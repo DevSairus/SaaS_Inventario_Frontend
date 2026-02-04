@@ -8,7 +8,7 @@ const useAuthStore = create((set) => ({
   isLoading: false,
   error: null,
 
-  // Login
+  // Login - CORREGIDO
   login: async (email, password) => {
     set({ isLoading: true, error: null });
     try {
@@ -30,7 +30,8 @@ const useAuthStore = create((set) => ({
           error: null
         });
         
-        return true;
+        // ✅ CORREGIDO: Retornar objeto con success y user
+        return { success: true, user };
       }
     } catch (error) {
       const errorMessage = error.response?.data?.message || 'Error al iniciar sesión';
@@ -38,7 +39,8 @@ const useAuthStore = create((set) => ({
         error: errorMessage,
         isLoading: false
       });
-      return false;
+      // ✅ CORREGIDO: Retornar objeto con error
+      return { success: false, error: errorMessage };
     }
   },
 
