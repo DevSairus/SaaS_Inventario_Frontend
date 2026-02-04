@@ -3,19 +3,20 @@ import Quagga from '@ericblade/quagga2';
 
 const BarcodeScanner = ({ onDetect, onClose }) => {
   const scannerRef = useRef(null);
-  const detectedRef = useRef(false);
+
+  const bufferRef = useRef({});
+  const frameCountRef = useRef(0);
+  const lockedRef = useRef(false);
 
   const [started, setStarted] = useState(false);
-  const [error, setError] = useState(null);
 
   /* =========================
-     INIT QUAGGA (CONFIG ESTABLE)
+     INIT QUAGGA
   ========================= */
   const initQuagga = useCallback(async () => {
     try {
       if (!scannerRef.current) return;
 
-      // Limpieza defensiva
       try {
         Quagga.stop();
         Quagga.offDetected();
@@ -30,7 +31,7 @@ const BarcodeScanner = ({ onDetect, onClose }) => {
           constraints: {
             facingMode: 'environment'
           },
-          area: { // ROI central (CRÍTICO)
+          area: {
             top: '30%',
             right: '10%',
             left: '10%',
@@ -46,17 +47,15 @@ const BarcodeScanner = ({ onDetect, onClose }) => {
             'code_128_reader'
           ]
         },
-        locate: false,              // 🔴 CLAVE
-        numOfWorkers: 2,
-        frequency: 20               // 🔴 CLAVE
+        locate: false,
+        frequency: 20,
+        numOfWorkers: 2
       });
 
       Quagga.start();
       setStarted(true);
-      setError(null);
     } catch (err) {
-      console.error('Quagga init error:', err);
-      setError('No se pudo iniciar el escáner.');
+      console.error(err);
     }
   }, []);
 
@@ -64,25 +63,47 @@ const BarcodeScanner = ({ onDetect, onClose }) => {
      EFECTO PRINCIPAL
   ========================= */
   useEffect(() => {
-    detectedRef.current = false;
-
     initQuagga();
 
-    const onDetectedHandler = (result) => {
-      if (detectedRef.current) return;
+    const onDetected = (result) => {
+      if (lockedRef.current) return;
 
       const code = result?.codeResult?.code;
-      if (code) {
-        detectedRef.current = true;
-        navigator.vibrate?.(200);
-        onDetect(code);
+      if (!code) return;
+
+      frameCountRef.current++;
+
+      bufferRef.current[code] = (bufferRef.current[code] || 0) + 1;
+
+      // Cada 20 frames evaluamos consenso
+      if (frameCountRef.current >= 20) {
+        let bestCode = null;
+        let bestCount = 0;
+
+        for (const [key, count] of Object.entries(bufferRef.current)) {
+          if (count > bestCount) {
+            bestCount = count;
+            bestCode = key;
+          }
+        }
+
+        // Umbral de confianza
+        if (bestCount >= 5) {
+          lockedRef.current = true;
+          navigator.vibrate?.(200);
+          onDetect(bestCode);
+        }
+
+        // Reset buffer
+        bufferRef.current = {};
+        frameCountRef.current = 0;
       }
     };
 
-    Quagga.onDetected(onDetectedHandler);
+    Quagga.onDetected(onDetected);
 
     return () => {
-      Quagga.offDetected(onDetectedHandler);
+      Quagga.offDetected(onDetected);
       try {
         Quagga.stop();
         Quagga.CameraAccess?.release();
@@ -97,13 +118,11 @@ const BarcodeScanner = ({ onDetect, onClose }) => {
     <div className="fixed inset-0 z-[9999] bg-black bg-opacity-70 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
 
-        {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 bg-gray-900 text-white">
           <span className="font-semibold">📷 Escanear Código</span>
           <button onClick={onClose} className="text-2xl">✕</button>
         </div>
 
-        {/* Camera */}
         <div className="relative bg-black h-[360px] overflow-hidden">
           <div
             id="interactive"
@@ -118,13 +137,11 @@ const BarcodeScanner = ({ onDetect, onClose }) => {
           )}
         </div>
 
-        {/* Footer */}
         <div className="px-5 py-4 bg-gray-50 text-center text-sm text-gray-600">
-          {started ? 'Acerca el código al recuadro' : 'Iniciando cámara…'}
+          Escanea manteniendo el código fijo
         </div>
       </div>
 
-      {/* CSS crítico */}
       <style>
         {`
           #interactive video,
