@@ -5,15 +5,57 @@ const BarcodeScanner = ({ onDetect, onClose }) => {
   const scannerRef = useRef(null);
   const videoRef = useRef(null);
 
+  // Control general
   const lockedRef = useRef(false);
+
+  // Quagga stabilization
   const bufferRef = useRef({});
   const frameCountRef = useRef(0);
 
-  const [mode, setMode] = useState(null); // 'native' | 'quagga'
+  // HID (USB scanner)
+  const hidBufferRef = useRef('');
+  const hidLastTimeRef = useRef(0);
+
+  const [mode, setMode] = useState(null); // native | quagga
   const [started, setStarted] = useState(false);
 
   /* =====================================================
-     1️⃣ BARCODE DETECTOR API (NATIVO)
+     🔫 USB HID SCANNER (KEYBOARD)
+  ===================================================== */
+  useEffect(() => {
+    const onKeyDown = (e) => {
+      if (lockedRef.current) return;
+
+      const now = Date.now();
+
+      // Reset si es escritura humana
+      if (now - hidLastTimeRef.current > 100) {
+        hidBufferRef.current = '';
+      }
+
+      hidLastTimeRef.current = now;
+
+      if (e.key === 'Enter' || e.key === 'Tab') {
+        if (hidBufferRef.current.length >= 4) {
+          lockedRef.current = true;
+          navigator.vibrate?.(100);
+          onDetect(hidBufferRef.current);
+        }
+        hidBufferRef.current = '';
+        return;
+      }
+
+      if (e.key.length === 1) {
+        hidBufferRef.current += e.key;
+      }
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [onDetect]);
+
+  /* =====================================================
+     📷 BARCODE DETECTOR API (NATIVO)
   ===================================================== */
   const startNativeScanner = useCallback(async () => {
     try {
@@ -43,7 +85,6 @@ const BarcodeScanner = ({ onDetect, onClose }) => {
 
         try {
           const barcodes = await detector.detect(videoRef.current);
-
           if (barcodes.length > 0) {
             lockedRef.current = true;
             navigator.vibrate?.(200);
@@ -57,13 +98,13 @@ const BarcodeScanner = ({ onDetect, onClose }) => {
 
       scan();
     } catch (err) {
-      console.warn('BarcodeDetector falló, usando Quagga', err);
+      console.warn('BarcodeDetector no disponible, usando Quagga', err);
       startQuagga();
     }
   }, [onDetect]);
 
   /* =====================================================
-     2️⃣ QUAGGA FALLBACK (ESTABILIZADO)
+     📦 QUAGGA (FALLBACK)
   ===================================================== */
   const startQuagga = useCallback(async () => {
     try {
@@ -115,10 +156,10 @@ const BarcodeScanner = ({ onDetect, onClose }) => {
         let best = null;
         let count = 0;
 
-        for (const [key, value] of Object.entries(bufferRef.current)) {
-          if (value > count) {
-            best = key;
-            count = value;
+        for (const [k, v] of Object.entries(bufferRef.current)) {
+          if (v > count) {
+            best = k;
+            count = v;
           }
         }
 
@@ -179,9 +220,9 @@ const BarcodeScanner = ({ onDetect, onClose }) => {
           {/* Native */}
           <video
             ref={videoRef}
-            className={`w-full h-full object-cover ${mode === 'native' ? 'block' : 'hidden'}`}
             playsInline
             muted
+            className={`w-full h-full object-cover ${mode === 'native' ? 'block' : 'hidden'}`}
           />
 
           {/* Quagga */}
@@ -199,7 +240,7 @@ const BarcodeScanner = ({ onDetect, onClose }) => {
         </div>
 
         <div className="px-5 py-4 bg-gray-50 text-center text-sm text-gray-600">
-          Mantén el código dentro del recuadro
+          Cámara o pistola USB – escaneo automático
         </div>
       </div>
 
