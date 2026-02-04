@@ -39,7 +39,7 @@ function LoginPage() {
             </svg>
           </div>
           <h1 className="text-3xl font-bold text-gray-800 mb-2">
-            Sistema de Inventario
+            Sistema de Control de Inventario
           </h1>
           <p className="text-gray-600">
             Ingresa tus credenciales para continuar
