@@ -24,8 +24,9 @@ import {
   Save,
   ArrowLeft
 } from 'lucide-react';
-import BarcodeScanner from '../../components/common/BarcodeScanner';
+import BarcodeScanner from '../../components/common/BarcodeScanner'; // ✅ Usa el BarcodeScanner mejorado
 import { productsAPI } from '../../api/products';
+
 const formatCurrency = (amount) => {
   if (!amount && amount !== 0) return '$0';
   return new Intl.NumberFormat('es-CO', {
@@ -128,12 +129,13 @@ function SaleFormPage() {
   }, [isEditMode, currentSale]);
 
   const handleInputChange = (e) => {
-    const { name, value } = e.target;  if (name === 'vehicle_plate') {
-    // Convertir a mayúsculas y permitir solo letras, números y guión
-    const formattedValue = value.toUpperCase().replace(/[^A-Z0-9-]/g, '');
-    setFormData(prev => ({ ...prev, vehicle_plate: formattedValue }));
-    return;
-  }
+    const { name, value } = e.target;
+    if (name === 'vehicle_plate') {
+      // Convertir a mayúsculas y permitir solo letras, números y guión
+      const formattedValue = value.toUpperCase().replace(/[^A-Z0-9-]/g, '');
+      setFormData(prev => ({ ...prev, vehicle_plate: formattedValue }));
+      return;
+    }
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
@@ -172,10 +174,16 @@ function SaleFormPage() {
       const response = await productsAPI.getByBarcode(code);
       if (response?.data) {
         handleAddItem(response.data);
+        
+        // ✅ Dar feedback visual/sonoro
+        if (navigator.vibrate) {
+          navigator.vibrate(200);
+        }
       } else {
         alert('Producto no encontrado para el código: ' + code);
       }
     } catch (e) {
+      console.error('Error buscando producto:', e);
       alert('Producto no encontrado para el código: ' + code);
     }
   };
@@ -427,9 +435,9 @@ function SaleFormPage() {
                 </div>
 
                 {/* Placa del Vehículo */}
-                <div>
+                <div className="mt-6">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    🚗 Placa del Vehículo
+                    Placa del Vehículo
                     <span className="text-gray-400 text-xs ml-2">(Opcional)</span>
                   </label>
                   <input
@@ -524,25 +532,31 @@ function SaleFormPage() {
                       Productos ({items.length})
                     </h2>
                   </div>
-                  <Button
-                    type="button"
-                    onClick={() => setShowProductSearch(true)}
-                    className="bg-blue-600 hover:bg-blue-700"
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Agregar Producto
-                  </Button>
-                  <button
-                    type="button"
-                    onClick={() => setShowScanner(true)}
-                    className="px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors flex items-center gap-1.5 text-sm font-medium"
-                    title="Escanear código de barras"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9l-2.293-2.293a1 1 0 010-1.414L3.414 3.6A1 1 0 014.828 3H7m0 18H4.828a1 1 0 01-.414-.086L2.707 18.707a1 1 0 010-1.414L5 15m14-6l2.293 2.293a1 1 0 010 1.414L18.586 15.6A1 1 0 0117.172 16H15m0-15h2.172a1 1 0 01.414.086l2.707 2.707a1 1 0 010 1.414L18 7" />
-                    </svg>
-                    Escanear
-                  </button>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      onClick={() => setShowProductSearch(true)}
+                      className="bg-blue-600 hover:bg-blue-700"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Agregar Producto
+                    </Button>
+                    {/* ✅ Botón de escaneo mejorado */}
+                    <button
+                      type="button"
+                      onClick={() => setShowScanner(true)}
+                      className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors flex items-center gap-2 text-sm font-medium shadow-sm"
+                      title="Escanear código de barras con cámara o pistola USB"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+                              d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+                              d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                      Escanear
+                    </button>
+                  </div>
                 </div>
 
                 {items.length === 0 ? (
@@ -552,14 +566,29 @@ function SaleFormPage() {
                     <p className="text-sm text-gray-500 mb-4">
                       Agrega productos para crear la venta
                     </p>
-                    <Button
-                      type="button"
-                      onClick={() => setShowProductSearch(true)}
-                      variant="outline"
-                    >
-                      <Plus className="w-4 h-4 mr-2" />
-                      Agregar Primer Producto
-                    </Button>
+                    <div className="flex gap-2 justify-center">
+                      <Button
+                        type="button"
+                        onClick={() => setShowProductSearch(true)}
+                        variant="outline"
+                      >
+                        <Plus className="w-4 h-4 mr-2" />
+                        Agregar Producto
+                      </Button>
+                      <button
+                        type="button"
+                        onClick={() => setShowScanner(true)}
+                        className="px-4 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors flex items-center gap-2"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+                                d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+                                d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        Escanear
+                      </button>
+                    </div>
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
@@ -659,7 +688,7 @@ function SaleFormPage() {
               </div>
             </Card>
 
-            {/* Totales - ABAJO */}
+            {/* Totales */}
             {items.length > 0 && (
               <Card className="mb-6">
                 <div className="p-6">
@@ -769,6 +798,7 @@ function SaleFormPage() {
           </div>
         </Modal>
 
+        {/* ✅ BarcodeScanner con componente mejorado */}
         {showScanner && (
           <BarcodeScanner
             onDetect={handleBarcodeScan}

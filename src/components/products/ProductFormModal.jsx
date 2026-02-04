@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import useProductsStore from '../../store/productsStore';
 import useCategoriesStore from '../../store/categoriesStore';
-import BarcodeScanner from '../common/BarcodeScanner';
+import BarcodeScanner from '../common/BarcodeScanner'; // ✅ Ya usa el componente mejorado
 
 const ProductFormModal = ({ isOpen, onClose, product = null }) => {
   const { createProduct, updateProduct, loading } = useProductsStore();
@@ -141,7 +141,7 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
         <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
           {/* Header */}
-          <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-4 flex items-center justify-between rounded-t-xl">
+          <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-4 flex items-center justify-between rounded-t-xl z-10">
             <h2 className="text-2xl font-bold">
               {product ? 'Editar Producto' : 'Nuevo Producto'}
             </h2>
@@ -183,28 +183,32 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
                 Código de Barras
               </label>
               <div className="flex gap-2">
-              <input
-                type="text"
-                name="barcode"
-                value={formData.barcode}
-                onChange={handleChange}
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Ej: 7501234567890"
-              />
-              <button
-                type="button"
-                onClick={() => setShowScanner(true)}
-                className="px-3 py-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition-colors"
-                title="Escanear código de barras"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
-                        d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
-                        d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-              </button>
-            </div>
+                <input
+                  type="text"
+                  name="barcode"
+                  value={formData.barcode}
+                  onChange={handleChange}
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Ej: 7501234567890"
+                />
+                {/* ✅ Botón de escaneo con mejor diseño */}
+                <button
+                  type="button"
+                  onClick={() => setShowScanner(true)}
+                  className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+                  title="Escanear código de barras con cámara o pistola USB"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+                          d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+                          d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                </button>
+              </div>
+              <p className="mt-1 text-xs text-gray-500">
+                💡 Escanea con cámara o pistola USB
+              </p>
             </div>
 
             <div className="md:col-span-2">
@@ -319,7 +323,7 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
               />
               {calculatedPrice && (
                 <p className="mt-1 text-xs text-green-600 font-medium">
-                  Precio sugerido: ${calculatedPrice}
+                  💰 Precio sugerido: ${calculatedPrice}
                 </p>
               )}
             </div>
@@ -523,15 +527,17 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
         </form>
       </div>
     </div>
-      {showScanner && (
-        <BarcodeScanner
-          onDetect={(code) => {
-            setFormData(prev => ({ ...prev, barcode: code }));
-            setShowScanner(false);
-          }}
-          onClose={() => setShowScanner(false)}
-        />
-      )}
+    
+    {/* ✅ BarcodeScanner con componente mejorado */}
+    {showScanner && (
+      <BarcodeScanner
+        onDetect={(code) => {
+          setFormData(prev => ({ ...prev, barcode: code }));
+          setShowScanner(false);
+        }}
+        onClose={() => setShowScanner(false)}
+      />
+    )}
     </>
   );
 };  
