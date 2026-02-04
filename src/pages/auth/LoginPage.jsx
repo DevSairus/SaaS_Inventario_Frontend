@@ -7,8 +7,8 @@ function LoginPage() {
   const { login, isLoading, error, clearError } = useAuthStore();
   
   const [formData, setFormData] = useState({
-    email: 'admin@inventario.com',
-    password: 'admin123'
+    email: '',
+    password: ''
   });
 
   const handleChange = (e) => {
@@ -117,17 +117,6 @@ function LoginPage() {
               )}
             </button>
           </form>
-
-          {/* Demo Credentials */}
-          <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-            <p className="text-xs text-blue-800 font-semibold mb-2">
-              Credenciales de prueba:
-            </p>
-            <div className="text-xs text-blue-700 space-y-1">
-              <p>📧 Email: admin@inventario.com</p>
-              <p>🔑 Password: admin123</p>
-            </div>
-          </div>
         </div>
 
         {/* Footer */}

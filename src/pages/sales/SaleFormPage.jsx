@@ -52,7 +52,8 @@ function SaleFormPage() {
     payment_method: 'efectivo',
     document_type: 'remision',
     sale_date: new Date().toISOString().split('T')[0],
-    notes: ''
+    notes: '',
+    vehicle_plate: ''
   });
 
   const [showQuickCustomer, setShowQuickCustomer] = useState(false);
@@ -103,7 +104,8 @@ function SaleFormPage() {
         sale_date: currentSale.sale_date 
           ? new Date(currentSale.sale_date).toISOString().split('T')[0] 
           : new Date().toISOString().split('T')[0],
-        notes: currentSale.notes || ''
+        notes: currentSale.notes || '',
+        vehicle_plate: currentSale.vehicle_plate || ''
       });
 
       if (currentSale.items && currentSale.items.length > 0) {
@@ -126,7 +128,12 @@ function SaleFormPage() {
   }, [isEditMode, currentSale]);
 
   const handleInputChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value } = e.target;  if (name === 'vehicle_plate') {
+    // Convertir a mayúsculas y permitir solo letras, números y guión
+    const formattedValue = value.toUpperCase().replace(/[^A-Z0-9-]/g, '');
+    setFormData(prev => ({ ...prev, vehicle_plate: formattedValue }));
+    return;
+  }
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
@@ -417,6 +424,26 @@ function SaleFormPage() {
                       ))}
                     </select>
                   </div>
+                </div>
+
+                {/* Placa del Vehículo */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    🚗 Placa del Vehículo
+                    <span className="text-gray-400 text-xs ml-2">(Opcional)</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="vehicle_plate"
+                    value={formData.vehicle_plate}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all uppercase"
+                    placeholder="ABC-123 o ABC123"
+                    maxLength="20"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Ingrese la placa del vehículo si aplica
+                  </p>
                 </div>
 
                 {/* Cliente Rápido */}

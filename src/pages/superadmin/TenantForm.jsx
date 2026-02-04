@@ -39,7 +39,7 @@ const TenantForm = () => {
 
   const fetchPlans = async () => {
     try {
-      const { data } = await api.get('/subscriptions/plans');
+      const { data } = await api.get('/superadmin/subscription-plans');
       setPlans(data.plans || []);
     } catch (error) {
       console.error('Error fetching plans:', error);
