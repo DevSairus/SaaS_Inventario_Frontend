@@ -7,39 +7,9 @@ const BarcodeScanner = ({ onDetect, onClose }) => {
 
   const [started, setStarted] = useState(false);
   const [error, setError] = useState(null);
-  const [permissionStatus, setPermissionStatus] = useState('checking');
 
   /* =========================
-     PERMISOS DE CÁMARA
-  ========================= */
-  const checkCameraPermission = useCallback(async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment' }
-      });
-
-      stream.getTracks().forEach(track => track.stop());
-      setPermissionStatus('granted');
-      return true;
-    } catch (err) {
-      console.error('Camera permission error:', err);
-
-      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-        setError('❌ Permiso de cámara denegado.');
-        setPermissionStatus('denied');
-      } else if (err.name === 'NotFoundError') {
-        setError('📷 No se encontró cámara en el dispositivo.');
-        setPermissionStatus('no-camera');
-      } else {
-        setError('❌ Error al acceder a la cámara.');
-        setPermissionStatus('error');
-      }
-      return false;
-    }
-  }, []);
-
-  /* =========================
-     INIT QUAGGA
+     INIT QUAGGA (CONFIG ESTABLE)
   ========================= */
   const initQuagga = useCallback(async () => {
     try {
@@ -49,9 +19,7 @@ const BarcodeScanner = ({ onDetect, onClose }) => {
       try {
         Quagga.stop();
         Quagga.offDetected();
-        if (Quagga.CameraAccess) {
-          Quagga.CameraAccess.release();
-        }
+        Quagga.CameraAccess?.release();
       } catch (_) {}
 
       await Quagga.init({
@@ -61,6 +29,12 @@ const BarcodeScanner = ({ onDetect, onClose }) => {
           target: scannerRef.current,
           constraints: {
             facingMode: 'environment'
+          },
+          area: { // ROI central (CRÍTICO)
+            top: '30%',
+            right: '10%',
+            left: '10%',
+            bottom: '30%'
           }
         },
         decoder: {
@@ -69,20 +43,12 @@ const BarcodeScanner = ({ onDetect, onClose }) => {
             'ean_8_reader',
             'upc_reader',
             'upc_e_reader',
-            'code_128_reader',
-            'code_39_reader',
-            'code_93_reader',
-            'codabar_reader',
-            'i2of5_reader'
+            'code_128_reader'
           ]
         },
-        locate: true,
-        locator: {
-          patchSize: 'medium',
-          halfSample: true
-        },
-        numOfWorkers: navigator.hardwareConcurrency || 4,
-        frequency: 10
+        locate: false,              // 🔴 CLAVE
+        numOfWorkers: 2,
+        frequency: 20               // 🔴 CLAVE
       });
 
       Quagga.start();
@@ -100,9 +66,7 @@ const BarcodeScanner = ({ onDetect, onClose }) => {
   useEffect(() => {
     detectedRef.current = false;
 
-    checkCameraPermission().then((ok) => {
-      if (ok) initQuagga();
-    });
+    initQuagga();
 
     const onDetectedHandler = (result) => {
       if (detectedRef.current) return;
@@ -121,22 +85,10 @@ const BarcodeScanner = ({ onDetect, onClose }) => {
       Quagga.offDetected(onDetectedHandler);
       try {
         Quagga.stop();
-        if (Quagga.CameraAccess) {
-          Quagga.CameraAccess.release();
-        }
+        Quagga.CameraAccess?.release();
       } catch (_) {}
     };
-  }, [checkCameraPermission, initQuagga, onDetect]);
-
-  /* =========================
-     REINTENTAR PERMISO
-  ========================= */
-  const handleRequestPermission = async () => {
-    setError(null);
-    setPermissionStatus('checking');
-    const ok = await checkCameraPermission();
-    if (ok) initQuagga();
-  };
+  }, [initQuagga, onDetect]);
 
   /* =========================
      UI
@@ -147,61 +99,32 @@ const BarcodeScanner = ({ onDetect, onClose }) => {
 
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 bg-gray-900 text-white">
-          <span className="font-semibold">📷 Escanear Código de Barras</span>
-          <button
-            onClick={onClose}
-            className="text-2xl hover:text-gray-300"
-          >
-            ✕
-          </button>
+          <span className="font-semibold">📷 Escanear Código</span>
+          <button onClick={onClose} className="text-2xl">✕</button>
         </div>
 
         {/* Camera */}
-        <div className="relative bg-black h-[360px] sm:h-[420px] overflow-hidden">
+        <div className="relative bg-black h-[360px] overflow-hidden">
           <div
             id="interactive"
             ref={scannerRef}
             className="w-full h-full"
           />
 
-          {started && !error && (
+          {started && (
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div className="w-56 h-36 border-4 border-green-400 rounded-xl shadow-lg" />
-            </div>
-          )}
-
-          {permissionStatus === 'checking' && !error && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black bg-opacity-80 text-white">
-              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-white mb-3" />
-              <p>Verificando cámara...</p>
-            </div>
-          )}
-
-          {error && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black bg-opacity-90 text-white p-6 text-center">
-              <p className="mb-4">{error}</p>
-
-              {permissionStatus === 'denied' && (
-                <button
-                  onClick={handleRequestPermission}
-                  className="px-4 py-2 bg-blue-600 rounded-lg hover:bg-blue-700"
-                >
-                  Solicitar permiso
-                </button>
-              )}
+              <div className="w-56 h-36 border-4 border-green-400 rounded-xl" />
             </div>
           )}
         </div>
 
         {/* Footer */}
         <div className="px-5 py-4 bg-gray-50 text-center text-sm text-gray-600">
-          {started
-            ? '✅ Escáner activo – acerca el código'
-            : 'Esperando cámara…'}
+          {started ? 'Acerca el código al recuadro' : 'Iniciando cámara…'}
         </div>
       </div>
 
-      {/* CSS crítico para Quagga */}
+      {/* CSS crítico */}
       <style>
         {`
           #interactive video,
