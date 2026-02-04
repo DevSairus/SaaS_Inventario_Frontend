@@ -7,30 +7,44 @@ const api = axios.create({
   }
 });
 
-// Interceptor para agregar el token a cada request
+// ================================
+// REQUEST INTERCEPTOR
+// ================================
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
+
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
-// Interceptor para manejar errores de respuesta
+// ================================
+// RESPONSE INTERCEPTOR
+// ================================
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
-      // Token expirado o inválido
+    const status = error.response?.status;
+    const url = error.config?.url || '';
+
+    /**
+     * ⚠️ SOLO hacer logout cuando:
+     * - el error es 401
+     * - viene de un endpoint de auth
+     *
+     * Esto evita el loop cuando hay 403 por permisos
+     */
+    if (status === 401 && url.includes('/auth')) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       window.location.href = '/login';
     }
+
     return Promise.reject(error);
   }
 );
