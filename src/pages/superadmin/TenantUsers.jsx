@@ -8,6 +8,7 @@ import {
   Trash2,
   Key,
   UserCog,
+  UserPlus,
 } from 'lucide-react';
 import useSuperAdminStore from '../../store/superAdminStore';
 import Card from '../../components/common/Card';
@@ -16,6 +17,7 @@ import Loading from '../../components/common/Loading';
 import Badge from '../../components/common/Badge';
 import Pagination from '../../components/common/Pagination';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
+import AddTenantUserModal from '../../components/superadmin/AddTenantUserModal';
 
 const TenantUsers = () => {
   const { id } = useParams();
@@ -27,6 +29,7 @@ const TenantUsers = () => {
     is_active: undefined,
   });
   const [showFilters, setShowFilters] = useState(false);
+  const [showAddUserModal, setShowAddUserModal] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState({ open: false });
   const [roleDialog, setRoleDialog] = useState({ open: false, user: null });
   const [passwordDialog, setPasswordDialog] = useState({
@@ -42,10 +45,13 @@ const TenantUsers = () => {
     tenantUsersPagination,
     isLoading,
     isSubmitting,
+    error,
     fetchTenantUsers,
     deleteTenantUser,
     changeTenantUserRole,
     resetTenantUserPassword,
+    createTenantUser,
+    clearError,
   } = useSuperAdminStore();
 
   const doFetch = useCallback(() => {
@@ -117,20 +123,42 @@ const TenantUsers = () => {
     }
   };
 
+  const handleCreateUser = async (userData) => {
+    const success = await createTenantUser(id, userData);
+    if (success) {
+      doFetch(); // Recargar lista de usuarios
+      return true;
+    }
+    return false;
+  };
+
+  const handleCloseAddUserModal = () => {
+    setShowAddUserModal(false);
+    clearError(); // Limpiar errores al cerrar el modal
+  };
+
   if (isLoading) {
     return <Loading text="Cargando usuarios..." />;
   }
 
   const roleColors = {
+    super_admin: 'red',
     admin: 'purple',
-    operario: 'blue',
-    cliente: 'green',
+    manager: 'indigo',
+    seller: 'blue',
+    warehouse_keeper: 'cyan',
+    user: 'green',
+    viewer: 'gray',
   };
 
   const roleLabels = {
+    super_admin: 'Super Admin',
     admin: 'Administrador',
-    operario: 'Operario',
-    cliente: 'Cliente',
+    manager: 'Gerente',
+    seller: 'Vendedor',
+    warehouse_keeper: 'Bodeguero',
+    user: 'Usuario',
+    viewer: 'Visualizador',
   };
 
   return (
@@ -153,10 +181,19 @@ const TenantUsers = () => {
               Usuarios de {tenantDetail?.company_name}
             </h1>
             <p className="text-gray-600">
-              Gestión completa de usuarios (Admin, Operario, Cliente)
+              Gestión completa de usuarios del sistema
             </p>
           </div>
-          <Badge color="blue">{tenantDetail?.plan?.toUpperCase()}</Badge>
+          <div className="flex items-center gap-3">
+            <Badge color="blue">{tenantDetail?.plan?.toUpperCase()}</Badge>
+            <Button
+              variant="primary"
+              icon={UserPlus}
+              onClick={() => setShowAddUserModal(true)}
+            >
+              Agregar Usuario
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -194,8 +231,11 @@ const TenantUsers = () => {
                 >
                   <option value="">Todos</option>
                   <option value="admin">Administrador</option>
-                  <option value="operario">Operario</option>
-                  <option value="cliente">Cliente</option>
+                  <option value="manager">Gerente</option>
+                  <option value="seller">Vendedor</option>
+                  <option value="warehouse_keeper">Bodeguero</option>
+                  <option value="user">Usuario</option>
+                  <option value="viewer">Visualizador</option>
                 </select>
               </div>
 
@@ -357,8 +397,11 @@ const TenantUsers = () => {
                 className="input"
               >
                 <option value="admin">Administrador</option>
-                <option value="operario">Operario</option>
-                <option value="cliente">Cliente</option>
+                <option value="manager">Gerente</option>
+                <option value="seller">Vendedor</option>
+                <option value="warehouse_keeper">Bodeguero</option>
+                <option value="user">Usuario</option>
+                <option value="viewer">Visualizador</option>
               </select>
             </div>
 
@@ -437,6 +480,15 @@ const TenantUsers = () => {
           </div>
         </div>
       )}
+
+      {/* Add User Modal */}
+      <AddTenantUserModal
+        isOpen={showAddUserModal}
+        onClose={handleCloseAddUserModal}
+        onSubmit={handleCreateUser}
+        isSubmitting={isSubmitting}
+        error={error}
+      />
     </div>
   );
 };

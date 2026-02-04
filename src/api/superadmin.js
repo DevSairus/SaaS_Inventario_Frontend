@@ -64,6 +64,11 @@ export const superAdminAPI = {
     return response.data;
   },
 
+  createTenantUser: async (tenantId, userData) => {
+    const response = await api.post(`/superadmin/tenants/${tenantId}/users`, userData);
+    return response.data;
+  },
+
   // Analytics
   getAnalyticsOverview: async (params = {}) => {
     const response = await api.get('/superadmin/analytics/overview', { params });

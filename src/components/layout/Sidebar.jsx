@@ -203,7 +203,7 @@ function Sidebar({ isCollapsed, setIsCollapsed }) {
         <div className="flex items-center justify-between p-4 border-b border-gray-700">
           {!isCollapsed && (
             <div>
-              <h2 className="font-bold text-lg">Inventario</h2>
+              <h2 className="font-bold text-lg">Control de Inventario</h2>
               <p className="text-xs text-gray-400">v1.0.0</p>
             </div>
           )}

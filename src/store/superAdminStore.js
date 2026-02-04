@@ -184,6 +184,21 @@ const useSuperAdminStore = create((set, get) => ({
     }
   },
 
+  createTenantUser: async (tenantId, userData) => {
+    set({ isSubmitting: true, error: null });
+    try {
+      await superAdminAPI.createTenantUser(tenantId, userData);
+      set({ isSubmitting: false });
+      return true;
+    } catch (error) {
+      set({
+        error: error.response?.data?.message || error.response?.data?.error || 'Error al crear usuario',
+        isSubmitting: false
+      });
+      return false;
+    }
+  },
+
   // ========== ANALYTICS ==========
   fetchAnalyticsOverview: async (params = {}) => {
     set({ isLoading: true, error: null });

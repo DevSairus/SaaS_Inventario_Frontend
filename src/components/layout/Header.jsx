@@ -34,7 +34,7 @@ const Header = ({ toggleSidebar }) => {
             </svg>
           </button>
           <h1 className="text-xl font-semibold text-gray-900 hidden sm:block">
-            Sistema de Inventario
+            Control de Inventario
           </h1>
         </div>
 
