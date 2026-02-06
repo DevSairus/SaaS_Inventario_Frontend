@@ -136,16 +136,33 @@ export const usePurchasesStore = create((set, get) => ({
     }
   },
 
-  // Recibir compra (actualiza stock)
-  receivePurchase: async (id, receivedItems) => {
+  // ✅ SOLUCIÓN: Recibir compra con actualización de productos
+  receivePurchase: async (id, receivedItems, productsStore = null) => {
     set({ isLoading: true, error: null });
     try {
+      console.log('📦 Recibiendo compra:', id);
+      
+      // Recibir la compra
       await purchasesAPI.receive(id, receivedItems);
+      
+      console.log('✅ Compra recibida exitosamente');
+      
+      // Actualizar la compra actual
       await get().fetchPurchaseById(id);
+      
+      // Actualizar estadísticas de compras
       await get().fetchStats();
+      
+      // ✅ Si se pasó el store de productos, refrescarlo
+      if (productsStore && typeof productsStore.refreshAfterPurchase === 'function') {
+        console.log('🔄 Actualizando productos automáticamente...');
+        await productsStore.refreshAfterPurchase();
+      }
+      
       set({ isLoading: false });
       return true;
     } catch (error) {
+      console.error('❌ Error al recibir compra:', error);
       set({
         error: error.response?.data?.message || 'Error al recibir compra',
         isLoading: false

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { usePurchasesStore } from '../../store/purchasesStore';
+import useProductsStore from '../../store/productsStore';
 import Layout from '../../components/layout/Layout';
 
 const PurchaseDetailPage = () => {
@@ -15,6 +16,8 @@ const PurchaseDetailPage = () => {
     receivePurchase,
     cancelPurchase
   } = usePurchasesStore();
+
+  const { fetchProducts } = useProductsStore();
 
   const [showReceiveModal, setShowReceiveModal] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
@@ -50,7 +53,9 @@ const PurchaseDetailPage = () => {
   const handleReceive = async () => {
     const success = await receivePurchase(id, receivedItems);
     if (success) {
-      alert('Compra recibida exitosamente. El stock ha sido actualizado.');
+      await fetchProducts();
+      
+      alert('Compra recibida exitosamente. Stock y precios actualizados.');
       setShowReceiveModal(false);
     }
   };
@@ -199,137 +204,117 @@ const PurchaseDetailPage = () => {
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
-              Cancelar
+              Cancelar Compra
             </button>
           )}
         </div>
       </div>
 
-      {/* Main Content */}
+      {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column - Details */}
+        {/* Left Column - Items and Notes */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Supplier Info */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-xl font-semibold text-gray-800 mb-4">Información del Proveedor</h2>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm text-gray-600">Nombre</p>
-                <p className="font-medium text-gray-900">{purchase.supplier?.name || '-'}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">Razón Social</p>
-                <p className="font-medium text-gray-900">{purchase.supplier?.business_name || '-'}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">NIT/RUT</p>
-                <p className="font-medium text-gray-900">{purchase.supplier?.tax_id || '-'}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">Email</p>
-                <p className="font-medium text-gray-900">{purchase.supplier?.email || '-'}</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Items */}
+          {/* Items Table */}
           <div className="bg-white rounded-lg shadow overflow-hidden">
-            <div className="p-4 bg-gray-50 border-b border-gray-200">
+            <div className="px-6 py-4 border-b border-gray-200">
               <h2 className="text-xl font-semibold text-gray-800">Productos</h2>
             </div>
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Producto</th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Cantidad</th>
-                    {purchase.status === 'received' && (
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Recibido</th>
-                    )}
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Costo Unit.</th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">IVA</th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Desc.</th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Producto
+                    </th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Cantidad
+                    </th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Precio Unitario
+                    </th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Subtotal
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {purchase.items?.map((item) => (
                     <tr key={item.id}>
-                      <td className="px-6 py-4">
-                        <div className="text-sm font-medium text-gray-900">{item.product?.name || '-'}</div>
-                        <div className="text-sm text-gray-500">{item.product?.sku || '-'}</div>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <div>
+                            <div className="text-sm font-medium text-gray-900">
+                              {item.product?.name || 'Producto no encontrado'}
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              {item.product?.sku}
+                            </div>
+                          </div>
+                        </div>
                       </td>
-                      <td className="px-6 py-4 text-right text-sm text-gray-900">{item.quantity}</td>
-                      {purchase.status === 'received' && (
-                        <td className="px-6 py-4 text-right text-sm">
-                          <span className="font-medium text-green-600">{item.received_quantity}</span>
-                        </td>
-                      )}
-                      <td className="px-6 py-4 text-right text-sm text-gray-900">{formatCurrency(item.unit_cost)}</td>
-                      <td className="px-6 py-4 text-right text-sm text-gray-900">{item.tax_rate}%</td>
-                      <td className="px-6 py-4 text-right text-sm text-gray-900">{item.discount_percentage}%</td>
-                      <td className="px-6 py-4 text-right text-sm font-medium text-gray-900">
-                        {formatCurrency(item.total)}
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900">
+                        {item.quantity}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900">
+                        {formatCurrency(item.unit_cost)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium text-gray-900">
+                        {formatCurrency(item.subtotal)}
                       </td>
                     </tr>
                   ))}
                 </tbody>
+                <tfoot className="bg-gray-50">
+                  <tr>
+                    <td colSpan="3" className="px-6 py-4 text-right text-sm font-semibold text-gray-900">
+                      Total:
+                    </td>
+                    <td className="px-6 py-4 text-right text-lg font-bold text-gray-900">
+                      {formatCurrency(purchase.total_amount)}
+                    </td>
+                  </tr>
+                </tfoot>
               </table>
             </div>
           </div>
 
           {/* Notes */}
-          {(purchase.notes || purchase.internal_notes) && (
+          {purchase.notes && (
             <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-xl font-semibold text-gray-800 mb-4">Notas</h2>
-              {purchase.notes && (
-                <div className="mb-4">
-                  <p className="text-sm font-medium text-gray-600 mb-1">Notas</p>
-                  <p className="text-gray-900">{purchase.notes}</p>
-                </div>
-              )}
-              {purchase.internal_notes && (
-                <div>
-                  <p className="text-sm font-medium text-gray-600 mb-1">Notas Internas</p>
-                  <p className="text-gray-900">{purchase.internal_notes}</p>
-                </div>
-              )}
+              <h2 className="text-xl font-semibold text-gray-800 mb-3">Notas</h2>
+              <p className="text-gray-700 whitespace-pre-wrap">{purchase.notes}</p>
             </div>
           )}
         </div>
 
-        {/* Right Column - Summary */}
+        {/* Right Column - Details */}
         <div className="space-y-6">
-          {/* Totals */}
+          {/* Supplier Info */}
           <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-xl font-semibold text-gray-800 mb-4">Resumen</h2>
+            <h2 className="text-xl font-semibold text-gray-800 mb-4">Proveedor</h2>
             <div className="space-y-3">
-              <div className="flex justify-between">
-                <span className="text-gray-600">Subtotal:</span>
-                <span className="font-medium">{formatCurrency(purchase.subtotal)}</span>
+              <div>
+                <p className="text-sm text-gray-600">Nombre</p>
+                <p className="font-medium text-gray-900">{purchase.supplier?.name}</p>
               </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">IVA:</span>
-                <span className="font-medium">{formatCurrency(purchase.tax_amount)}</span>
-              </div>
-              {purchase.discount_amount > 0 && (
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Descuento:</span>
-                  <span className="font-medium text-red-600">-{formatCurrency(purchase.discount_amount)}</span>
+              {purchase.supplier?.contact_name && (
+                <div>
+                  <p className="text-sm text-gray-600">Contacto</p>
+                  <p className="font-medium text-gray-900">{purchase.supplier.contact_name}</p>
                 </div>
               )}
-              {purchase.shipping_cost > 0 && (
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Envío:</span>
-                  <span className="font-medium">{formatCurrency(purchase.shipping_cost)}</span>
+              {purchase.supplier?.phone && (
+                <div>
+                  <p className="text-sm text-gray-600">Teléfono</p>
+                  <p className="font-medium text-gray-900">{purchase.supplier.phone}</p>
                 </div>
               )}
-              <div className="border-t pt-3 mt-3">
-                <div className="flex justify-between">
-                  <span className="text-lg font-bold text-gray-900">Total:</span>
-                  <span className="text-lg font-bold text-blue-600">{formatCurrency(purchase.total_amount)}</span>
+              {purchase.supplier?.email && (
+                <div>
+                  <p className="text-sm text-gray-600">Email</p>
+                  <p className="font-medium text-gray-900">{purchase.supplier.email}</p>
                 </div>
-              </div>
+              )}
             </div>
           </div>
 
@@ -419,9 +404,15 @@ const PurchaseDetailPage = () => {
                   </svg>
                   <div className="ml-3">
                     <h3 className="text-sm font-medium text-yellow-800">
-                      Al recibir esta compra se actualizará el stock y costo promedio de los productos
+                      Al recibir esta compra se actualizará automáticamente:
                     </h3>
-                    <p className="text-sm text-yellow-700 mt-1">
+                    <ul className="text-sm text-yellow-700 mt-2 list-disc list-inside space-y-1">
+                      <li>Stock actual de los productos</li>
+                      <li>Costo promedio (average_cost)</li>
+                      <li>Último costo de compra (last_purchase_cost)</li>
+                      <li>Precio de venta base (si tiene margen de ganancia configurado)</li>
+                    </ul>
+                    <p className="text-sm text-yellow-700 mt-2">
                       Verifique las cantidades recibidas antes de confirmar.
                     </p>
                   </div>

@@ -20,9 +20,19 @@ const useProductsStore = create((set, get) => ({
   },
   isLoading: false,
   error: null,
+  lastFetch: null, // ✅ Para tracking de última actualización
 
-  // Obtener productos
-  fetchProducts: async () => {
+  // ✅ Obtener productos con cache inteligente
+  fetchProducts: async (forceRefresh = false) => {
+    const { lastFetch } = get();
+    const now = Date.now();
+    
+    // Si fue actualizado hace menos de 5 segundos y no es refresh forzado, usar cache
+    if (!forceRefresh && lastFetch && (now - lastFetch) < 5000) {
+      console.log('📦 Usando productos en cache');
+      return;
+    }
+
     set({ isLoading: true, error: null });
     try {
       const { filters, pagination } = get();
@@ -37,7 +47,8 @@ const useProductsStore = create((set, get) => ({
         set({
           products: response.data || [],
           pagination: response.pagination || pagination,
-          isLoading: false
+          isLoading: false,
+          lastFetch: now // ✅ Actualizar timestamp
         });
       } else {
         set({ isLoading: false });
@@ -49,6 +60,13 @@ const useProductsStore = create((set, get) => ({
         isLoading: false
       });
     }
+  },
+
+  // ✅ Método específico para refrescar después de operaciones de compra
+  refreshAfterPurchase: async () => {
+    console.log('🔄 Refrescando productos después de operación de compra...');
+    await get().fetchProducts(true); // Forzar refresh
+    await get().fetchStats(); // Actualizar estadísticas también
   },
 
   // Obtener estadísticas
@@ -92,7 +110,7 @@ const useProductsStore = create((set, get) => ({
       const response = await productsAPI.create(productData);
       console.log('✅ Respuesta:', response);
       if (response && response.success) {
-        await get().fetchProducts();
+        await get().fetchProducts(true); // ✅ Forzar refresh
         set({ isLoading: false });
         return true;
       } else {
@@ -118,7 +136,7 @@ const useProductsStore = create((set, get) => ({
     try {
       const response = await productsAPI.update(id, productData);
       if (response && response.success) {
-        await get().fetchProducts();
+        await get().fetchProducts(true); // ✅ Forzar refresh
         set({ isLoading: false });
         return true;
       } else {
@@ -140,7 +158,7 @@ const useProductsStore = create((set, get) => ({
     try {
       const response = await productsAPI.deactivate(id);
       if (response && response.success) {
-        await get().fetchProducts();
+        await get().fetchProducts(true); // ✅ Forzar refresh
         set({ isLoading: false });
         return true;
       } else {
@@ -162,7 +180,7 @@ const useProductsStore = create((set, get) => ({
     try {
       const response = await productsAPI.delete(id);
       if (response && response.success) {
-        await get().fetchProducts();
+        await get().fetchProducts(true); // ✅ Forzar refresh
         set({ isLoading: false });
         return true;
       } else {
@@ -191,6 +209,11 @@ const useProductsStore = create((set, get) => ({
     set((state) => ({
       pagination: { ...state.pagination, page }
     }));
+  },
+
+  // ✅ Limpiar cache (útil para debugging)
+  clearCache: () => {
+    set({ lastFetch: null });
   },
 
   // Limpiar errores
