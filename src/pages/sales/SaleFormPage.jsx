@@ -42,7 +42,7 @@ function SaleFormPage() {
   const { id } = useParams();
   const { createSale, updateSale, fetchSaleById, currentSale, loading } = useSalesStore();
   const { customers, fetchCustomers } = useCustomersStore();
-  const { products, fetchProducts } = useProductsStore();
+  const { searchProducts } = useProductsStore();
 
   const isEditMode = Boolean(id);
 
@@ -68,6 +68,8 @@ function SaleFormPage() {
   const [items, setItems] = useState([]);
   const [showProductSearch, setShowProductSearch] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
 
   // Cargar bodegas usando el servicio de API configurado
@@ -86,8 +88,31 @@ function SaleFormPage() {
 
   useEffect(() => {
     fetchCustomers();
-    fetchProducts();
-  }, [fetchCustomers, fetchProducts]);
+  }, [fetchCustomers]);
+
+  useEffect(() => {
+    const searchProductsDebounced = async () => {
+      if (searchTerm.trim().length < 2) {
+        setSearchResults([]);
+        setIsSearching(false);
+        return;
+      }
+
+      setIsSearching(true);
+      try {
+        const results = await searchProducts(searchTerm);
+        setSearchResults(results);
+      } catch (error) {
+        console.error('Error buscando productos:', error);
+        setSearchResults([]);
+      } finally {
+        setIsSearching(false);
+      }
+    };
+
+    const timer = setTimeout(searchProductsDebounced, 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm, searchProducts]);
 
   useEffect(() => {
     if (isEditMode && id) {
@@ -158,7 +183,7 @@ function SaleFormPage() {
         product_name: product.name,
         product_sku: product.sku,
         quantity: 1,
-        unit_price: product.sale_price || 0,
+        unit_price: product.base_price || 0,
         discount_percentage: 0,
         tax_percentage: 19
       };
@@ -264,10 +289,6 @@ function SaleFormPage() {
   };
 
   const totals = calculateTotals();
-  const filteredProducts = products.filter(p =>
-    p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (p.sku && p.sku.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
 
   return (
     <Layout>
@@ -739,62 +760,98 @@ function SaleFormPage() {
           onClose={() => {
             setShowProductSearch(false);
             setSearchTerm('');
+            setSearchResults([]);
           }}
           title="Buscar Producto"
         >
-          <div className="p-6">
-            <div className="mb-6">
-              <div className="relative">
-                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                <Input
-                  type="text"
-                  placeholder="Buscar por nombre o SKU..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-12 text-base"
-                  autoFocus
-                />
-              </div>
-            </div>
-
-            <div className="max-h-96 overflow-y-auto">
-              {filteredProducts.length === 0 ? (
-                <div className="text-center py-12 text-gray-500">
-                  <Package className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-                  <p className="font-medium">No se encontraron productos</p>
-                  <p className="text-sm mt-2">Intenta con otro término de búsqueda</p>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {filteredProducts.map(product => (
-                    <div
-                      key={product.id}
-                      onClick={() => handleAddItem(product)}
-                      className="p-4 border border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 cursor-pointer transition-all group"
-                    >
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
-                          <div className="font-medium text-gray-900 group-hover:text-blue-700">
-                            {product.name}
-                          </div>
-                          <div className="text-sm text-gray-500 mt-1">
-                            SKU: {product.sku || 'N/A'} • Stock disponible: {product.available_stock || 0}
-                          </div>
-                        </div>
-                        <div className="text-right ml-4">
-                          <div className="font-bold text-blue-600 text-lg">
-                            ${formatCurrency(product.sale_price || 0)}
-                          </div>
-                          <div className="text-xs text-gray-500 mt-1">
-                            Click para agregar
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+          <div className="space-y-4">
+            {/* Input de búsqueda */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+              <input
+                type="text"
+                placeholder="Buscar por nombre o SKU..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                autoFocus
+              />
+              {isSearching && (
+                <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-500"></div>
                 </div>
               )}
             </div>
+
+            {/* Mensaje: escribir al menos 2 caracteres */}
+            {searchTerm.length > 0 && searchTerm.length < 2 && (
+              <div className="text-center py-8">
+                <p className="text-sm text-gray-500">
+                  ✏️ Escribe al menos 2 caracteres para buscar
+                </p>
+              </div>
+            )}
+
+            {/* Mensaje: buscando... */}
+            {isSearching && searchTerm.length >= 2 && (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                <span className="ml-3 text-sm text-gray-600">Buscando productos...</span>
+              </div>
+            )}
+
+            {/* Mensaje: no se encontraron productos */}
+            {!isSearching && searchTerm.length >= 2 && searchResults.length === 0 && (
+              <div className="text-center py-8">
+                <p className="text-sm text-gray-500">
+                  🔍 No se encontraron productos con "{searchTerm}"
+                </p>
+              </div>
+            )}
+
+            {/* Lista de productos encontrados */}
+            {!isSearching && searchResults.length > 0 && (
+              <div className="max-h-96 overflow-y-auto space-y-2">
+                {searchResults.map(product => (
+                  <button
+                    key={product.id}
+                    onClick={() => {
+                      handleAddItem(product);
+                      setShowProductSearch(false);
+                      setSearchTerm('');
+                      setSearchResults([]);
+                    }}
+                    className="w-full text-left p-4 border border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-300 transition-all duration-200"
+                  >
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <p className="font-medium text-gray-900">{product.name}</p>
+                        <p className="text-sm text-gray-500 mt-1">SKU: {product.sku}</p>
+                        <div className="flex items-center gap-3 mt-2">
+                          <span className={`text-sm font-medium ${
+                            product.current_stock > 0 
+                              ? 'text-green-600' 
+                              : 'text-red-600'
+                          }`}>
+                            Stock: {product.current_stock || 0}
+                          </span>
+                          {product.category?.name && (
+                            <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">
+                              {product.category.name}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-right ml-4">
+                        <p className="font-semibold text-lg text-blue-600">
+                          {formatCurrency(product.base_price || product.base_price || 0)}
+                        </p>
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </Modal>
 

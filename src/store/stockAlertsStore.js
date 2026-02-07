@@ -36,9 +36,17 @@ const useStockAlertsStore = create((set, get) => ({
   error: null,
 
   // Acciones
-  setFilters: (filters) => set({ filters: { ...get().filters, ...filters } }),
+  setFilters: async (newFilters) => {
+    set({ filters: { ...get().filters, ...newFilters } });
+    // Automáticamente recargar alertas cuando cambien los filtros
+    await get().fetchAlerts();
+  },
   
-  setPage: (page) => set({ pagination: { ...get().pagination, page } }),
+  setPage: async (page) => {
+    set({ pagination: { ...get().pagination, page } });
+    // Automáticamente recargar alertas cuando cambie la página
+    await get().fetchAlerts();
+  },
 
   resetFilters: () => set({
     filters: {
@@ -63,7 +71,11 @@ const useStockAlertsStore = create((set, get) => ({
         limit: pagination.limit
       };
       
+      console.log('📡 Fetching alerts con params:', params);
       const response = await stockAlertsApi.getStockAlerts(params);
+      console.log('📡 Response recibida:', response);
+      console.log('📡 Datos de alertas:', response.data);
+      console.log('📡 Número de alertas:', response.data?.length);
       
       set({
         alerts: response.data,
@@ -71,6 +83,7 @@ const useStockAlertsStore = create((set, get) => ({
         loading: false
       });
     } catch (error) {
+      console.error('❌ Error en fetchAlerts:', error);
       set({ 
         error: error.response?.data?.message || 'Error al cargar alertas',
         loading: false 
@@ -108,15 +121,21 @@ const useStockAlertsStore = create((set, get) => ({
   checkAlerts: async () => {
     set({ loading: true, error: null });
     try {
+      console.log('🔍 Verificando alertas manualmente...');
       const response = await stockAlertsApi.checkStockAlerts();
+      console.log('✅ Respuesta de checkAlerts:', response);
+      console.log('✅ Alertas creadas:', response.data?.alerts_created);
+      console.log('✅ Productos revisados:', response.data?.products_checked);
       
       // Recargar alertas y estadísticas
+      console.log('🔄 Recargando alertas y stats...');
       await get().fetchAlerts();
       await get().fetchStats();
       
       set({ loading: false });
       return response.data;
     } catch (error) {
+      console.error('❌ Error en checkAlerts:', error);
       set({ 
         error: error.response?.data?.message || 'Error al verificar alertas',
         loading: false 

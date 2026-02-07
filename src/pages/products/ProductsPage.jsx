@@ -34,10 +34,16 @@ function ProductsPage() {
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
 
+  // ✅ Refresh al entrar a la página
   useEffect(() => {
-    fetchProducts();
+    fetchProducts(true);
     fetchStats();
     fetchCategories();
+  }, []); // ← Sin dependencias = se ejecuta siempre al montar
+
+  // Refresh cuando cambian filtros
+  useEffect(() => {
+    fetchProducts();
   }, [filters.search, filters.category_id, filters.is_active, filters.sort_by, filters.sort_order, pagination.page]);
 
   // Búsqueda en tiempo real con debounce
@@ -141,94 +147,138 @@ function ProductsPage() {
   const handleImport = async (productsData) => {
     try {
       let successCount = 0;
+      let skippedCount = 0;
       let errorCount = 0;
       const errors = [];
+      const skipped = [];
+      const imported = [];
+
+      console.log(`📦 Iniciando importación de ${productsData.length} productos...`);
 
       for (const productData of productsData) {
         try {
-          // Buscar category_id si se especificó una categoría
-          let category_id = null;
-          if (productData.category_name) {
-            const category = categories.find(
-              c => c.name.toLowerCase() === productData.category_name.toLowerCase()
-            );
-            if (category) {
-              category_id = category.id;
-            }
-          }
-
           // Mapear los datos al formato esperado por el API
           const mappedData = {
             sku: productData.sku,
-            barcode: productData.barcode || null,
             name: productData.name,
-            description: productData.description || null,
-            category_id: category_id,
-            unit_of_measure: mapUnitOfMeasure(productData.unit), // Mapear unidad
+            description: null,
+            category_id: null,
+            unit_of_measure: 'unidad',
             current_stock: parseFloat(productData.current_stock) || 0,
             min_stock: parseFloat(productData.min_stock) || 0,
-            max_stock: productData.max_stock ? parseFloat(productData.max_stock) : null,
-            sale_price: parseFloat(productData.sale_price) || 0,
+            max_stock: null,
+            base_price: parseFloat(productData.base_price) || 0,
             average_cost: parseFloat(productData.average_cost) || 0,
-            track_inventory: productData.track_inventory,
-            location: productData.location || null,
+            profit_margin_percentage: parseFloat(productData.profit_margin_percentage) || 30,
+            track_inventory: true,
+            location: null,
             is_active: true,
             is_for_sale: true,
             is_for_purchase: true,
             reserved_stock: 0
           };
 
-          console.log('🔍 Intentando crear:', mappedData);
+          console.log(`🔍 Importando: ${mappedData.sku} - ${mappedData.name}`);
+          
           await createProduct(mappedData);
+          
           successCount++;
-          console.log('✅ Producto creado:', productData.sku);
+          imported.push(productData.sku);
+          console.log(`✅ Importado: ${productData.sku}`);
+          
         } catch (error) {
-          errorCount++;
-          console.error('❌ Error al crear producto:', error);
-          const errorMsg = error.message || 'Error desconocido';
-          errors.push(`${productData.sku}: ${errorMsg}`);
+          console.error(`❌ Error con ${productData.sku}:`, error);
+          
+          const errorMsg = error.message || error.response?.data?.message || 'Error desconocido';
+          
+          // Verificar si es un error de código duplicado
+          if (errorMsg.includes('ya existe') || 
+              errorMsg.includes('duplicate') || 
+              errorMsg.includes('unique') ||
+              errorMsg.includes('duplicado')) {
+            
+            skippedCount++;
+            skipped.push(productData.sku);
+            console.log(`⏭️ Omitido (duplicado): ${productData.sku}`);
+            
+          } else {
+            // Error real
+            errorCount++;
+            errors.push({
+              sku: productData.sku,
+              name: productData.name,
+              error: errorMsg
+            });
+            console.log(`❌ Error real: ${productData.sku} - ${errorMsg}`);
+          }
         }
       }
 
-      // Mostrar resultado
-      let message = '';
+      // ========================================
+      // MOSTRAR RESUMEN COMPLETO
+      // ========================================
+      
+      console.log('\n========================================');
+      console.log('📊 RESUMEN DE IMPORTACIÓN');
+      console.log('========================================');
+      console.log(`Total procesados: ${productsData.length}`);
+      console.log(`✅ Importados: ${successCount}`);
+      console.log(`⏭️ Omitidos (duplicados): ${skippedCount}`);
+      console.log(`❌ Errores: ${errorCount}`);
+      console.log('========================================\n');
+
+      // Construir mensaje para el usuario
+      let message = '📊 RESUMEN DE IMPORTACIÓN\n\n';
+      message += `Total procesados: ${productsData.length}\n\n`;
       
       if (successCount > 0) {
-        message += `✅ ${successCount} productos importados correctamente\n\n`;
+        message += `✅ ${successCount} productos importados correctamente\n`;
+        if (imported.length <= 5) {
+          message += `   ${imported.join(', ')}\n`;
+        } else {
+          message += `   ${imported.slice(0, 5).join(', ')} y ${imported.length - 5} más\n`;
+        }
+        message += '\n';
+      }
+      
+      if (skippedCount > 0) {
+        message += `⏭️ ${skippedCount} productos omitidos (códigos duplicados)\n`;
+        if (skipped.length <= 5) {
+          message += `   ${skipped.join(', ')}\n`;
+        } else {
+          message += `   ${skipped.slice(0, 5).join(', ')} y ${skipped.length - 5} más\n`;
+        }
+        message += '\n';
       }
       
       if (errorCount > 0) {
-        message += `⚠️ ${errorCount} productos con errores\n\n`;
-        message += 'Errores:\n';
-        errors.slice(0, 5).forEach(err => {
-          message += `${err}\n`;
+        message += `❌ ${errorCount} productos con errores\n\n`;
+        message += 'Detalles de errores:\n';
+        errors.slice(0, 3).forEach(err => {
+          message += `• ${err.sku}: ${err.error}\n`;
         });
         
-        if (errors.length > 5) {
-          message += `\n... y ${errors.length - 5} errores más`;
-        }
-        
-        // Verificar si el error es de tenant_id
-        if (errors.some(e => e.includes('tenant_id') || e.includes('Usuario sin tenant'))) {
-          message += '\n\n🔧 SOLUCIÓN:\n';
-          message += '1. Ejecutar: cd backend && node scripts/fix-users-tenant.js\n';
-          message += '2. Reiniciar backend\n';
-          message += '3. Cerrar sesión y volver a entrar\n';
-          message += '4. Intentar importar nuevamente';
+        if (errors.length > 3) {
+          message += `\n... y ${errors.length - 3} errores más`;
         }
       }
       
-      if (successCount === 0 && errorCount === 0) {
+      if (successCount === 0 && skippedCount === 0 && errorCount === 0) {
         message = '⚠️ No se procesaron productos';
       }
 
+      // Mostrar el resumen
       alert(message);
       
+      // Refrescar la lista si hubo al menos un producto importado
       if (successCount > 0) {
+        console.log('🔄 Refrescando lista de productos...');
         fetchProducts();
         fetchStats();
       }
+      
     } catch (error) {
+      console.error('❌ Error general en importación:', error);
       alert('Error al importar productos: ' + error.message);
     }
   };
@@ -500,7 +550,7 @@ function ProductsPage() {
                         </td>
                         <td className="px-6 py-4">
                           <div className="text-sm font-medium text-gray-900">
-                            {formatCurrency(product.sale_price)}
+                            {formatCurrency(product.base_price)}
                           </div>
                           {product.average_cost > 0 && (
                             <div className="text-xs text-gray-500">
@@ -559,24 +609,30 @@ function ProductsPage() {
 
               {/* Pagination */}
               {pagination && pagination.totalPages > 1 && (
-                <div className="bg-gray-50 px-6 py-4 flex items-center justify-between border-t border-gray-200">
-                  <div className="flex-1 flex justify-between sm:hidden">
+                <div className="bg-gray-50 px-6 py-4 border-t border-gray-200">
+                  {/* Mobile */}
+                  <div className="flex justify-between sm:hidden mb-3">
                     <button
                       onClick={() => setPage(pagination.page - 1)}
                       disabled={pagination.page === 1}
-                      className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
+                      className="px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
                     >
                       Anterior
                     </button>
+                    <span className="px-4 py-2 text-sm text-gray-700">
+                      Pág. {pagination.page} de {pagination.totalPages}
+                    </span>
                     <button
                       onClick={() => setPage(pagination.page + 1)}
                       disabled={pagination.page === pagination.totalPages}
-                      className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
+                      className="px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
                     >
                       Siguiente
                     </button>
                   </div>
-                  <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+
+                  {/* Desktop */}
+                  <div className="hidden sm:flex sm:items-center sm:justify-between">
                     <div>
                       <p className="text-sm text-gray-700">
                         Mostrando <span className="font-medium">{((pagination.page - 1) * pagination.limit) + 1}</span> a{' '}
@@ -586,42 +642,112 @@ function ProductsPage() {
                         de <span className="font-medium">{pagination.total}</span> productos
                       </p>
                     </div>
-                    <div>
-                      <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
-                        <button
-                          onClick={() => setPage(pagination.page - 1)}
-                          disabled={pagination.page === 1}
-                          className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
-                        >
-                          <span className="sr-only">Anterior</span>
-                          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                          </svg>
-                        </button>
-                        {[...Array(pagination.totalPages)].map((_, i) => (
-                          <button
-                            key={i + 1}
-                            onClick={() => setPage(i + 1)}
-                            className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
-                              pagination.page === i + 1
-                                ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
-                                : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
-                            }`}
-                          >
-                            {i + 1}
-                          </button>
-                        ))}
-                        <button
-                          onClick={() => setPage(pagination.page + 1)}
-                          disabled={pagination.page === pagination.totalPages}
-                          className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
-                        >
-                          <span className="sr-only">Siguiente</span>
-                          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                          </svg>
-                        </button>
-                      </nav>
+                    
+                    <div className="flex gap-2">
+                      {/* Primera página */}
+                      <button
+                        onClick={() => setPage(1)}
+                        disabled={pagination.page === 1}
+                        className="px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                        title="Primera página"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+                        </svg>
+                      </button>
+
+                      {/* Anterior */}
+                      <button
+                        onClick={() => setPage(pagination.page - 1)}
+                        disabled={pagination.page === 1}
+                        className="px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                        </svg>
+                      </button>
+
+                      {/* Números de página con ellipsis */}
+                      {(() => {
+                        const pages = [];
+                        const delta = 2; // páginas a cada lado
+                        const start = Math.max(1, pagination.page - delta);
+                        const end = Math.min(pagination.totalPages, pagination.page + delta);
+
+                        // Primera página
+                        if (start > 1) {
+                          pages.push(
+                            <button
+                              key={1}
+                              onClick={() => setPage(1)}
+                              className="px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
+                            >
+                              1
+                            </button>
+                          );
+                          if (start > 2) {
+                            pages.push(<span key="ellipsis1" className="px-2 py-2 text-gray-500">...</span>);
+                          }
+                        }
+
+                        // Páginas del rango
+                        for (let i = start; i <= end; i++) {
+                          pages.push(
+                            <button
+                              key={i}
+                              onClick={() => setPage(i)}
+                              className={`px-3 py-2 border rounded-lg text-sm font-medium ${
+                                pagination.page === i
+                                  ? 'bg-blue-50 border-blue-500 text-blue-600'
+                                  : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                              }`}
+                            >
+                              {i}
+                            </button>
+                          );
+                        }
+
+                        // Última página
+                        if (end < pagination.totalPages) {
+                          if (end < pagination.totalPages - 1) {
+                            pages.push(<span key="ellipsis2" className="px-2 py-2 text-gray-500">...</span>);
+                          }
+                          pages.push(
+                            <button
+                              key={pagination.totalPages}
+                              onClick={() => setPage(pagination.totalPages)}
+                              className="px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
+                            >
+                              {pagination.totalPages}
+                            </button>
+                          );
+                        }
+
+                        return pages;
+                      })()}
+
+                      {/* Siguiente */}
+                      <button
+                        onClick={() => setPage(pagination.page + 1)}
+                        disabled={pagination.page === pagination.totalPages}
+                        className="px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </button>
+
+                      {/* Última página */}
+                      <button
+                        onClick={() => setPage(pagination.totalPages)}
+                        disabled={pagination.page === pagination.totalPages}
+                        className="px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                        title="Última página"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+                        </svg>
+                      </button>
                     </div>
                   </div>
                 </div>

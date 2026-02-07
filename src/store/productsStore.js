@@ -24,31 +24,29 @@ const useProductsStore = create((set, get) => ({
 
   // ✅ Obtener productos con cache inteligente
   fetchProducts: async (forceRefresh = false) => {
-    const { lastFetch } = get();
-    const now = Date.now();
-    
-    // Si fue actualizado hace menos de 5 segundos y no es refresh forzado, usar cache
-    if (!forceRefresh && lastFetch && (now - lastFetch) < 5000) {
-      console.log('📦 Usando productos en cache');
-      return;
-    }
-
     set({ isLoading: true, error: null });
+    
     try {
       const { filters, pagination } = get();
       
-      const response = await productsAPI.getAll({
+      // ✅ SOLUCIÓN: Agregar timestamp para evitar cache
+      const params = {
         ...filters,
         page: pagination.page,
         limit: pagination.limit
-      });
+      };
+      
+      if (forceRefresh) {
+        params._t = Date.now(); // ← Invalida cache del navegador
+      }
+      
+      const response = await productsAPI.getAll(params);
 
       if (response && response.success) {
         set({
           products: response.data || [],
           pagination: response.pagination || pagination,
-          isLoading: false,
-          lastFetch: now // ✅ Actualizar timestamp
+          isLoading: false
         });
       } else {
         set({ isLoading: false });
@@ -209,6 +207,30 @@ const useProductsStore = create((set, get) => ({
     set((state) => ({
       pagination: { ...state.pagination, page }
     }));
+  },
+
+  searchProducts: async (searchTerm) => {
+    if (!searchTerm || searchTerm.trim().length < 2) {
+      return [];
+    }
+
+    try {
+      const response = await productsAPI.getAll({
+        search: searchTerm.trim(),
+        is_active: 'true',
+        limit: 100, // Más resultados para búsqueda
+        page: 1,
+        _t: Date.now() // Evitar cache
+      });
+
+      if (response && response.success) {
+        return response.data || [];
+      }
+      return [];
+    } catch (error) {
+      console.error('Error buscando productos:', error);
+      return [];
+    }
   },
 
   // ✅ Limpiar cache (útil para debugging)

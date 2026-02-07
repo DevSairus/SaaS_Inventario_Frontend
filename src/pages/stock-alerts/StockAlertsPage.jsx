@@ -28,10 +28,21 @@ const StockAlertsPage = () => {
   const [showResolveModal, setShowResolveModal] = useState(false);
   const [resolutionNotes, setResolutionNotes] = useState('');
 
+
+  // Cargar alertas y stats al montar el componente
   useEffect(() => {
+    console.log('📊 StockAlertsPage montado - cargando datos...');
     if (fetchAlerts) fetchAlerts();
     if (fetchStats) fetchStats();
-  }, [fetchAlerts, fetchStats]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Debug: Monitorear cambios en alerts
+  useEffect(() => {
+    console.log('🔔 Alerts actualizadas:', alerts);
+    console.log('🔔 Número de alertas:', alerts?.length || 0);
+    console.log('🔔 Es array?:', Array.isArray(alerts));
+  }, [alerts]);
 
   const handleFilterChange = (field, value) => {
     if (setFilters) {
