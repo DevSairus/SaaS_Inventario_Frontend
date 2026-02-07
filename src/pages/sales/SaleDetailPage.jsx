@@ -102,8 +102,23 @@ export default function SaleDetailPage() {
     }
   };
 
-  const handlePrint = () => {
-    window.print();
+  // Abrir PDF en nueva pestaña para imprimir
+  const handlePrint = async () => {
+    try {
+      const response = await salesApi.generatePDF(id);
+      const url = URL.createObjectURL(response.data);
+      const printWindow = window.open(url, '_blank');
+      
+      // Esperar a que cargue y ejecutar print automáticamente
+      if (printWindow) {
+        printWindow.onload = function() {
+          printWindow.print();
+        };
+      }
+    } catch (error) {
+      console.error('Error generando PDF para imprimir:', error);
+      alert('Error al generar el PDF');
+    }
   };
 
   // window.open() no envía headers → el token no llega al backend.
@@ -176,87 +191,6 @@ export default function SaleDetailPage() {
 
   return (
     <Layout>
-      {/* Estilos para impresión: oculta todo excepto el contenido de la venta */}
-      <style>{`
-        @media print {
-          /* Ocultar todo excepto el contenido imprimible */
-          body * { 
-            visibility: hidden; 
-          }
-          
-          .print-root, 
-          .print-root * { 
-            visibility: visible; 
-          }
-          
-          .print-root {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-          }
-          
-          /* Ocultar elementos no imprimibles */
-          .no-print, 
-          .no-print * { 
-            display: none !important; 
-            visibility: hidden !important;
-          }
-          
-          /* Mostrar solo contenido de impresión */
-          .print-content { 
-            display: block !important; 
-          }
-          
-          /* Estilos de página */
-          @page { 
-            margin: 1.5cm; 
-            size: A4 portrait; 
-          }
-          
-          /* Colores y fondos */
-          .print-root { 
-            color: #000 !important; 
-            background: white !important;
-          }
-          
-          .print-root .bg-white { 
-            background: white !important; 
-            box-shadow: none !important; 
-          }
-          
-          /* Tablas */
-          .print-root table { 
-            border-collapse: collapse; 
-            width: 100%; 
-            page-break-inside: avoid;
-          }
-          
-          .print-root th, 
-          .print-root td { 
-            border: 1px solid #d1d5db !important; 
-            padding: 8px 12px !important; 
-          }
-          
-          .print-root th { 
-            background: #f3f4f6 !important; 
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-          }
-          
-          /* Evitar saltos de página dentro de elementos */
-          .print-root h1,
-          .print-root h2,
-          .print-root h3 {
-            page-break-after: avoid;
-          }
-          
-          .print-root tr {
-            page-break-inside: avoid;
-          }
-        }
-      `}</style>
-
       <div className="print-root p-6">
         {/* Header - solo visible en pantalla */}
         <div className="no-print mb-6">

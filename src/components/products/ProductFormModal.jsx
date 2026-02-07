@@ -21,7 +21,6 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
     profit_margin_percentage: '',
     base_price: '',
     current_stock: '',
-    reorder_point: '',
     track_inventory: true,
     allow_negative_stock: false,
     is_active: true
@@ -49,7 +48,6 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
         profit_margin_percentage: product.profit_margin_percentage || '',
         base_price: product.base_price || '',
         current_stock: product.current_stock || '',
-        reorder_point: product.reorder_point || '',
         track_inventory: product.track_inventory !== false,
         allow_negative_stock: product.allow_negative_stock || false,
         is_active: product.is_active !== false
@@ -68,7 +66,6 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
         profit_margin_percentage: '',
         base_price: '',
         current_stock: '',
-        reorder_point: '',
         track_inventory: true,
         allow_negative_stock: false,
         is_active: true
@@ -122,7 +119,6 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
       profit_margin_percentage: formData.profit_margin_percentage ? parseFloat(formData.profit_margin_percentage) : null,
       base_price: formData.base_price ? parseFloat(formData.base_price) : null,
       current_stock: formData.current_stock ? parseFloat(formData.current_stock) : 0,
-      reorder_point: formData.reorder_point ? parseFloat(formData.reorder_point) : null
     };
 
     if (product) {
@@ -433,8 +429,6 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
               </label>
               <input
                 type="number"
-                name="reorder_point"
-                value={formData.reorder_point}
                 onChange={handleChange}
                 step="0.01"
                 min="0"
