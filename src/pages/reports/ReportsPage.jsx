@@ -18,14 +18,29 @@ const ReportsPage = () => {
   const [profitData, setProfitData] = useState({ products: [], totals: {} });
   const [rotationData, setRotationData] = useState({ high_rotation: [], low_rotation: [], total_products: 0, products_with_sales: 0, products_without_sales: 0 });
   const [periodMonths, setPeriodMonths] = useState(6);
+  
+  // Estados para selector de fechas personalizado en ganancias
+  const [profitDateMode, setProfitDateMode] = useState('period'); // 'period' o 'custom'
+  const [profitCustomDates, setProfitCustomDates] = useState({
+    from_date: '',
+    to_date: ''
+  });
 
   const fetchAll = async () => {
     setLoading(true);
     try {
+        // Determinar parámetros para el reporte de ganancias
+        let profitParams;
+        if (profitDateMode === 'custom' && profitCustomDates.from_date && profitCustomDates.to_date) {
+          profitParams = profitCustomDates;
+        } else {
+          profitParams = { months: periodMonths };
+        }
+
         const [mov, val, prof, rot] = await Promise.all([
         reportsAPI.getMovementsByMonth(periodMonths),
         reportsAPI.getValuation(),
-        reportsAPI.getProfitReport(periodMonths),
+        reportsAPI.getProfitReport(profitParams),
         reportsAPI.getRotationReport(periodMonths)
         ]);
         
@@ -85,7 +100,60 @@ const ReportsPage = () => {
     }
     };
 
-  useEffect(() => { fetchAll(); }, [periodMonths]);
+  useEffect(() => { fetchAll(); }, [periodMonths, profitDateMode]);
+
+  const handleApplyCustomDates = () => {
+    if (profitCustomDates.from_date && profitCustomDates.to_date) {
+      fetchAll();
+    }
+  };
+
+  const exportProfitToExcel = () => {
+    // Crear datos para CSV
+    const headers = ['Producto', 'SKU', 'Cantidad', 'Ingresos', 'Costo', 'Ganancia', 'Margen %'];
+    const rows = profitData.products.map(p => [
+      p.product_name,
+      p.product_sku,
+      p.total_quantity,
+      p.total_revenue,
+      p.total_cost,
+      p.profit,
+      p.margin_percentage.toFixed(1)
+    ]);
+    
+    // Agregar fila de totales
+    rows.push([
+      'TOTAL',
+      '',
+      '',
+      profitData.totals.total_revenue,
+      profitData.totals.total_cost,
+      profitData.totals.total_profit,
+      profitData.totals.margin_percentage.toFixed(1)
+    ]);
+
+    // Crear CSV
+    let csvContent = headers.join(',') + '\n';
+    rows.forEach(row => {
+      csvContent += row.join(',') + '\n';
+    });
+
+    // Descargar archivo
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    
+    // Crear nombre de archivo con fecha
+    const dateStr = profitDateMode === 'custom' 
+      ? `${profitCustomDates.from_date}_${profitCustomDates.to_date}`
+      : `ultimos_${periodMonths}_meses`;
+    link.setAttribute('download', `informe_ganancias_${dateStr}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   const tabs = [
     { id: 'movements', label: 'Movimientos', icon: '📊' },
@@ -293,6 +361,84 @@ const ReportsPage = () => {
           /* ===== GANANCIA ===== */
           || tab === 'profit' && (
             <div className="space-y-6">
+              {/* Selector de período personalizado */}
+              <div className="bg-white rounded-xl shadow p-6">
+                <div className="flex flex-col md:flex-row md:items-end gap-4">
+                  <div className="flex-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Modo de filtrado
+                    </label>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setProfitDateMode('period')}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                          profitDateMode === 'period'
+                            ? 'bg-emerald-600 text-white shadow-md'
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                      >
+                        Por período
+                      </button>
+                      <button
+                        onClick={() => setProfitDateMode('custom')}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                          profitDateMode === 'custom'
+                            ? 'bg-emerald-600 text-white shadow-md'
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                      >
+                        Rango personalizado
+                      </button>
+                    </div>
+                  </div>
+
+                  {profitDateMode === 'custom' && (
+                    <>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Fecha desde
+                        </label>
+                        <input
+                          type="date"
+                          value={profitCustomDates.from_date}
+                          onChange={(e) => setProfitCustomDates(prev => ({ ...prev, from_date: e.target.value }))}
+                          className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Fecha hasta
+                        </label>
+                        <input
+                          type="date"
+                          value={profitCustomDates.to_date}
+                          onChange={(e) => setProfitCustomDates(prev => ({ ...prev, to_date: e.target.value }))}
+                          className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                        />
+                      </div>
+                      <button
+                        onClick={handleApplyCustomDates}
+                        disabled={!profitCustomDates.from_date || !profitCustomDates.to_date}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all text-sm font-medium"
+                      >
+                        Aplicar
+                      </button>
+                    </>
+                  )}
+
+                  <button
+                    onClick={exportProfitToExcel}
+                    disabled={profitData.products.length === 0}
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all flex items-center gap-2 text-sm font-medium shadow-md"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    Exportar a Excel
+                  </button>
+                </div>
+              </div>
+
               {/* KPIs */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 {[

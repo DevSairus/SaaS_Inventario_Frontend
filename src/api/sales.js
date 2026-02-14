@@ -11,6 +11,8 @@ const salesApi = {
     if (filters.from_date) params.append('from_date', filters.from_date);
     if (filters.to_date) params.append('to_date', filters.to_date);
     if (filters.document_type) params.append('document_type', filters.document_type);
+    if (filters.customer_name) params.append('customer_name', filters.customer_name);
+    if (filters.vehicle_plate) params.append('vehicle_plate', filters.vehicle_plate);
     
     return api.get(`/sales?${params.toString()}`);
   },

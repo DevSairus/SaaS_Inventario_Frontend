@@ -13,6 +13,8 @@ const useSalesStore = create((set, get) => ({
     from_date: '',
     to_date: '',
     document_type: '',
+    customer_name: '',
+    vehicle_plate: '',
   },
   stats: {
     total_sales: 0,

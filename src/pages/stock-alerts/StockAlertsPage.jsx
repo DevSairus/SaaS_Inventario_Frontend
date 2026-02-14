@@ -395,25 +395,22 @@ const StockAlertsPage = () => {
                 <table className="w-full">
                   <thead className="bg-gray-50 border-b border-gray-200">
                     <tr>
-                      <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">
                         Producto
                       </th>
-                      <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Tipo
                       </th>
-                      <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Stock
                       </th>
-                      <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">
                         Severidad
                       </th>
-                      <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Estado
-                      </th>
-                      <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">
                         Fecha
                       </th>
-                      <th className="px-6 py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Acciones
                       </th>
                     </tr>
@@ -421,57 +418,73 @@ const StockAlertsPage = () => {
                   <tbody className="bg-white divide-y divide-gray-200">
                     {alerts.map((alert) => (
                       <tr key={alert.id} className="hover:bg-gray-50 transition-colors">
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div>
-                            <div className="font-medium text-gray-900">{alert.product?.name}</div>
-                            <div className="text-sm text-gray-500">SKU: {alert.product?.sku}</div>
+                        {/* Columna de Producto - Truncada */}
+                        <td className="px-4 py-3">
+                          <div className="max-w-xs">
+                            <div 
+                              className="font-medium text-gray-900 truncate" 
+                              title={alert.product?.name}
+                            >
+                              {alert.product?.name}
+                            </div>
+                            <div className="text-xs text-gray-500 truncate">
+                              SKU: {alert.product?.sku}
+                            </div>
                           </div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-3 py-1 text-xs font-semibold rounded-full ${getTypeBadge(alert.alert_type)}`}>
+                        
+                        {/* Columna de Tipo - Compacta */}
+                        <td className="px-3 py-3">
+                          <span className={`inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full ${getTypeBadge(alert.alert_type)}`}>
                             {getTypeLabel(alert.alert_type)}
                           </span>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        
+                        {/* Columna de Stock - Compacta */}
+                        <td className="px-3 py-3">
                           <div className="text-sm">
                             <div className="text-gray-900 font-medium">
-                              Actual: {alert.product?.current_stock || 0}
+                              {alert.product?.current_stock || 0}
                             </div>
-                            <div className="text-gray-500">
-                              Mín: {alert.product?.min_stock || 0}
+                            <div className="text-xs text-gray-500">
+                              Min: {alert.product?.min_stock || 0}
                             </div>
                           </div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-3 py-1 text-xs font-semibold rounded-lg ${getSeverityBadge(alert.severity)}`}>
-                            {alert.severity}
+                        
+                        {/* Columna de Severidad - Oculta en móvil */}
+                        <td className="px-3 py-3 hidden lg:table-cell">
+                          <span className={`inline-flex items-center px-2 py-1 text-xs font-semibold rounded-lg ${getSeverityBadge(alert.severity)}`}>
+                            {alert.severity === 'critical' ? '🔴 Crítica' : alert.severity === 'warning' ? '⚠️ Alerta' : 'ℹ️ Info'}
                           </span>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-3 py-1 text-xs font-semibold rounded-lg ${getStatusBadge(alert.status)}`}>
-                            {alert.status === 'active' ? 'Activo' : alert.status === 'resolved' ? 'Resuelto' : 'Ignorado'}
-                          </span>
+                        
+                        {/* Columna de Fecha - Oculta en tablet */}
+                        <td className="px-3 py-3 hidden md:table-cell text-sm text-gray-500">
+                          {new Date(alert.created_at).toLocaleDateString('es-ES', { 
+                            day: '2-digit', 
+                            month: 'short' 
+                          })}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {new Date(alert.created_at).toLocaleDateString()}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center justify-center gap-2">
+                        
+                        {/* Columna de Acciones - Compacta */}
+                        <td className="px-4 py-3">
+                          <div className="flex items-center justify-center gap-1">
                             {alert.status === 'active' && (
                               <>
                                 <button
                                   onClick={() => handleResolve(alert)}
-                                  className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                                  className="p-1.5 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
                                   title="Resolver"
                                 >
-                                  <CheckCircle className="w-5 h-5" />
+                                  <CheckCircle className="w-4 h-4" />
                                 </button>
                                 <button
                                   onClick={() => handleIgnore(alert.id)}
-                                  className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                                  className="p-1.5 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
                                   title="Ignorar"
                                 >
-                                  <XCircle className="w-5 h-5" />
+                                  <XCircle className="w-4 h-4" />
                                 </button>
                               </>
                             )}
@@ -482,10 +495,10 @@ const StockAlertsPage = () => {
                                 fetchSuppliersForProduct(alert.product?.id);
                                 setShowSuppliersModal(true);
                               }}
-                              className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                              className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
                               title="Ver Proveedores"
                             >
-                              <Package className="w-5 h-5" />
+                              <Package className="w-4 h-4" />
                             </button>
                           </div>
                         </td>

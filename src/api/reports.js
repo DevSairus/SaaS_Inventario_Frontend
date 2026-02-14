@@ -11,8 +11,13 @@ export const reportsAPI = {
     return response.data;
   },
 
-  getProfitReport: async (months = 3, limit = 10) => {
-    const response = await api.get('/inventory/reports/profit', { params: { months, limit } });
+  getProfitReport: async (params = {}, limit = 100) => {
+    // Si params es un número, es el modo legacy (meses)
+    const queryParams = typeof params === 'number' 
+      ? { months: params, limit } 
+      : { ...params, limit };
+    
+    const response = await api.get('/inventory/reports/profit', { params: queryParams });
     return response.data;
   },
 

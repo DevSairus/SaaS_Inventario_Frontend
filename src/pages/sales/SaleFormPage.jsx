@@ -72,6 +72,20 @@ function SaleFormPage() {
   const [isSearching, setIsSearching] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
 
+  // Estados para búsqueda de clientes
+  const [customerSearchTerm, setCustomerSearchTerm] = useState('');
+  const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
+
+  // Clientes filtrados basados en el término de búsqueda
+  const filteredCustomers = customerSearchTerm.trim() === '' 
+    ? customers 
+    : customers.filter(customer => {
+        const searchLower = customerSearchTerm.toLowerCase();
+        const fullName = `${customer.first_name} ${customer.last_name}`.toLowerCase();
+        const taxId = (customer.tax_id || '').toLowerCase();
+        return fullName.includes(searchLower) || taxId.includes(searchLower);
+      });
+
   // Cargar bodegas usando el servicio de API configurado
   useEffect(() => {
     const loadWarehouses = async () => {
@@ -114,6 +128,18 @@ function SaleFormPage() {
     return () => clearTimeout(timer);
   }, [searchTerm, searchProducts]);
 
+  // Cerrar dropdown de clientes al hacer clic fuera
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (showCustomerDropdown && !event.target.closest('.customer-selector')) {
+        setShowCustomerDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showCustomerDropdown]);
+
   useEffect(() => {
     if (isEditMode && id) {
       fetchSaleById(id);
@@ -133,6 +159,11 @@ function SaleFormPage() {
         notes: currentSale.notes || '',
         vehicle_plate: currentSale.vehicle_plate || ''
       });
+
+      // Establecer el nombre del cliente en el campo de búsqueda
+      if (currentSale.customer_name) {
+        setCustomerSearchTerm(currentSale.customer_name);
+      }
 
       if (currentSale.items && currentSale.items.length > 0) {
         const loadedItems = currentSale.items.map(item => ({
@@ -380,26 +411,6 @@ function SaleFormPage() {
                     />
                   </div>
 
-                  {/* Método de Pago */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      <CreditCard className="w-4 h-4 inline mr-1" />
-                      Método de Pago *
-                    </label>
-                    <select
-                      name="payment_method"
-                      value={formData.payment_method}
-                      onChange={handleInputChange}
-                      required
-                      className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                    >
-                      <option value="efectivo">💵 Efectivo</option>
-                      <option value="tarjeta">💳 Tarjeta</option>
-                      <option value="transferencia">🏦 Transferencia</option>
-                      <option value="credito">📝 Crédito</option>
-                    </select>
-                  </div>
-
                   {/* Cliente */}
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -407,28 +418,66 @@ function SaleFormPage() {
                       Cliente *
                     </label>
                     <div className="flex gap-2">
-                      <select
-                        name="customer_id"
-                        value={formData.customer_id}
-                        onChange={handleInputChange}
-                        required={!showQuickCustomer}
-                        disabled={showQuickCustomer}
-                        className="flex-1 px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 transition-all"
-                      >
-                        <option value="">Seleccionar cliente</option>
-                        {customers.map(customer => (
-                          <option key={customer.id} value={customer.id}>
-                            {customer.first_name} {customer.last_name} {customer.tax_id ? `- ${customer.tax_id}` : ''}
-                          </option>
-                        ))}
-                      </select>
+                      <div className="flex-1 relative customer-selector">
+                        <input
+                          type="text"
+                          value={customerSearchTerm}
+                          onChange={(e) => {
+                            setCustomerSearchTerm(e.target.value);
+                            setShowCustomerDropdown(true);
+                          }}
+                          onFocus={() => setShowCustomerDropdown(true)}
+                          placeholder="Buscar cliente por nombre..."
+                          disabled={showQuickCustomer}
+                          required={!showQuickCustomer && !formData.customer_id}
+                          className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 transition-all"
+                        />
+                        {showCustomerDropdown && !showQuickCustomer && (
+                          <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                            {filteredCustomers.length === 0 ? (
+                              <div className="px-4 py-3 text-sm text-gray-500">
+                                No se encontraron clientes
+                              </div>
+                            ) : (
+                              filteredCustomers.map(customer => (
+                                <button
+                                  key={customer.id}
+                                  type="button"
+                                  onClick={() => {
+                                    setFormData(prev => ({ ...prev, customer_id: customer.id }));
+                                    setCustomerSearchTerm(`${customer.first_name} ${customer.last_name}`);
+                                    setShowCustomerDropdown(false);
+                                  }}
+                                  className="w-full text-left px-4 py-2.5 hover:bg-blue-50 transition-colors border-b border-gray-100 last:border-b-0"
+                                >
+                                  <div className="font-medium text-gray-900">
+                                    {customer.first_name} {customer.last_name}
+                                  </div>
+                                  {customer.tax_id && (
+                                    <div className="text-xs text-gray-500">
+                                      {customer.tax_id}
+                                    </div>
+                                  )}
+                                </button>
+                              ))
+                            )}
+                          </div>
+                        )}
+                      </div>
                       <Button
                         type="button"
                         variant={showQuickCustomer ? "primary" : "outline"}
-                        onClick={() => setShowQuickCustomer(!showQuickCustomer)}
+                        onClick={() => {
+                          setShowQuickCustomer(!showQuickCustomer);
+                          if (!showQuickCustomer) {
+                            setCustomerSearchTerm('');
+                            setFormData(prev => ({ ...prev, customer_id: '' }));
+                          }
+                        }}
                         className="px-4"
+                        title="Agregar cliente rápido"
                       >
-                        <User className="w-4 h-4" />
+                        <Plus className="w-4 h-4" />
                       </Button>
                     </div>
                   </div>

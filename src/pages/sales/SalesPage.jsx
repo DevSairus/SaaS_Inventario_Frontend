@@ -97,6 +97,8 @@ export default function SalesPage() {
       from_date: '',
       to_date: '',
       document_type: '',
+      customer_name: '',
+      vehicle_plate: '',
     });
     fetchSales();
   };
@@ -182,7 +184,7 @@ export default function SalesPage() {
                   onChange={(e) => handleFilterChange('status', e.target.value)}
                   className="border border-gray-300 rounded-lg px-3 py-2"
                 >
-                  <option value="">Todos</option>
+                  <option value="">Todos los estados</option>
                   <option value="draft">Borrador</option>
                   <option value="confirmed">Confirmada</option>
                   <option value="delivered">Entregada</option>
@@ -194,7 +196,7 @@ export default function SalesPage() {
                   onChange={(e) => handleFilterChange('document_type', e.target.value)}
                   className="border border-gray-300 rounded-lg px-3 py-2"
                 >
-                  <option value="">Todos</option>
+                  <option value="">Todos los documentos</option>
                   <option value="remision">Remisión</option>
                   <option value="factura">Factura</option>
                   <option value="cotizacion">Cotización</option>
@@ -204,6 +206,7 @@ export default function SalesPage() {
                   type="date"
                   value={filters.from_date}
                   onChange={(e) => handleFilterChange('from_date', e.target.value)}
+                  placeholder="Desde"
                   className="border border-gray-300 rounded-lg px-3 py-2"
                 />
 
@@ -211,7 +214,27 @@ export default function SalesPage() {
                   type="date"
                   value={filters.to_date}
                   onChange={(e) => handleFilterChange('to_date', e.target.value)}
+                  placeholder="Hasta"
                   className="border border-gray-300 rounded-lg px-3 py-2"
+                />
+              </div>
+
+              {/* Nueva fila para búsqueda por nombre y placa */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <input
+                  type="text"
+                  value={filters.customer_name || ''}
+                  onChange={(e) => handleFilterChange('customer_name', e.target.value)}
+                  placeholder="Buscar por nombre de cliente..."
+                  className="border border-gray-300 rounded-lg px-3 py-2"
+                />
+
+                <input
+                  type="text"
+                  value={filters.vehicle_plate || ''}
+                  onChange={(e) => handleFilterChange('vehicle_plate', e.target.value.toUpperCase())}
+                  placeholder="Buscar por placa del vehículo..."
+                  className="border border-gray-300 rounded-lg px-3 py-2 uppercase"
                 />
               </div>
 
@@ -240,6 +263,7 @@ export default function SalesPage() {
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Número</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cliente</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Placa</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
@@ -250,7 +274,7 @@ export default function SalesPage() {
             <tbody className="divide-y divide-gray-200">
               {sales.length === 0 ? (
                 <tr>
-                  <td colSpan="7" className="px-6 py-10 text-center text-gray-500">
+                  <td colSpan="8" className="px-6 py-10 text-center text-gray-500">
                     No hay ventas registradas
                   </td>
                 </tr>
@@ -259,6 +283,15 @@ export default function SalesPage() {
                   <tr key={sale.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 text-sm font-medium">{sale.sale_number}</td>
                     <td className="px-6 py-4 text-sm">{sale.customer_name}</td>
+                    <td className="px-6 py-4 text-sm">
+                      {sale.vehicle_plate ? (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                          {sale.vehicle_plate}
+                        </span>
+                      ) : (
+                        <span className="text-gray-400 text-xs">-</span>
+                      )}
+                    </td>
                     <td className="px-6 py-4 text-sm">{formatDate(sale.sale_date)}</td>
                     <td className="px-6 py-4 text-sm font-semibold">{formatCurrency(sale.total_amount)}</td>
                     <td className="px-6 py-4">{getStatusBadge(sale.status)}</td>

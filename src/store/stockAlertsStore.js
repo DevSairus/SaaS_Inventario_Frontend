@@ -20,7 +20,7 @@ const useStockAlertsStore = create((set, get) => ({
   pagination: {
     total: 0,
     page: 1,
-    limit: 20,
+    limit: 100, // Aumentado para ver más alertas por página
     pages: 0
   },
   filters: {
