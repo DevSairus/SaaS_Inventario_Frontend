@@ -4,6 +4,13 @@ import { usePurchasesStore } from '../../store/purchasesStore';
 import { useSuppliersStore } from '../../store/suppliersStore';
 import useProductsStore from '../../store/productsStore';
 import Layout from '../../components/layout/Layout';
+import { 
+  formatCurrency, 
+  toInteger, 
+  toNumber, 
+  calculateItemTotals,
+  INPUT_CONFIG 
+} from '../../utils/numberUtils';
 
 const PurchaseFormPage = () => {
   const navigate = useNavigate();
@@ -64,8 +71,8 @@ const PurchaseFormPage = () => {
       if (prefilledData.product && prefilledData.product.id) {
         const product = products.find(p => p.id === prefilledData.product.id);
         if (product) {
-          const quantity = prefilledData.suggested_quantity || 1;
-          const unit_cost = prefilledData.product.last_price || 0;
+          const quantity = toInteger(prefilledData.suggested_quantity, 1);
+          const unit_cost = toNumber(prefilledData.product.last_price, 0);
           
           const totals = calculateItemTotals({
             quantity,
@@ -118,8 +125,8 @@ const PurchaseFormPage = () => {
             reference: purchase.reference || '',
             notes: purchase.notes || '',
             internal_notes: purchase.internal_notes || '',
-            discount_amount: purchase.discount_amount || 0,
-            shipping_cost: purchase.shipping_cost || 0
+            discount_amount: toNumber(purchase.discount_amount, 0),
+            shipping_cost: toNumber(purchase.shipping_cost, 0)
           });
 
           // Cargar items
@@ -135,10 +142,10 @@ const PurchaseFormPage = () => {
 
               return {
                 product_id: item.product_id,
-                quantity: item.quantity,
-                unit_cost: item.unit_cost,
-                tax_rate: item.tax_rate || 19,
-                discount_percentage: item.discount_percentage || 0,
+                quantity: toInteger(item.quantity, 1),
+                unit_cost: toNumber(item.unit_cost, 0),
+                tax_rate: toNumber(item.tax_rate, 19),
+                discount_percentage: toNumber(item.discount_percentage, 0),
                 product_name: item.product?.name || product?.name || 'Producto desconocido',
                 product_sku: item.product?.sku || product?.sku || '',
                 ...totals
@@ -187,12 +194,28 @@ const PurchaseFormPage = () => {
 
   const handleFormChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    
+    // Usar toInteger para campos numéricos
+    if (name === 'discount_amount' || name === 'shipping_cost') {
+      const numValue = toInteger(value, 0);
+      setFormData(prev => ({ ...prev, [name]: numValue }));
+    } else {
+      setFormData(prev => ({ ...prev, [name]: value }));
+    }
   };
 
   const handleItemChange = (e) => {
     const { name, value } = e.target;
-    setCurrentItem(prev => ({ ...prev, [name]: value }));
+    
+    // Convertir a número según el campo
+    let numValue = value;
+    if (name === 'quantity') {
+      numValue = toInteger(value, 1);
+    } else if (name === 'unit_cost' || name === 'tax_rate' || name === 'discount_percentage') {
+      numValue = toInteger(value, 0);
+    }
+    
+    setCurrentItem(prev => ({ ...prev, [name]: numValue }));
   };
 
   const handleProductSearch = (e) => {
@@ -210,26 +233,6 @@ const PurchaseFormPage = () => {
     setCurrentItem(prev => ({ ...prev, product_id: '' }));
     setProductSearch('');
     setShowProductDropdown(false);
-  };
-
-  const calculateItemTotals = (item) => {
-    const quantity = parseFloat(item.quantity) || 0;
-    const unitCost = parseFloat(item.unit_cost) || 0;
-    const taxRate = parseFloat(item.tax_rate) || 0;
-    const discountPercentage = parseFloat(item.discount_percentage) || 0;
-
-    const subtotal = quantity * unitCost;
-    const discountAmount = (subtotal * discountPercentage) / 100;
-    const subtotalAfterDiscount = subtotal - discountAmount;
-    const taxAmount = (subtotalAfterDiscount * taxRate) / 100;
-    const total = subtotalAfterDiscount + taxAmount;
-
-    return {
-      subtotal: subtotalAfterDiscount,
-      discountAmount,
-      taxAmount,
-      total
-    };
   };
 
   const addItem = () => {
@@ -289,10 +292,10 @@ const PurchaseFormPage = () => {
   };
 
   const calculateTotals = () => {
-    const subtotal = items.reduce((sum, item) => sum + (parseFloat(item.subtotal) || 0), 0);
-    const taxAmount = items.reduce((sum, item) => sum + (parseFloat(item.taxAmount) || 0), 0);
-    const discountAmount = parseFloat(formData.discount_amount) || 0;
-    const shippingCost = parseFloat(formData.shipping_cost) || 0;
+    const subtotal = items.reduce((sum, item) => sum + toNumber(item.subtotal, 0), 0);
+    const taxAmount = items.reduce((sum, item) => sum + toNumber(item.taxAmount, 0), 0);
+    const discountAmount = toInteger(formData.discount_amount, 0);
+    const shippingCost = toInteger(formData.shipping_cost, 0);
     const total = subtotal + taxAmount - discountAmount + shippingCost;
 
     return {
@@ -317,14 +320,14 @@ const PurchaseFormPage = () => {
 
     const purchaseData = {
       ...formData,
-      discount_amount: parseFloat(formData.discount_amount) || 0,
-      shipping_cost: parseFloat(formData.shipping_cost) || 0,
+      discount_amount: toInteger(formData.discount_amount, 0),
+      shipping_cost: toInteger(formData.shipping_cost, 0),
       items: items.map(item => ({
         product_id: item.product_id,
-        quantity: parseFloat(item.quantity),
-        unit_cost: parseFloat(item.unit_cost),
-        tax_rate: parseFloat(item.tax_rate),
-        discount_percentage: parseFloat(item.discount_percentage)
+        quantity: toInteger(item.quantity),
+        unit_cost: toInteger(item.unit_cost),
+        tax_rate: toInteger(item.tax_rate),
+        discount_percentage: toInteger(item.discount_percentage)
       }))
     };
 
@@ -345,14 +348,6 @@ const PurchaseFormPage = () => {
   };
 
   const totals = calculateTotals();
-
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('es-CO', {
-      style: 'currency',
-      currency: 'COP',
-      minimumFractionDigits: 0
-    }).format(amount);
-  };
 
   return (
     <Layout>
@@ -405,7 +400,7 @@ const PurchaseFormPage = () => {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Fecha de Compra <span className="text-red-500">*</span>
+                Fecha de Compra
               </label>
               <input
                 type="date"
@@ -413,10 +408,11 @@ const PurchaseFormPage = () => {
                 value={formData.purchase_date}
                 onChange={handleFormChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                required
               />
             </div>
+          </div>
 
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Fecha Esperada de Entrega
@@ -434,14 +430,18 @@ const PurchaseFormPage = () => {
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Método de Pago
               </label>
-              <input
-                type="text"
+              <select
                 name="payment_method"
                 value={formData.payment_method}
                 onChange={handleFormChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Ej: Crédito 30 días"
-              />
+              >
+                <option value="">Seleccione método de pago</option>
+                <option value="cash">Efectivo</option>
+                <option value="transfer">Transferencia</option>
+                <option value="check">Cheque</option>
+                <option value="credit">Crédito</option>
+              </select>
             </div>
 
             <div>
@@ -453,10 +453,24 @@ const PurchaseFormPage = () => {
                 name="invoice_number"
                 value={formData.invoice_number}
                 onChange={handleFormChange}
+                placeholder="Ej: FAC-001"
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Factura del proveedor"
               />
             </div>
+          </div>
+
+          <div className="mt-4">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Referencia
+            </label>
+            <input
+              type="text"
+              name="reference"
+              value={formData.reference}
+              onChange={handleFormChange}
+              placeholder="Referencia interna opcional"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
           </div>
         </div>
 
@@ -531,8 +545,7 @@ const PurchaseFormPage = () => {
                 name="quantity"
                 value={currentItem.quantity}
                 onChange={handleItemChange}
-                min="0.01"
-                step="0.01"
+                {...INPUT_CONFIG.quantity}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
@@ -546,8 +559,7 @@ const PurchaseFormPage = () => {
                 name="unit_cost"
                 value={currentItem.unit_cost}
                 onChange={handleItemChange}
-                min="0"
-                step="0.01"
+                {...INPUT_CONFIG.price}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
@@ -561,9 +573,7 @@ const PurchaseFormPage = () => {
                 name="tax_rate"
                 value={currentItem.tax_rate}
                 onChange={handleItemChange}
-                min="0"
-                max="100"
-                step="0.01"
+                {...INPUT_CONFIG.percentage}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
@@ -577,9 +587,7 @@ const PurchaseFormPage = () => {
                 name="discount_percentage"
                 value={currentItem.discount_percentage}
                 onChange={handleItemChange}
-                min="0"
-                max="100"
-                step="0.01"
+                {...INPUT_CONFIG.percentage}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
@@ -628,14 +636,14 @@ const PurchaseFormPage = () => {
                         <div className="text-sm text-gray-500">{item.product_sku}</div>
                       </td>
                       <td className="px-4 py-3 text-right text-sm text-gray-900">{item.quantity}</td>
-                      <td className="px-4 py-3 text-right text-sm text-gray-900">{formatCurrency(item.unit_cost)}</td>
+                      <td className="px-4 py-3 text-right text-sm text-gray-900">${formatCurrency(item.unit_cost)}</td>
                       <td className="px-4 py-3 text-right text-sm text-gray-900">{item.tax_rate}%</td>
                       <td className="px-4 py-3 text-right text-sm text-gray-900">{item.discount_percentage}%</td>
                       <td className="px-4 py-3 text-right text-sm font-medium text-gray-900">
-                        {formatCurrency(item.subtotal)}
+                        ${formatCurrency(item.subtotal)}
                       </td>
                       <td className="px-4 py-3 text-right text-sm font-bold text-gray-900">
-                        {formatCurrency(item.total)}
+                        ${formatCurrency(item.total)}
                       </td>
                       <td className="px-4 py-3 text-right">
                         <button
@@ -672,8 +680,7 @@ const PurchaseFormPage = () => {
                       name="discount_amount"
                       value={formData.discount_amount}
                       onChange={handleFormChange}
-                      min="0"
-                      step="0.01"
+                      {...INPUT_CONFIG.price}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                   </div>
@@ -686,8 +693,7 @@ const PurchaseFormPage = () => {
                       name="shipping_cost"
                       value={formData.shipping_cost}
                       onChange={handleFormChange}
-                      min="0"
-                      step="0.01"
+                      {...INPUT_CONFIG.price}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                   </div>
@@ -699,24 +705,24 @@ const PurchaseFormPage = () => {
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Subtotal:</span>
-                    <span className="font-medium">{formatCurrency(totals.subtotal)}</span>
+                    <span className="font-medium">${formatCurrency(totals.subtotal)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">IVA:</span>
-                    <span className="font-medium">{formatCurrency(totals.taxAmount)}</span>
+                    <span className="font-medium">${formatCurrency(totals.taxAmount)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Descuento:</span>
-                    <span className="font-medium text-red-600">-{formatCurrency(formData.discount_amount)}</span>
+                    <span className="font-medium text-red-600">-${formatCurrency(formData.discount_amount)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Envío:</span>
-                    <span className="font-medium">{formatCurrency(formData.shipping_cost)}</span>
+                    <span className="font-medium">${formatCurrency(formData.shipping_cost)}</span>
                   </div>
                   <div className="border-t pt-2 mt-2">
                     <div className="flex justify-between">
                       <span className="text-lg font-bold text-gray-900">Total:</span>
-                      <span className="text-lg font-bold text-blue-600">{formatCurrency(totals.total)}</span>
+                      <span className="text-lg font-bold text-blue-600">${formatCurrency(totals.total)}</span>
                     </div>
                   </div>
                 </div>

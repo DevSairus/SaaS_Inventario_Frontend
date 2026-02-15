@@ -24,18 +24,14 @@ import {
   Save,
   ArrowLeft
 } from 'lucide-react';
-import BarcodeScanner from '../../components/common/BarcodeScanner'; // ✅ Usa el BarcodeScanner mejorado
+import BarcodeScanner from '../../components/common/BarcodeScanner';
 import { productsAPI } from '../../api/products';
-
-const formatCurrency = (amount) => {
-  if (!amount && amount !== 0) return '$0';
-  return new Intl.NumberFormat('es-CO', {
-    style: 'currency',
-    currency: 'COP',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount).replace('COP', '').trim();
-};
+import { 
+  formatCurrency, 
+  toInteger, 
+  toNumber, 
+  INPUT_CONFIG 
+} from '../../utils/numberUtils';
 
 function SaleFormPage() {
   const navigate = useNavigate();
@@ -170,14 +166,14 @@ function SaleFormPage() {
           product_id: item.product_id,
           product_name: item.product_name,
           product_sku: item.product_sku,
-          quantity: item.quantity,
-          unit_price: item.unit_price,
-          discount_percentage: item.discount_percentage || 0,
-          tax_percentage: item.tax_percentage || 19,
-          discount_amount: item.discount_amount || 0,
-          tax_amount: item.tax_amount || 0,
-          subtotal: item.subtotal || 0,
-          total: item.total || 0
+          quantity: toInteger(item.quantity, 1),
+          unit_price: toInteger(item.unit_price, 0),
+          discount_percentage: toInteger(item.discount_percentage, 0),
+          tax_percentage: toInteger(item.tax_percentage, 19),
+          discount_amount: toInteger(item.discount_amount, 0),
+          tax_amount: toInteger(item.tax_amount, 0),
+          subtotal: toInteger(item.subtotal, 0),
+          total: toInteger(item.total, 0)
         }));
         setItems(loadedItems);
       }
@@ -205,7 +201,7 @@ function SaleFormPage() {
     
     if (existingIndex >= 0) {
       const newItems = [...items];
-      newItems[existingIndex].quantity += 1;
+      newItems[existingIndex].quantity = toInteger(newItems[existingIndex].quantity, 0) + 1;
       newItems[existingIndex] = calculateItemTotals(newItems[existingIndex]);
       setItems(newItems);
     } else {
@@ -214,7 +210,7 @@ function SaleFormPage() {
         product_name: product.name,
         product_sku: product.sku,
         quantity: 1,
-        unit_price: product.base_price || 0,
+        unit_price: toInteger(product.base_price, 0),
         discount_percentage: 0,
         tax_percentage: 19
       };
@@ -231,7 +227,7 @@ function SaleFormPage() {
       if (response?.data) {
         handleAddItem(response.data);
         
-        // ✅ Dar feedback visual/sonoro
+        // Dar feedback visual/sonoro
         if (navigator.vibrate) {
           navigator.vibrate(200);
         }
@@ -245,14 +241,23 @@ function SaleFormPage() {
   };
 
   const calculateItemTotals = (item) => {
-    const subtotal = item.quantity * item.unit_price;
-    const discount = subtotal * (item.discount_percentage / 100);
+    const quantity = toInteger(item.quantity, 0);
+    const unitPrice = toInteger(item.unit_price, 0);
+    const discountPercentage = toInteger(item.discount_percentage, 0);
+    const taxPercentage = toInteger(item.tax_percentage, 0);
+
+    const subtotal = quantity * unitPrice;
+    const discount = Math.round((subtotal * discountPercentage) / 100);
     const taxBase = subtotal - discount;
-    const tax = taxBase * (item.tax_percentage / 100);
+    const tax = Math.round((taxBase * taxPercentage) / 100);
     const total = taxBase + tax;
 
     return {
       ...item,
+      quantity,
+      unit_price: unitPrice,
+      discount_percentage: discountPercentage,
+      tax_percentage: taxPercentage,
       subtotal,
       discount_amount: discount,
       tax_amount: tax,
@@ -262,7 +267,7 @@ function SaleFormPage() {
 
   const handleItemChange = (index, field, value) => {
     const newItems = [...items];
-    newItems[index][field] = parseFloat(value) || 0;
+    newItems[index][field] = toInteger(value, 0);
     newItems[index] = calculateItemTotals(newItems[index]);
     setItems(newItems);
   };
@@ -272,10 +277,10 @@ function SaleFormPage() {
   };
 
   const calculateTotals = () => {
-    const subtotal = items.reduce((sum, item) => sum + (item.subtotal || 0), 0);
-    const discount = items.reduce((sum, item) => sum + (item.discount_amount || 0), 0);
-    const tax = items.reduce((sum, item) => sum + (item.tax_amount || 0), 0);
-    const total = items.reduce((sum, item) => sum + (item.total || 0), 0);
+    const subtotal = items.reduce((sum, item) => sum + toInteger(item.subtotal, 0), 0);
+    const discount = items.reduce((sum, item) => sum + toInteger(item.discount_amount, 0), 0);
+    const tax = items.reduce((sum, item) => sum + toInteger(item.tax_amount, 0), 0);
+    const total = items.reduce((sum, item) => sum + toInteger(item.total, 0), 0);
     return { subtotal, discount, tax, total };
   };
 
@@ -292,10 +297,10 @@ function SaleFormPage() {
         ...formData,
         items: items.map(item => ({
           product_id: item.product_id,
-          quantity: item.quantity,
-          unit_price: item.unit_price,
-          discount_percentage: item.discount_percentage,
-          tax_percentage: item.tax_percentage
+          quantity: toInteger(item.quantity),
+          unit_price: toInteger(item.unit_price),
+          discount_percentage: toInteger(item.discount_percentage),
+          tax_percentage: toInteger(item.tax_percentage)
         }))
       };
 
@@ -611,7 +616,6 @@ function SaleFormPage() {
                       <Plus className="w-4 h-4 mr-2" />
                       Agregar Producto
                     </Button>
-                    {/* ✅ Botón de escaneo mejorado */}
                     <button
                       type="button"
                       onClick={() => setShowScanner(true)}
@@ -696,8 +700,7 @@ function SaleFormPage() {
                             <td className="py-4 px-4">
                               <Input
                                 type="number"
-                                min="1"
-                                step="1"
+                                {...INPUT_CONFIG.quantity}
                                 value={item.quantity}
                                 onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
                                 className="text-center w-full"
@@ -706,8 +709,7 @@ function SaleFormPage() {
                             <td className="py-4 px-4">
                               <Input
                                 type="number"
-                                min="0"
-                                step="0.01"
+                                {...INPUT_CONFIG.price}
                                 value={item.unit_price}
                                 onChange={(e) => handleItemChange(index, 'unit_price', e.target.value)}
                                 className="text-right w-full"
@@ -716,9 +718,7 @@ function SaleFormPage() {
                             <td className="py-4 px-4">
                               <Input
                                 type="number"
-                                min="0"
-                                max="100"
-                                step="0.01"
+                                {...INPUT_CONFIG.percentage}
                                 value={item.discount_percentage}
                                 onChange={(e) => handleItemChange(index, 'discount_percentage', e.target.value)}
                                 className="text-right w-full"
@@ -727,9 +727,7 @@ function SaleFormPage() {
                             <td className="py-4 px-4">
                               <Input
                                 type="number"
-                                min="0"
-                                max="100"
-                                step="0.01"
+                                {...INPUT_CONFIG.percentage}
                                 value={item.tax_percentage}
                                 onChange={(e) => handleItemChange(index, 'tax_percentage', e.target.value)}
                                 className="text-right w-full"
@@ -737,7 +735,7 @@ function SaleFormPage() {
                             </td>
                             <td className="py-4 px-4 text-right">
                               <span className="font-semibold text-gray-900">
-                                {formatCurrency(item.total)}
+                                ${formatCurrency(item.total)}
                               </span>
                             </td>
                             <td className="py-4 px-4">
@@ -767,7 +765,7 @@ function SaleFormPage() {
                       <div className="flex justify-between text-sm text-gray-600">
                         <span>Subtotal:</span>
                         <span className="font-medium text-gray-900">
-                          {formatCurrency(totals.subtotal)}
+                          ${formatCurrency(totals.subtotal)}
                         </span>
                       </div>
                       
@@ -775,7 +773,7 @@ function SaleFormPage() {
                         <div className="flex justify-between text-sm text-red-600">
                           <span>Descuento:</span>
                           <span className="font-medium">
-                            -{formatCurrency(totals.discount)}
+                            -${formatCurrency(totals.discount)}
                           </span>
                         </div>
                       )}
@@ -783,7 +781,7 @@ function SaleFormPage() {
                       <div className="flex justify-between text-sm text-gray-600">
                         <span>IVA:</span>
                         <span className="font-medium text-gray-900">
-                          {formatCurrency(totals.tax)}
+                          ${formatCurrency(totals.tax)}
                         </span>
                       </div>
                       
@@ -791,7 +789,7 @@ function SaleFormPage() {
                         <div className="flex justify-between items-center">
                           <span className="text-lg font-bold text-gray-900">TOTAL:</span>
                           <span className="text-2xl font-bold text-blue-600">
-                            {formatCurrency(totals.total)}
+                            ${formatCurrency(totals.total)}
                           </span>
                         </div>
                       </div>
@@ -893,7 +891,7 @@ function SaleFormPage() {
                       </div>
                       <div className="text-right ml-4">
                         <p className="font-semibold text-lg text-blue-600">
-                          {formatCurrency(product.base_price || product.base_price || 0)}
+                          ${formatCurrency(product.base_price || 0)}
                         </p>
                       </div>
                     </div>
@@ -904,7 +902,7 @@ function SaleFormPage() {
           </div>
         </Modal>
 
-        {/* ✅ BarcodeScanner con componente mejorado */}
+        {/* BarcodeScanner */}
         {showScanner && (
           <BarcodeScanner
             onDetect={handleBarcodeScan}

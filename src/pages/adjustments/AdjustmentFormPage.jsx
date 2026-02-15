@@ -3,6 +3,12 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useAdjustmentsStore } from '../../store/adjustmentsStore';
 import useProductsStore from '../../store/productsStore';
 import Layout from '../../components/layout/Layout';
+import { 
+  formatCurrency, 
+  toInteger, 
+  toNumber, 
+  INPUT_CONFIG 
+} from '../../utils/numberUtils';
 
 const AdjustmentFormPage = () => {
   const navigate = useNavigate();
@@ -64,13 +70,13 @@ const AdjustmentFormPage = () => {
               const product = products.find(p => p.id === item.product_id);
               return {
                 product_id: item.product_id,
-                quantity: item.quantity,
-                unit_cost: item.unit_cost,
+                quantity: toInteger(item.quantity, 1),
+                unit_cost: toInteger(item.unit_cost, 0),
                 reason: item.reason || '',
                 notes: item.notes || '',
                 product_name: item.product?.name || product?.name || 'Producto desconocido',
                 product_sku: item.product?.sku || product?.sku || '',
-                total_cost: item.total_cost
+                total_cost: toInteger(item.total_cost, 0)
               };
             });
             setItems(loadedItems);
@@ -121,7 +127,15 @@ const AdjustmentFormPage = () => {
 
   const handleItemChange = (e) => {
     const { name, value } = e.target;
-    setCurrentItem(prev => ({ ...prev, [name]: value }));
+    
+    let numValue = value;
+    if (name === 'quantity') {
+      numValue = toInteger(value, 1);
+    } else if (name === 'unit_cost') {
+      numValue = toInteger(value, 0);
+    }
+    
+    setCurrentItem(prev => ({ ...prev, [name]: numValue }));
   };
 
   const handleProductSearch = (e) => {
@@ -133,7 +147,7 @@ const AdjustmentFormPage = () => {
     setCurrentItem(prev => ({ 
       ...prev, 
       product_id: product.id,
-      unit_cost: product.average_cost || 0
+      unit_cost: toInteger(product.average_cost, 0)
     }));
     setProductSearch(`${product.sku} - ${product.name}`);
     setShowProductDropdown(false);
@@ -159,8 +173,8 @@ const AdjustmentFormPage = () => {
     }
 
     const product = products.find(p => p.id === currentItem.product_id);
-    const quantity = parseFloat(currentItem.quantity);
-    const unit_cost = parseFloat(currentItem.unit_cost) || 0;
+    const quantity = toInteger(currentItem.quantity, 1);
+    const unit_cost = toInteger(currentItem.unit_cost, 0);
     const total_cost = quantity * unit_cost;
 
     const newItem = {
@@ -192,8 +206,8 @@ const AdjustmentFormPage = () => {
   };
 
   const calculateTotals = () => {
-    const totalQuantity = items.reduce((sum, item) => sum + parseFloat(item.quantity), 0);
-    const totalCost = items.reduce((sum, item) => sum + parseFloat(item.total_cost), 0);
+    const totalQuantity = items.reduce((sum, item) => sum + toInteger(item.quantity, 0), 0);
+    const totalCost = items.reduce((sum, item) => sum + toInteger(item.total_cost, 0), 0);
     return { totalQuantity, totalCost };
   };
 
@@ -214,8 +228,8 @@ const AdjustmentFormPage = () => {
       ...formData,
       items: items.map(item => ({
         product_id: item.product_id,
-        quantity: parseFloat(item.quantity),
-        unit_cost: parseFloat(item.unit_cost),
+        quantity: toInteger(item.quantity),
+        unit_cost: toInteger(item.unit_cost),
         reason: item.reason || null,
         notes: item.notes || null
       }))
@@ -238,14 +252,6 @@ const AdjustmentFormPage = () => {
   };
 
   const totals = calculateTotals();
-
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('es-CO', {
-      style: 'currency',
-      currency: 'COP',
-      minimumFractionDigits: 0
-    }).format(amount);
-  };
 
   return (
     <Layout>
@@ -418,8 +424,7 @@ const AdjustmentFormPage = () => {
                   name="quantity"
                   value={currentItem.quantity}
                   onChange={handleItemChange}
-                  min="0.01"
-                  step="0.01"
+                  {...INPUT_CONFIG.quantity}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
@@ -433,8 +438,7 @@ const AdjustmentFormPage = () => {
                   name="unit_cost"
                   value={currentItem.unit_cost}
                   onChange={handleItemChange}
-                  min="0"
-                  step="0.01"
+                  {...INPUT_CONFIG.price}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
@@ -480,9 +484,9 @@ const AdjustmentFormPage = () => {
                           <div className="text-sm text-gray-500">{item.product_sku}</div>
                         </td>
                         <td className="px-4 py-3 text-right text-sm text-gray-900">{item.quantity}</td>
-                        <td className="px-4 py-3 text-right text-sm text-gray-900">{formatCurrency(item.unit_cost)}</td>
+                        <td className="px-4 py-3 text-right text-sm text-gray-900">${formatCurrency(item.unit_cost)}</td>
                         <td className="px-4 py-3 text-right text-sm font-bold text-gray-900">
-                          {formatCurrency(item.total_cost)}
+                          ${formatCurrency(item.total_cost)}
                         </td>
                         <td className="px-4 py-3 text-right">
                           <button
@@ -504,7 +508,7 @@ const AdjustmentFormPage = () => {
                       <td className="px-4 py-3 text-right text-sm font-semibold text-gray-900">{totals.totalQuantity}</td>
                       <td className="px-4 py-3"></td>
                       <td className="px-4 py-3 text-right text-sm font-bold text-blue-600">
-                        {formatCurrency(totals.totalCost)}
+                        ${formatCurrency(totals.totalCost)}
                       </td>
                       <td className="px-4 py-3"></td>
                     </tr>

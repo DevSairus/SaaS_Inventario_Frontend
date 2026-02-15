@@ -23,7 +23,11 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
     current_stock: '',
     track_inventory: true,
     allow_negative_stock: false,
-    is_active: true
+    is_active: true,
+    // Campos de IVA
+    has_tax: true,
+    tax_percentage: 19,
+    price_includes_tax: false
   });
 
   const [calculatedPrice, setCalculatedPrice] = useState(null);
@@ -50,7 +54,11 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
         current_stock: product.current_stock || '',
         track_inventory: product.track_inventory !== false,
         allow_negative_stock: product.allow_negative_stock || false,
-        is_active: product.is_active !== false
+        is_active: product.is_active !== false,
+        // Campos de IVA
+        has_tax: product.has_tax !== false,
+        tax_percentage: product.tax_percentage || 19,
+        price_includes_tax: product.price_includes_tax || false
       });
     } else {
       setFormData({
@@ -68,7 +76,11 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
         current_stock: '',
         track_inventory: true,
         allow_negative_stock: false,
-        is_active: true
+        is_active: true,
+        // Campos de IVA
+        has_tax: true,
+        tax_percentage: 19,
+        price_includes_tax: false
       });
       setCalculatedPrice(null);
     }
@@ -203,7 +215,7 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
                 </button>
               </div>
               <p className="mt-1 text-xs text-gray-500">
-                💡 Escanea con cámara o pistola USB
+                Escanea con cámara o pistola USB
               </p>
             </div>
 
@@ -287,6 +299,9 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Costo Promedio
+                <span className="ml-2 text-xs text-blue-600 font-normal">
+                  Ingresa el costo SIN IVA
+                </span>
               </label>
               <input
                 type="number"
@@ -299,6 +314,9 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
                 placeholder="0.00"
               />
               <p className="mt-1 text-xs text-gray-500">
+                Ejemplo: Si compras a $11,900 (con IVA 19%), ingresa $10,000
+              </p>
+              <p className="mt-0.5 text-xs text-gray-400">
                 Se actualiza automáticamente con las compras
               </p>
             </div>
@@ -319,7 +337,7 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
               />
               {calculatedPrice && (
                 <p className="mt-1 text-xs text-green-600 font-medium">
-                  💰 Precio sugerido: ${calculatedPrice}
+                  Precio sugerido: ${calculatedPrice}
                 </p>
               )}
             </div>
@@ -355,6 +373,147 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
                 </p>
               )}
             </div>
+
+            {/* Configuración de IVA */}
+            <div className="md:col-span-2 mt-4">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b">
+                Configuración de IVA / Impuestos
+              </h3>
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors">
+                <input
+                  type="checkbox"
+                  name="has_tax"
+                  checked={formData.has_tax}
+                  onChange={handleChange}
+                  className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                />
+                <div>
+                  <span className="text-sm font-medium text-gray-900">
+                    Este producto tiene IVA
+                  </span>
+                  <p className="text-xs text-gray-500">
+                    Desmarca esta opción si el producto está exento de IVA
+                  </p>
+                </div>
+              </label>
+            </div>
+
+            {formData.has_tax && (
+              <>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Porcentaje de IVA (%)
+                  </label>
+                  <select
+                    name="tax_percentage"
+                    value={formData.tax_percentage}
+                    onChange={handleChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="0">0% - Exento</option>
+                    <option value="5">5% - Reducido</option>
+                    <option value="10">10% - Intermedio</option>
+                    <option value="19">19% - General</option>
+                    <option value="21">21% - Otro</option>
+                  </select>
+                  <p className="mt-1 text-xs text-gray-500">
+                    Porcentaje de IVA aplicable según normativa
+                  </p>
+                </div>
+
+                <div>
+                  <label className="flex items-center space-x-3 p-3 bg-blue-50 rounded-lg cursor-pointer hover:bg-blue-100 transition-colors border border-blue-200">
+                    <input
+                      type="checkbox"
+                      name="price_includes_tax"
+                      checked={formData.price_includes_tax}
+                      onChange={handleChange}
+                      className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    />
+                    <div>
+                      <span className="text-sm font-medium text-gray-900">
+                        El precio YA incluye IVA
+                      </span>
+                      <p className="text-xs text-gray-600">
+                        {formData.price_includes_tax 
+                          ? '✓ El precio mostrado incluye IVA' 
+                          : '✗ El IVA se suma al precio mostrado'}
+                      </p>
+                    </div>
+                  </label>
+                </div>
+
+                {/* Calculadora de IVA */}
+                {formData.base_price && (
+                  <div className="md:col-span-2 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-200">
+                    <div className="text-sm font-medium text-gray-900 mb-3 flex items-center gap-2">
+                      Desglose de Precio
+                      <span className="text-xs font-normal text-gray-600">
+                        (Lo que verá el cliente)
+                      </span>
+                    </div>
+                    {formData.price_includes_tax ? (
+                      <>
+                        <div className="grid grid-cols-2 gap-2 text-sm mb-3">
+                          <div className="text-gray-600">Precio final al cliente:</div>
+                          <div className="font-bold text-blue-600">
+                            ${parseFloat(formData.base_price).toFixed(2)}
+                          </div>
+                          <div className="text-gray-600">Base imponible (sin IVA):</div>
+                          <div className="font-medium text-gray-900">
+                            ${(parseFloat(formData.base_price) / (1 + parseFloat(formData.tax_percentage) / 100)).toFixed(2)}
+                          </div>
+                          <div className="text-gray-600">IVA ({formData.tax_percentage}%):</div>
+                          <div className="font-medium text-green-600">
+                            ${(parseFloat(formData.base_price) - (parseFloat(formData.base_price) / (1 + parseFloat(formData.tax_percentage) / 100))).toFixed(2)}
+                          </div>
+                        </div>
+                        <div className="text-xs text-gray-600 bg-white p-2 rounded border border-gray-200">
+                          El cliente pagará exactamente ${parseFloat(formData.base_price).toFixed(2)} (ya con IVA incluido)
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="grid grid-cols-2 gap-2 text-sm mb-3">
+                          <div className="text-gray-600">Precio base (sin IVA):</div>
+                          <div className="font-medium text-gray-900">
+                            ${parseFloat(formData.base_price).toFixed(2)}
+                          </div>
+                          <div className="text-gray-600">+ IVA ({formData.tax_percentage}%):</div>
+                          <div className="font-medium text-green-600">
+                            ${(parseFloat(formData.base_price) * parseFloat(formData.tax_percentage) / 100).toFixed(2)}
+                          </div>
+                          <div className="text-gray-600">= Total al cliente:</div>
+                          <div className="font-bold text-blue-600">
+                            ${(parseFloat(formData.base_price) * (1 + parseFloat(formData.tax_percentage) / 100)).toFixed(2)}
+                          </div>
+                        </div>
+                        <div className="text-xs text-gray-600 bg-white p-2 rounded border border-gray-200">
+                          El cliente pagará ${(parseFloat(formData.base_price) * (1 + parseFloat(formData.tax_percentage) / 100)).toFixed(2)} (precio + IVA)
+                        </div>
+                      </>
+                    )}
+                    {formData.average_cost && formData.base_price && (
+                      <div className="mt-3 pt-3 border-t border-blue-300">
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                          <div className="text-gray-600">Tu costo (sin IVA):</div>
+                          <div className="font-medium text-gray-700">
+                            ${parseFloat(formData.average_cost).toFixed(2)}
+                          </div>
+                          <div className="text-gray-600">Tu ganancia:</div>
+                          <div className="font-bold text-green-700">
+                            ${(parseFloat(formData.base_price) - parseFloat(formData.average_cost)).toFixed(2)}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
 
             {/* Inventario */}
             <div className="md:col-span-2 mt-4">
