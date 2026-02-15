@@ -39,6 +39,13 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
 
   useEffect(() => {
     if (product) {
+      // ✅ Determinar correctamente el estado del IVA
+      const productTaxPercentage = product.tax_percentage !== null && product.tax_percentage !== undefined 
+        ? parseFloat(product.tax_percentage) 
+        : 19;
+      
+      const productHasTax = product.has_tax !== false && productTaxPercentage > 0;
+      
       setFormData({
         sku: product.sku || '',
         barcode: product.barcode || '',
@@ -55,9 +62,9 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
         track_inventory: product.track_inventory !== false,
         allow_negative_stock: product.allow_negative_stock || false,
         is_active: product.is_active !== false,
-        // Campos de IVA
-        has_tax: product.has_tax !== false,
-        tax_percentage: product.tax_percentage || 19,
+        // Campos de IVA - ✅ Corregido
+        has_tax: productHasTax,
+        tax_percentage: productTaxPercentage,
         price_includes_tax: product.price_includes_tax || false
       });
     } else {
@@ -105,10 +112,29 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value
-    }));
+    
+    // ✅ Lógica especial para el manejo de IVA
+    if (name === 'has_tax') {
+      setFormData(prev => ({
+        ...prev,
+        has_tax: checked,
+        // Si se desmarca "tiene IVA", poner tax_percentage en 0
+        tax_percentage: checked ? (prev.tax_percentage || 19) : 0
+      }));
+    } else if (name === 'tax_percentage') {
+      const taxValue = parseFloat(value);
+      setFormData(prev => ({
+        ...prev,
+        tax_percentage: taxValue,
+        // Si se selecciona 0%, también actualizar has_tax a false
+        has_tax: taxValue > 0
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: type === 'checkbox' ? checked : value
+      }));
+    }
   };
 
   const handleUseCalculatedPrice = () => {
@@ -123,6 +149,7 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    // ✅ Preparar datos con lógica de IVA correcta
     const dataToSend = {
       ...formData,
       average_cost: formData.average_cost ? parseFloat(formData.average_cost) : 0,
@@ -131,6 +158,9 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
       profit_margin_percentage: formData.profit_margin_percentage ? parseFloat(formData.profit_margin_percentage) : null,
       base_price: formData.base_price ? parseFloat(formData.base_price) : null,
       current_stock: formData.current_stock ? parseFloat(formData.current_stock) : 0,
+      // ✅ Asegurar que has_tax sea false cuando tax_percentage es 0
+      has_tax: formData.has_tax && parseFloat(formData.tax_percentage) > 0,
+      tax_percentage: parseFloat(formData.tax_percentage) || 0
     };
 
     if (product) {
@@ -382,48 +412,30 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
             </div>
 
             <div className="md:col-span-2">
-              <label className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors">
-                <input
-                  type="checkbox"
-                  name="has_tax"
-                  checked={formData.has_tax}
-                  onChange={handleChange}
-                  className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                />
-                <div>
-                  <span className="text-sm font-medium text-gray-900">
-                    Este producto tiene IVA
-                  </span>
-                  <p className="text-xs text-gray-500">
-                    Desmarca esta opción si el producto está exento de IVA
-                  </p>
-                </div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Tipo de IVA
               </label>
+              <select
+                name="tax_percentage"
+                value={formData.tax_percentage}
+                onChange={handleChange}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="0">Exento (0%)</option>
+                <option value="5">Reducido (5%)</option>
+                <option value="10">Intermedio (10%)</option>
+                <option value="19">General (19%)</option>
+                <option value="21">Otro (21%)</option>
+              </select>
+              <p className="mt-1 text-xs text-gray-500">
+                {formData.tax_percentage === 0 || formData.tax_percentage === '0' 
+                  ? '⚠️ Producto exento de IVA' 
+                  : `✓ IVA del ${formData.tax_percentage}% aplicable según normativa`}
+              </p>
             </div>
 
-            {formData.has_tax && (
+            {formData.has_tax && parseFloat(formData.tax_percentage) > 0 && (
               <>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Porcentaje de IVA (%)
-                  </label>
-                  <select
-                    name="tax_percentage"
-                    value={formData.tax_percentage}
-                    onChange={handleChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    <option value="0">0% - Exento</option>
-                    <option value="5">5% - Reducido</option>
-                    <option value="10">10% - Intermedio</option>
-                    <option value="19">19% - General</option>
-                    <option value="21">21% - Otro</option>
-                  </select>
-                  <p className="mt-1 text-xs text-gray-500">
-                    Porcentaje de IVA aplicable según normativa
-                  </p>
-                </div>
-
                 <div>
                   <label className="flex items-center space-x-3 p-3 bg-blue-50 rounded-lg cursor-pointer hover:bg-blue-100 transition-colors border border-blue-200">
                     <input

@@ -29,6 +29,7 @@ function Sidebar({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobileOpen })
   const [expandedMenus, setExpandedMenus] = useState({
     sales: false,
     inventory: false,
+    settings: false,
   });
 
   const navigate = useNavigate();
@@ -41,6 +42,7 @@ function Sidebar({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobileOpen })
     setExpandedMenus({
       sales: false,
       inventory: false,
+      settings: false,
     });
   }, [location.pathname]);
 
@@ -65,6 +67,7 @@ function Sidebar({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobileOpen })
     setExpandedMenus({
       sales: false,
       inventory: false,
+      settings: false,
     });
   };
 
@@ -167,9 +170,23 @@ function Sidebar({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobileOpen })
     {
       id: 'settings',
       title: 'Configuración',
-      route: '/settings',
-      available: true,
       icon: Cog6ToothIcon,
+      children: [
+        {
+          id: 'general-settings',
+          title: 'Configuración General',
+          route: '/settings',
+          available: true,
+          icon: Cog6ToothIcon,
+        },
+        {
+          id: 'users-management',
+          title: 'Gestión de Usuarios',
+          route: '/users',
+          available: true,
+          icon: UsersIcon,
+        },
+      ],
     },
   ];
 

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, User as UserIcon } from 'lucide-react';
 import useUsersStore from '../../store/usersStore';
+import Layout from '../../components/layout/Layout';
 import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
@@ -26,7 +27,7 @@ const UserForm = () => {
     last_name: '',
     email: '',
     password: '',
-    role: 'operario',
+    role: 'user',
     phone: '',
   });
 
@@ -40,7 +41,7 @@ const UserForm = () => {
         last_name: user.last_name || '',
         email: user.email || '',
         password: '',
-        role: user.role || 'operario',
+        role: user.role || 'user',
         phone: user.phone || '',
       });
     }
@@ -92,11 +93,12 @@ const UserForm = () => {
   };
 
   if (isLoading && isEdit) {
-    return <Loading text="Cargando usuario..." />;
+    return <Layout><Loading text="Cargando usuario..." /></Layout>;
   }
 
   return (
-    <div className="space-y-6">
+    <Layout>
+      <div className="space-y-6">
       {/* Header */}
       <div>
         <Button
@@ -114,7 +116,7 @@ const UserForm = () => {
         <p className="text-gray-600">
           {isEdit
             ? 'Actualiza la información del usuario'
-            : 'Crea un nuevo usuario del sistema (Admin u Operario)'}
+            : 'Crea un nuevo usuario y asigna sus permisos'}
         </p>
       </div>
 
@@ -167,19 +169,22 @@ const UserForm = () => {
               placeholder="+57 300 123 4567"
             />
 
-            <div>
+            <div className="md:col-span-2">
               <label className="label">Rol *</label>
               <select
                 value={formData.role}
                 onChange={(e) => handleChange('role', e.target.value)}
                 className="input"
               >
-                <option value="operario">Operario</option>
-                <option value="admin">Administrador</option>
+                <option value="admin">Administrador - Acceso total al sistema</option>
+                <option value="manager">Gerente - Gestión y reportes avanzados</option>
+                <option value="seller">Vendedor - Ventas y clientes</option>
+                <option value="warehouse_keeper">Bodeguero - Inventario y almacén</option>
+                <option value="user">Usuario - Acceso estándar</option>
+                <option value="viewer">Visualizador - Solo lectura</option>
               </select>
               <p className="text-xs text-gray-500 mt-1">
-                Admin tiene acceso completo. Operario puede gestionar lecturas y
-                PQRS.
+                Selecciona el rol que mejor se adapte a las responsabilidades del usuario
               </p>
             </div>
           </div>
@@ -206,6 +211,7 @@ const UserForm = () => {
         </div>
       </form>
     </div>
+    </Layout>
   );
 };
 

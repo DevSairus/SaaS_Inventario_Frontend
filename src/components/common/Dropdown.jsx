@@ -3,11 +3,57 @@ import { Link } from 'react-router-dom';
 
 const Dropdown = ({ trigger, items, align = 'right' }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [position, setPosition] = useState({ top: 0, left: 0 });
+  const [isPositioned, setIsPositioned] = useState(false);
   const dropdownRef = useRef(null);
+  const triggerRef = useRef(null);
 
+  // Calcular posición del dropdown
+  useEffect(() => {
+    if (isOpen && triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect();
+      const dropdownWidth = 224; // w-56 = 14rem = 224px
+      const spacing = 8; // mt-2 = 0.5rem = 8px
+      
+      let left = rect.left;
+      let top = rect.bottom + spacing;
+
+      // Alinear a la derecha si es necesario
+      if (align === 'right') {
+        left = rect.right - dropdownWidth;
+      }
+
+      // Ajustar si se sale por la derecha
+      if (left + dropdownWidth > window.innerWidth) {
+        left = window.innerWidth - dropdownWidth - 10;
+      }
+
+      // Ajustar si se sale por la izquierda
+      if (left < 10) {
+        left = 10;
+      }
+
+      // Verificar si hay espacio abajo, si no, mostrar arriba
+      const dropdownHeight = items.length * 40 + 16; // aproximado
+      if (top + dropdownHeight > window.innerHeight) {
+        top = rect.top - dropdownHeight - spacing;
+      }
+
+      setPosition({ top, left });
+      // Pequeño delay para asegurar que la posición esté lista
+      requestAnimationFrame(() => {
+        setIsPositioned(true);
+      });
+    } else {
+      setIsPositioned(false);
+    }
+  }, [isOpen, align, items.length]);
+
+  // Cerrar al hacer click fuera
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target) &&
+          triggerRef.current && !triggerRef.current.contains(event.target)) {
         setIsOpen(false);
       }
     };
@@ -21,6 +67,23 @@ const Dropdown = ({ trigger, items, align = 'right' }) => {
     };
   }, [isOpen]);
 
+  // Cerrar al hacer scroll
+  useEffect(() => {
+    const handleScroll = () => {
+      if (isOpen) {
+        setIsOpen(false);
+      }
+    };
+
+    if (isOpen) {
+      window.addEventListener('scroll', handleScroll, true);
+    }
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll, true);
+    };
+  }, [isOpen]);
+
   const handleItemClick = (item) => {
     if (item.onClick) {
       item.onClick();
@@ -29,14 +92,19 @@ const Dropdown = ({ trigger, items, align = 'right' }) => {
   };
 
   return (
-    <div className="relative inline-block text-left" ref={dropdownRef}>
-      <div onClick={() => setIsOpen(!isOpen)}>{trigger}</div>
+    <>
+      <div className="relative inline-block" ref={triggerRef}>
+        <div onClick={() => setIsOpen(!isOpen)}>{trigger}</div>
+      </div>
 
-      {isOpen && (
+      {isOpen && isPositioned && (
         <div
-          className={`absolute z-50 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 ${
-            align === 'right' ? 'right-0' : 'left-0'
-          }`}
+          ref={dropdownRef}
+          className="fixed z-[9999] w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 animate-in fade-in-0 zoom-in-95 duration-100"
+          style={{
+            top: `${position.top}px`,
+            left: `${position.left}px`,
+          }}
         >
           <div className="py-1">
             {items.map((item, index) => {
@@ -78,7 +146,7 @@ const Dropdown = ({ trigger, items, align = 'right' }) => {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 };
 

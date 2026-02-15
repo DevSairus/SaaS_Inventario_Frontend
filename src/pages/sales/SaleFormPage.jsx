@@ -197,6 +197,15 @@ function SaleFormPage() {
   };
 
   const handleAddItem = (product) => {
+    // 🔍 DEBUG: Ver qué información trae el producto
+    console.log('📦 Producto agregado:', {
+      name: product.name,
+      tax_percentage: product.tax_percentage,
+      price_includes_tax: product.price_includes_tax,
+      has_tax: product.has_tax,
+      base_price: product.base_price
+    });
+    
     const existingIndex = items.findIndex(item => item.product_id === product.id);
     
     if (existingIndex >= 0) {
@@ -212,8 +221,12 @@ function SaleFormPage() {
         quantity: 1,
         unit_price: toInteger(product.base_price, 0),
         discount_percentage: 0,
-        tax_percentage: 19
+        tax_percentage: product.has_tax === false ? 0 : (product.tax_percentage || 19),
+        price_includes_tax: product.price_includes_tax || false,
+        has_tax: product.has_tax !== false // true por defecto
       };
+      
+      console.log('➕ Item creado:', newItem);
       setItems([...items, calculateItemTotals(newItem)]);
     }
     setShowProductSearch(false);
@@ -245,12 +258,29 @@ function SaleFormPage() {
     const unitPrice = toInteger(item.unit_price, 0);
     const discountPercentage = toInteger(item.discount_percentage, 0);
     const taxPercentage = toInteger(item.tax_percentage, 0);
+    const priceIncludesTax = item.price_includes_tax || false;
+    const hasTax = item.has_tax !== false;
 
     const subtotal = quantity * unitPrice;
     const discount = Math.round((subtotal * discountPercentage) / 100);
     const taxBase = subtotal - discount;
-    const tax = Math.round((taxBase * taxPercentage) / 100);
-    const total = taxBase + tax;
+    
+    let tax = 0;
+    let total = 0;
+    
+    if (!hasTax) {
+      // Producto exento de IVA
+      tax = 0;
+      total = taxBase;
+    } else if (priceIncludesTax) {
+      // El precio YA INCLUYE el IVA - extraerlo
+      tax = Math.round((taxBase * taxPercentage) / (100 + taxPercentage));
+      total = taxBase; // El total es el precio que ya incluye IVA
+    } else {
+      // El precio NO incluye IVA - sumarlo
+      tax = Math.round((taxBase * taxPercentage) / 100);
+      total = taxBase + tax;
+    }
 
     return {
       ...item,
@@ -696,6 +726,16 @@ function SaleFormPage() {
                             <td className="py-4 px-4">
                               <div className="font-medium text-gray-900">{item.product_name}</div>
                               <div className="text-sm text-gray-500">SKU: {item.product_sku}</div>
+                              {item.price_includes_tax && (
+                                <div className="text-xs text-blue-600 mt-1 font-medium">
+                                  💡 Precio incluye IVA
+                                </div>
+                              )}
+                              {item.has_tax === false && (
+                                <div className="text-xs text-green-600 mt-1 font-medium">
+                                  ✓ Exento de IVA
+                                </div>
+                              )}
                             </td>
                             <td className="py-4 px-4">
                               <Input
@@ -730,7 +770,19 @@ function SaleFormPage() {
                                 {...INPUT_CONFIG.percentage}
                                 value={item.tax_percentage}
                                 onChange={(e) => handleItemChange(index, 'tax_percentage', e.target.value)}
-                                className="text-right w-full"
+                                className={`text-right w-full ${
+                                  item.has_tax === false || item.price_includes_tax 
+                                    ? 'bg-gray-100 cursor-not-allowed' 
+                                    : ''
+                                }`}
+                                disabled={item.has_tax === false || item.price_includes_tax}
+                                title={
+                                  item.has_tax === false 
+                                    ? 'Producto exento de IVA' 
+                                    : item.price_includes_tax 
+                                    ? 'IVA configurado en el producto (incluido en precio)'
+                                    : ''
+                                }
                               />
                             </td>
                             <td className="py-4 px-4 text-right">
@@ -893,6 +945,21 @@ function SaleFormPage() {
                         <p className="font-semibold text-lg text-blue-600">
                           ${formatCurrency(product.base_price || 0)}
                         </p>
+                        {product.price_includes_tax && (
+                          <p className="text-xs text-blue-600 mt-1">
+                            (IVA {product.tax_percentage || 19}% incluido)
+                          </p>
+                        )}
+                        {product.has_tax === false && (
+                          <p className="text-xs text-green-600 mt-1">
+                            (Exento de IVA)
+                          </p>
+                        )}
+                        {product.has_tax !== false && !product.price_includes_tax && (
+                          <p className="text-xs text-gray-500 mt-1">
+                            + IVA {product.tax_percentage || 19}%
+                          </p>
+                        )}
                       </div>
                     </div>
                   </button>

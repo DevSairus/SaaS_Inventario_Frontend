@@ -11,6 +11,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import useUsersStore from '../../store/usersStore';
+import Layout from '../../components/layout/Layout';
 import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';
 import Loading from '../../components/common/Loading';
@@ -90,27 +91,38 @@ const UsersPage = () => {
   };
 
   const roleColors = {
+    super_admin: 'red',
     admin: 'purple',
-    operario: 'blue',
+    manager: 'blue',
+    seller: 'green',
+    warehouse_keeper: 'yellow',
+    user: 'gray',
+    viewer: 'indigo',
   };
 
   const roleLabels = {
+    super_admin: 'Super Admin',
     admin: 'Administrador',
-    operario: 'Operario',
+    manager: 'Gerente',
+    seller: 'Vendedor',
+    warehouse_keeper: 'Bodeguero',
+    user: 'Usuario',
+    viewer: 'Visualizador',
   };
 
   if (isLoading) {
-    return <Loading text="Cargando usuarios..." />;
+    return <Layout><Loading text="Cargando usuarios..." /></Layout>;
   }
 
   return (
-    <div className="space-y-6">
+    <Layout>
+      <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Usuarios</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Gestión de Usuarios</h1>
           <p className="text-gray-600">
-            Gestión de usuarios del sistema (Admin y Operarios)
+            Administra los usuarios de tu organización y sus roles
           </p>
         </div>
         <Link to="/users/new">
@@ -154,7 +166,11 @@ const UsersPage = () => {
                 >
                   <option value="">Todos</option>
                   <option value="admin">Administrador</option>
-                  <option value="operario">Operario</option>
+                  <option value="manager">Gerente</option>
+                  <option value="seller">Vendedor</option>
+                  <option value="warehouse_keeper">Bodeguero</option>
+                  <option value="user">Usuario</option>
+                  <option value="viewer">Visualizador</option>
                 </select>
               </div>
 
@@ -311,6 +327,7 @@ const UsersPage = () => {
         loading={isSubmitting}
       />
     </div>
+    </Layout>
   );
 };
 

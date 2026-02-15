@@ -36,8 +36,17 @@ const TenantSettingsPage = () => {
       const response = await axios.get('/tenant/config');
       if (response.data.success) {
         setConfig(response.data.data);
+        // ✅ Manejar tanto URLs locales como de Cloudinary
         if (response.data.data.logo_url) {
-          setLogoPreview(`/uploads/logos/${response.data.data.logo_url}`);
+          const logoUrl = response.data.data.logo_url;
+          // Si es URL de Cloudinary (contiene http), usar directamente
+          if (logoUrl.startsWith('http')) {
+            setLogoPreview(logoUrl);
+          } else {
+            // Si es nombre de archivo local, construir URL
+            const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+            setLogoPreview(`${baseUrl}/uploads/logos/${logoUrl}`);
+          }
         }
       }
     } catch (error) {
