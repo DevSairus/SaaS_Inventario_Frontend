@@ -20,7 +20,7 @@ const useStockAlertsStore = create((set, get) => ({
   pagination: {
     total: 0,
     page: 1,
-    limit: 100, // Aumentado para ver más alertas por página
+    limit: 500, // ✅ Aumentado a 500 para mostrar todas las alertas
     pages: 0
   },
   filters: {
@@ -71,19 +71,29 @@ const useStockAlertsStore = create((set, get) => ({
         limit: pagination.limit
       };
       
-      console.log('📡 Fetching alerts con params:', params);
+      console.log('🔍 [StockAlerts] Fetching alerts...');
+      console.log('📊 [StockAlerts] Params:', params);
+      console.log('📄 [StockAlerts] Página actual:', pagination.page);
+      console.log('📦 [StockAlerts] Límite por página:', pagination.limit);
+      
       const response = await stockAlertsApi.getStockAlerts(params);
-      console.log('📡 Response recibida:', response);
-      console.log('📡 Datos de alertas:', response.data);
-      console.log('📡 Número de alertas:', response.data?.length);
+      
+      console.log('✅ [StockAlerts] Response completa:', response);
+      console.log('📋 [StockAlerts] Alertas recibidas:', response.data?.length || 0);
+      console.log('📊 [StockAlerts] Paginación:', response.pagination);
+      console.log('🔢 [StockAlerts] Total de alertas:', response.pagination?.total);
+      console.log('📄 [StockAlerts] Total de páginas:', response.pagination?.pages);
       
       set({
         alerts: response.data,
         pagination: response.pagination,
         loading: false
       });
+      
+      console.log('✅ [StockAlerts] Estado actualizado correctamente');
     } catch (error) {
-      console.error('❌ Error en fetchAlerts:', error);
+      console.error('❌ [StockAlerts] Error en fetchAlerts:', error);
+      console.error('❌ [StockAlerts] Error response:', error.response);
       set({ 
         error: error.response?.data?.message || 'Error al cargar alertas',
         loading: false 

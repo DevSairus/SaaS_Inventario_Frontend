@@ -374,6 +374,18 @@ const StockAlertsPage = () => {
 
         {/* Tabla de alertas */}
         <div className="bg-white rounded-xl shadow-md overflow-hidden">
+          {/* Banner informativo si hay paginación */}
+          {pagination?.total > pagination?.limit && (
+            <div className="bg-yellow-50 border-b border-yellow-200 px-6 py-3">
+              <p className="text-sm text-yellow-800">
+                ℹ️ Mostrando <strong>{alerts.length}</strong> de <strong>{pagination.total}</strong> alertas totales. 
+                {pagination.pages > 1 && (
+                  <span> Estás en la página {pagination.page} de {pagination.pages}.</span>
+                )}
+              </p>
+            </div>
+          )}
+          
           {loading ? (
             <div className="p-12 text-center">
               <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600"></div>
@@ -508,17 +520,21 @@ const StockAlertsPage = () => {
                 </table>
               </div>
 
-              {/* Paginación */}
-              {pagination?.pages > 1 && (
-                <div className="bg-gray-50 px-6 py-4 border-t border-gray-200">
-                  <div className="flex items-center justify-between">
+              {/* Paginación - Siempre mostrar contador */}
+              <div className="bg-gray-50 px-6 py-4 border-t border-gray-200">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
                     <p className="text-sm text-gray-600">
-                      Mostrando <span className="font-medium">{((pagination?.page || 1) - 1) * (pagination?.limit || 10) + 1}</span> a{' '}
-                      <span className="font-medium">
-                        {Math.min((pagination?.page || 1) * (pagination?.limit || 10), pagination?.total || 0)}
-                      </span>{' '}
-                      de <span className="font-medium">{pagination?.total || 0}</span> alertas
+                      Mostrando <span className="font-medium">{alerts.length}</span> de{' '}
+                      <span className="font-medium">{pagination?.total || 0}</span> alertas totales
                     </p>
+                    {pagination?.pages > 1 && (
+                      <span className="text-xs text-gray-500 bg-yellow-50 border border-yellow-200 px-2 py-1 rounded">
+                        Página {pagination?.page || 1} de {pagination?.pages}
+                      </span>
+                    )}
+                  </div>
+                  {pagination?.pages > 1 && (
                     <div className="flex gap-2">
                       <button
                         onClick={() => handlePageChange((pagination?.page || 1) - 1)}
@@ -535,9 +551,9 @@ const StockAlertsPage = () => {
                         Siguiente
                       </button>
                     </div>
-                  </div>
+                  )}
                 </div>
-              )}
+              </div>
             </>
           )}
         </div>
