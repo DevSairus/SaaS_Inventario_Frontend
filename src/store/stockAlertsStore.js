@@ -29,7 +29,7 @@ const useStockAlertsStore = create((set, get) => ({
     severity: '',
     status: 'active',
     category_id: '',
-    sort_by: 'alert_date',
+    sort_by: 'created_at', // ✅ Corregido de 'alert_date' a 'created_at'
     sort_order: 'DESC'
   },
   loading: false,
@@ -55,7 +55,7 @@ const useStockAlertsStore = create((set, get) => ({
       severity: '',
       status: 'active',
       category_id: '',
-      sort_by: 'alert_date',
+      sort_by: 'created_at', // ✅ Corregido
       sort_order: 'DESC'
     }
   }),
