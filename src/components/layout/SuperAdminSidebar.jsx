@@ -14,6 +14,7 @@ import {
   TrendingUp,
   DollarSign,
   Settings,
+  Megaphone, // ✅ NUEVO: Icono para Anuncios
 } from 'lucide-react';
 import useAuthStore from '@store/authStore';
 
@@ -97,6 +98,13 @@ const SuperAdminSidebar = ({ isOpen, toggleSidebar }) => {
           description: 'Credenciales de pago',
         },
       ],
+    },
+
+    // ✅ NUEVO: Anuncios
+    {
+      name: 'Anuncios',
+      href: '/superadmin/announcements',
+      icon: Megaphone,
     },
 
     {

@@ -6,7 +6,6 @@ import ProductFormModal from '../../components/products/ProductFormModal';
 import ImportProductsModal from '../../components/products/ImportProductsModal';
 import Layout from '../../components/layout/Layout';
 import { exportProductsToExcel } from '../../utils/excelExport';
-import SmartTable from '../../components/common/SmartTable';
 
 function ProductsPage() {
   const { user } = useAuthStore();

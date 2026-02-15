@@ -58,6 +58,10 @@ import SubscriptionInvoicesManagement from './pages/superadmin/SubscriptionInvoi
 import SubscriptionManagement from './pages/superadmin/SubscriptionManagement';
 import SuperAdminMercadoPagoConfig from './pages/superadmin/SuperAdminMercadoPagoConfig';
 
+// ✅ NUEVO: Sistema de Anuncios
+import AnnouncementsManagement from './pages/superadmin/AnnouncementsManagement';
+import AnnouncementsModal from './components/common/AnnouncementsModal';
+
 // Components
 import PrivateRoute from './components/auth/PrivateRoute';
 import useAuthStore from './store/authStore';
@@ -150,6 +154,9 @@ function App() {
           <Route path="subscription-invoices" element={<SubscriptionInvoicesManagement />} />
           <Route path="mercadopago-config" element={<SuperAdminMercadoPagoConfig />} />
           
+          {/* ✅ NUEVO: Anuncios */}
+          <Route path="announcements" element={<AnnouncementsManagement />} />
+          
           {/* Analytics y Permisos */}
           <Route path="analytics" element={<Analytics />} />
           <Route path="permissions" element={<RolePermissionsPage />} />
@@ -239,6 +246,9 @@ function App() {
         {/* 404 */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+
+      {/* ✅ Modal de Anuncios - Se muestra globalmente cuando hay anuncios pendientes */}
+      {isAuthenticated && <AnnouncementsModal />}
     </BrowserRouter>
   );
 }
