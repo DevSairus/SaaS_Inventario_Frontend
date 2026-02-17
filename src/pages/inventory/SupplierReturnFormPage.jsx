@@ -111,7 +111,7 @@ const SupplierReturnFormPage = () => {
 
   return (
     <Layout>
-      <div className="p-6 max-w-6xl mx-auto">
+      <div className="max-w-6xl mx-auto space-y-5">
         <div className="flex items-center gap-4 mb-6">
           <button
             onClick={() => navigate('/inventory/supplier-returns')}

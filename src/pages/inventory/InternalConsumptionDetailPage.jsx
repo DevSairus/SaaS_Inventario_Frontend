@@ -103,7 +103,7 @@ const InternalConsumptionDetailPage = () => {
   if (!consumption) {
     return (
       <Layout>
-        <div className="p-6">
+        <div className="space-y-5">
           <div className="text-center">
             <h2 className="text-2xl font-bold text-gray-900">Consumo no encontrado</h2>
             <button
@@ -225,6 +225,7 @@ const InternalConsumptionDetailPage = () => {
           <div className="p-6">
             <h2 className="text-lg font-semibold mb-4">Productos Consumidos</h2>
           </div>
+          <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
@@ -263,6 +264,7 @@ const InternalConsumptionDetailPage = () => {
               ))}
             </tbody>
           </table>
+        </div>
         </div>
 
         {/* Approval/Rejection Info */}

@@ -73,48 +73,36 @@ function CategoriesPage() {
 
   return (
     <Layout>
-      {/* Header */}
-      <div className="p-6 pb-0">
-        <div className="bg-gradient-to-r from-orange-500 to-amber-600 rounded-2xl shadow-xl p-8 text-white">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="flex items-center gap-3 mb-2">
-                <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-                </svg>
-                <h1 className="text-3xl font-bold">Categorías</h1>
-              </div>
-              <p className="text-orange-100">Organiza tus productos en categorías y subcategorías</p>
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={handleExport}
-                className="flex items-center gap-2 px-4 py-2.5 bg-white bg-opacity-20 hover:bg-opacity-30 rounded-lg transition-colors font-medium text-sm"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                Exportar
-              </button>
-              <button
-                onClick={handleCreate}
-                className="flex items-center gap-2 px-5 py-2.5 bg-white text-orange-600 rounded-lg hover:bg-orange-50 transition-colors font-medium shadow-md"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-                Nueva Categoría
-              </button>
-            </div>
+      <div className="space-y-5">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Categorías</h1>
+            <p className="text-sm text-gray-500 mt-0.5">Organiza tus productos en categorías y subcategorías</p>
+          </div>
+          <div className="flex gap-2 flex-wrap">
+            <button
+              onClick={handleExport}
+              className="inline-flex items-center gap-2 px-4 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 shadow-sm"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              Exportar
+            </button>
+            <button
+              onClick={handleCreate}
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-sm font-semibold shadow-sm transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              Nueva Categoría
+            </button>
           </div>
         </div>
-      </div>
-
-      {/* Main Content */}
-      <main className="p-6 space-y-6">
-        
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="bg-white rounded-xl shadow-md hover:shadow-xl transition-shadow p-6 border-l-4 border-purple-500">
             <div className="flex items-center justify-between">
               <div>
@@ -159,7 +147,7 @@ function CategoriesPage() {
         </div>
 
         {/* Filter */}
-        <div className="bg-white rounded-xl shadow-md p-6 mb-6">
+        <div className="bg-white rounded-xl shadow-md p-4">
           <div className="flex items-center justify-between">
             <label className="flex items-center cursor-pointer">
               <input
@@ -296,7 +284,7 @@ function CategoriesPage() {
             </table>
           </div>
         </div>
-      </main>
+      </div>
 
       {/* Category Form Modal */}
       <CategoryFormModal

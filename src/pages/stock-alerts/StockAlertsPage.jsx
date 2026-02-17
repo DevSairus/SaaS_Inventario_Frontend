@@ -239,35 +239,30 @@ const StockAlertsPage = () => {
 
   return (
     <Layout>
-      <div className="p-6 space-y-6">
+      <div className="space-y-5">
         {/* Header */}
-        <div className="bg-gradient-to-r from-orange-500 to-red-600 rounded-2xl shadow-xl p-8 text-white">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="flex items-center gap-3 mb-2">
-                <AlertTriangle className="w-10 h-10" />
-                <h1 className="text-3xl font-bold">Alertas de Stock</h1>
-              </div>
-              <p className="text-orange-100">Gestión de alertas de inventario</p>
-            </div>
-            <button
-              onClick={handleCheckAlerts}
-              disabled={loading}
-              className="flex items-center gap-2 px-4 py-2 bg-white text-orange-600 rounded-lg hover:bg-orange-50 transition-colors font-medium disabled:opacity-50"
-            >
-              <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
-              Verificar Stock
-            </button>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Alertas de Stock</h1>
+            <p className="text-sm text-gray-500 mt-0.5">Gestión de alertas de inventario</p>
           </div>
+          <button
+            onClick={handleCheckAlerts}
+            disabled={loading}
+            className="inline-flex items-center gap-2 px-4 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            Verificar Stock
+          </button>
         </div>
 
         {/* Estadísticas */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
           <div className="bg-white rounded-xl shadow-md p-6 border-l-4 border-orange-500">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-600 text-sm font-medium">Total Activas</p>
-                <p className="text-3xl font-bold text-gray-900 mt-1">{stats?.total_active || 0}</p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">{stats?.total_active || 0}</p>
               </div>
               <AlertTriangle className="w-12 h-12 text-orange-500 opacity-20" />
             </div>
@@ -277,7 +272,7 @@ const StockAlertsPage = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-600 text-sm font-medium">Críticas</p>
-                <p className="text-3xl font-bold text-gray-900 mt-1">{stats?.critical || 0}</p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">{stats?.critical || 0}</p>
               </div>
               <XCircle className="w-12 h-12 text-red-500 opacity-20" />
             </div>
@@ -287,7 +282,7 @@ const StockAlertsPage = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-600 text-sm font-medium">Stock Bajo</p>
-                <p className="text-3xl font-bold text-gray-900 mt-1">{stats?.low_stock || 0}</p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">{stats?.low_stock || 0}</p>
               </div>
               <Package className="w-12 h-12 text-yellow-500 opacity-20" />
             </div>
@@ -297,7 +292,7 @@ const StockAlertsPage = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-600 text-sm font-medium">Sobre Stock</p>
-                <p className="text-3xl font-bold text-gray-900 mt-1">{stats?.overstock || 0}</p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">{stats?.overstock || 0}</p>
               </div>
               <Package className="w-12 h-12 text-blue-500 opacity-20" />
             </div>
@@ -307,7 +302,7 @@ const StockAlertsPage = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-600 text-sm font-medium">Resueltas</p>
-                <p className="text-3xl font-bold text-gray-900 mt-1">{stats?.resolved || 0}</p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">{stats?.resolved || 0}</p>
               </div>
               <CheckCircle className="w-12 h-12 text-green-500 opacity-20" />
             </div>

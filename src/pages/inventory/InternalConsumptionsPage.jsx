@@ -93,7 +93,7 @@ const InternalConsumptionsPage = () => {
 
   return (
     <Layout>
-      <div className="p-6">
+      <div className="space-y-5">
         {/* Header */}
         <div className="flex justify-between items-center mb-6">
           <div>
@@ -163,6 +163,7 @@ const InternalConsumptionsPage = () => {
               <p className="text-gray-600">Crea un nuevo consumo para comenzar</p>
             </div>
           ) : (
+            <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
@@ -245,6 +246,7 @@ const InternalConsumptionsPage = () => {
                 ))}
               </tbody>
             </table>
+            </div>
           )}
         </div>
 

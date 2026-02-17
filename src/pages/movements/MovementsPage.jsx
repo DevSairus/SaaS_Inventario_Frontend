@@ -91,24 +91,17 @@ const MovementsPage = () => {
 
   return (
     <Layout>
-      <div className="p-6">
+      <div className="space-y-5">
         {/* Header */}
-        <div className="bg-gradient-to-r from-indigo-500 to-violet-600 rounded-2xl shadow-xl p-8 text-white mb-6">
-          <div className="flex items-center gap-3">
-            <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4m4 4V8" />
-            </svg>
-            <div>
-              <h1 className="text-3xl font-bold">Movimientos de Inventario</h1>
-              <p className="text-indigo-100">Historial completo de entradas y salidas</p>
-            </div>
-          </div>
+        <div>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Movimientos de Inventario</h1>
+          <p className="text-sm text-gray-500 mt-0.5">Historial completo de entradas y salidas</p>
         </div>
 
         {/* Filtros */}
-        <div className="bg-white rounded-lg shadow mb-6 p-4">
+        <div className="bg-white rounded-lg shadow p-4">
           <form onSubmit={handleSearch}>
-            <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
               <div>
                 <select
                   name="product_id"

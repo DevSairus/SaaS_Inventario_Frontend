@@ -351,22 +351,22 @@ const PurchaseFormPage = () => {
 
   return (
     <Layout>
-      <div className="p-6 max-w-7xl mx-auto">
+      <div className="max-w-7xl mx-auto space-y-5">
       {/* Header */}
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-800">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-800 truncate">
             {isEditMode ? 'Editar Orden de Compra' : 'Nueva Orden de Compra'}
           </h1>
-          <p className="text-gray-600 mt-2">
+          <p className="text-sm text-gray-500 mt-0.5">
             {isEditMode ? 'Modifica los datos de la orden de compra' : 'Crea una nueva orden de compra a proveedor'}
           </p>
         </div>
         <button
           onClick={() => navigate('/purchases')}
-          className="text-gray-600 hover:text-gray-800"
+          className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg flex-shrink-0"
         >
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>

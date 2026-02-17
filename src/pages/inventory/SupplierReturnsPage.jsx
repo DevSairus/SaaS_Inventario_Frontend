@@ -82,7 +82,7 @@ const SupplierReturnsPage = () => {
 
   return (
     <Layout>
-      <div className="p-6">
+      <div className="space-y-5">
         <div className="flex justify-between items-center mb-6">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Devoluciones a Proveedores</h1>
@@ -147,6 +147,7 @@ const SupplierReturnsPage = () => {
               <p className="text-gray-600">Crea una nueva devolución para comenzar</p>
             </div>
           ) : (
+            <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
@@ -227,6 +228,7 @@ const SupplierReturnsPage = () => {
                 ))}
               </tbody>
             </table>
+            </div>
           )}
         </div>
 

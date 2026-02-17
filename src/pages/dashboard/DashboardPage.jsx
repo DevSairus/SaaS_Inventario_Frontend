@@ -1,316 +1,296 @@
-// frontend/src/pages/dashboard/DashboardPage.jsx
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, 
-  Tooltip, ResponsiveContainer 
+import {
+  LineChart, Line, BarChart, Bar,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts';
 import Layout from '../../components/layout/Layout';
 import useAuthStore from '../../store/authStore';
 import useDashboardStore from '../../store/dashboardStore';
 
+/* ── Formateadores ──────────────────────────────────────── */
+const fmtFull = (v) =>
+  new Intl.NumberFormat('es-CO', {
+    style: 'currency', currency: 'COP',
+    minimumFractionDigits: 0, maximumFractionDigits: 0,
+  }).format(v || 0);
+
+// Versión compacta para que no desborde los cards
+const fmtCompact = (v) => {
+  const n = Math.abs(parseFloat(v) || 0);
+  if (n >= 1_000_000_000) return `$${(n / 1_000_000_000).toFixed(1)}B`;
+  if (n >= 1_000_000)     return `$${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000)         return `$${(n / 1_000).toFixed(0)}K`;
+  return fmtFull(v);
+};
+
+const fmtNum = (v) => new Intl.NumberFormat('es-CO').format(v || 0);
+
+/* ── KPI Card ───────────────────────────────────────────── */
+function KpiCard({ icon, from, to, labelCls, label, value, sub }) {
+  return (
+    <div className={`bg-gradient-to-br ${from} ${to} rounded-xl p-4 sm:p-5 text-white shadow-md flex flex-col gap-2 min-w-0`}>
+      <div className={`w-9 h-9 rounded-lg bg-white/20 flex items-center justify-center text-lg flex-shrink-0`}>
+        {icon}
+      </div>
+      <div className="min-w-0">
+        <p className={`${labelCls} text-xs font-medium truncate`}>{label}</p>
+        {/* text-xl en móvil (2 cols) → text-2xl en desktop (4 cols) */}
+        <p className="font-bold mt-0.5 text-xl sm:text-2xl leading-tight truncate">
+          {value}
+        </p>
+      </div>
+      <p className={`${labelCls} text-xs truncate`}>{sub}</p>
+    </div>
+  );
+}
+
+/* ── Página ─────────────────────────────────────────────── */
 function DashboardPage() {
   const { user } = useAuthStore();
-  const navigate = useNavigate();
-  const [currentTime, setCurrentTime] = useState(new Date());
-  
-  const { 
-    loading, 
-    period, 
-    kpis, 
-    charts, 
-    alerts, 
-    setPeriod, 
-    fetchAll 
-  } = useDashboardStore();
+  const navigate  = useNavigate();
+  const [now, setNow] = useState(new Date());
+
+  const { loading, period, kpis, charts, alerts, setPeriod, fetchAll } =
+    useDashboardStore();
 
   useEffect(() => {
     fetchAll(period);
-    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-    return () => clearInterval(timer);
+    const t = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(t);
   }, []);
 
-  const handlePeriodChange = (newPeriod) => {
-    setPeriod(newPeriod);
-  };
-
-  const formatCurrency = (value) => {
-    return new Intl.NumberFormat('es-CO', {
-      style: 'currency',
-      currency: 'COP',
-      minimumFractionDigits: 0,
-    }).format(value || 0);
-  };
-
-  const formatNumber = (value) => {
-    return new Intl.NumberFormat('es-CO').format(value || 0);
-  };
+  const changePeriod = (p) => { setPeriod(p); fetchAll(p); };
 
   if (loading) {
     return (
       <Layout>
-        <div className="flex items-center justify-center h-96">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+        <div className="flex items-center justify-center h-80">
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600" />
         </div>
       </Layout>
     );
   }
 
-  // Datos desde el store
-  const salesKPI = kpis?.sales || {};
-  const todayKPI = kpis?.today || {};
+  const salesKPI     = kpis?.sales     || {};
+  const todayKPI     = kpis?.today     || {};
   const inventoryKPI = kpis?.inventory || {};
-  const salesByDay = charts?.salesByDay || [];
-  const topProducts = charts?.topProducts || [];
+  const salesByDay   = charts?.salesByDay  || [];
+  const topProducts  = charts?.topProducts || [];
 
   return (
     <Layout>
-      <div className="p-6 space-y-6">
+      <div className="space-y-5">
+
         {/* Header */}
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">
-              ¡Bienvenido, {user?.name}! 👋
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 truncate">
+              ¡Bienvenido, {user?.first_name || user?.name}! 👋
             </h1>
-            <p className="text-gray-600 mt-1">
-              {currentTime.toLocaleDateString('es-CO', { 
-                weekday: 'long', 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric' 
-              })} - {currentTime.toLocaleTimeString('es-CO')}
+            <p className="text-xs sm:text-sm text-gray-500 mt-0.5">
+              {now.toLocaleDateString('es-CO', {
+                weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+              })}
+              {' · '}
+              {now.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}
             </p>
           </div>
-          <div className="flex gap-2">
-            <button
-              onClick={() => handlePeriodChange(7)}
-              className={`px-4 py-2 rounded-lg ${
-                period === 7
-                  ? 'bg-indigo-600 text-white'
-                  : 'bg-white text-gray-700 border border-gray-300'
-              }`}
-            >
-              7 días
-            </button>
-            <button
-              onClick={() => handlePeriodChange(30)}
-              className={`px-4 py-2 rounded-lg ${
-                period === 30
-                  ? 'bg-indigo-600 text-white'
-                  : 'bg-white text-gray-700 border border-gray-300'
-              }`}
-            >
-              30 días
-            </button>
-            <button
-              onClick={() => handlePeriodChange(90)}
-              className={`px-4 py-2 rounded-lg ${
-                period === 90
-                  ? 'bg-indigo-600 text-white'
-                  : 'bg-white text-gray-700 border border-gray-300'
-              }`}
-            >
-              90 días
-            </button>
+
+          {/* Selector período */}
+          <div className="flex gap-1.5 flex-shrink-0 self-start sm:self-auto">
+            {[7, 30, 90].map((p) => (
+              <button
+                key={p}
+                onClick={() => changePeriod(p)}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  period === p
+                    ? 'bg-indigo-600 text-white shadow-sm'
+                    : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+                }`}
+              >
+                {p}d
+              </button>
+            ))}
           </div>
         </div>
 
         {/* Alertas */}
-        {alerts.length > 0 && (
+        {alerts?.length > 0 && (
           <div className="space-y-2">
-            {alerts.map((alert, idx) => (
+            {alerts.map((alert, i) => (
               <div
-                key={idx}
-                className={`p-4 rounded-lg border-l-4 ${
+                key={i}
+                className={`p-3 rounded-lg border-l-4 flex items-start gap-3 ${
                   alert.type === 'error'
                     ? 'bg-red-50 border-red-500'
                     : 'bg-yellow-50 border-yellow-500'
                 }`}
               >
-                <div className="flex items-center">
-                  <span className="text-2xl mr-3">
-                    {alert.type === 'error' ? '🚨' : '⚠️'}
-                  </span>
-                  <div>
-                    <h3 className="font-semibold text-gray-900">{alert.title}</h3>
-                    <p className="text-sm text-gray-600">{alert.message}</p>
-                  </div>
+                <span className="text-lg flex-shrink-0">
+                  {alert.type === 'error' ? '🚨' : '⚠️'}
+                </span>
+                <div className="min-w-0">
+                  <p className="font-semibold text-gray-900 text-sm">{alert.title}</p>
+                  <p className="text-xs text-gray-600 mt-0.5 break-words">{alert.message}</p>
                 </div>
               </div>
             ))}
           </div>
         )}
 
-        {/* KPIs Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {/* Ventas del Período */}
-          <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-6 text-white shadow-lg">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-white/20 rounded-lg">
-                <span className="text-2xl">💰</span>
-              </div>
-            </div>
-            <h3 className="text-blue-100 text-sm font-medium">Ventas ({period} días)</h3>
-            <p className="text-3xl font-bold mt-2">{formatCurrency(salesKPI.revenue)}</p>
-            <div className="mt-4 flex items-center text-sm">
-              <span className="text-blue-100">{salesKPI.count || 0} transacciones</span>
-            </div>
-          </div>
-
-          {/* Ganancia */}
-          <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl p-6 text-white shadow-lg">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-white/20 rounded-lg">
-                <span className="text-2xl">📈</span>
-              </div>
-            </div>
-            <h3 className="text-green-100 text-sm font-medium">Ganancia</h3>
-            <p className="text-3xl font-bold mt-2">{formatCurrency(salesKPI.profit)}</p>
-            <div className="mt-4 flex items-center text-sm">
-              <span className="text-green-100">Margen: {salesKPI.margin}%</span>
-            </div>
-          </div>
-
-          {/* Ventas de Hoy */}
-          <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl p-6 text-white shadow-lg">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-white/20 rounded-lg">
-                <span className="text-2xl">🎯</span>
-              </div>
-            </div>
-            <h3 className="text-purple-100 text-sm font-medium">Ventas de Hoy</h3>
-            <p className="text-3xl font-bold mt-2">{formatCurrency(todayKPI.revenue)}</p>
-            <div className="mt-4 flex items-center text-sm">
-              <span className="text-purple-100">{todayKPI.count || 0} ventas</span>
-            </div>
-          </div>
-
-          {/* Inventario */}
-          <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl p-6 text-white shadow-lg">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-white/20 rounded-lg">
-                <span className="text-2xl">📦</span>
-              </div>
-            </div>
-            <h3 className="text-orange-100 text-sm font-medium">Valor Inventario</h3>
-            <p className="text-3xl font-bold mt-2">{formatCurrency(inventoryKPI.total_value)}</p>
-            <div className="mt-4 flex items-center text-sm">
-              <span className="text-orange-100">{inventoryKPI.total_products || 0} productos</span>
-            </div>
-          </div>
+        {/* KPI Cards — 2 cols en móvil, 4 en desktop */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <KpiCard
+            icon="💰" from="from-blue-500" to="to-blue-600" labelCls="text-blue-100"
+            label={`Ventas (${period}d)`}
+            value={fmtCompact(salesKPI.revenue)}
+            sub={`${fmtNum(salesKPI.count)} transacciones`}
+          />
+          <KpiCard
+            icon="📈" from="from-green-500" to="to-green-600" labelCls="text-green-100"
+            label="Ganancia"
+            value={fmtCompact(salesKPI.profit)}
+            sub={`Margen: ${salesKPI.margin ?? 0}%`}
+          />
+          <KpiCard
+            icon="🎯" from="from-purple-500" to="to-purple-600" labelCls="text-purple-100"
+            label="Ventas de hoy"
+            value={fmtCompact(todayKPI.revenue)}
+            sub={`${fmtNum(todayKPI.count)} ventas`}
+          />
+          <KpiCard
+            icon="📦" from="from-orange-500" to="to-orange-600" labelCls="text-orange-100"
+            label="Valor inventario"
+            value={fmtCompact(inventoryKPI.total_value)}
+            sub={`${fmtNum(inventoryKPI.total_products)} productos`}
+          />
         </div>
 
         {/* Gráficas */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Ventas por Día */}
-          <div className="bg-white rounded-xl p-6 shadow-lg">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+          {/* Ventas por día */}
+          <div className="bg-white rounded-xl p-4 sm:p-5 shadow-sm border border-gray-100">
+            <h3 className="text-sm sm:text-base font-semibold text-gray-800 mb-4">
               📊 Ventas por Día
             </h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={salesByDay}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" />
-                <YAxis yAxisId="left" />
-                <YAxis yAxisId="right" orientation="right" />
-                <Tooltip 
-                  formatter={(value) => formatCurrency(value)}
-                  labelFormatter={(label) => `Fecha: ${label}`}
-                />
-                <Line 
-                  yAxisId="left"
-                  type="monotone" 
-                  dataKey="revenue" 
-                  stroke="#6366f1" 
-                  strokeWidth={2}
-                  name="Ingresos"
-                />
-                <Line 
-                  yAxisId="right"
-                  type="monotone" 
-                  dataKey="count" 
-                  stroke="#8b5cf6" 
-                  strokeWidth={2}
-                  name="Cantidad"
-                />
-              </LineChart>
-            </ResponsiveContainer>
+            {salesByDay.length === 0 ? (
+              <div className="h-48 flex items-center justify-center text-gray-400 text-sm">
+                Sin datos en este período
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height={220}>
+                <LineChart data={salesByDay}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis
+                    dataKey="date"
+                    tick={{ fontSize: 10 }}
+                    tickFormatter={(d) => d?.slice(5)}
+                  />
+                  <YAxis
+                    yAxisId="left"
+                    tick={{ fontSize: 10 }}
+                    tickFormatter={(v) => `$${(v / 1000).toFixed(0)}K`}
+                    width={44}
+                  />
+                  <YAxis
+                    yAxisId="right"
+                    orientation="right"
+                    tick={{ fontSize: 10 }}
+                    width={28}
+                  />
+                  <Tooltip
+                    formatter={(v, name) =>
+                      name === 'Ingresos' ? [fmtFull(v), name] : [fmtNum(v), name]
+                    }
+                    labelFormatter={(l) => `Fecha: ${l}`}
+                  />
+                  <Line yAxisId="left"  type="monotone" dataKey="revenue" stroke="#6366f1" strokeWidth={2} dot={false} name="Ingresos" />
+                  <Line yAxisId="right" type="monotone" dataKey="count"   stroke="#8b5cf6" strokeWidth={2} dot={false} name="Cantidad" />
+                </LineChart>
+              </ResponsiveContainer>
+            )}
           </div>
 
-          {/* Top Productos */}
-          <div className="bg-white rounded-xl p-6 shadow-lg">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              🏆 Top 5 Productos Vendidos
+          {/* Top productos */}
+          <div className="bg-white rounded-xl p-4 sm:p-5 shadow-sm border border-gray-100">
+            <h3 className="text-sm sm:text-base font-semibold text-gray-800 mb-4">
+              🏆 Top 5 Productos
             </h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={topProducts}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="product.name" />
-                <YAxis />
-                <Tooltip 
-                  formatter={(value) => formatNumber(value)}
-                  labelFormatter={(label) => `Producto: ${label}`}
-                />
-                <Bar dataKey="quantity" fill="#6366f1" name="Cantidad" />
-              </BarChart>
-            </ResponsiveContainer>
+            {topProducts.length === 0 ? (
+              <div className="h-48 flex items-center justify-center text-gray-400 text-sm">
+                Sin ventas en este período
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart data={topProducts} layout="vertical">
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis type="number" tick={{ fontSize: 10 }} />
+                  <YAxis
+                    type="category"
+                    dataKey="product.name"
+                    tick={{ fontSize: 10 }}
+                    width={85}
+                    tickFormatter={(v) => (v?.length > 12 ? v.slice(0, 12) + '…' : v)}
+                  />
+                  <Tooltip
+                    formatter={(v) => [fmtNum(v), 'Cantidad']}
+                    labelFormatter={(l) => `Producto: ${l}`}
+                  />
+                  <Bar dataKey="quantity" fill="#6366f1" radius={[0, 4, 4, 0]} name="Cantidad" />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
           </div>
         </div>
 
-        {/* Accesos Rápidos */}
-        <div className="bg-white rounded-xl p-6 shadow-lg">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">⚡ Accesos Rápidos</h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <button
-              onClick={() => navigate('/sales/new')}
-              className="p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg hover:shadow-md transition-shadow"
-            >
-              <div className="text-3xl mb-2">🛒</div>
-              <div className="text-sm font-semibold text-blue-900">Nueva Venta</div>
-            </button>
-            <button
-              onClick={() => navigate('/products')}
-              className="p-4 bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg hover:shadow-md transition-shadow"
-            >
-              <div className="text-3xl mb-2">📦</div>
-              <div className="text-sm font-semibold text-purple-900">Productos</div>
-            </button>
-            <button
-              onClick={() => navigate('/reports')}
-              className="p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-lg hover:shadow-md transition-shadow"
-            >
-              <div className="text-3xl mb-2">📊</div>
-              <div className="text-sm font-semibold text-green-900">Reportes</div>
-            </button>
-            <button
-              onClick={() => navigate('/purchases/new')}
-              className="p-4 bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg hover:shadow-md transition-shadow"
-            >
-              <div className="text-3xl mb-2">🚚</div>
-              <div className="text-sm font-semibold text-orange-900">Nueva Compra</div>
-            </button>
+        {/* Accesos rápidos */}
+        <div className="bg-white rounded-xl p-4 sm:p-5 shadow-sm border border-gray-100">
+          <h3 className="text-sm sm:text-base font-semibold text-gray-800 mb-4">⚡ Accesos Rápidos</h3>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {[
+              { icon: '🛒', label: 'Nueva Venta',  path: '/sales/new',     clr: 'blue'   },
+              { icon: '📦', label: 'Productos',     path: '/products',      clr: 'purple' },
+              { icon: '📊', label: 'Reportes',      path: '/reports',       clr: 'green'  },
+              { icon: '🚚', label: 'Nueva Compra',  path: '/purchases/new', clr: 'orange' },
+            ].map(({ icon, label, path, clr }) => (
+              <button
+                key={path}
+                onClick={() => navigate(path)}
+                className={`p-3 sm:p-4 bg-gradient-to-br from-${clr}-50 to-${clr}-100 rounded-xl hover:shadow-md transition-all text-center group`}
+              >
+                <div className="text-2xl sm:text-3xl mb-1.5 group-hover:scale-110 transition-transform">
+                  {icon}
+                </div>
+                <div className={`text-xs sm:text-sm font-semibold text-${clr}-900`}>
+                  {label}
+                </div>
+              </button>
+            ))}
           </div>
         </div>
 
-        {/* Stock Bajo */}
+        {/* Stock bajo */}
         {inventoryKPI.low_stock_count > 0 && (
-          <div className="bg-white rounded-xl p-6 shadow-lg">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">
+          <div className="bg-white rounded-xl p-4 sm:p-5 shadow-sm border border-yellow-200">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <h3 className="text-sm sm:text-base font-semibold text-gray-800">
                 ⚠️ Productos con Stock Bajo
               </h3>
-              <span className="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm font-semibold">
+              <span className="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-semibold">
                 {inventoryKPI.low_stock_count} productos
               </span>
             </div>
             <button
               onClick={() => navigate('/products?filter=low_stock')}
-              className="text-indigo-600 hover:text-indigo-700 font-medium"
+              className="mt-2 text-indigo-600 hover:text-indigo-700 text-sm font-medium"
             >
               Ver productos →
             </button>
           </div>
         )}
+
       </div>
     </Layout>
   );

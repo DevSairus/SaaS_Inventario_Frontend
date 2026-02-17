@@ -371,50 +371,42 @@ function SaleFormPage() {
 
   return (
     <Layout>
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+      <div className="space-y-4 max-w-7xl mx-auto">
         {/* Header */}
-        <div className="bg-white border-b border-gray-200 shadow-sm">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <button
-                  onClick={() => navigate('/sales')}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                >
-                  <ArrowLeft className="w-5 h-5 text-gray-600" />
-                </button>
-                <div>
-                  <h1 className="text-2xl font-bold text-gray-900">
-                    {isEditMode ? 'Editar Venta' : 'Nueva Venta'}
-                  </h1>
-                  <p className="text-sm text-gray-500 mt-1">
-                    {isEditMode ? 'Modifica los datos de la venta' : 'Crea una nueva venta, factura o cotización'}
-                  </p>
-                </div>
-              </div>
-              <div className="flex space-x-3">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => navigate('/sales')}
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  onClick={handleSubmit}
-                  disabled={loading || items.length === 0}
-                  className="bg-blue-600 hover:bg-blue-700"
-                >
-                  <Save className="w-4 h-4 mr-2" />
-                  {loading ? 'Guardando...' : isEditMode ? 'Actualizar' : 'Guardar'}
-                </Button>
-              </div>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <button
+              onClick={() => navigate('/sales')}
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
+            >
+              <ArrowLeft className="w-5 h-5 text-gray-600" />
+            </button>
+            <div className="min-w-0">
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 truncate">
+                {isEditMode ? 'Editar Venta' : 'Nueva Venta'}
+              </h1>
+              <p className="text-xs sm:text-sm text-gray-500 mt-0.5">
+                {isEditMode ? 'Modifica los datos de la venta' : 'Crea una nueva venta, factura o cotización'}
+              </p>
             </div>
+          </div>
+          <div className="flex gap-2 flex-shrink-0">
+            <Button type="button" variant="outline" onClick={() => navigate('/sales')}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleSubmit}
+              disabled={loading || items.length === 0}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              <Save className="w-4 h-4 mr-2" />
+              {loading ? 'Guardando...' : isEditMode ? 'Actualizar' : 'Guardar'}
+            </Button>
           </div>
         </div>
 
         {/* Content */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div>
           <form onSubmit={handleSubmit}>
             {/* Información General */}
             <Card className="mb-6">

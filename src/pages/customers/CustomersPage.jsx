@@ -116,27 +116,20 @@ export default function CustomersPage() {
 
   return (
     <Layout>
-      <div className="p-6 space-y-6">
+      <div className="space-y-5">
         {/* Header */}
-        <div className="bg-gradient-to-r from-purple-500 to-pink-600 rounded-2xl shadow-xl p-8 text-white">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="flex items-center gap-3 mb-2">
-                <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-                <h1 className="text-3xl font-bold">Clientes</h1>
-              </div>
-              <p className="text-purple-100">Gestiona tu base de clientes</p>
-            </div>
-            <button
-              onClick={() => handleOpenModal()}
-              className="flex items-center gap-2 px-5 py-2.5 bg-white text-purple-600 rounded-lg hover:bg-purple-50 transition-colors font-medium shadow-md"
-            >
-              <PlusIcon className="h-5 w-5" />
-              Nuevo Cliente
-            </button>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Clientes</h1>
+            <p className="text-sm text-gray-500 mt-0.5">Gestiona tu base de clientes</p>
           </div>
+          <button
+            onClick={() => handleOpenModal()}
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-semibold shadow-sm transition-colors"
+          >
+            <PlusIcon className="h-5 w-5" />
+            Nuevo Cliente
+          </button>
         </div>
 
         {/* Búsqueda */}
@@ -161,7 +154,8 @@ export default function CustomersPage() {
         )}
 
         {/* Tabla de clientes */}
-        <div className="bg-white rounded-lg shadow overflow-hidden">
+        <div className="bg-white rounded-lg shadow">
+          <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
@@ -253,6 +247,7 @@ export default function CustomersPage() {
               )}
             </tbody>
           </table>
+          </div>
         </div>
 
         {/* Modal de Cliente */}
@@ -263,7 +258,7 @@ export default function CustomersPage() {
           size="large"
         >
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Tipo de Cliente *
@@ -312,7 +307,7 @@ export default function CustomersPage() {
               />
             )}
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Input
                 label="Cédula / NIT"
                 value={formData.tax_id}
@@ -326,7 +321,7 @@ export default function CustomersPage() {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Input
                 label="Teléfono"
                 type="tel"
