@@ -9,6 +9,7 @@ import {
   DocumentArrowDownIcon,
   PrinterIcon,
   PencilIcon,
+  ClockIcon,
 } from '@heroicons/react/24/outline';
 import Button from '../../components/common/Button';
 import Badge from '../../components/common/Badge';
@@ -47,7 +48,7 @@ export default function SaleDetailPage() {
   // Traer movimientos cuando la venta esté confirmada o entregada
   useEffect(() => {
     const loadMovements = async () => {
-      if (currentSale && (currentSale.status === 'confirmed' || currentSale.status === 'delivered') && id) {
+      if (currentSale && (currentSale.status === 'pending' || currentSale.status === 'completed') && id) {
         try {
           const response = await movementsAPI.getBySaleId(id);
           setSaleMovements(response.data || []);
@@ -142,15 +143,15 @@ export default function SaleDetailPage() {
   const getStatusBadge = (status) => {
     const variants = {
       draft: 'secondary',
-      confirmed: 'info',
-      delivered: 'success',
+      pending: 'info',
+      completed: 'success',
       cancelled: 'danger',
     };
 
     const labels = {
       draft: 'Borrador',
-      confirmed: 'Confirmada',
-      delivered: 'Entregada',
+      pending: 'Confirmada',
+      completed: 'Entregada',
       cancelled: 'Cancelada',
     };
 
@@ -165,38 +166,31 @@ export default function SaleDetailPage() {
     };
 
     const labels = {
-      pending: 'Pendiente',
-      partial: 'Parcial',
-      paid: 'Pagada',
+      pending: 'Pendiente (A Crédito)',
+      partial: 'Pago Parcial',
+      paid: 'Pagado',
     };
 
     return <Badge variant={variants[status]}>{labels[status]}</Badge>;
   };
 
-  // Mapeo de método de pago (valores en español, como los envía el form)
   const getPaymentMethodLabel = (method) => {
     const labels = {
       efectivo: 'Efectivo',
       tarjeta: 'Tarjeta',
       transferencia: 'Transferencia',
       credito: 'Crédito',
-      // también soportar inglés por si viene de otra fuente
-      cash: 'Efectivo',
-      card: 'Tarjeta',
-      transfer: 'Transferencia',
-      credit: 'Crédito',
     };
-    return labels[method] || method || 'No especificado';
+    return labels[method] || method;
   };
 
   return (
     <Layout>
-      <div className="print-root p-6">
-        {/* Header - solo visible en pantalla */}
-        <div className="no-print mb-6">
+      <div className="space-y-6">
+        <div className="no-print">
           <button
             onClick={() => navigate('/sales')}
-            className="flex items-center text-blue-600 hover:text-blue-700 mb-4"
+            className="inline-flex items-center text-sm text-gray-600 hover:text-gray-900 mb-4"
           >
             <ArrowLeftIcon className="h-5 w-5 mr-2" />
             Volver a Ventas
@@ -235,7 +229,7 @@ export default function SaleDetailPage() {
                 </>
               )}
 
-              {(sale.status === 'draft' || sale.status === 'confirmed') && (
+              {sale.status === 'draft' && (
                 <Button
                   variant="danger"
                   icon={XMarkIcon}
@@ -281,7 +275,7 @@ export default function SaleDetailPage() {
             <p className="text-sm text-gray-600">
               {sale.document_type === 'remision' ? 'Remisión' :
               sale.document_type === 'factura' ? 'Factura' : 'Cotización'}
-              {' · '}Estado: {sale.status === 'draft' ? 'Borrador' : sale.status === 'confirmed' ? 'Confirmada' : sale.status === 'delivered' ? 'Entregada' : 'Cancelada'}
+              {' · '}Estado: {sale.status === 'draft' ? 'Borrador' : sale.status === 'pending' ? 'Confirmada' : sale.status === 'completed' ? 'Entregada' : 'Cancelada'}
             </p>
           </div>
 
@@ -416,8 +410,8 @@ export default function SaleDetailPage() {
                             <span>{formatCurrency(sale.total_amount - (sale.paid_amount || 0))}</span>
                           </div>
 
-                          {/* Botón registrar pago */}
-                          {!showPaymentForm && (sale.status === 'confirmed' || sale.status === 'delivered') && (
+                          {/* Botón registrar pago - CORREGIDO con step="any" */}
+                          {!showPaymentForm && (sale.status === 'pending' || sale.status === 'completed') && (
                             <button
                               onClick={() => {
                                 setPaymentData(prev => ({
@@ -435,7 +429,7 @@ export default function SaleDetailPage() {
                             </button>
                           )}
 
-                          {/* Formulario de pago inline */}
+                          {/* Formulario de pago inline - CORREGIDO */}
                           {showPaymentForm && (
                             <div className="mt-4 pt-4 border-t border-gray-200 space-y-3">
                               <div>
@@ -443,11 +437,13 @@ export default function SaleDetailPage() {
                                 <input
                                   type="number"
                                   min="0"
-                                  step="0.01"
+                                  step="any"
                                   value={paymentData.amount}
                                   onChange={(e) => setPaymentData(prev => ({ ...prev, amount: e.target.value }))}
                                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                                  placeholder="Ingrese el monto del pago"
                                 />
+                                <p className="mt-1 text-xs text-gray-500">Puede ingresar pagos parciales</p>
                               </div>
                               <div>
                                 <label className="block text-xs font-medium text-gray-600 mb-1">Método de Pago</label>
@@ -501,6 +497,36 @@ export default function SaleDetailPage() {
                   </div>
                 </div>
               </div>
+
+              {/* Historial de Pagos */}
+              {sale.payment_history && sale.payment_history.length > 0 && (
+                <div className="bg-white rounded-lg shadow p-6">
+                  <h2 className="text-lg font-semibold mb-4">Historial de Pagos</h2>
+                  <div className="space-y-3">
+                    {sale.payment_history.map((payment, index) => (
+                      <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <ClockIcon className="h-4 w-4 text-gray-400" />
+                            <span className="text-sm font-medium text-gray-900">
+                              {formatDateTime(payment.date)}
+                            </span>
+                          </div>
+                          <div className="mt-1 text-xs text-gray-600">
+                            Método: {payment.method || 'Efectivo'}
+                            {payment.notes && ` • ${payment.notes}`}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-lg font-bold text-green-600">
+                            {formatCurrency(payment.amount)}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Sidebar - Información del cliente */}
@@ -556,7 +582,7 @@ export default function SaleDetailPage() {
               </div>
 
               {/* Movimientos de Inventario - oculto en impresión */}
-              {(sale.status === 'confirmed' || sale.status === 'delivered') && (
+              {(sale.status === 'pending' || sale.status === 'completed') && (
                 <div className="no-print bg-white rounded-lg shadow p-6">
                   <h2 className="text-lg font-semibold mb-4">Movimientos de Inventario</h2>
 
@@ -602,7 +628,7 @@ export default function SaleDetailPage() {
                     </div>
                   </div>
 
-                  {sale.status === 'confirmed' && (
+                  {sale.status === 'pending' && (
                     <div className="flex">
                       <div className="flex-shrink-0 w-2 h-2 mt-2 bg-green-500 rounded-full"></div>
                       <div className="ml-4">
@@ -614,7 +640,7 @@ export default function SaleDetailPage() {
                     </div>
                   )}
 
-                  {sale.status === 'delivered' && (
+                  {sale.status === 'completed' && (
                     <div className="flex">
                       <div className="flex-shrink-0 w-2 h-2 mt-2 bg-purple-500 rounded-full"></div>
                       <div className="ml-4">

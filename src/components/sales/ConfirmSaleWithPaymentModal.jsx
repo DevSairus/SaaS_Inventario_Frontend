@@ -188,7 +188,7 @@ const ConfirmSaleWithPaymentModal = ({ isOpen, onClose, onConfirm, saleTotal, lo
                       placeholder="0"
                       min="1"
                       max={saleTotal - 1}
-                      step="1000"
+                      step="any"
                       required
                     />
                   </div>

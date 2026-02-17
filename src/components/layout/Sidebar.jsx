@@ -15,6 +15,7 @@ import {
   ChartBarIcon,
   Cog6ToothIcon,
   CurrencyDollarIcon,
+  CreditCardIcon,
   UsersIcon,
   DocumentTextIcon,
   ChevronDownIcon,
@@ -102,6 +103,13 @@ function Sidebar({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobileOpen })
           route: '/sales',
           available: true,
           icon: DocumentTextIcon
+        },
+        {
+          id: 'accounts-receivable',
+          title: 'Cartera',
+          route: '/accounts-receivable',
+          available: true,
+          icon: CreditCardIcon
         },
         {
           id: 'customer-returns',

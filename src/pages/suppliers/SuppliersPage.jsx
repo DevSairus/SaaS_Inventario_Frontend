@@ -1,26 +1,39 @@
-import React, { useEffect, useState } from 'react';
+// frontend/src/pages/suppliers/SuppliersPage.jsx
+import React, { useEffect, useState, useMemo } from 'react';
 import { useSuppliersStore } from '../../store/suppliersStore';
 import SupplierModal from '../../components/suppliers/SupplierModal';
 import Layout from '../../components/layout/Layout';
+import {
+  PlusIcon,
+  PencilIcon,
+  TrashIcon,
+  MagnifyingGlassIcon,
+  FunnelIcon,
+  XMarkIcon,
+  ArrowPathIcon,
+  UserGroupIcon,
+  CheckCircleIcon,
+  NoSymbolIcon,
+  PhoneIcon,
+  EnvelopeIcon,
+} from '@heroicons/react/24/outline';
 
+/* ─── helpers ─────────────────────────────────────────────── */
+const normalizeQ = (s) => (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+/* ─── componente ──────────────────────────────────────────── */
 const SuppliersPage = () => {
   const {
-    suppliers,
-    stats,
-    isLoading,
-    pagination,
-    filters,
-    fetchSuppliers,
-    fetchStats,
-    setFilters,
-    setPage,
-    deleteSupplier,
-    deactivateSupplier,
-    activateSupplier
+    suppliers, stats, isLoading, pagination, filters,
+    fetchSuppliers, fetchStats, setFilters, setPage,
+    deleteSupplier, deactivateSupplier, activateSupplier,
   } = useSuppliersStore();
 
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isModalOpen, setIsModalOpen]     = useState(false);
   const [editingSupplier, setEditingSupplier] = useState(null);
+  const [search, setSearch]               = useState('');
+  const [showFilters, setShowFilters]     = useState(false);
+  const [filterActive, setFilterActive]   = useState('');
 
   useEffect(() => {
     fetchSuppliers();
@@ -28,356 +41,293 @@ const SuppliersPage = () => {
   }, []);
 
   useEffect(() => {
+    setFilters({ is_active: filterActive });
     fetchSuppliers();
-  }, [filters, pagination.page]);
+  }, [filterActive, pagination.page]);
 
-  const handleSearch = (e) => {
-    setFilters({ search: e.target.value });
-    setPage(1);
-  };
+  /* filtrado local */
+  const filtered = useMemo(() => {
+    const q = normalizeQ(search);
+    if (!q) return suppliers;
+    return suppliers.filter((s) => {
+      const hay = [s.name, s.business_name, s.tax_id, s.email, s.contact_name, s.phone].map(normalizeQ).join(' ');
+      return hay.includes(q);
+    });
+  }, [suppliers, search]);
 
-  const handleFilterChange = (key, value) => {
-    setFilters({ [key]: value });
-    setPage(1);
-  };
+  const activeCount = [filterActive].filter(Boolean).length;
 
-  const handleEdit = (supplier) => {
-    setEditingSupplier(supplier);
-    setIsModalOpen(true);
-  };
+  const handleEdit = (supplier) => { setEditingSupplier(supplier); setIsModalOpen(true); };
+  const handleNew  = () => { setEditingSupplier(null); setIsModalOpen(true); };
+  const handleClose = () => { setIsModalOpen(false); setEditingSupplier(null); };
 
   const handleDelete = async (id) => {
-    if (window.confirm('¿Está seguro de eliminar este proveedor?')) {
-      const success = await deleteSupplier(id);
-      if (success) {
-        alert('Proveedor eliminado exitosamente');
-      }
-    }
+    if (!window.confirm('¿Eliminar este proveedor? Esta acción no se puede deshacer.')) return;
+    const ok = await deleteSupplier(id);
+    if (ok) fetchSuppliers();
   };
 
   const handleToggleActive = async (supplier) => {
-    const action = supplier.is_active ? 'desactivar' : 'activar';
-    if (window.confirm(`¿Está seguro de ${action} este proveedor?`)) {
-      const success = supplier.is_active
-        ? await deactivateSupplier(supplier.id)
-        : await activateSupplier(supplier.id);
-      
-      if (success) {
-        alert(`Proveedor ${action === 'desactivar' ? 'desactivado' : 'activado'} exitosamente`);
-      }
-    }
+    const action = supplier.is_active ? deactivateSupplier : activateSupplier;
+    await action(supplier.id);
+    fetchSuppliers();
+    fetchStats();
   };
 
-  const handleNewSupplier = () => {
-    setEditingSupplier(null);
-    setIsModalOpen(true);
-  };
+  const clearAll = () => { setSearch(''); setFilterActive(''); };
 
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-    setEditingSupplier(null);
-  };
-
+  /* ── render ─────────────────────────────────────────────── */
   return (
     <Layout>
-      <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-emerald-500 to-green-600 rounded-2xl shadow-xl p-8 text-white">
-        <div className="flex items-center justify-between">
+      <div className="space-y-5">
+
+        {/* ── Header ── */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
-            <div className="flex items-center gap-3 mb-2">
-              <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-              <h1 className="text-3xl font-bold">Proveedores</h1>
-            </div>
-            <p className="text-emerald-100">Gestiona los proveedores y sus datos de contacto</p>
+            <h1 className="text-2xl font-bold text-gray-900">Proveedores</h1>
+            <p className="text-sm text-gray-500 mt-0.5">Gestión de proveedores y datos de contacto</p>
           </div>
           <button
-            onClick={handleNewSupplier}
-            className="flex items-center gap-2 px-5 py-2.5 bg-white text-emerald-600 rounded-lg hover:bg-emerald-50 transition-colors font-medium shadow-md"
+            onClick={handleNew}
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-semibold shadow-sm transition-colors self-start sm:self-auto"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
+            <PlusIcon className="h-4 w-4" />
             Nuevo Proveedor
           </button>
         </div>
-      </div>
 
-      {/* Stats Cards */}
-      {stats && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-500 text-sm">Total Proveedores</p>
-                <p className="text-3xl font-bold text-gray-800 mt-1">{stats.total}</p>
+        {/* ── Stats ── */}
+        {stats && (
+          <div className="grid grid-cols-3 gap-4">
+            {[
+              { icon: UserGroupIcon,   color: 'text-blue-600 bg-blue-50',    label: 'Total',     value: stats.total || 0 },
+              { icon: CheckCircleIcon, color: 'text-emerald-600 bg-emerald-50', label: 'Activos', value: stats.active || 0 },
+              { icon: NoSymbolIcon,    color: 'text-red-500 bg-red-50',      label: 'Inactivos', value: stats.inactive || 0 },
+            ].map(({ icon: Icon, color, label, value }) => (
+              <div key={label} className="bg-white shadow rounded-xl p-4 flex items-center gap-3">
+                <div className={`rounded-lg p-2.5 flex-shrink-0 ${color}`}>
+                  <Icon className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-gray-500">{label}</p>
+                  <p className="text-2xl font-bold text-gray-900">{value}</p>
+                </div>
               </div>
-              <div className="bg-blue-100 p-3 rounded-full">
-                <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                </svg>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-500 text-sm">Activos</p>
-                <p className="text-3xl font-bold text-green-600 mt-1">{stats.active}</p>
-              </div>
-              <div className="bg-green-100 p-3 rounded-full">
-                <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-500 text-sm">Inactivos</p>
-                <p className="text-3xl font-bold text-red-600 mt-1">{stats.inactive}</p>
-              </div>
-              <div className="bg-red-100 p-3 rounded-full">
-                <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
-                </svg>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Filters and Actions */}
-      <div className="bg-white rounded-lg shadow mb-6 p-4">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div className="flex-1 max-w-md">
-            <input
-              type="text"
-              placeholder="Buscar por nombre, NIT, email..."
-              value={filters.search}
-              onChange={handleSearch}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-          </div>
-
-          <div className="flex items-center gap-4">
-            <select
-              value={filters.is_active}
-              onChange={(e) => handleFilterChange('is_active', e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-            >
-              <option value="">Todos los estados</option>
-              <option value="true">Activos</option>
-              <option value="false">Inactivos</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      {/* Table */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Proveedor
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  NIT/RUT
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Contacto
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Teléfono
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Estado
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Acciones
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {isLoading ? (
-                <tr>
-                  <td colSpan="6" className="px-6 py-12 text-center text-gray-500">
-                    <div className="flex justify-center items-center">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                      <span className="ml-3">Cargando proveedores...</span>
-                    </div>
-                  </td>
-                </tr>
-              ) : suppliers.length === 0 ? (
-                <tr>
-                  <td colSpan="6" className="px-6 py-12 text-center text-gray-500">
-                    No se encontraron proveedores
-                  </td>
-                </tr>
-              ) : (
-                suppliers.map((supplier) => (
-                  <tr key={supplier.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div>
-                        <div className="text-sm font-medium text-gray-900">{supplier.name}</div>
-                        {supplier.business_name && (
-                          <div className="text-sm text-gray-500">{supplier.business_name}</div>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {supplier.tax_id || '-'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{supplier.contact_name || '-'}</div>
-                      {supplier.email && (
-                        <div className="text-sm text-gray-500">{supplier.email}</div>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {supplier.phone || '-'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        supplier.is_active
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-red-100 text-red-800'
-                      }`}>
-                        {supplier.is_active ? 'Activo' : 'Inactivo'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <div className="flex justify-end gap-2">
-                        <button
-                          onClick={() => handleEdit(supplier)}
-                          className="text-blue-600 hover:text-blue-900"
-                          title="Editar"
-                        >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                          </svg>
-                        </button>
-
-                        <button
-                          onClick={() => handleToggleActive(supplier)}
-                          className={supplier.is_active ? 'text-orange-600 hover:text-orange-900' : 'text-green-600 hover:text-green-900'}
-                          title={supplier.is_active ? 'Desactivar' : 'Activar'}
-                        >
-                          {supplier.is_active ? (
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
-                            </svg>
-                          ) : (
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                          )}
-                        </button>
-
-                        <button
-                          onClick={() => handleDelete(supplier.id)}
-                          className="text-red-600 hover:text-red-900"
-                          title="Eliminar"
-                        >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                          </svg>
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Pagination */}
-        {pagination.pages > 1 && (
-          <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
-            <div className="flex-1 flex justify-between sm:hidden">
-              <button
-                onClick={() => setPage(pagination.page - 1)}
-                disabled={pagination.page === 1}
-                className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
-              >
-                Anterior
-              </button>
-              <button
-                onClick={() => setPage(pagination.page + 1)}
-                disabled={pagination.page === pagination.pages}
-                className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
-              >
-                Siguiente
-              </button>
-            </div>
-            <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-              <div>
-                <p className="text-sm text-gray-700">
-                  Mostrando <span className="font-medium">{(pagination.page - 1) * pagination.limit + 1}</span> a{' '}
-                  <span className="font-medium">
-                    {Math.min(pagination.page * pagination.limit, pagination.total)}
-                  </span>{' '}
-                  de <span className="font-medium">{pagination.total}</span> resultados
-                </p>
-              </div>
-              <div>
-                <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
-                  <button
-                    onClick={() => setPage(pagination.page - 1)}
-                    disabled={pagination.page === 1}
-                    className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
-                  >
-                    <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                  </button>
-                  
-                  {[...Array(pagination.pages)].map((_, i) => (
-                    <button
-                      key={i + 1}
-                      onClick={() => setPage(i + 1)}
-                      className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
-                        pagination.page === i + 1
-                          ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
-                          : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
-                      }`}
-                    >
-                      {i + 1}
-                    </button>
-                  ))}
-
-                  <button
-                    onClick={() => setPage(pagination.page + 1)}
-                    disabled={pagination.page === pagination.pages}
-                    className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
-                  >
-                    <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                    </svg>
-                  </button>
-                </nav>
-              </div>
-            </div>
+            ))}
           </div>
         )}
+
+        {/* ── Búsqueda + filtros ── */}
+        <div className="bg-white shadow rounded-xl p-4 space-y-3">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
+              <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Buscar por nombre, NIT, contacto, email o teléfono..."
+                className="w-full pl-9 pr-9 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+              />
+              {search && (
+                <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                  <XMarkIcon className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className={`inline-flex items-center gap-2 px-4 py-2.5 border rounded-lg text-sm font-medium transition-colors flex-shrink-0 ${
+                activeCount > 0 ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              <FunnelIcon className="h-4 w-4" />
+              Filtros
+              {activeCount > 0 && (
+                <span className="bg-emerald-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">{activeCount}</span>
+              )}
+            </button>
+
+            <button
+              onClick={() => fetchSuppliers()}
+              className="inline-flex items-center gap-2 px-4 py-2.5 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 flex-shrink-0"
+            >
+              <ArrowPathIcon className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+              <span className="hidden sm:inline">Actualizar</span>
+            </button>
+
+            {(search || activeCount > 0) && (
+              <button onClick={clearAll} className="inline-flex items-center gap-1.5 px-3 py-2.5 text-sm text-gray-500 hover:text-red-600 flex-shrink-0">
+                <XMarkIcon className="h-4 w-4" />
+                Limpiar
+              </button>
+            )}
+          </div>
+
+          {showFilters && (
+            <div className="pt-3 border-t border-gray-100">
+              <div className="w-full sm:w-48">
+                <label className="block text-xs font-semibold text-gray-500 mb-1">Estado</label>
+                <select
+                  value={filterActive}
+                  onChange={(e) => setFilterActive(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500"
+                >
+                  <option value="">Todos</option>
+                  <option value="true">Activos</option>
+                  <option value="false">Inactivos</option>
+                </select>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ── Tabla ── */}
+        <div className="bg-white shadow rounded-xl overflow-hidden">
+          {isLoading && !suppliers.length ? (
+            <div className="flex items-center justify-center gap-3 py-20 text-gray-400">
+              <ArrowPathIcon className="h-6 w-6 animate-spin" />
+              <span className="text-sm">Cargando proveedores...</span>
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="py-20 text-center text-gray-400">
+              <UserGroupIcon className="h-10 w-10 mx-auto mb-3 opacity-30" />
+              <p className="text-sm">No se encontraron proveedores</p>
+              {(search || activeCount > 0) && (
+                <button onClick={clearAll} className="mt-2 text-emerald-600 text-sm hover:underline">Limpiar filtros</button>
+              )}
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr className="bg-gray-50 text-xs font-semibold text-gray-500 uppercase tracking-wide border-b border-gray-200">
+                    <th className="px-4 py-3 text-left whitespace-nowrap">Proveedor</th>
+                    <th className="px-4 py-3 text-left whitespace-nowrap">NIT / RUT</th>
+                    <th className="px-4 py-3 text-left whitespace-nowrap">Contacto</th>
+                    <th className="px-4 py-3 text-left whitespace-nowrap">Teléfono</th>
+                    <th className="px-4 py-3 text-center whitespace-nowrap">Estado</th>
+                    <th className="px-4 py-3 text-center whitespace-nowrap sticky right-0 bg-gray-50 shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.08)]">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {filtered.map((s) => (
+                    <tr key={s.id} className="hover:bg-slate-50 transition-colors group">
+
+                      {/* Proveedor */}
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 text-white flex items-center justify-center font-bold text-xs flex-shrink-0 shadow-sm">
+                            {s.name?.[0]?.toUpperCase() || '?'}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="font-semibold text-gray-900 truncate max-w-[160px]">{s.name}</p>
+                            {s.business_name && <p className="text-xs text-gray-400 truncate max-w-[160px]">{s.business_name}</p>}
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* NIT */}
+                      <td className="px-4 py-3 whitespace-nowrap font-mono text-gray-600 text-xs">{s.tax_id || '—'}</td>
+
+                      {/* Contacto */}
+                      <td className="px-4 py-3">
+                        <p className="text-gray-800 max-w-[150px] truncate">{s.contact_name || '—'}</p>
+                        {s.email && (
+                          <a href={`mailto:${s.email}`} className="text-xs text-blue-500 hover:underline flex items-center gap-1 mt-0.5">
+                            <EnvelopeIcon className="h-3 w-3" />
+                            {s.email}
+                          </a>
+                        )}
+                      </td>
+
+                      {/* Teléfono */}
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        {s.phone ? (
+                          <a href={`tel:${s.phone}`} className="text-gray-600 hover:text-emerald-600 flex items-center gap-1 text-sm">
+                            <PhoneIcon className="h-3.5 w-3.5" />
+                            {s.phone}
+                          </a>
+                        ) : (
+                          <span className="text-gray-300">—</span>
+                        )}
+                      </td>
+
+                      {/* Estado */}
+                      <td className="px-4 py-3 text-center whitespace-nowrap">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${
+                          s.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-600'
+                        }`}>
+                          {s.is_active ? 'Activo' : 'Inactivo'}
+                        </span>
+                      </td>
+
+                      {/* Acciones — sticky */}
+                      <td className="px-4 py-3 text-center whitespace-nowrap sticky right-0 bg-white group-hover:bg-slate-50 transition-colors shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.08)]">
+                        <div className="flex items-center justify-center gap-1.5">
+                          <button onClick={() => handleEdit(s)} title="Editar" className="p-1.5 rounded-lg text-blue-600 hover:bg-blue-50 transition-colors">
+                            <PencilIcon className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={() => handleToggleActive(s)}
+                            title={s.is_active ? 'Desactivar' : 'Activar'}
+                            className={`p-1.5 rounded-lg transition-colors ${
+                              s.is_active ? 'text-orange-500 hover:bg-orange-50' : 'text-emerald-600 hover:bg-emerald-50'
+                            }`}
+                          >
+                            {s.is_active ? <NoSymbolIcon className="h-4 w-4" /> : <CheckCircleIcon className="h-4 w-4" />}
+                          </button>
+                          <button onClick={() => handleDelete(s.id)} title="Eliminar" className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors">
+                            <TrashIcon className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr className="bg-gray-50 border-t-2 border-gray-200 text-sm">
+                    <td colSpan={6} className="px-4 py-3 text-gray-500">
+                      {filtered.length} proveedor{filtered.length !== 1 ? 'es' : ''}
+                      {stats && <span className="ml-3 text-emerald-600 font-medium">· {stats.active} activos</span>}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          )}
+
+          {/* Paginación */}
+          {!isLoading && (pagination.pages || pagination.totalPages) > 1 && (
+            <div className="px-4 py-3 border-t border-gray-100 flex items-center justify-between text-sm">
+              <span className="text-gray-500">
+                {(pagination.page - 1) * pagination.limit + 1}–{Math.min(pagination.page * pagination.limit, pagination.total)} de {pagination.total}
+              </span>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setPage(pagination.page - 1)}
+                  disabled={pagination.page === 1}
+                  className="px-3 py-1.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  ← Anterior
+                </button>
+                <button
+                  onClick={() => setPage(pagination.page + 1)}
+                  disabled={pagination.page >= (pagination.pages || pagination.totalPages)}
+                  className="px-3 py-1.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Siguiente →
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Modal */}
       {isModalOpen && (
-        <SupplierModal
-          supplier={editingSupplier}
-          onClose={handleCloseModal}
-        />
+        <SupplierModal supplier={editingSupplier} onClose={handleClose} />
       )}
-      </div>
     </Layout>
   );
 };

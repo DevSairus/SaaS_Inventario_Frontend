@@ -32,6 +32,16 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
 
   const [calculatedPrice, setCalculatedPrice] = useState(null);
   const [showScanner, setShowScanner] = useState(false);
+  const [saveError, setSaveError] = useState('');
+
+  // Formatear número para mostrar en el input (sin decimales innecesarios)
+  const fmtNum = (v) => {
+    if (v === '' || v === null || v === undefined) return '';
+    const n = parseFloat(v);
+    if (isNaN(n)) return '';
+    // Si es número entero, sin decimales; si tiene decimales, máximo 2
+    return Number.isInteger(n) ? String(n) : parseFloat(n.toFixed(2)).toString();
+  };
 
   useEffect(() => {
     fetchCategories();
@@ -53,12 +63,12 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
         description: product.description || '',
         category_id: product.category_id || '',
         unit_of_measure: product.unit_of_measure || 'unit',
-        average_cost: product.average_cost || '',
-        min_stock: product.min_stock || '',
-        max_stock: product.max_stock || '',
-        profit_margin_percentage: product.profit_margin_percentage || '',
-        base_price: product.base_price || '',
-        current_stock: product.current_stock || '',
+        average_cost: fmtNum(product.average_cost),
+        min_stock: fmtNum(product.min_stock),
+        max_stock: fmtNum(product.max_stock),
+        profit_margin_percentage: fmtNum(product.profit_margin_percentage),
+        base_price: fmtNum(product.base_price),
+        current_stock: fmtNum(product.current_stock),
         track_inventory: product.track_inventory !== false,
         allow_negative_stock: product.allow_negative_stock || false,
         is_active: product.is_active !== false,
@@ -90,6 +100,7 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
         price_includes_tax: false
       });
       setCalculatedPrice(null);
+      setSaveError('');
     }
   }, [product, isOpen]);
 
@@ -101,7 +112,7 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
       
       if (!isNaN(cost) && !isNaN(margin) && cost > 0 && margin >= 0) {
         const suggestedPrice = cost * (1 + margin / 100);
-        setCalculatedPrice(suggestedPrice.toFixed(2));
+        setCalculatedPrice(fmtNum(suggestedPrice));
       } else {
         setCalculatedPrice(null);
       }
@@ -112,6 +123,7 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
+    setSaveError(''); // limpiar error previo al cambiar algo
     
     // ✅ Lógica especial para el manejo de IVA
     if (name === 'has_tax') {
@@ -148,8 +160,9 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setSaveError('');
 
-    // ✅ Preparar datos con lógica de IVA correcta
+    // Preparar datos con lógica de IVA correcta
     const dataToSend = {
       ...formData,
       average_cost: formData.average_cost ? parseFloat(formData.average_cost) : 0,
@@ -158,18 +171,22 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
       profit_margin_percentage: formData.profit_margin_percentage ? parseFloat(formData.profit_margin_percentage) : null,
       base_price: formData.base_price ? parseFloat(formData.base_price) : null,
       current_stock: formData.current_stock ? parseFloat(formData.current_stock) : 0,
-      // ✅ Asegurar que has_tax sea false cuando tax_percentage es 0
       has_tax: formData.has_tax && parseFloat(formData.tax_percentage) > 0,
       tax_percentage: parseFloat(formData.tax_percentage) || 0
     };
 
-    if (product) {
-      await updateProduct(product.id, dataToSend);
-    } else {
-      await createProduct(dataToSend);
+    try {
+      if (product) {
+        await updateProduct(product.id, dataToSend);
+      } else {
+        await createProduct(dataToSend);
+      }
+      onClose();
+    } catch (err) {
+      const msg = err?.response?.data?.message || err?.message || 'Error al guardar el producto';
+      setSaveError(msg);
+      // NO cerramos el modal — el usuario puede corregir y reintentar
     }
-
-    onClose();
   };
 
   if (!isOpen) return null;
@@ -335,6 +352,7 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
               </label>
               <input
                 type="number"
+                onWheel={(e) => e.target.blur()}
                 name="average_cost"
                 value={formData.average_cost}
                 onChange={handleChange}
@@ -357,6 +375,7 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
               </label>
               <input
                 type="number"
+                onWheel={(e) => e.target.blur()}
                 name="profit_margin_percentage"
                 value={formData.profit_margin_percentage}
                 onChange={handleChange}
@@ -379,6 +398,7 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
               <div className="flex gap-2">
                 <input
                   type="number"
+                onWheel={(e) => e.target.blur()}
                   name="base_price"
                   value={formData.base_price}
                   onChange={handleChange}
@@ -540,10 +560,11 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
               </label>
               <input
                 type="number"
+                onWheel={(e) => e.target.blur()}
                 name="current_stock"
                 value={formData.current_stock}
                 onChange={handleChange}
-                step="0.01"
+                step="1"
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="0.00"
                 disabled={!!product}
@@ -561,10 +582,11 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
               </label>
               <input
                 type="number"
+                onWheel={(e) => e.target.blur()}
                 name="min_stock"
                 value={formData.min_stock}
                 onChange={handleChange}
-                step="0.01"
+                step="1"
                 min="0"
                 required
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -581,10 +603,11 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
               </label>
               <input
                 type="number"
+                onWheel={(e) => e.target.blur()}
                 name="max_stock"
                 value={formData.max_stock}
                 onChange={handleChange}
-                step="0.01"
+                step="1"
                 min="0"
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="0.00"
@@ -600,11 +623,12 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
               </label>
               <input
                 type="number"
+                onWheel={(e) => e.target.blur()}
                 onChange={handleChange}
-                step="0.01"
+                step="1"
                 min="0"
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="0.00"
+                placeholder="0"
               />
             </div>
 
@@ -673,21 +697,28 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
           </div>
 
           {/* Footer */}
-          <div className="flex gap-3 mt-8 pt-6 border-t">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? 'Guardando...' : product ? 'Actualizar' : 'Crear Producto'}
-            </button>
+          <div className="flex flex-col gap-3 mt-8 pt-6 border-t">
+            {saveError && (
+              <div className="w-full px-4 py-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 font-medium">
+                ⚠️ {saveError}
+              </div>
+            )}
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex-1 px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                disabled={loading}
+                className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? 'Guardando...' : product ? 'Actualizar' : 'Crear Producto'}
+              </button>
+            </div>
           </div>
         </form>
       </div>

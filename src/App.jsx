@@ -18,6 +18,7 @@ import UserForm from './pages/users/UserForm';
 import SalesPage from './pages/sales/SalesPage';
 import SaleFormPage from './pages/sales/SaleFormPage';
 import SaleDetailPage from './pages/sales/SaleDetailPage';
+import AccountsReceivablePage from './pages/sales/AccountsReceivablePage';
 import CustomersPage from './pages/customers/CustomersPage';
 import WarehousesPage from './pages/warehouses/WarehousesPage';
 import TenantSettingsPage from './pages/settings/TenantSettingsPage';
@@ -61,6 +62,10 @@ import SuperAdminMercadoPagoConfig from './pages/superadmin/SuperAdminMercadoPag
 // ✅ NUEVO: Sistema de Anuncios
 import AnnouncementsManagement from './pages/superadmin/AnnouncementsManagement';
 import AnnouncementsModal from './components/common/AnnouncementsModal';
+
+// ✅ NUEVO: Sistema de Auto-Logout
+import SessionMonitor from './components/auth/SessionMonitor';
+import { Toaster } from 'react-hot-toast';
 
 // Components
 import PrivateRoute from './components/auth/PrivateRoute';
@@ -118,6 +123,35 @@ function App() {
 
   return (
     <BrowserRouter>
+      {/* ✅ Sistema de notificaciones toast */}
+      <Toaster 
+        position="top-center"
+        toastOptions={{
+          duration: 3000,
+          style: {
+            background: '#363636',
+            color: '#fff',
+          },
+          success: {
+            duration: 3000,
+            iconTheme: {
+              primary: '#10b981',
+              secondary: '#fff',
+            },
+          },
+          error: {
+            duration: 4000,
+            iconTheme: {
+              primary: '#ef4444',
+              secondary: '#fff',
+            },
+          },
+        }}
+      />
+
+      {/* ✅ Monitor de sesión - Detecta tokens expirados */}
+      <SessionMonitor />
+
       <Routes>
         {/* Redirect root basado en rol */}
         <Route path="/" element={<RoleBasedRedirect />} />
@@ -194,6 +228,9 @@ function App() {
         <Route path="sales" element={<TenantRoute><SalesPage /></TenantRoute>} />
         <Route path="sales/new" element={<TenantRoute><SaleFormPage /></TenantRoute>} />
         <Route path="sales/:id/edit" element={<TenantRoute><SaleFormPage /></TenantRoute>} />
+        
+        {/* Cartera (Cuentas por Cobrar) */}
+        <Route path="accounts-receivable" element={<TenantRoute><AccountsReceivablePage /></TenantRoute>} />
         
         {/* Customer Returns - ANTES de la ruta dinámica :id */}
         <Route path="sales/customer-returns" element={<TenantRoute><CustomerReturnsPage /></TenantRoute>} />

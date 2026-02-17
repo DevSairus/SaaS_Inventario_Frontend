@@ -180,6 +180,14 @@ function SaleFormPage() {
     }
   }, [isEditMode, currentSale]);
 
+  // 🆕 Recalcular items cuando cambie el tipo de documento
+  useEffect(() => {
+    if (items.length > 0) {
+      const recalculatedItems = items.map(item => calculateItemTotals(item));
+      setItems(recalculatedItems);
+    }
+  }, [formData.document_type]);
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     if (name === 'vehicle_plate') {
@@ -268,7 +276,12 @@ function SaleFormPage() {
     let tax = 0;
     let total = 0;
     
-    if (!hasTax) {
+    // 🆕 Si es remisión, NO calcular IVA
+    if (formData.document_type === 'remision') {
+      tax = 0;
+      total = taxBase;
+    }
+    else if (!hasTax) {
       // Producto exento de IVA
       tax = 0;
       total = taxBase;
@@ -830,12 +843,15 @@ function SaleFormPage() {
                         </div>
                       )}
                       
-                      <div className="flex justify-between text-sm text-gray-600">
-                        <span>IVA:</span>
-                        <span className="font-medium text-gray-900">
-                          ${formatCurrency(totals.tax)}
-                        </span>
-                      </div>
+                      {/* Solo mostrar IVA si NO es remisión */}
+                      {formData.document_type !== 'remision' && (
+                        <div className="flex justify-between text-sm text-gray-600">
+                          <span>IVA:</span>
+                          <span className="font-medium text-gray-900">
+                            ${formatCurrency(totals.tax)}
+                          </span>
+                        </div>
+                      )}
                       
                       <div className="border-t-2 border-gray-300 pt-3">
                         <div className="flex justify-between items-center">

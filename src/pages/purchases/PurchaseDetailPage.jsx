@@ -77,7 +77,7 @@ const PurchaseDetailPage = () => {
     setReceivedItems(prev =>
       prev.map(item =>
         item.item_id === itemId
-          ? { ...item, received_quantity: parseFloat(quantity) || 0 }
+          ? { ...item, received_quantity: Math.round(parseFloat(quantity) || 0) }
           : item
       )
     );
@@ -441,7 +441,7 @@ const PurchaseDetailPage = () => {
                           value={receivedItems[index]?.received_quantity || 0}
                           onChange={(e) => updateReceivedQuantity(item.id, e.target.value)}
                           min="0"
-                          step="0.01"
+                          step="1"
                           className="w-32 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-right"
                         />
                       </td>
