@@ -99,7 +99,7 @@ function Sidebar({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobileOpen })
         },
         {
           id: 'sales-list',
-          title: 'Remisiones',
+          title: 'Facturas',
           route: '/sales',
           available: true,
           icon: DocumentTextIcon
