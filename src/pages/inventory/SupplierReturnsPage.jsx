@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Package, Search, Eye, CheckCircle, XCircle, Plus } from 'lucide-react';
 import Layout from '../../components/layout/Layout';
 import api from '../../api/axios';
+import toast from 'react-hot-toast';
 
 const SupplierReturnsPage = () => {
   const navigate = useNavigate();
@@ -31,7 +32,6 @@ const SupplierReturnsPage = () => {
       setReturns(response.data.data || []);
       setPagination(response.data.pagination || { total: 0, pages: 0 });
     } catch (error) {
-      console.error('Error:', error);
     } finally {
       setLoading(false);
     }
@@ -42,10 +42,10 @@ const SupplierReturnsPage = () => {
       await api.put(`/inventory/supplier-returns/${selectedReturn.id}/approve`);
       setShowApproveModal(false);
       setSelectedReturn(null);
-      alert('Devolución aprobada exitosamente');
+      toast.success('Devolución aprobada exitosamente');
       fetchReturns();
     } catch (error) {
-      alert(error.response?.data?.message || 'Error al aprobar');
+      toast.error(error.response?.data?.message || 'Error al aprobar');
     }
   };
 
@@ -55,10 +55,10 @@ const SupplierReturnsPage = () => {
       setShowRejectModal(false);
       setRejectionReason('');
       setSelectedReturn(null);
-      alert('Devolución rechazada');
+      toast.success('Devolución rechazada');
       fetchReturns();
     } catch (error) {
-      alert(error.response?.data?.message || 'Error al rechazar');
+      toast.error(error.response?.data?.message || 'Error al rechazar');
     }
   };
 

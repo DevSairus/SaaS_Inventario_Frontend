@@ -17,5 +17,17 @@ export const authAPI = {
   verifyToken: async () => {
     const response = await api.get('/auth/verify');
     return response.data;
+  },
+
+  // Refrescar token
+  refreshToken: async () => {
+    const response = await api.post('/auth/refresh');
+    return response.data;
+  },
+
+  // Cambiar contraseña
+  changePassword: async (data) => {
+    const response = await api.post('/auth/change-password', data);
+    return response.data;
   }
 };

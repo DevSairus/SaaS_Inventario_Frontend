@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSuppliersStore } from '../../store/suppliersStore';
+import toast from 'react-hot-toast';
 
 const SupplierModal = ({ supplier, onClose }) => {
   const { createSupplier, updateSupplier, isLoading } = useSuppliersStore();
@@ -102,7 +103,7 @@ const SupplierModal = ({ supplier, onClose }) => {
       : await createSupplier(dataToSend);
 
     if (success) {
-      alert(supplier ? 'Proveedor actualizado exitosamente' : 'Proveedor creado exitosamente');
+      toast.success(supplier ? 'Proveedor actualizado exitosamente' : 'Proveedor creado exitosamente');
       onClose();
     }
   };

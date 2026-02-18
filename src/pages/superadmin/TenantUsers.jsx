@@ -18,6 +18,7 @@ import Badge from '../../components/common/Badge';
 import Pagination from '../../components/common/Pagination';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
 import AddTenantUserModal from '../../components/superadmin/AddTenantUserModal';
+import toast from 'react-hot-toast';
 
 const TenantUsers = () => {
   const { id } = useParams();
@@ -113,7 +114,7 @@ const TenantUsers = () => {
 
   const confirmResetPassword = async () => {
     if (!newPassword || newPassword.length < 6) {
-      alert('La contraseña debe tener al menos 6 caracteres');
+      toast('La contraseña debe tener al menos 6 caracteres');
       return;
     }
     const success = await resetTenantUserPassword(id, passwordDialog.user.id, newPassword);

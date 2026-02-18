@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import Layout from '../../components/layout/Layout';
 import { warehousesService } from '../../api/warehouses';
+import toast from 'react-hot-toast';
 
 const WarehousesPage = () => {
   const [warehouses, setWarehouses] = useState([]);
@@ -26,7 +27,6 @@ const WarehousesPage = () => {
       const response = await warehousesService.getAll();
       setWarehouses(response.data || []);
     } catch (e) {
-      console.error('Error cargando bodegas:', e);
     } finally {
       setLoading(false);
     }
@@ -68,7 +68,7 @@ const WarehousesPage = () => {
       setShowModal(false);
       await fetchWarehouses();
     } catch (e) {
-      alert('Error: ' + (e.response?.data?.message || e.message));
+      toast.error('Error: ' + (e.response?.data?.message || e.message));
     } finally {
       setSaving(false);
     }
@@ -80,7 +80,7 @@ const WarehousesPage = () => {
       setDeleteConfirm(null);
       await fetchWarehouses();
     } catch (e) {
-      alert('Error: ' + (e.response?.data?.message || e.message));
+      toast.error('Error: ' + (e.response?.data?.message || e.message));
       setDeleteConfirm(null);
     }
   };

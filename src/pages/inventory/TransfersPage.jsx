@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Truck, Search, Eye, Send, CheckCircle, XCircle, Plus } from 'lucide-react';
 import Layout from '../../components/layout/Layout';
 import useTransfersStore from '../../store/transfersStore';
+import toast from 'react-hot-toast';
 
 const TransfersPage = () => {
   const navigate = useNavigate();
@@ -45,9 +46,9 @@ const TransfersPage = () => {
       setShowSendModal(false);
       setShippingNotes('');
       setSelectedTransfer(null);
-      alert('Transferencia enviada exitosamente');
+      toast.success('Transferencia enviada exitosamente');
     } catch (error) {
-      alert(error.response?.data?.message || 'Error al enviar');
+      toast.error(error.response?.data?.message || 'Error al enviar');
     }
   };
 
@@ -57,9 +58,9 @@ const TransfersPage = () => {
       setShowCancelModal(false);
       setCancelNotes('');
       setSelectedTransfer(null);
-      alert('Transferencia cancelada');
+      toast.success('Transferencia cancelada');
     } catch (error) {
-      alert(error.response?.data?.message || 'Error al cancelar');
+      toast.error(error.response?.data?.message || 'Error al cancelar');
     }
   };
 

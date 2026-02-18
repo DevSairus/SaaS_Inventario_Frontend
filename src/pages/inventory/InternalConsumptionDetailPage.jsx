@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, CheckCircle, XCircle, Package, Calendar, Warehouse } from 'lucide-react';
 import Layout from '../../components/layout/Layout';
 import axios from 'axios';
+import toast from 'react-hot-toast';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -29,8 +30,7 @@ const InternalConsumptionDetailPage = () => {
       });
       setConsumption(response.data.data);
     } catch (error) {
-      console.error('Error loading consumption:', error);
-      alert('Error al cargar el consumo');
+      toast.error('Error al cargar el consumo');
       navigate('/inventory/internal-consumptions');
     } finally {
       setLoading(false);
@@ -44,16 +44,16 @@ const InternalConsumptionDetailPage = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       setShowApproveModal(false);
-      alert('Consumo aprobado exitosamente');
+      toast.success('Consumo aprobado exitosamente');
       loadConsumption();
     } catch (error) {
-      alert(error.response?.data?.message || 'Error al aprobar');
+      toast.error(error.response?.data?.message || 'Error al aprobar');
     }
   };
 
   const handleReject = async () => {
     if (!rejectionReason.trim()) {
-      alert('Debe indicar el motivo del rechazo');
+      toast('Debe indicar el motivo del rechazo');
       return;
     }
     
@@ -65,10 +65,10 @@ const InternalConsumptionDetailPage = () => {
       );
       setShowRejectModal(false);
       setRejectionReason('');
-      alert('Consumo rechazado');
+      toast.success('Consumo rechazado');
       loadConsumption();
     } catch (error) {
-      alert(error.response?.data?.message || 'Error al rechazar');
+      toast.error(error.response?.data?.message || 'Error al rechazar');
     }
   };
 

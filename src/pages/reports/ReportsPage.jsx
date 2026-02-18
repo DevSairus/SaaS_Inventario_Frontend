@@ -2,6 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import Layout from '../../components/layout/Layout';
 import { reportsAPI } from '../../api/reports';
+import { accountsReceivableAPI } from '../../api/accountsReceivable';
+import { exportReceivablesToExcel } from '../../utils/excelExport';
+import useCustomersStore from '../../store/customersStore';
+import CustomerSearchInput from '../../components/common/CustomerSearchInput';
 
 const COLORS = ['#6366f1', '#8b5cf6', '#a78bfa', '#c4b5fd', '#ddd6fe', '#ede9fe', '#f5f3ff', '#818cf8', '#7c3aed', '#5b21b6'];
 
@@ -10,144 +14,245 @@ const formatNum = (val) => new Intl.NumberFormat('es-CO').format(val || 0);
 
 const MONTH_NAMES = { '01': 'Ene', '02': 'Feb', '03': 'Mar', '04': 'Abr', '05': 'May', '06': 'Jun', '07': 'Jul', '08': 'Ago', '09': 'Sep', '10': 'Oct', '11': 'Nov', '12': 'Dic' };
 
+// ─── Date Filter Bar (reusable) ───────────────────────────────────────────────
+const DateFilterBar = ({ dateMode, setDateMode, periodMonths, setPeriodMonths, customDates, setCustomDates, onApply, extraActions }) => {
+  const canApply = dateMode === 'period' || (customDates.from_date && customDates.to_date);
+  return (
+    <div className="bg-white rounded-xl shadow p-4">
+      <div className="flex flex-col md:flex-row md:items-end gap-3 flex-wrap">
+        {/* Toggle */}
+        <div>
+          <label className="block text-xs font-medium text-gray-500 mb-1.5">Modo de filtrado</label>
+          <div className="flex gap-1.5">
+            <button
+              onClick={() => { setDateMode('period'); }}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${dateMode === 'period' ? 'bg-teal-600 text-white shadow' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+            >
+              Por período
+            </button>
+            <button
+              onClick={() => setDateMode('custom')}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${dateMode === 'custom' ? 'bg-teal-600 text-white shadow' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+            >
+              Rango personalizado
+            </button>
+          </div>
+        </div>
+
+        {/* Period selector */}
+        {dateMode === 'period' && (
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1.5">Período</label>
+            <select
+              value={periodMonths}
+              onChange={(e) => setPeriodMonths(parseInt(e.target.value))}
+              className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 bg-white"
+            >
+              <option value={1}>Último mes</option>
+              <option value={3}>Últimos 3 meses</option>
+              <option value={6}>Últimos 6 meses</option>
+              <option value={12}>Último año</option>
+            </select>
+          </div>
+        )}
+
+        {/* Custom date range */}
+        {dateMode === 'custom' && (
+          <>
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1.5">Desde</label>
+              <input
+                type="date"
+                value={customDates.from_date}
+                onChange={(e) => setCustomDates(prev => ({ ...prev, from_date: e.target.value }))}
+                className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1.5">Hasta</label>
+              <input
+                type="date"
+                value={customDates.to_date}
+                onChange={(e) => setCustomDates(prev => ({ ...prev, to_date: e.target.value }))}
+                className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+              />
+            </div>
+            <button
+              onClick={onApply}
+              disabled={!canApply}
+              className="px-4 py-1.5 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all text-sm font-medium"
+            >
+              Aplicar
+            </button>
+          </>
+        )}
+
+        {/* Extra actions slot (e.g. export button) */}
+        {extraActions && <div className="md:ml-auto flex items-end">{extraActions}</div>}
+      </div>
+
+      {/* Active filter badge */}
+      {dateMode === 'custom' && customDates.from_date && customDates.to_date && (
+        <div className="mt-2 flex items-center gap-1.5 text-xs text-teal-700">
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+          Mostrando del <strong>{customDates.from_date}</strong> al <strong>{customDates.to_date}</strong>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ─── Main Component ───────────────────────────────────────────────────────────
 const ReportsPage = () => {
+  const { customers, fetchCustomers } = useCustomersStore();
   const [tab, setTab] = useState('movements');
   const [loading, setLoading] = useState(true);
+
+  // Data states
   const [movementsData, setMovementsData] = useState([]);
   const [valuationData, setValuationData] = useState({ by_category: [], totals: {} });
   const [profitData, setProfitData] = useState({ products: [], totals: {} });
   const [rotationData, setRotationData] = useState({ high_rotation: [], low_rotation: [], total_products: 0, products_with_sales: 0, products_without_sales: 0 });
+  const [receivablesData, setReceivablesData] = useState({ summary: {}, by_customer: [], all_invoices: [] });
+
+  // Shared date filter state
+  const [dateMode, setDateMode] = useState('period');
   const [periodMonths, setPeriodMonths] = useState(6);
-  
-  // Estados para selector de fechas personalizado en ganancias
-  const [profitDateMode, setProfitDateMode] = useState('period'); // 'period' o 'custom'
-  const [profitCustomDates, setProfitCustomDates] = useState({
-    from_date: '',
-    to_date: ''
-  });
+  const [customDates, setCustomDates] = useState({ from_date: '', to_date: '' });
+
+  // Receivables-specific filters
+  const [receivablesFilters, setReceivablesFilters] = useState({ customer_id: '', from_date: '', to_date: '', status: '' });
+  const [showReceivablesFilters, setShowReceivablesFilters] = useState(false);
+
+  // Build params for a given API from shared date state
+  const getDateParams = () => {
+    if (dateMode === 'custom' && customDates.from_date && customDates.to_date) {
+      return { from_date: customDates.from_date, to_date: customDates.to_date };
+    }
+    return { months: periodMonths };
+  };
 
   const fetchAll = async () => {
     setLoading(true);
     try {
-        // Determinar parámetros para el reporte de ganancias
-        let profitParams;
-        if (profitDateMode === 'custom' && profitCustomDates.from_date && profitCustomDates.to_date) {
-          profitParams = profitCustomDates;
-        } else {
-          profitParams = { months: periodMonths };
-        }
+      const dateParams = getDateParams();
 
-        const [mov, val, prof, rot] = await Promise.all([
-        reportsAPI.getMovementsByMonth(periodMonths),
+      const cleanReceivablesFilters = Object.fromEntries(
+        Object.entries(receivablesFilters).filter(([_, v]) => v !== '')
+      );
+
+      const results = await Promise.allSettled([
+        reportsAPI.getMovementsByMonth(dateParams),
         reportsAPI.getValuation(),
-        reportsAPI.getProfitReport(profitParams),
-        reportsAPI.getRotationReport(periodMonths)
-        ]);
-        
-        // Movimientos
-        setMovementsData(mov.data || []);
-        
-        // Valorización con valores por defecto completos
-        setValuationData(val.data || { 
-        by_category: [], 
-        totals: { 
-            product_count: 0, 
-            total_stock: 0, 
-            total_value: 0 
-        } 
-        });
-        
-        // Ganancia con valores por defecto completos
-        setProfitData(prof.data || { 
-        products: [], 
-        totals: { 
-            total_revenue: 0, 
-            total_cost: 0, 
-            total_profit: 0, 
-            margin_percentage: 0 
-        } 
-        });
-        
-        // Rotación con valores por defecto completos
-        setRotationData(rot.data || { 
-        high_rotation: [], 
-        low_rotation: [], 
-        total_products: 0, 
-        products_with_sales: 0, 
-        products_without_sales: 0 
-        });
-    } catch (e) {
-        console.error('Error cargando reportes:', e);
-        // Establecer valores por defecto en caso de error
-        setMovementsData([]);
-        setValuationData({ 
-        by_category: [], 
-        totals: { product_count: 0, total_stock: 0, total_value: 0 } 
-        });
-        setProfitData({ 
-        products: [], 
-        totals: { total_revenue: 0, total_cost: 0, total_profit: 0, margin_percentage: 0 } 
-        });
-        setRotationData({ 
-        high_rotation: [], 
-        low_rotation: [], 
-        total_products: 0, 
-        products_with_sales: 0, 
-        products_without_sales: 0 
-        });
-    } finally {
-        setLoading(false);
-    }
-    };
+        reportsAPI.getProfitReport(dateParams),
+        reportsAPI.getRotationReport(dateParams),
+        accountsReceivableAPI.getSummary(cleanReceivablesFilters)
+      ]);
 
-  useEffect(() => { fetchAll(); }, [periodMonths, profitDateMode]);
+      const [movResult, valResult, profResult, rotResult, recvResult] = results;
+
+      if (movResult.status === 'fulfilled') {
+        setMovementsData(movResult.value.data || []);
+      } else {
+        console.error('Error en movimientos:', movResult.reason);
+        setMovementsData([]);
+      }
+
+      if (valResult.status === 'fulfilled') {
+        setValuationData(valResult.value.data || { by_category: [], totals: { product_count: 0, total_stock: 0, total_value: 0 } });
+      } else {
+        setValuationData({ by_category: [], totals: { product_count: 0, total_stock: 0, total_value: 0 } });
+      }
+
+      if (profResult.status === 'fulfilled') {
+        setProfitData(profResult.value.data || { products: [], totals: { total_revenue: 0, total_cost: 0, total_profit: 0, margin_percentage: 0 } });
+      } else {
+        setProfitData({ products: [], totals: { total_revenue: 0, total_cost: 0, total_profit: 0, margin_percentage: 0 } });
+      }
+
+      if (rotResult.status === 'fulfilled') {
+        setRotationData(rotResult.value.data || { high_rotation: [], low_rotation: [], total_products: 0, products_with_sales: 0, products_without_sales: 0 });
+      } else {
+        setRotationData({ high_rotation: [], low_rotation: [], total_products: 0, products_with_sales: 0, products_without_sales: 0 });
+      }
+
+      if (recvResult.status === 'fulfilled') {
+        setReceivablesData(recvResult.value.data || { summary: {}, by_customer: [], all_invoices: [] });
+      } else {
+        const error = recvResult.reason;
+        console.error('Error en cartera:', error);
+        if (error.response?.status === 403) {
+          setReceivablesData({ summary: {}, by_customer: [], all_invoices: [], error: { type: 'permission', message: 'No tienes permisos para ver la cartera' } });
+        } else {
+          setReceivablesData({ summary: {}, by_customer: [], all_invoices: [], error: { type: 'general', message: error.message || 'Error al cargar cartera' } });
+        }
+      }
+    } catch (e) {
+      console.error('Error cargando reportes:', e);
+      setMovementsData([]);
+      setValuationData({ by_category: [], totals: { product_count: 0, total_stock: 0, total_value: 0 } });
+      setProfitData({ products: [], totals: { total_revenue: 0, total_cost: 0, total_profit: 0, margin_percentage: 0 } });
+      setRotationData({ high_rotation: [], low_rotation: [], total_products: 0, products_with_sales: 0, products_without_sales: 0 });
+      setReceivablesData({ summary: {}, by_customer: [], all_invoices: [] });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Re-fetch when period/mode changes (except custom — user must click Apply)
+  useEffect(() => {
+    if (dateMode === 'period') fetchAll();
+  }, [periodMonths, dateMode]);
+
+  useEffect(() => { fetchCustomers(); }, []);
 
   const handleApplyCustomDates = () => {
-    if (profitCustomDates.from_date && profitCustomDates.to_date) {
-      fetchAll();
+    if (customDates.from_date && customDates.to_date) fetchAll();
+  };
+
+  const handleApplyReceivablesFilters = async () => {
+    const cleanFilters = Object.fromEntries(
+      Object.entries(receivablesFilters).filter(([_, v]) => v !== '')
+    );
+    setLoading(true);
+    try {
+      const recv = await accountsReceivableAPI.getSummary(cleanFilters);
+      setReceivablesData(recv.data || { summary: {}, by_customer: [], all_invoices: [] });
+    } catch (e) {
+      console.error('Error cargando cartera:', e);
+      setReceivablesData({ summary: {}, by_customer: [], all_invoices: [] });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleClearReceivablesFilters = async () => {
+    const emptyFilters = { customer_id: '', from_date: '', to_date: '', status: '' };
+    setReceivablesFilters(emptyFilters);
+    setLoading(true);
+    try {
+      const recv = await accountsReceivableAPI.getSummary({});
+      setReceivablesData(recv.data || { summary: {}, by_customer: [], all_invoices: [] });
+    } catch (e) {
+      setReceivablesData({ summary: {}, by_customer: [], all_invoices: [] });
+    } finally {
+      setLoading(false);
     }
   };
 
   const exportProfitToExcel = () => {
-    // Crear datos para CSV
     const headers = ['Producto', 'SKU', 'Cantidad', 'Ingresos', 'Costo', 'Ganancia', 'Margen %'];
-    const rows = profitData.products.map(p => [
-      p.product_name,
-      p.product_sku,
-      p.total_quantity,
-      p.total_revenue,
-      p.total_cost,
-      p.profit,
-      p.margin_percentage.toFixed(1)
-    ]);
-    
-    // Agregar fila de totales
-    rows.push([
-      'TOTAL',
-      '',
-      '',
-      profitData.totals.total_revenue,
-      profitData.totals.total_cost,
-      profitData.totals.total_profit,
-      profitData.totals.margin_percentage.toFixed(1)
-    ]);
-
-    // Crear CSV
+    const rows = profitData.products.map(p => [p.product_name, p.product_sku, p.total_quantity, p.total_revenue, p.total_cost, p.profit, p.margin_percentage.toFixed(1)]);
+    rows.push(['TOTAL', '', '', profitData.totals.total_revenue, profitData.totals.total_cost, profitData.totals.total_profit, profitData.totals.margin_percentage.toFixed(1)]);
     let csvContent = headers.join(',') + '\n';
-    rows.forEach(row => {
-      csvContent += row.join(',') + '\n';
-    });
-
-    // Descargar archivo
+    rows.forEach(row => { csvContent += row.join(',') + '\n'; });
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
-    
-    // Crear nombre de archivo con fecha
-    const dateStr = profitDateMode === 'custom' 
-      ? `${profitCustomDates.from_date}_${profitCustomDates.to_date}`
-      : `ultimos_${periodMonths}_meses`;
+    const dateStr = dateMode === 'custom' ? `${customDates.from_date}_${customDates.to_date}` : `ultimos_${periodMonths}_meses`;
     link.setAttribute('download', `informe_ganancias_${dateStr}.csv`);
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
@@ -159,7 +264,8 @@ const ReportsPage = () => {
     { id: 'movements', label: 'Movimientos', icon: '📊' },
     { id: 'valuation', label: 'Valorización', icon: '💎' },
     { id: 'profit', label: 'Ganancia', icon: '💰' },
-    { id: 'rotation', label: 'Rotación', icon: '🔄' }
+    { id: 'rotation', label: 'Rotación', icon: '🔄' },
+    { id: 'receivables', label: 'Cartera', icon: '💳' }
   ];
 
   const movChartData = movementsData.map(d => ({
@@ -174,6 +280,14 @@ const ReportsPage = () => {
     Salidas: Math.round(parseFloat(d?.salidas_valor) || 0)
   }));
 
+  // Shared date filter props
+  const dateFilterProps = {
+    dateMode, setDateMode,
+    periodMonths, setPeriodMonths,
+    customDates, setCustomDates,
+    onApply: handleApplyCustomDates
+  };
+
   return (
     <Layout>
       <div className="space-y-5">
@@ -183,18 +297,6 @@ const ReportsPage = () => {
           <div>
             <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Reportes Gerenciales</h1>
             <p className="text-sm text-gray-500 mt-0.5">Análisis de inventario, ventas y rentabilidad</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <label className="text-sm text-gray-600 font-medium">Período:</label>
-            <select
-              value={periodMonths}
-              onChange={(e) => setPeriodMonths(parseInt(e.target.value))}
-              className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 bg-white"
-            >
-              <option value={3}>Últimos 3 meses</option>
-              <option value={6}>Últimos 6 meses</option>
-              <option value={12}>Último año</option>
-            </select>
           </div>
         </div>
 
@@ -225,13 +327,14 @@ const ReportsPage = () => {
           /* ===== MOVIMIENTOS ===== */
           tab === 'movements' && (
             <div className="space-y-6">
-              {/* KPIs */}
+              <DateFilterBar {...dateFilterProps} />
+
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 {[
-                  { label: 'Total Entradas', value: movementsData.reduce((s, d) => s + (parseFloat(d?.entradas) || 0), 0), color: 'border-green-500', bg: 'bg-green-50', textColor: 'text-green-700' },
-                  { label: 'Total Salidas', value: movementsData.reduce((s, d) => s + (parseFloat(d?.salidas) || 0), 0), color: 'border-red-500', bg: 'bg-red-50', textColor: 'text-red-700' },
-                  { label: 'Valor Entradas', value: formatCOP(movementsData.reduce((s, d) => s + (parseFloat(d?.entradas_valor) || 0), 0)), color: 'border-blue-500', bg: 'bg-blue-50', textColor: 'text-blue-700', isValue: true },
-                  { label: 'Valor Salidas', value: formatCOP(movementsData.reduce((s, d) => s + (parseFloat(d?.salidas_valor) || 0), 0)), color: 'border-orange-500', bg: 'bg-orange-50', textColor: 'text-orange-700', isValue: true }
+                  { label: 'Total Entradas', value: formatNum(movementsData.reduce((s, d) => s + (parseFloat(d?.entradas) || 0), 0)), color: 'border-green-500', bg: 'bg-green-50', textColor: 'text-green-700' },
+                  { label: 'Total Salidas', value: formatNum(movementsData.reduce((s, d) => s + (parseFloat(d?.salidas) || 0), 0)), color: 'border-red-500', bg: 'bg-red-50', textColor: 'text-red-700' },
+                  { label: 'Valor Entradas', value: formatCOP(movementsData.reduce((s, d) => s + (parseFloat(d?.entradas_valor) || 0), 0)), color: 'border-blue-500', bg: 'bg-blue-50', textColor: 'text-blue-700' },
+                  { label: 'Valor Salidas', value: formatCOP(movementsData.reduce((s, d) => s + (parseFloat(d?.salidas_valor) || 0), 0)), color: 'border-orange-500', bg: 'bg-orange-50', textColor: 'text-orange-700' }
                 ].map((kpi, i) => (
                   <div key={i} className={`bg-white rounded-xl shadow p-5 border-l-4 ${kpi.color}`}>
                     <p className="text-xs font-medium text-gray-500 uppercase">{kpi.label}</p>
@@ -240,7 +343,6 @@ const ReportsPage = () => {
                 ))}
               </div>
 
-              {/* Gráfico cantidad */}
               <div className="bg-white rounded-xl shadow p-6">
                 <h3 className="text-lg font-bold text-gray-800 mb-1">Cantidad de movimientos por mes</h3>
                 <p className="text-sm text-gray-500 mb-4">Entradas vs Salidas</p>
@@ -257,7 +359,6 @@ const ReportsPage = () => {
                 </ResponsiveContainer>
               </div>
 
-              {/* Gráfico valor */}
               <div className="bg-white rounded-xl shadow p-6">
                 <h3 className="text-lg font-bold text-gray-800 mb-1">Valor de movimientos por mes</h3>
                 <p className="text-sm text-gray-500 mb-4">En COP</p>
@@ -279,7 +380,14 @@ const ReportsPage = () => {
           /* ===== VALORIZACIÓN ===== */
           || tab === 'valuation' && (
             <div className="space-y-6">
-              {/* KPIs */}
+              {/* Note: valuation is a current-snapshot report, date filter not applicable */}
+              <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-700 flex items-center gap-2">
+                <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                La valorización refleja el inventario actual. No aplica filtro de fechas.
+              </div>
+
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                 {[
                   { label: 'Productos Activos', value: formatNum(valuationData.totals.product_count), sub: 'unidades', color: 'border-indigo-500', textColor: 'text-indigo-700' },
@@ -295,18 +403,12 @@ const ReportsPage = () => {
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Pie chart */}
                 <div className="bg-white rounded-xl shadow p-6">
                   <h3 className="text-lg font-bold text-gray-800 mb-4">Distribución por categoría</h3>
                   <ResponsiveContainer width="100%" height={280}>
                     <PieChart>
-                      <Pie
-                        data={valuationData.by_category}
-                        dataKey="total_value"
-                        nameKey="category_name"
-                        cx="50%" cy="50%" outerRadius={100}
-                        label={({ category_name, percent }) => `${category_name || 'Sin cat.'} ${(percent * 100).toFixed(0)}%`}
-                      >
+                      <Pie data={valuationData.by_category} dataKey="total_value" nameKey="category_name" cx="50%" cy="50%" outerRadius={100}
+                        label={({ category_name, percent }) => `${category_name || 'Sin cat.'} ${(percent * 100).toFixed(0)}%`}>
                         {valuationData.by_category.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
                       </Pie>
                       <Tooltip formatter={(v) => formatCOP(v)} />
@@ -314,11 +416,8 @@ const ReportsPage = () => {
                   </ResponsiveContainer>
                 </div>
 
-                {/* Tabla por categoría */}
                 <div className="bg-white rounded-xl shadow overflow-hidden">
-                  <div className="p-5 border-b">
-                    <h3 className="text-lg font-bold text-gray-800">Valor por categoría</h3>
-                  </div>
+                  <div className="p-5 border-b"><h3 className="text-lg font-bold text-gray-800">Valor por categoría</h3></div>
                   <div className="overflow-x-auto">
                     <table className="min-w-full">
                       <thead className="bg-gray-50">
@@ -354,85 +453,18 @@ const ReportsPage = () => {
           /* ===== GANANCIA ===== */
           || tab === 'profit' && (
             <div className="space-y-6">
-              {/* Selector de período personalizado */}
-              <div className="bg-white rounded-xl shadow p-6">
-                <div className="flex flex-col md:flex-row md:items-end gap-4">
-                  <div className="flex-1">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Modo de filtrado
-                    </label>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => setProfitDateMode('period')}
-                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                          profitDateMode === 'period'
-                            ? 'bg-emerald-600 text-white shadow-md'
-                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                        }`}
-                      >
-                        Por período
-                      </button>
-                      <button
-                        onClick={() => setProfitDateMode('custom')}
-                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                          profitDateMode === 'custom'
-                            ? 'bg-emerald-600 text-white shadow-md'
-                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                        }`}
-                      >
-                        Rango personalizado
-                      </button>
-                    </div>
-                  </div>
-
-                  {profitDateMode === 'custom' && (
-                    <>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Fecha desde
-                        </label>
-                        <input
-                          type="date"
-                          value={profitCustomDates.from_date}
-                          onChange={(e) => setProfitCustomDates(prev => ({ ...prev, from_date: e.target.value }))}
-                          className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Fecha hasta
-                        </label>
-                        <input
-                          type="date"
-                          value={profitCustomDates.to_date}
-                          onChange={(e) => setProfitCustomDates(prev => ({ ...prev, to_date: e.target.value }))}
-                          className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                        />
-                      </div>
-                      <button
-                        onClick={handleApplyCustomDates}
-                        disabled={!profitCustomDates.from_date || !profitCustomDates.to_date}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all text-sm font-medium"
-                      >
-                        Aplicar
-                      </button>
-                    </>
-                  )}
-
-                  <button
-                    onClick={exportProfitToExcel}
-                    disabled={profitData.products.length === 0}
-                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all flex items-center gap-2 text-sm font-medium shadow-md"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <DateFilterBar {...dateFilterProps}
+                extraActions={
+                  <button onClick={exportProfitToExcel} disabled={profitData.products.length === 0}
+                    className="px-4 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all flex items-center gap-2 text-sm font-medium shadow-md">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
-                    Exportar a Excel
+                    Exportar CSV
                   </button>
-                </div>
-              </div>
+                }
+              />
 
-              {/* KPIs */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 {[
                   { label: 'Ingresos Total', value: formatCOP(profitData.totals.total_revenue), color: 'border-green-500', textColor: 'text-green-700' },
@@ -447,7 +479,6 @@ const ReportsPage = () => {
                 ))}
               </div>
 
-              {/* Gráfico top productos */}
               {profitData.products.length > 0 && (
                 <div className="bg-white rounded-xl shadow p-6">
                   <h3 className="text-lg font-bold text-gray-800 mb-1">Top productos por ganancia</h3>
@@ -466,11 +497,8 @@ const ReportsPage = () => {
                 </div>
               )}
 
-              {/* Tabla detalle */}
               <div className="bg-white rounded-xl shadow overflow-hidden">
-                <div className="p-5 border-b">
-                  <h3 className="text-lg font-bold text-gray-800">Detalle por producto</h3>
-                </div>
+                <div className="p-5 border-b"><h3 className="text-lg font-bold text-gray-800">Detalle por producto</h3></div>
                 {profitData.products.length === 0 ? (
                   <div className="p-10 text-center text-gray-500">No hay ventas en el período seleccionado</div>
                 ) : (
@@ -515,7 +543,8 @@ const ReportsPage = () => {
           /* ===== ROTACIÓN ===== */
           || tab === 'rotation' && (
             <div className="space-y-6">
-              {/* KPIs */}
+              <DateFilterBar {...dateFilterProps} />
+
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                 {[
                   { label: 'Productos Totales', value: formatNum(rotationData.total_products), sub: 'activos', color: 'border-indigo-500', textColor: 'text-indigo-700' },
@@ -531,7 +560,6 @@ const ReportsPage = () => {
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Alta rotación */}
                 <div className="bg-white rounded-xl shadow overflow-hidden">
                   <div className="p-5 border-b flex items-center gap-2">
                     <span className="text-lg">🚀</span>
@@ -560,7 +588,6 @@ const ReportsPage = () => {
                   )}
                 </div>
 
-                {/* Baja rotación */}
                 <div className="bg-white rounded-xl shadow overflow-hidden">
                   <div className="p-5 border-b flex items-center gap-2">
                     <span className="text-lg">⚠️</span>
@@ -586,6 +613,242 @@ const ReportsPage = () => {
                   )}
                 </div>
               </div>
+            </div>
+          )
+
+          /* ===== CARTERA ===== */
+          || tab === 'receivables' && (
+            <div className="space-y-6">
+              {receivablesData.error && (
+                <div className={`rounded-lg p-4 ${receivablesData.error.type === 'permission' ? 'bg-yellow-50 border border-yellow-200' : 'bg-red-50 border border-red-200'}`}>
+                  <div className="flex items-start">
+                    <div className="flex-shrink-0">
+                      {receivablesData.error.type === 'permission' ? (
+                        <svg className="h-5 w-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                      ) : (
+                        <svg className="h-5 w-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      )}
+                    </div>
+                    <div className="ml-3 flex-1">
+                      <h3 className={`text-sm font-medium ${receivablesData.error.type === 'permission' ? 'text-yellow-800' : 'text-red-800'}`}>
+                        {receivablesData.error.type === 'permission' ? 'Sin permisos' : 'Error al cargar'}
+                      </h3>
+                      <p className={`mt-1 text-sm ${receivablesData.error.type === 'permission' ? 'text-yellow-700' : 'text-red-700'}`}>
+                        {receivablesData.error.message}
+                      </p>
+                      {receivablesData.error.type === 'permission' && (
+                        <p className="mt-2 text-xs text-yellow-600">Contacta a tu administrador para solicitar acceso al módulo de Cartera.</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Filtros propios de cartera */}
+              <div className="bg-white rounded-xl shadow">
+                <div className="p-4 border-b border-gray-200 flex justify-between items-center">
+                  <h3 className="text-sm font-semibold text-gray-700">Filtros de Cartera</h3>
+                  <button
+                    onClick={() => setShowReceivablesFilters(!showReceivablesFilters)}
+                    disabled={receivablesData.error?.type === 'permission'}
+                    className={`flex items-center gap-2 text-sm font-medium ${receivablesData.error?.type === 'permission' ? 'text-gray-400 cursor-not-allowed' : 'text-blue-600 hover:text-blue-700'}`}
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                    </svg>
+                    {showReceivablesFilters ? 'Ocultar' : 'Mostrar'} filtros
+                  </button>
+                </div>
+
+                {showReceivablesFilters && !receivablesData.error && (
+                  <div className="p-4 space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">Cliente</label>
+                        <CustomerSearchInput
+                          customers={customers.filter(c => c.is_active)}
+                          value={receivablesFilters.customer_id}
+                          onChange={(value) => setReceivablesFilters({ ...receivablesFilters, customer_id: value })}
+                          placeholder="Buscar cliente..."
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">Estado</label>
+                        <select
+                          value={receivablesFilters.status}
+                          onChange={(e) => setReceivablesFilters({ ...receivablesFilters, status: e.target.value })}
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value="">Todas</option>
+                          <option value="overdue">Solo Vencidas</option>
+                          <option value="current">Solo Al Día</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">Desde</label>
+                        <input type="date" value={receivablesFilters.from_date}
+                          onChange={(e) => setReceivablesFilters({ ...receivablesFilters, from_date: e.target.value })}
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">Hasta</label>
+                        <input type="date" value={receivablesFilters.to_date}
+                          onChange={(e) => setReceivablesFilters({ ...receivablesFilters, to_date: e.target.value })}
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                      </div>
+                    </div>
+                    <div className="flex justify-end gap-2 pt-2 border-t">
+                      <button onClick={handleClearReceivablesFilters} className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">Limpiar</button>
+                      <button onClick={handleApplyReceivablesFilters} className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700">Aplicar Filtros</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {!receivablesData.error && (
+                <>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {[
+                      { label: 'Total Por Cobrar', value: formatCOP(receivablesData.summary?.total_receivable), color: 'border-blue-500', textColor: 'text-blue-700', icon: '💵' },
+                      { label: 'Vencido (+30 días)', value: formatCOP(receivablesData.summary?.total_overdue), color: 'border-red-500', textColor: 'text-red-700', icon: '⚠️' },
+                      { label: 'A Vencer (0-30 días)', value: formatCOP(receivablesData.summary?.total_current), color: 'border-yellow-500', textColor: 'text-yellow-700', icon: '📅' },
+                      { label: 'Clientes con Deuda', value: formatNum(receivablesData.summary?.total_customers), sub: `${receivablesData.summary?.total_invoices || 0} facturas`, color: 'border-purple-500', textColor: 'text-purple-700', icon: '👥' }
+                    ].map((kpi, i) => (
+                      <div key={i} className={`bg-white rounded-xl shadow p-5 border-l-4 ${kpi.color}`}>
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <p className="text-xs font-medium text-gray-500 uppercase">{kpi.label}</p>
+                            <p className={`text-2xl font-bold ${kpi.textColor} mt-1`}>{kpi.value}</p>
+                            {kpi.sub && <p className="text-xs text-gray-400 mt-0.5">{kpi.sub}</p>}
+                          </div>
+                          <span className="text-3xl">{kpi.icon}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="flex justify-end">
+                    <button
+                      onClick={() => {
+                        const filename = receivablesFilters.customer_id
+                          ? `cartera_cliente_${customers.find(c => c.id === parseInt(receivablesFilters.customer_id))?.full_name || 'filtrado'}`
+                          : receivablesFilters.from_date && receivablesFilters.to_date
+                          ? `cartera_${receivablesFilters.from_date}_${receivablesFilters.to_date}`
+                          : 'cartera';
+                        exportReceivablesToExcel(receivablesData, filename);
+                      }}
+                      className="inline-flex items-center gap-2 px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-semibold shadow-sm transition-colors"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      Exportar a Excel
+                    </button>
+                  </div>
+
+                  <div className="bg-white rounded-xl shadow overflow-hidden">
+                    <div className="p-5 border-b flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">👥</span>
+                        <h3 className="text-lg font-bold text-gray-800">Cartera por Cliente</h3>
+                      </div>
+                      <p className="text-sm text-gray-500">{receivablesData.by_customer?.length || 0} clientes</p>
+                    </div>
+                    {(!receivablesData.by_customer || receivablesData.by_customer.length === 0) ? (
+                      <div className="p-8 text-center text-gray-500 text-sm">No hay deudas pendientes</div>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="min-w-full divide-y divide-gray-200">
+                          <thead className="bg-gray-50">
+                            <tr>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cliente</th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">NIT/CC</th>
+                              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Total Pendiente</th>
+                              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Facturas</th>
+                              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Días Promedio</th>
+                              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Vencido</th>
+                            </tr>
+                          </thead>
+                          <tbody className="bg-white divide-y divide-gray-200">
+                            {receivablesData.by_customer.slice(0, 10).map((item, i) => (
+                              <tr key={i} className="hover:bg-gray-50">
+                                <td className="px-6 py-4 text-sm font-medium text-gray-900">{item.customer_name}</td>
+                                <td className="px-6 py-4 text-sm text-gray-500">{item.customer_tax_id || '-'}</td>
+                                <td className="px-6 py-4 text-sm text-right font-semibold text-gray-900">{formatCOP(item.total_pending)}</td>
+                                <td className="px-6 py-4 text-sm text-center">
+                                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">{item.pending_invoices}</span>
+                                </td>
+                                <td className="px-6 py-4 text-sm text-right text-gray-600">{Math.round(item.avg_days_pending || 0)} días</td>
+                                <td className="px-6 py-4 text-sm text-right">
+                                  <span className={`font-semibold ${parseFloat(item.overdue_amount) > 0 ? 'text-red-600' : 'text-gray-400'}`}>{formatCOP(item.overdue_amount)}</span>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="bg-white rounded-xl shadow overflow-hidden">
+                    <div className="p-5 border-b flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">📄</span>
+                        <h3 className="text-lg font-bold text-gray-800">Facturas Pendientes Recientes</h3>
+                      </div>
+                      <p className="text-sm text-gray-500">{receivablesData.all_invoices?.length || 0} facturas</p>
+                    </div>
+                    {(!receivablesData.all_invoices || receivablesData.all_invoices.length === 0) ? (
+                      <div className="p-8 text-center text-gray-500 text-sm">No hay facturas pendientes</div>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="min-w-full divide-y divide-gray-200">
+                          <thead className="bg-gray-50">
+                            <tr>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Factura</th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cliente</th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
+                              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
+                              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Pagado</th>
+                              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Saldo</th>
+                              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Estado</th>
+                            </tr>
+                          </thead>
+                          <tbody className="bg-white divide-y divide-gray-200">
+                            {receivablesData.all_invoices.slice(0, 15).map((inv, i) => {
+                              const daysOverdue = parseInt(inv.days_overdue) || 0;
+                              const isOverdue = daysOverdue > 30;
+                              return (
+                                <tr key={i} className={`hover:bg-gray-50 ${isOverdue ? 'bg-red-50' : ''}`}>
+                                  <td className="px-6 py-4 text-sm font-medium text-gray-900">{inv.sale_number}</td>
+                                  <td className="px-6 py-4 text-sm text-gray-600">{inv.customer_name}</td>
+                                  <td className="px-6 py-4 text-sm text-gray-500">{inv.sale_date ? new Date(inv.sale_date).toLocaleDateString('es-CO') : '-'}</td>
+                                  <td className="px-6 py-4 text-sm text-right text-gray-900">{formatCOP(inv.total_amount)}</td>
+                                  <td className="px-6 py-4 text-sm text-right text-green-600">{formatCOP(inv.paid_amount)}</td>
+                                  <td className="px-6 py-4 text-sm text-right font-semibold text-blue-600">{formatCOP(inv.balance)}</td>
+                                  <td className="px-6 py-4 text-center">
+                                    {isOverdue ? (
+                                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Vencida ({daysOverdue}d)</span>
+                                    ) : daysOverdue > 0 ? (
+                                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">{daysOverdue} días</span>
+                                    ) : (
+                                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Al día</span>
+                                    )}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
           )
         )}

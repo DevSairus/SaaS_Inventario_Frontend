@@ -1,8 +1,10 @@
 import api from './axios';
 
 export const reportsAPI = {
-  getMovementsByMonth: async (months = 6) => {
-    const response = await api.get('/inventory/reports/movements', { params: { months } });
+  getMovementsByMonth: async (params = {}) => {
+    // legacy: if number passed, treat as months
+    const queryParams = typeof params === 'number' ? { months: params } : params;
+    const response = await api.get('/inventory/reports/movements', { params: queryParams });
     return response.data;
   },
 
@@ -12,17 +14,16 @@ export const reportsAPI = {
   },
 
   getProfitReport: async (params = {}, limit = 100) => {
-    // Si params es un número, es el modo legacy (meses)
-    const queryParams = typeof params === 'number' 
-      ? { months: params, limit } 
+    const queryParams = typeof params === 'number'
+      ? { months: params, limit }
       : { ...params, limit };
-    
     const response = await api.get('/inventory/reports/profit', { params: queryParams });
     return response.data;
   },
 
-  getRotationReport: async (months = 3) => {
-    const response = await api.get('/inventory/reports/rotation', { params: { months } });
+  getRotationReport: async (params = {}) => {
+    const queryParams = typeof params === 'number' ? { months: params } : params;
+    const response = await api.get('/inventory/reports/rotation', { params: queryParams });
     return response.data;
   }
 };

@@ -6,6 +6,7 @@ import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
 import Loading from '../../components/common/Loading';
 import Layout from '../../components/layout/Layout';
+import toast from 'react-hot-toast';
 
 const TenantSettingsPage = () => {
   const [loading, setLoading] = useState(true);
@@ -50,8 +51,7 @@ const TenantSettingsPage = () => {
         }
       }
     } catch (error) {
-      console.error('Error cargando configuración:', error);
-      alert('Error al cargar la configuración');
+      toast.error('Error al cargar la configuración');
     } finally {
       setLoading(false);
     }
@@ -70,12 +70,12 @@ const TenantSettingsPage = () => {
     if (file) {
       const validTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp'];
       if (!validTypes.includes(file.type)) {
-        alert('Tipo de archivo no permitido. Solo se permiten imágenes JPG, PNG o WEBP');
+        toast('Tipo de archivo no permitido. Solo se permiten imágenes JPG, PNG o WEBP');
         return;
       }
 
       if (file.size > 5 * 1024 * 1024) {
-        alert('El archivo es demasiado grande. El tamaño máximo es 5MB');
+        toast('El archivo es demasiado grande. El tamaño máximo es 5MB');
         return;
       }
 
@@ -91,7 +91,7 @@ const TenantSettingsPage = () => {
 
   const handleUploadLogo = async () => {
     if (!logoFile) {
-      alert('Selecciona un archivo primero');
+      toast('Selecciona un archivo primero');
       return;
     }
 
@@ -107,7 +107,7 @@ const TenantSettingsPage = () => {
       });
 
       if (response.data.success) {
-        alert('Logo subido exitosamente');
+        toast.success('Logo subido exitosamente');
         setConfig(prev => ({
           ...prev,
           logo_url: response.data.data.logo_url
@@ -115,8 +115,7 @@ const TenantSettingsPage = () => {
         setLogoFile(null);
       }
     } catch (error) {
-      console.error('Error subiendo logo:', error);
-      alert(error.response?.data?.message || 'Error al subir el logo');
+      toast.error(error.response?.data?.message || 'Error al subir el logo');
     } finally {
       setUploadingLogo(false);
     }
@@ -130,7 +129,7 @@ const TenantSettingsPage = () => {
     try {
       const response = await axios.delete('/tenant/logo');
       if (response.data.success) {
-        alert('Logo eliminado exitosamente');
+        toast.success('Logo eliminado exitosamente');
         setConfig(prev => ({
           ...prev,
           logo_url: ''
@@ -139,8 +138,7 @@ const TenantSettingsPage = () => {
         setLogoFile(null);
       }
     } catch (error) {
-      console.error('Error eliminando logo:', error);
-      alert('Error al eliminar el logo');
+      toast.error('Error al eliminar el logo');
     }
   };
 
@@ -152,11 +150,10 @@ const TenantSettingsPage = () => {
       const response = await axios.put('/tenant/config', config);
       
       if (response.data.success) {
-        alert('Configuración actualizada exitosamente');
+        toast.success('Configuración actualizada exitosamente');
       }
     } catch (error) {
-      console.error('Error guardando configuración:', error);
-      alert('Error al guardar la configuración');
+      toast.error('Error al guardar la configuración');
     } finally {
       setSaving(false);
     }

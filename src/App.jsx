@@ -23,6 +23,7 @@ import CustomersPage from './pages/customers/CustomersPage';
 import WarehousesPage from './pages/warehouses/WarehousesPage';
 import TenantSettingsPage from './pages/settings/TenantSettingsPage';
 import ReportsPage from './pages/reports/ReportsPage';
+import ProfilePage from './pages/profile/ProfilePage';
 
 // Movimientos Avanzados - Customer Returns
 import CustomerReturnsPage from './pages/sales/CustomerReturnsPage';
@@ -70,6 +71,7 @@ import { Toaster } from 'react-hot-toast';
 // Components
 import PrivateRoute from './components/auth/PrivateRoute';
 import useAuthStore from './store/authStore';
+import SessionKeepAlive from './components/SessionKeepAlive';
 
 // Componente para redirigir según el rol
 function RoleBasedRedirect() {
@@ -123,6 +125,9 @@ function App() {
 
   return (
     <BrowserRouter>
+      {/* Mantener sesión activa mientras el usuario está activo */}
+      <SessionKeepAlive />
+      
       {/* ✅ Sistema de notificaciones toast */}
       <Toaster 
         position="top-center"
@@ -279,6 +284,9 @@ function App() {
         <Route path="users" element={<TenantRoute><UsersPage /></TenantRoute>} />
         <Route path="users/new" element={<TenantRoute><UserForm /></TenantRoute>} />
         <Route path="users/:id/edit" element={<TenantRoute><UserForm /></TenantRoute>} />
+
+        {/* Profile */}
+        <Route path="profile" element={<TenantRoute><ProfilePage /></TenantRoute>} />
 
         {/* 404 */}
         <Route path="*" element={<Navigate to="/" replace />} />

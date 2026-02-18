@@ -5,6 +5,7 @@ import Layout from '../../components/layout/Layout';
 import useCustomerReturnsStore from '../../store/customerReturnsStore';
 import api from '../../api/axios';
 import { formatCurrency, toInteger, toNumber, INPUT_CONFIG } from '../../utils/numberUtils';
+import toast from 'react-hot-toast';
 
 const CustomerReturnFormPage = () => {
   const navigate = useNavigate();
@@ -33,8 +34,7 @@ const CustomerReturnFormPage = () => {
       });
       setSales(response.data.data || []);
     } catch (error) {
-      console.error('Error buscando ventas:', error);
-      alert('Error al buscar ventas');
+      toast.error('Error al buscar ventas');
     } finally {
       setLoadingSales(false);
     }
@@ -61,8 +61,7 @@ const CustomerReturnFormPage = () => {
         }))
       }));
     } catch (error) {
-      console.error('Error obteniendo venta:', error);
-      alert('Error al cargar la venta');
+      toast.error('Error al cargar la venta');
     }
   };
 
@@ -72,7 +71,7 @@ const CustomerReturnFormPage = () => {
     const quantity = toInteger(value, 0);
     
     if (quantity > newItems[index].quantity_sold) {
-      alert('No puedes devolver más de lo vendido');
+      toast('No puedes devolver más de lo vendido');
       return;
     }
     
@@ -101,7 +100,7 @@ const CustomerReturnFormPage = () => {
       }));
 
     if (itemsToReturn.length === 0) {
-      alert('Debes seleccionar al menos un producto para devolver');
+      toast('Debes seleccionar al menos un producto para devolver');
       return;
     }
 
@@ -113,11 +112,10 @@ const CustomerReturnFormPage = () => {
         items: itemsToReturn
       });
       
-      alert('Devolución creada exitosamente');
+      toast.success('Devolución creada exitosamente');
       navigate('/sales/customer-returns');
     } catch (error) {
-      console.error('Error:', error);
-      alert(error.response?.data?.message || 'Error al crear devolución');
+      toast.error(error.response?.data?.message || 'Error al crear devolución');
     }
   };
 

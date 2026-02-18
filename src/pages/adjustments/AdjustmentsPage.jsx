@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAdjustmentsStore } from '../../store/adjustmentsStore';
 import Layout from '../../components/layout/Layout';
+import toast from 'react-hot-toast';
 
 const AdjustmentsPage = () => {
   const navigate = useNavigate();
@@ -51,7 +52,7 @@ const AdjustmentsPage = () => {
     if (window.confirm('¿Estás seguro de eliminar este ajuste?')) {
       const success = await deleteAdjustment(id);
       if (success) {
-        alert('Ajuste eliminado exitosamente');
+        toast.success('Ajuste eliminado exitosamente');
       }
     }
   };

@@ -16,6 +16,7 @@ import Loading from '../../components/common/Loading';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
 import Layout from '../../components/layout/Layout';
 import salesApi from '../../api/sales';
+import toast from 'react-hot-toast';
 
 export default function SalesPage() {
   const navigate = useNavigate();
@@ -66,7 +67,7 @@ export default function SalesPage() {
       setConfirmDialog({ show: false, sale: null, action: null });
       fetchSales();
     } catch (err) {
-      alert(err.message || 'Error ejecutando acción');
+      toast.error(err.message || 'Error ejecutando acción');
     }
   };
 
@@ -80,8 +81,7 @@ export default function SalesPage() {
       const url = URL.createObjectURL(response.data);
       window.open(url, '_blank');
     } catch (error) {
-      console.error('Error descargando PDF:', error);
-      alert('Error al generar el PDF');
+      toast.error('Error al generar el PDF');
     }
   };
 

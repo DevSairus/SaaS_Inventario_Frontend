@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Send, CheckCircle, Package, Calendar, Warehouse } from 'lucide-react';
 import Layout from '../../components/layout/Layout';
 import axios from 'axios';
+import toast from 'react-hot-toast';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -28,8 +29,7 @@ const TransferDetailPage = () => {
       });
       setTransfer(response.data.data);
     } catch (error) {
-      console.error('Error loading transfer:', error);
-      alert('Error al cargar la transferencia');
+      toast.error('Error al cargar la transferencia');
       navigate('/inventory/transfers');
     } finally {
       setLoading(false);
@@ -45,10 +45,10 @@ const TransferDetailPage = () => {
       );
       setShowSendModal(false);
       setShippingNotes('');
-      alert('Transferencia enviada exitosamente');
+      toast.success('Transferencia enviada exitosamente');
       loadTransfer();
     } catch (error) {
-      alert(error.response?.data?.message || 'Error al enviar');
+      toast.error(error.response?.data?.message || 'Error al enviar');
     }
   };
 

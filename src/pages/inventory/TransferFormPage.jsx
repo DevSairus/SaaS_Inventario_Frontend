@@ -4,6 +4,7 @@ import { ArrowLeft, Search, Plus, X } from 'lucide-react';
 import Layout from '../../components/layout/Layout';
 import useTransfersStore from '../../store/transfersStore';
 import api from '../../api/axios';
+import toast from 'react-hot-toast';
 
 const TransferFormPage = () => {
   const navigate = useNavigate();
@@ -33,7 +34,6 @@ const TransferFormPage = () => {
       const response = await api.get('/inventory/warehouses');
       setWarehouses(response.data.data || []);
     } catch (error) {
-      console.error('Error cargando bodegas:', error);
     }
   };
 
@@ -72,7 +72,6 @@ const TransferFormPage = () => {
       
       setProducts(productsWithStock);
     } catch (error) {
-      console.error('Error buscando productos:', error);
       setSearchError('Error al buscar productos');
     }
   };
@@ -80,14 +79,14 @@ const TransferFormPage = () => {
   const addProduct = (product) => {
     // Verificar si ya está en la lista
     if (formData.items.find(item => item.product_id === product.id)) {
-      alert('Este producto ya está en la lista');
+      toast('Este producto ya está en la lista');
       return;
     }
 
     // Verificar stock disponible
     const availableStock = parseFloat(product.available_stock || 0);
     if (availableStock <= 0) {
-      alert('Este producto no tiene stock disponible en la bodega de origen');
+      toast('Este producto no tiene stock disponible en la bodega de origen');
       return;
     }
 
@@ -121,7 +120,7 @@ const TransferFormPage = () => {
     const quantity = parseFloat(value) || 0;
 
     if (quantity > newItems[index].available_stock) {
-      alert(`Stock máximo disponible: ${newItems[index].available_stock}`);
+      toast(`Stock máximo disponible: ${newItems[index].available_stock}`);
       return;
     }
 
@@ -143,18 +142,18 @@ const TransferFormPage = () => {
 
     // Validaciones
     if (formData.from_warehouse_id === formData.to_warehouse_id) {
-      alert('La bodega de origen y destino no pueden ser la misma');
+      toast('La bodega de origen y destino no pueden ser la misma');
       return;
     }
 
     if (formData.items.length === 0) {
-      alert('Debes agregar al menos un producto');
+      toast('Debes agregar al menos un producto');
       return;
     }
 
     const itemsWithQuantity = formData.items.filter(item => item.quantity > 0);
     if (itemsWithQuantity.length === 0) {
-      alert('Debes especificar cantidades para los productos');
+      toast('Debes especificar cantidades para los productos');
       return;
     }
 
@@ -167,11 +166,10 @@ const TransferFormPage = () => {
         }))
       });
 
-      alert('Transferencia creada exitosamente');
+      toast.success('Transferencia creada exitosamente');
       navigate('/inventory/transfers');
     } catch (error) {
-      console.error('Error:', error);
-      alert(error.response?.data?.message || 'Error al crear transferencia');
+      toast.error(error.response?.data?.message || 'Error al crear transferencia');
     }
   };
 

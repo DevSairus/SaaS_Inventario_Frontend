@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, CheckCircle, XCircle, Package, Calendar, User, FileText } from 'lucide-react';
 import Layout from '../../components/layout/Layout';
 import useCustomerReturnsStore from '../../store/customerReturnsStore';
+import toast from 'react-hot-toast';
 
 const CustomerReturnDetailPage = () => {
   const { id } = useParams();
@@ -26,8 +27,7 @@ const CustomerReturnDetailPage = () => {
       const data = await getReturnById(id);
       setCustomerReturn(data);
     } catch (error) {
-      console.error('Error loading return:', error);
-      alert('Error al cargar la devolución');
+      toast.error('Error al cargar la devolución');
       navigate('/sales/customer-returns');
     } finally {
       setLoading(false);
@@ -39,10 +39,10 @@ const CustomerReturnDetailPage = () => {
       await approveReturn(id, approvalNotes);
       setShowApproveModal(false);
       setApprovalNotes('');
-      alert('Devolución aprobada exitosamente');
+      toast.success('Devolución aprobada exitosamente');
       loadReturnDetail();
     } catch (error) {
-      alert(error.response?.data?.message || 'Error al aprobar');
+      toast.error(error.response?.data?.message || 'Error al aprobar');
     }
   };
 
@@ -51,10 +51,10 @@ const CustomerReturnDetailPage = () => {
       await rejectReturn(id, rejectionReason);
       setShowRejectModal(false);
       setRejectionReason('');
-      alert('Devolución rechazada');
+      toast.success('Devolución rechazada');
       loadReturnDetail();
     } catch (error) {
-      alert(error.response?.data?.message || 'Error al rechazar');
+      toast.error(error.response?.data?.message || 'Error al rechazar');
     }
   };
 

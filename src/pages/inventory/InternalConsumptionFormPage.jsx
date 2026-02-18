@@ -4,6 +4,7 @@ import { ArrowLeft, Search, Plus, X } from 'lucide-react';
 import Layout from '../../components/layout/Layout';
 import useInternalConsumptionsStore from '../../store/internalConsumptionsStore';
 import api from '../../api/axios';
+import toast from 'react-hot-toast';
 
 const InternalConsumptionFormPage = () => {
   const navigate = useNavigate();
@@ -32,7 +33,6 @@ const InternalConsumptionFormPage = () => {
       const response = await api.get('/inventory/warehouses');
       setWarehouses(response.data.data || []);
     } catch (error) {
-      console.error('Error cargando bodegas:', error);
     }
   };
 
@@ -71,20 +71,19 @@ const InternalConsumptionFormPage = () => {
       
       setProducts(productsWithStock);
     } catch (error) {
-      console.error('Error buscando productos:', error);
       setSearchError('Error al buscar productos');
     }
   };
 
   const addProduct = (product) => {
     if (formData.items.find(item => item.product_id === product.id)) {
-      alert('Este producto ya está en la lista');
+      toast('Este producto ya está en la lista');
       return;
     }
 
     const availableStock = parseFloat(product.available_stock || 0);
     if (availableStock <= 0) {
-      alert('Este producto no tiene stock disponible');
+      toast('Este producto no tiene stock disponible');
       return;
     }
 
@@ -122,7 +121,7 @@ const InternalConsumptionFormPage = () => {
     const quantity = parseFloat(value) || 0;
 
     if (quantity > newItems[index].available_stock) {
-      alert(`Stock máximo disponible: ${newItems[index].available_stock}`);
+      toast(`Stock máximo disponible: ${newItems[index].available_stock}`);
       return;
     }
 
@@ -156,13 +155,13 @@ const InternalConsumptionFormPage = () => {
     e.preventDefault();
 
     if (formData.items.length === 0) {
-      alert('Debes agregar al menos un producto');
+      toast('Debes agregar al menos un producto');
       return;
     }
 
     const itemsWithQuantity = formData.items.filter(item => item.quantity > 0);
     if (itemsWithQuantity.length === 0) {
-      alert('Debes especificar cantidades para los productos');
+      toast('Debes especificar cantidades para los productos');
       return;
     }
 
@@ -176,11 +175,10 @@ const InternalConsumptionFormPage = () => {
         }))
       });
 
-      alert('Consumo interno creado exitosamente');
+      toast.success('Consumo interno creado exitosamente');
       navigate('/inventory/internal-consumptions');
     } catch (error) {
-      console.error('Error:', error);
-      alert(error.response?.data?.message || 'Error al crear consumo');
+      toast.error(error.response?.data?.message || 'Error al crear consumo');
     }
   };
 

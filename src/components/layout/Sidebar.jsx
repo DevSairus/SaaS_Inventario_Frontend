@@ -17,6 +17,7 @@ import {
   CurrencyDollarIcon,
   CreditCardIcon,
   UsersIcon,
+  UserCircleIcon,
   DocumentTextIcon,
   ChevronDownIcon,
   ChevronRightIcon,
@@ -99,7 +100,7 @@ function Sidebar({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobileOpen })
         },
         {
           id: 'sales-list',
-          title: 'Facturas',
+          title: 'Remisiones',
           route: '/sales',
           available: true,
           icon: DocumentTextIcon
@@ -181,17 +182,24 @@ function Sidebar({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobileOpen })
       icon: Cog6ToothIcon,
       children: [
         {
+          id: 'my-profile',
+          title: 'Mi Perfil',
+          route: '/profile',
+          available: true,
+          icon: UserCircleIcon,
+        },
+        {
           id: 'general-settings',
           title: 'Configuración General',
           route: '/settings',
-          available: true,
+          available: user?.role === 'admin',  // Solo admin
           icon: Cog6ToothIcon,
         },
         {
           id: 'users-management',
           title: 'Gestión de Usuarios',
           route: '/users',
-          available: true,
+          available: user?.role === 'admin',  // Solo admin
           icon: UsersIcon,
         },
       ],

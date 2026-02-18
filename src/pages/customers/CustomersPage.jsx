@@ -16,6 +16,7 @@ import Modal from '../../components/common/Modal';
 import Input from '../../components/common/Input';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
 import Layout from '../../components/layout/Layout';
+import toast from 'react-hot-toast';
 
 export default function CustomersPage() {
   const { 
@@ -92,7 +93,7 @@ export default function CustomersPage() {
       handleCloseModal();
       fetchCustomers();
     } catch (error) {
-      alert('Error guardando cliente: ' + (error.response?.data?.message || error.message));
+      toast.error('Error guardando cliente: ' + (error.response?.data?.message || error.message));
     }
   };
 
@@ -102,7 +103,7 @@ export default function CustomersPage() {
       setDeleteDialog({ show: false, customer: null });
       fetchCustomers();
     } catch (error) {
-      alert('Error eliminando cliente: ' + (error.response?.data?.message || error.message));
+      toast.error('Error eliminando cliente: ' + (error.response?.data?.message || error.message));
     }
   };
 

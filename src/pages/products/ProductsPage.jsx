@@ -6,6 +6,7 @@ import ProductFormModal from '../../components/products/ProductFormModal';
 import ImportProductsModal from '../../components/products/ImportProductsModal';
 import Layout from '../../components/layout/Layout';
 import { exportProductsToExcel } from '../../utils/excelExport';
+import toast from 'react-hot-toast';
 
 function ProductsPage() {
   const { user } = useAuthStore();
@@ -151,9 +152,6 @@ function ProductsPage() {
       const errors = [];
       const skipped = [];
       const imported = [];
-
-      console.log(`📦 Iniciando importación de ${productsData.length} productos...`);
-
       for (const productData of productsData) {
         try {
           // Mapear los datos al formato esperado por el API
@@ -176,18 +174,11 @@ function ProductsPage() {
             is_for_purchase: true,
             reserved_stock: 0
           };
-
-          console.log(`🔍 Importando: ${mappedData.sku} - ${mappedData.name}`);
-          
           await createProduct(mappedData);
           
           successCount++;
           imported.push(productData.sku);
-          console.log(`✅ Importado: ${productData.sku}`);
-          
         } catch (error) {
-          console.error(`❌ Error con ${productData.sku}:`, error);
-          
           const errorMsg = error.message || error.response?.data?.message || 'Error desconocido';
           
           // Verificar si es un error de código duplicado
@@ -198,8 +189,6 @@ function ProductsPage() {
             
             skippedCount++;
             skipped.push(productData.sku);
-            console.log(`⏭️ Omitido (duplicado): ${productData.sku}`);
-            
           } else {
             // Error real
             errorCount++;
@@ -208,7 +197,6 @@ function ProductsPage() {
               name: productData.name,
               error: errorMsg
             });
-            console.log(`❌ Error real: ${productData.sku} - ${errorMsg}`);
           }
         }
       }
@@ -216,16 +204,6 @@ function ProductsPage() {
       // ========================================
       // MOSTRAR RESUMEN COMPLETO
       // ========================================
-      
-      console.log('\n========================================');
-      console.log('📊 RESUMEN DE IMPORTACIÓN');
-      console.log('========================================');
-      console.log(`Total procesados: ${productsData.length}`);
-      console.log(`✅ Importados: ${successCount}`);
-      console.log(`⏭️ Omitidos (duplicados): ${skippedCount}`);
-      console.log(`❌ Errores: ${errorCount}`);
-      console.log('========================================\n');
-
       // Construir mensaje para el usuario
       let message = '📊 RESUMEN DE IMPORTACIÓN\n\n';
       message += `Total procesados: ${productsData.length}\n\n`;
@@ -267,18 +245,16 @@ function ProductsPage() {
       }
 
       // Mostrar el resumen
-      alert(message);
+      toast(message);
       
       // Refrescar la lista si hubo al menos un producto importado
       if (successCount > 0) {
-        console.log('🔄 Refrescando lista de productos...');
         fetchProducts();
         fetchStats();
       }
       
     } catch (error) {
-      console.error('❌ Error general en importación:', error);
-      alert('Error al importar productos: ' + error.message);
+      toast.error('Error al importar productos: ' + error.message);
     }
   };
 

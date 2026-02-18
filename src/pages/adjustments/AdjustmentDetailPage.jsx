@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAdjustmentsStore } from '../../store/adjustmentsStore';
 import Layout from '../../components/layout/Layout';
+import toast from 'react-hot-toast';
 
 const AdjustmentDetailPage = () => {
   const { id } = useParams();
@@ -24,7 +25,7 @@ const AdjustmentDetailPage = () => {
     if (window.confirm('¿Confirmar este ajuste? Esta acción actualizará el inventario y no podrá deshacerse.')) {
       const success = await confirmAdjustment(id);
       if (success) {
-        alert('Ajuste confirmado exitosamente');
+        toast.success('Ajuste confirmado exitosamente');
       }
     }
   };
@@ -33,7 +34,7 @@ const AdjustmentDetailPage = () => {
     if (window.confirm('¿Cancelar este ajuste?')) {
       const success = await cancelAdjustment(id);
       if (success) {
-        alert('Ajuste cancelado exitosamente');
+        toast.success('Ajuste cancelado exitosamente');
       }
     }
   };

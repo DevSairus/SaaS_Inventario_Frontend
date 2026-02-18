@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { parseImportedFile, validateImportedProducts, downloadProductsTemplate } from '../../utils/excelExport';
+import toast from 'react-hot-toast';
 
 function ImportProductsModal({ isOpen, onClose, onImport }) {
   const [file, setFile] = useState(null);
@@ -26,7 +27,7 @@ function ImportProductsModal({ isOpen, onClose, onImport }) {
       setValidationResult(result);
       setStep(2);
     } catch (error) {
-      alert('Error al procesar el archivo: ' + error.message);
+      toast.error('Error al procesar el archivo: ' + error.message);
     } finally {
       setIsProcessing(false);
     }
@@ -40,7 +41,7 @@ function ImportProductsModal({ isOpen, onClose, onImport }) {
       await onImport(validationResult.validProducts);
       handleClose();
     } catch (error) {
-      alert('Error al importar productos: ' + error.message);
+      toast.error('Error al importar productos: ' + error.message);
     } finally {
       setIsProcessing(false);
     }

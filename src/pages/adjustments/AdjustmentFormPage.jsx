@@ -9,6 +9,7 @@ import {
   toNumber, 
   INPUT_CONFIG 
 } from '../../utils/numberUtils';
+import toast from 'react-hot-toast';
 
 const AdjustmentFormPage = () => {
   const navigate = useNavigate();
@@ -52,7 +53,7 @@ const AdjustmentFormPage = () => {
           const adjustment = await getAdjustmentById(id);
           
           if (adjustment.status !== 'draft') {
-            alert('Solo se pueden editar ajustes en estado borrador');
+            toast('Solo se pueden editar ajustes en estado borrador');
             navigate(`/adjustments/${id}`);
             return;
           }
@@ -82,8 +83,7 @@ const AdjustmentFormPage = () => {
             setItems(loadedItems);
           }
         } catch (error) {
-          console.error('Error cargando ajuste:', error);
-          alert('Error al cargar los datos del ajuste');
+          toast.error('Error al cargar los datos del ajuste');
           navigate('/adjustments');
         }
       }
@@ -161,14 +161,14 @@ const AdjustmentFormPage = () => {
 
   const addItem = () => {
     if (!currentItem.product_id || !currentItem.quantity) {
-      alert('Por favor seleccione un producto y cantidad');
+      toast('Por favor seleccione un producto y cantidad');
       return;
     }
 
     const existingItemIndex = items.findIndex(item => item.product_id === currentItem.product_id);
     
     if (existingItemIndex >= 0) {
-      alert('Este producto ya está en la lista');
+      toast('Este producto ya está en la lista');
       return;
     }
 
@@ -215,12 +215,12 @@ const AdjustmentFormPage = () => {
     e.preventDefault();
 
     if (!formData.adjustment_type || !formData.reason) {
-      alert('Por favor complete el tipo y razón del ajuste');
+      toast('Por favor complete el tipo y razón del ajuste');
       return;
     }
 
     if (items.length === 0) {
-      alert('Debe agregar al menos un producto');
+      toast('Debe agregar al menos un producto');
       return;
     }
 
@@ -238,16 +238,15 @@ const AdjustmentFormPage = () => {
     try {
       if (isEditMode) {
         await updateAdjustment(id, adjustmentData);
-        alert('Ajuste actualizado exitosamente');
+        toast.success('Ajuste actualizado exitosamente');
         navigate(`/adjustments/${id}`);
       } else {
         const result = await createAdjustment(adjustmentData);
-        alert('Ajuste creado exitosamente');
+        toast.success('Ajuste creado exitosamente');
         navigate(`/adjustments/${result.id}`);
       }
     } catch (error) {
-      console.error('Error:', error);
-      alert(isEditMode ? 'Error al actualizar el ajuste' : 'Error al crear el ajuste');
+      toast.error(isEditMode ? 'Error al actualizar el ajuste' : 'Error al crear el ajuste');
     }
   };
 

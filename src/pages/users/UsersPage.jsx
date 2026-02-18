@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   Users as UsersIcon,
   Plus,
@@ -11,6 +11,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import useUsersStore from '../../store/usersStore';
+import useAuthStore from '../../store/authStore';
 import Layout from '../../components/layout/Layout';
 import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';
@@ -21,6 +22,22 @@ import ConfirmDialog from '../../components/common/ConfirmDialog';
 import Dropdown from '../../components/common/Dropdown';
 
 const UsersPage = () => {
+  const navigate = useNavigate();
+  const { user: currentUser } = useAuthStore();
+  
+  // Verificar permisos: solo admin puede ver usuarios
+  useEffect(() => {
+    if (currentUser && currentUser.role !== 'admin') {
+      // Redirigir a perfil si no es admin
+      navigate('/profile', { replace: true });
+    }
+  }, [currentUser, navigate]);
+
+  // Si no es admin, no renderizar nada (mientras redirige)
+  if (currentUser && currentUser.role !== 'admin') {
+    return null;
+  }
+
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [filters, setFilters] = useState({

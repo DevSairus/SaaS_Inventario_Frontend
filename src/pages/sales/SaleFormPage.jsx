@@ -32,6 +32,7 @@ import {
   toNumber, 
   INPUT_CONFIG 
 } from '../../utils/numberUtils';
+import toast from 'react-hot-toast';
 
 function SaleFormPage() {
   const navigate = useNavigate();
@@ -89,7 +90,6 @@ function SaleFormPage() {
         const data = await warehousesService.getAll();
         setWarehouses(data.data || []);
       } catch (e) {
-        console.error('Error cargando bodegas:', e);
         setWarehouses([]);
       }
     };
@@ -113,7 +113,6 @@ function SaleFormPage() {
         const results = await searchProducts(searchTerm);
         setSearchResults(results);
       } catch (error) {
-        console.error('Error buscando productos:', error);
         setSearchResults([]);
       } finally {
         setIsSearching(false);
@@ -233,8 +232,6 @@ function SaleFormPage() {
         price_includes_tax: product.price_includes_tax || false,
         has_tax: product.has_tax !== false // true por defecto
       };
-      
-      console.log('➕ Item creado:', newItem);
       setItems([...items, calculateItemTotals(newItem)]);
     }
     setShowProductSearch(false);
@@ -253,11 +250,10 @@ function SaleFormPage() {
           navigator.vibrate(200);
         }
       } else {
-        alert('Producto no encontrado para el código: ' + code);
+        toast('Producto no encontrado para el código: ' + code);
       }
     } catch (e) {
-      console.error('Error buscando producto:', e);
-      alert('Producto no encontrado para el código: ' + code);
+      toast('Producto no encontrado para el código: ' + code);
     }
   };
 
@@ -331,7 +327,7 @@ function SaleFormPage() {
     e.preventDefault();
 
     if (items.length === 0) {
-      alert('Debe agregar al menos un producto');
+      toast('Debe agregar al menos un producto');
       return;
     }
 
@@ -354,16 +350,15 @@ function SaleFormPage() {
 
       if (isEditMode) {
         await updateSale(id, saleData);
-        alert('Venta actualizada exitosamente');
+        toast.success('Venta actualizada exitosamente');
         navigate(`/sales/${id}`);
       } else {
         const result = await createSale(saleData);
-        alert('Venta creada exitosamente');
+        toast.success('Venta creada exitosamente');
         navigate(`/sales/${result.id}`);
       }
     } catch (error) {
-      console.error('Error al guardar venta:', error);
-      alert(error.message || 'Error al guardar la venta');
+      toast.error(error.message || 'Error al guardar la venta');
     }
   };
 

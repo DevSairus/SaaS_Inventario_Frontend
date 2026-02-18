@@ -1,6 +1,7 @@
 // src/pages/superadmin/AnnouncementsManagement.jsx
 import { useState, useEffect } from 'react';
 import useAnnouncementsStore from '../../store/announcementsStore';
+import toast from 'react-hot-toast';
 
 const AnnouncementsManagement = () => {
   const {
@@ -83,19 +84,19 @@ const AnnouncementsManagement = () => {
     if (editingAnnouncement) {
       success = await updateAnnouncement(editingAnnouncement.id, dataToSend);
       if (success) {
-        alert('Anuncio actualizado exitosamente');
+        toast.success('Anuncio actualizado exitosamente');
       }
     } else {
       success = await createAnnouncement(dataToSend);
       if (success) {
-        alert('Anuncio creado exitosamente');
+        toast.success('Anuncio creado exitosamente');
       }
     }
     
     if (success) {
       setIsModalOpen(false);
     } else if (error) {
-      alert('Error: ' + error);
+      toast.error('Error: ' + error);
     }
   };
 
@@ -103,9 +104,9 @@ const AnnouncementsManagement = () => {
     if (window.confirm(`¿Eliminar el anuncio "${title}"?\n\nEsta acción no se puede deshacer.`)) {
       const success = await deleteAnnouncement(id);
       if (success) {
-        alert('Anuncio eliminado');
+        toast.success('Anuncio eliminado');
       } else if (error) {
-        alert('Error al eliminar: ' + error);
+        toast.error('Error al eliminar: ' + error);
       }
     }
   };
@@ -119,7 +120,7 @@ const AnnouncementsManagement = () => {
       });
       setShowStats(true);
     } else if (error) {
-      alert('Error al cargar estadísticas: ' + error);
+      toast.error('Error al cargar estadísticas: ' + error);
     }
   };
 

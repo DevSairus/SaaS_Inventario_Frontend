@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, AlertTriangle } from 'lucide-react';
 import Layout from '../../components/layout/Layout';
 import useTransfersStore from '../../store/transfersStore';
+import toast from 'react-hot-toast';
 
 const TransferReceivePage = () => {
   const { id } = useParams();
@@ -58,7 +59,7 @@ const TransferReceivePage = () => {
     // Validación: al menos un producto debe tener cantidad recibida > 0
     const itemsWithQuantity = items.filter(item => parseFloat(item.quantity_received) > 0);
     if (itemsWithQuantity.length === 0) {
-      alert('Debes recibir al menos un producto');
+      toast('Debes recibir al menos un producto');
       return;
     }
 
@@ -80,11 +81,10 @@ const TransferReceivePage = () => {
         }))
       });
 
-      alert('Transferencia recibida exitosamente');
+      toast.success('Transferencia recibida exitosamente');
       navigate('/inventory/transfers');
     } catch (error) {
-      console.error('Error:', error);
-      alert(error.response?.data?.message || 'Error al recibir transferencia');
+      toast.error(error.response?.data?.message || 'Error al recibir transferencia');
     }
   };
 

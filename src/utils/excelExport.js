@@ -1,13 +1,203 @@
 /**
  * Exportar e Importar datos en formato Excel (.xlsx)
- * Versión SIMPLIFICADA con nuevo formato
+ * Versión mejorada con formatos profesionales
  */
 
 import * as XLSX from 'xlsx';
 
+// ============================================================================
+// UTILIDADES DE FORMATO
+// ============================================================================
+
+/**
+ * Aplicar formato de moneda a una celda
+ */
+const applyCurrencyFormat = (value) => {
+  return {
+    v: value,
+    t: 'n',
+    z: '"$"#,##0'
+  };
+};
+
+/**
+ * Aplicar formato de número con separadores de miles
+ */
+const applyNumberFormat = (value) => {
+  return {
+    v: value,
+    t: 'n',
+    z: '#,##0'
+  };
+};
+
+// ============================================================================
+// FUNCIONES DE EXPORTACIÓN MEJORADAS
+// ============================================================================
+
+/**
+ * EXPORTAR CARTERA (CUENTAS POR COBRAR) - FORMATO PROFESIONAL
+ */
+export const exportReceivablesToExcel = (data, filename = 'cartera') => {
+  const wb = XLSX.utils.book_new();
+  
+  // ────────────────────────────────────────────────────────────────────────
+  // HOJA 1: RESUMEN POR CLIENTE
+  // ────────────────────────────────────────────────────────────────────────
+  if (data.by_customer && data.by_customer.length > 0) {
+    const customerData = data.by_customer.map(item => ({
+      'Cliente': item.customer_name || 'N/A',
+      'NIT/CC': item.customer_tax_id || '',
+      'Total Por Cobrar': parseFloat(item.total_pending) || 0,
+      'Facturas Pendientes': parseInt(item.pending_invoices) || 0,
+      'Días Promedio': Math.round(parseFloat(item.avg_days_pending) || 0),
+      'Vencido': parseFloat(item.overdue_amount) || 0
+    }));
+
+    const ws1 = XLSX.utils.json_to_sheet(customerData);
+    
+    // Aplicar formato de moneda a las columnas de dinero
+    const range = XLSX.utils.decode_range(ws1['!ref']);
+    for (let R = range.s.r + 1; R <= range.e.r; ++R) {
+      const totalCell = XLSX.utils.encode_cell({ r: R, c: 2 }); // Total Por Cobrar
+      const overdueCell = XLSX.utils.encode_cell({ r: R, c: 5 }); // Vencido
+      
+      if (ws1[totalCell]) {
+        ws1[totalCell] = applyCurrencyFormat(ws1[totalCell].v);
+      }
+      if (ws1[overdueCell]) {
+        ws1[overdueCell] = applyCurrencyFormat(ws1[overdueCell].v);
+      }
+    }
+    
+    // Totales
+    const totalPendiente = customerData.reduce((sum, r) => sum + (r['Total Por Cobrar'] || 0), 0);
+    const totalVencido = customerData.reduce((sum, r) => sum + (r['Vencido'] || 0), 0);
+    const totalFacturas = customerData.reduce((sum, r) => sum + (r['Facturas Pendientes'] || 0), 0);
+    
+    const totalRow = customerData.length + 2;
+    ws1[`A${totalRow}`] = { v: 'TOTALES', t: 's' };
+    ws1[`C${totalRow}`] = applyCurrencyFormat(totalPendiente);
+    ws1[`D${totalRow}`] = { v: totalFacturas, t: 'n' };
+    ws1[`F${totalRow}`] = applyCurrencyFormat(totalVencido);
+    
+    // Anchos de columna
+    ws1['!cols'] = [
+      { wch: 30 },  // Cliente
+      { wch: 15 },  // NIT/CC
+      { wch: 18 },  // Total Por Cobrar
+      { wch: 18 },  // Facturas Pendientes
+      { wch: 15 },  // Días Promedio
+      { wch: 18 }   // Vencido
+    ];
+    
+    XLSX.utils.book_append_sheet(wb, ws1, 'Resumen por Cliente');
+  }
+  
+  // ────────────────────────────────────────────────────────────────────────
+  // HOJA 2: DETALLE DE FACTURAS
+  // ────────────────────────────────────────────────────────────────────────
+  if (data.all_invoices && data.all_invoices.length > 0) {
+    const invoiceData = data.all_invoices.map(item => ({
+      'Número Factura': item.sale_number || '',
+      'Fecha': item.sale_date || '',
+      'Cliente': item.customer_name || '',
+      'Total Factura': parseFloat(item.total_amount) || 0,
+      'Pagado': parseFloat(item.paid_amount) || 0,
+      'Saldo Pendiente': parseFloat(item.balance) || 0,
+      'Días Vencimiento': parseInt(item.days_overdue) || 0,
+      'Estado': item.status || '',
+      'Vencimiento': item.due_date || ''
+    }));
+
+    const ws2 = XLSX.utils.json_to_sheet(invoiceData);
+    
+    // Aplicar formatos
+    const range = XLSX.utils.decode_range(ws2['!ref']);
+    for (let R = range.s.r + 1; R <= range.e.r; ++R) {
+      // Formatos de moneda
+      ['D', 'E', 'F'].forEach(col => {
+        const cell = `${col}${R + 1}`;
+        if (ws2[cell]) {
+          ws2[cell] = applyCurrencyFormat(ws2[cell].v);
+        }
+      });
+    }
+    
+    // Totales
+    const totalFactura = invoiceData.reduce((sum, r) => sum + (r['Total Factura'] || 0), 0);
+    const totalPagado = invoiceData.reduce((sum, r) => sum + (r['Pagado'] || 0), 0);
+    const totalSaldo = invoiceData.reduce((sum, r) => sum + (r['Saldo Pendiente'] || 0), 0);
+    
+    const totalRow = invoiceData.length + 2;
+    ws2[`A${totalRow}`] = { v: 'TOTALES', t: 's' };
+    ws2[`D${totalRow}`] = applyCurrencyFormat(totalFactura);
+    ws2[`E${totalRow}`] = applyCurrencyFormat(totalPagado);
+    ws2[`F${totalRow}`] = applyCurrencyFormat(totalSaldo);
+    
+    // Anchos de columna
+    ws2['!cols'] = [
+      { wch: 18 },  // Número Factura
+      { wch: 12 },  // Fecha
+      { wch: 30 },  // Cliente
+      { wch: 16 },  // Total Factura
+      { wch: 14 },  // Pagado
+      { wch: 18 },  // Saldo Pendiente
+      { wch: 16 },  // Días Vencimiento
+      { wch: 12 },  // Estado
+      { wch: 12 }   // Vencimiento
+    ];
+    
+    XLSX.utils.book_append_sheet(wb, ws2, 'Detalle Facturas');
+  }
+  
+  // ────────────────────────────────────────────────────────────────────────
+  // HOJA 3: RESUMEN EJECUTIVO
+  // ────────────────────────────────────────────────────────────────────────
+  if (data.summary) {
+    const summaryData = [
+      { 'Métrica': 'Total Por Cobrar', 'Valor': parseFloat(data.summary.total_receivable) || 0 },
+      { 'Métrica': 'Total Vencido (+30 días)', 'Valor': parseFloat(data.summary.total_overdue) || 0 },
+      { 'Métrica': 'Total a Vencer (0-30 días)', 'Valor': parseFloat(data.summary.total_current) || 0 },
+      { 'Métrica': 'Número de Clientes con Deuda', 'Valor': parseInt(data.summary.total_customers) || 0 },
+      { 'Métrica': 'Facturas Pendientes', 'Valor': parseInt(data.summary.total_invoices) || 0 },
+      { 'Métrica': 'Días Promedio de Cobro', 'Valor': Math.round(parseFloat(data.summary.avg_days) || 0) },
+      { 'Métrica': '', 'Valor': '' },
+      { 'Métrica': 'Fecha de Reporte', 'Valor': new Date().toLocaleDateString('es-CO', { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      }) }
+    ];
+
+    const ws3 = XLSX.utils.json_to_sheet(summaryData);
+    
+    // Aplicar formato de moneda a los valores monetarios
+    [1, 2, 3].forEach(row => {
+      const cell = `B${row + 1}`;
+      if (ws3[cell] && typeof ws3[cell].v === 'number') {
+        ws3[cell] = applyCurrencyFormat(ws3[cell].v);
+      }
+    });
+    
+    // Anchos de columna
+    ws3['!cols'] = [
+      { wch: 35 },  // Métrica
+      { wch: 25 }   // Valor
+    ];
+    
+    XLSX.utils.book_append_sheet(wb, ws3, 'Resumen Ejecutivo');
+  }
+  
+  const timestamp = new Date().toISOString().split('T')[0];
+  XLSX.writeFile(wb, `${filename}_${timestamp}.xlsx`);
+};
+
+
 /**
  * Descargar plantilla SIMPLIFICADA de Excel para importar productos
- * Nueva estructura: Código, Nombre, Costo Promedio, Precio Venta, Margen Utilidad (%), Cantidad
  */
 export const downloadProductsTemplate = () => {
   const wb = XLSX.utils.book_new();
@@ -262,11 +452,11 @@ export const validateImportedProducts = (data) => {
 };
 
 // ========================================
-// FUNCIONES DE EXPORTACIÓN (sin cambios)
+// FUNCIONES DE EXPORTACIÓN
 // ========================================
 
 /**
- * Exportar productos a Excel (.xlsx)
+ * Exportar productos a Excel (.xlsx) - FORMATO MEJORADO
  */
 export const exportProductsToExcel = (products, filename = 'productos') => {
   const data = products.map(product => ({
@@ -286,6 +476,20 @@ export const exportProductsToExcel = (products, filename = 'productos') => {
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.json_to_sheet(data);
 
+  // Aplicar formatos de moneda
+  const range = XLSX.utils.decode_range(ws['!ref']);
+  for (let R = range.s.r + 1; R <= range.e.r; ++R) {
+    const costoCell = `H${R + 1}`;
+    const precioCell = `I${R + 1}`;
+    
+    if (ws[costoCell]) {
+      ws[costoCell] = applyCurrencyFormat(ws[costoCell].v);
+    }
+    if (ws[precioCell]) {
+      ws[precioCell] = applyCurrencyFormat(ws[precioCell].v);
+    }
+  }
+
   ws['!cols'] = [
     { wch: 20 },  // Código
     { wch: 30 },  // Nombre
@@ -302,14 +506,31 @@ export const exportProductsToExcel = (products, filename = 'productos') => {
 
   XLSX.utils.book_append_sheet(wb, ws, 'Productos');
 
-  // Resumen
+  // Resumen con formato mejorado
+  const valorInventario = products.reduce((sum, p) => 
+    sum + (parseFloat(p.current_stock) * parseFloat(p.average_cost || 0)), 0
+  );
+  
   const summary = [
     { 'Métrica': 'Total de Productos', 'Valor': products.length },
     { 'Métrica': 'Productos Activos', 'Valor': products.filter(p => p.is_active).length },
-    { 'Métrica': 'Valor Total Inventario', 'Valor': products.reduce((sum, p) => sum + (parseFloat(p.current_stock) * parseFloat(p.average_cost || 0)), 0).toFixed(2) },
-    { 'Métrica': 'Fecha de Exportación', 'Valor': new Date().toLocaleString('es-CO') }
+    { 'Métrica': 'Valor Total Inventario', 'Valor': valorInventario },
+    { 'Métrica': 'Fecha de Exportación', 'Valor': new Date().toLocaleDateString('es-CO', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    }) }
   ];
+  
   const wsSummary = XLSX.utils.json_to_sheet(summary);
+  
+  // Formato de moneda en el valor del inventario
+  if (wsSummary['B3']) {
+    wsSummary['B3'] = applyCurrencyFormat(wsSummary['B3'].v);
+  }
+  
   wsSummary['!cols'] = [{ wch: 30 }, { wch: 30 }];
   XLSX.utils.book_append_sheet(wb, wsSummary, 'Resumen');
 
@@ -345,7 +566,7 @@ export const exportCategoriesToExcel = (categories, filename = 'categorias') => 
 };
 
 /**
- * Exportar movimientos a Excel
+ * Exportar movimientos a Excel - FORMATO MEJORADO
  */
 export const exportMovementsToExcel = (movements, filename = 'movimientos') => {
   const data = movements.map(mov => ({
@@ -355,12 +576,27 @@ export const exportMovementsToExcel = (movements, filename = 'movimientos') => {
     'SKU': mov.product?.sku || '',
     'Cantidad': mov.quantity,
     'Costo Unitario': mov.unit_cost || 0,
+    'Valor Total': (mov.quantity || 0) * (mov.unit_cost || 0),
     'Usuario': (mov.user?.first_name || '') + ' ' + (mov.user?.last_name || ''),
     'Notas': mov.notes || ''
   }));
 
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.json_to_sheet(data);
+
+  // Aplicar formato de moneda
+  const range = XLSX.utils.decode_range(ws['!ref']);
+  for (let R = range.s.r + 1; R <= range.e.r; ++R) {
+    const costoCell = `F${R + 1}`;
+    const valorCell = `G${R + 1}`;
+    
+    if (ws[costoCell]) {
+      ws[costoCell] = applyCurrencyFormat(ws[costoCell].v);
+    }
+    if (ws[valorCell]) {
+      ws[valorCell] = applyCurrencyFormat(ws[valorCell].v);
+    }
+  }
 
   ws['!cols'] = [
     { wch: 20 },  // Fecha
@@ -369,6 +605,7 @@ export const exportMovementsToExcel = (movements, filename = 'movimientos') => {
     { wch: 15 },  // SKU
     { wch: 10 },  // Cantidad
     { wch: 15 },  // Costo Unitario
+    { wch: 15 },  // Valor Total
     { wch: 25 },  // Usuario
     { wch: 40 }   // Notas
   ];
@@ -380,7 +617,7 @@ export const exportMovementsToExcel = (movements, filename = 'movimientos') => {
 };
 
 /**
- * Exportar compras a Excel
+ * Exportar compras a Excel - FORMATO MEJORADO
  */
 export const exportPurchasesToExcel = (purchases, filename = 'compras') => {
   const purchasesData = purchases.map(purchase => ({
@@ -394,6 +631,15 @@ export const exportPurchasesToExcel = (purchases, filename = 'compras') => {
 
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.json_to_sheet(purchasesData);
+  
+  // Aplicar formato de moneda
+  const range = XLSX.utils.decode_range(ws['!ref']);
+  for (let R = range.s.r + 1; R <= range.e.r; ++R) {
+    const totalCell = `E${R + 1}`;
+    if (ws[totalCell]) {
+      ws[totalCell] = applyCurrencyFormat(ws[totalCell].v);
+    }
+  }
 
   ws['!cols'] = [
     { wch: 15 },  // Número

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ClipboardList, Search, Eye, CheckCircle, XCircle, Plus } from 'lucide-react';
 import Layout from '../../components/layout/Layout';
 import useInternalConsumptionsStore from '../../store/internalConsumptionsStore';
+import toast from 'react-hot-toast';
 
 const InternalConsumptionsPage = () => {
   const navigate = useNavigate();
@@ -44,9 +45,9 @@ const InternalConsumptionsPage = () => {
       await approveConsumption(selectedConsumption.id);
       setShowApproveModal(false);
       setSelectedConsumption(null);
-      alert('Consumo aprobado exitosamente');
+      toast.success('Consumo aprobado exitosamente');
     } catch (error) {
-      alert(error.response?.data?.message || 'Error al aprobar');
+      toast.error(error.response?.data?.message || 'Error al aprobar');
     }
   };
 
@@ -56,9 +57,9 @@ const InternalConsumptionsPage = () => {
       setShowRejectModal(false);
       setRejectionReason('');
       setSelectedConsumption(null);
-      alert('Consumo rechazado');
+      toast.success('Consumo rechazado');
     } catch (error) {
-      alert(error.response?.data?.message || 'Error al rechazar');
+      toast.error(error.response?.data?.message || 'Error al rechazar');
     }
   };
 
@@ -66,9 +67,9 @@ const InternalConsumptionsPage = () => {
     if (window.confirm('¿Estás seguro de eliminar este consumo?')) {
       try {
         await deleteConsumption(id);
-        alert('Consumo eliminado');
+        toast.success('Consumo eliminado');
       } catch (error) {
-        alert(error.response?.data?.message || 'Error al eliminar');
+        toast.error(error.response?.data?.message || 'Error al eliminar');
       }
     }
   };

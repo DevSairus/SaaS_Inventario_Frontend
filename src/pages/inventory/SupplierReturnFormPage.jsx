@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Search } from 'lucide-react';
 import Layout from '../../components/layout/Layout';
 import api from '../../api/axios';
+import toast from 'react-hot-toast';
 
 const SupplierReturnFormPage = () => {
   const navigate = useNavigate();
@@ -30,8 +31,7 @@ const SupplierReturnFormPage = () => {
       });
       setPurchases(response.data.data || []);
     } catch (error) {
-      console.error('Error buscando compras:', error);
-      alert('Error al buscar compras');
+      toast.error('Error al buscar compras');
     } finally {
       setLoadingPurchases(false);
     }
@@ -56,8 +56,7 @@ const SupplierReturnFormPage = () => {
         }))
       }));
     } catch (error) {
-      console.error('Error obteniendo compra:', error);
-      alert('Error al cargar la compra');
+      toast.error('Error al cargar la compra');
     }
   };
 
@@ -66,7 +65,7 @@ const SupplierReturnFormPage = () => {
     const quantity = parseFloat(value) || 0;
     
     if (quantity > newItems[index].quantity_purchased) {
-      alert('No puedes devolver más de lo comprado');
+      toast('No puedes devolver más de lo comprado');
       return;
     }
     
@@ -85,7 +84,7 @@ const SupplierReturnFormPage = () => {
       }));
 
     if (itemsToReturn.length === 0) {
-      alert('Debes seleccionar al menos un producto para devolver');
+      toast('Debes seleccionar al menos un producto para devolver');
       return;
     }
 
@@ -99,11 +98,10 @@ const SupplierReturnFormPage = () => {
         items: itemsToReturn
       });
       
-      alert('Devolución a proveedor creada exitosamente');
+      toast.success('Devolución a proveedor creada exitosamente');
       navigate('/inventory/supplier-returns');
     } catch (error) {
-      console.error('Error:', error);
-      alert(error.response?.data?.message || 'Error al crear devolución');
+      toast.error(error.response?.data?.message || 'Error al crear devolución');
     } finally {
       setLoading(false);
     }

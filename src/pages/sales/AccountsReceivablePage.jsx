@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { accountsReceivableAPI } from '../../api/accountsReceivable';
 import salesApi from '../../api/sales';
 import Layout from '../../components/layout/Layout';
+import toast from 'react-hot-toast';
 import { 
   CreditCardIcon, 
   ClockIcon, 
@@ -44,7 +45,6 @@ const AccountsReceivablePage = () => {
       setByCustomer(response.data.by_customer);
       setAllInvoices(response.data.all_invoices);
     } catch (error) {
-      console.error('Error cargando cartera:', error);
     } finally {
       setLoading(false);
     }
@@ -52,7 +52,7 @@ const AccountsReceivablePage = () => {
 
   const handleRegisterPayment = async () => {
     if (!selectedInvoice || !paymentAmount || parseFloat(paymentAmount) <= 0) {
-      alert('Por favor ingrese un monto válido');
+      toast('Por favor ingrese un monto válido');
       return;
     }
 
@@ -69,8 +69,7 @@ const AccountsReceivablePage = () => {
       setPaymentNotes('');
       loadData();
     } catch (error) {
-      console.error('Error registrando pago:', error);
-      alert('Error al registrar el pago');
+      toast.error('Error al registrar el pago');
     }
   };
 

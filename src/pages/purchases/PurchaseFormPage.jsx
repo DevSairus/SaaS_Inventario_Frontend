@@ -11,6 +11,7 @@ import {
   calculateItemTotals,
   INPUT_CONFIG 
 } from '../../utils/numberUtils';
+import toast from 'react-hot-toast';
 
 const PurchaseFormPage = () => {
   const navigate = useNavigate();
@@ -110,7 +111,7 @@ const PurchaseFormPage = () => {
           
           // No permitir editar compras confirmadas, recibidas o canceladas
           if (purchase.status !== 'draft') {
-            alert('Solo se pueden editar compras en estado borrador');
+            toast('Solo se pueden editar compras en estado borrador');
             navigate(`/purchases/${id}`);
             return;
           }
@@ -154,8 +155,7 @@ const PurchaseFormPage = () => {
             setItems(loadedItems);
           }
         } catch (error) {
-          console.error('Error cargando compra:', error);
-          alert('Error al cargar los datos de la compra');
+          toast.error('Error al cargar los datos de la compra');
           navigate('/purchases');
         }
       }
@@ -237,14 +237,14 @@ const PurchaseFormPage = () => {
 
   const addItem = () => {
     if (!currentItem.product_id || !currentItem.quantity || !currentItem.unit_cost) {
-      alert('Por favor complete todos los campos del producto');
+      toast('Por favor complete todos los campos del producto');
       return;
     }
 
     const existingItemIndex = items.findIndex(item => item.product_id === currentItem.product_id);
     
     if (existingItemIndex >= 0) {
-      alert('Este producto ya está en la lista');
+      toast('Este producto ya está en la lista');
       return;
     }
 
@@ -309,12 +309,12 @@ const PurchaseFormPage = () => {
     e.preventDefault();
 
     if (!formData.supplier_id) {
-      alert('Por favor seleccione un proveedor');
+      toast('Por favor seleccione un proveedor');
       return;
     }
 
     if (items.length === 0) {
-      alert('Debe agregar al menos un producto');
+      toast('Debe agregar al menos un producto');
       return;
     }
 
@@ -334,16 +334,15 @@ const PurchaseFormPage = () => {
     try {
       if (isEditMode) {
         await updatePurchase(id, purchaseData);
-        alert('Compra actualizada exitosamente');
+        toast.success('Compra actualizada exitosamente');
         navigate(`/purchases/${id}`);
       } else {
         const result = await createPurchase(purchaseData);
-        alert('Compra creada exitosamente');
+        toast.success('Compra creada exitosamente');
         navigate(`/purchases/${result.id}`);
       }
     } catch (error) {
-      console.error('Error:', error);
-      alert(isEditMode ? 'Error al actualizar la compra' : 'Error al crear la compra');
+      toast.error(isEditMode ? 'Error al actualizar la compra' : 'Error al crear la compra');
     }
   };
 

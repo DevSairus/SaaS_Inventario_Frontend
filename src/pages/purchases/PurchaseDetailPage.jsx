@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { usePurchasesStore } from '../../store/purchasesStore';
 import useProductsStore from '../../store/productsStore';
 import Layout from '../../components/layout/Layout';
+import toast from 'react-hot-toast';
 
 const PurchaseDetailPage = () => {
   const { id } = useParams();
@@ -45,7 +46,7 @@ const PurchaseDetailPage = () => {
     if (window.confirm('¿Está seguro de confirmar esta compra? Ya no podrá editarla.')) {
       const success = await confirmPurchase(id);
       if (success) {
-        alert('Compra confirmada exitosamente');
+        toast.success('Compra confirmada exitosamente');
       }
     }
   };
@@ -55,20 +56,20 @@ const PurchaseDetailPage = () => {
     if (success) {
       await fetchProducts();
       
-      alert('Compra recibida exitosamente. Stock y precios actualizados.');
+      toast.success('Compra recibida exitosamente. Stock y precios actualizados.');
       setShowReceiveModal(false);
     }
   };
 
   const handleCancel = async () => {
     if (!cancellationReason.trim()) {
-      alert('Por favor ingrese un motivo de cancelación');
+      toast('Por favor ingrese un motivo de cancelación');
       return;
     }
 
     const success = await cancelPurchase(id, cancellationReason);
     if (success) {
-      alert('Compra cancelada exitosamente');
+      toast.success('Compra cancelada exitosamente');
       setShowCancelModal(false);
     }
   };

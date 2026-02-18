@@ -20,6 +20,7 @@ import Layout from '../../components/layout/Layout';
 import salesApi from '../../api/sales';
 import { movementsAPI } from '../../api/movements';
 import ConfirmSaleWithPaymentModal from '../../components/sales/ConfirmSaleWithPaymentModal';
+import toast from 'react-hot-toast';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -69,7 +70,7 @@ export default function SaleDetailPage() {
       setShowConfirmWithPayment(false);
       fetchSaleById(id);
     } catch (error) {
-      alert('Error confirmando venta: ' + error.response?.data?.message || error.message);
+      toast.error('Error confirmando venta: ' + error.response?.data?.message || error.message);
     } finally {
       setConfirmingPayment(false);
     }
@@ -81,7 +82,7 @@ export default function SaleDetailPage() {
       setConfirmDialog({ show: false, action: null });
       fetchSaleById(id);
     } catch (error) {
-      alert('Error cancelando venta: ' + error.message);
+      toast.error('Error cancelando venta: ' + error.message);
     }
   };
 
@@ -97,7 +98,7 @@ export default function SaleDetailPage() {
       setPaymentData({ amount: '', payment_method: 'efectivo', payment_date: new Date().toISOString().split('T')[0] });
       fetchSaleById(id);
     } catch (error) {
-      alert('Error registrando pago: ' + (error.response?.data?.message || error.message));
+      toast.error('Error registrando pago: ' + (error.response?.data?.message || error.message));
     } finally {
       setSavingPayment(false);
     }
@@ -117,8 +118,7 @@ export default function SaleDetailPage() {
         };
       }
     } catch (error) {
-      console.error('Error generando PDF para imprimir:', error);
-      alert('Error al generar el PDF');
+      toast.error('Error al generar el PDF');
     }
   };
 
@@ -131,8 +131,7 @@ export default function SaleDetailPage() {
       const url = URL.createObjectURL(response.data);
       window.open(url, '_blank');
     } catch (error) {
-      console.error('Error descargando PDF:', error);
-      alert('Error al generar el PDF');
+      toast.error('Error al generar el PDF');
     }
   };
 
