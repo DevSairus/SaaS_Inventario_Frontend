@@ -34,38 +34,16 @@ api.interceptors.response.use(
     const url = error.config?.url || '';
 
     /**
-     * 🔒 AUTO-LOGOUT EN ERRORES 401 (Token inválido/expirado)
+     * 🔒 ERRORES 401 (Token inválido/expirado)
      * 
-     * Casos que causan 401:
-     * - Token expirado
-     * - Token inválido
-     * - Token no proporcionado
-     * - Servidor reiniciado (tokens anteriores invalidados)
-     * 
-     * Excepciones (NO hacer logout):
-     * - Endpoint de login (evitar loop)
-     * - Ya estamos en la página de login
+     * Auto-logout deshabilitado para evitar pérdida de datos durante operaciones largas.
+     * El token tiene duración de 365 días, por lo que no debería expirar en uso normal.
+     * Solo se registra el error en consola para diagnóstico.
      */
     if (status === 401) {
-      // No hacer logout si estamos intentando hacer login
       const isLoginAttempt = url.includes('/auth/login') || url.includes('/auth/register');
-      const isAlreadyInLogin = window.location.pathname === '/login';
-      
-      if (!isLoginAttempt && !isAlreadyInLogin) {
-        // Limpiar datos de sesión
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        
-        // Mostrar notificación al usuario
-        toast.error('Tu sesión ha expirado. Por favor, inicia sesión nuevamente.', {
-          duration: 3000,
-          position: 'top-center',
-        });
-        
-        // Redirigir al login después de un breve delay para que el usuario vea el mensaje
-        setTimeout(() => {
-          window.location.href = '/login';
-        }, 1000);
+      if (!isLoginAttempt) {
+        console.warn('⚠️ Error 401 - Token inválido o expirado. Auto-logout deshabilitado.');
       }
     }
 

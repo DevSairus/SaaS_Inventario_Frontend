@@ -103,31 +103,8 @@ class SessionKeepAlive extends Component {
       }
     } catch (error) {
       console.error('Error al refrescar token:', error);
-      
-      // Si el endpoint no existe (404), intentar con verify
-      if (error.response?.status === 404) {
-        try {
-          await authAPI.verifyToken();
-          console.log('Token verificado (refresh endpoint no disponible)');
-          this.scheduleNextRefresh();
-          return;
-        } catch (verifyError) {
-          // Si verify también falla, cerrar sesión
-          if (verifyError.response?.status === 401) {
-            console.log('Token expirado, cerrando sesión...');
-            this.logout();
-          }
-        }
-      }
-      
-      // Si el token expiró, cerrar sesión
-      if (error.response?.status === 401) {
-        console.log('Token expirado, cerrando sesión...');
-        this.logout();
-      } else {
-        // En caso de otro error, programar siguiente intento
-        this.scheduleNextRefresh();
-      }
+      // No cerrar sesión por errores de refresh - simplemente reintentar luego
+      this.scheduleNextRefresh();
     }
   }
 
