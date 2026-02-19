@@ -51,7 +51,8 @@ function SaleFormPage() {
     document_type: 'remision',
     sale_date: new Date().toISOString().split('T')[0],
     notes: '',
-    vehicle_plate: ''
+    vehicle_plate: '',
+    mileage: ''
   });
 
   const [showQuickCustomer, setShowQuickCustomer] = useState(false);
@@ -152,7 +153,8 @@ function SaleFormPage() {
           ? new Date(currentSale.sale_date).toISOString().split('T')[0] 
           : new Date().toISOString().split('T')[0],
         notes: currentSale.notes || '',
-        vehicle_plate: currentSale.vehicle_plate || ''
+        vehicle_plate: currentSale.vehicle_plate || '',
+        mileage: currentSale.mileage || ''
       });
 
       // Establecer el nombre del cliente en el campo de búsqueda
@@ -162,6 +164,7 @@ function SaleFormPage() {
 
       if (currentSale.items && currentSale.items.length > 0) {
         const loadedItems = currentSale.items.map(item => ({
+          item_type: item.item_type || 'product',
           product_id: item.product_id,
           product_name: item.product_name,
           product_sku: item.product_sku,
@@ -222,6 +225,7 @@ function SaleFormPage() {
       setItems(newItems);
     } else {
       const newItem = {
+        item_type: product.product_type === 'service' ? 'service' : 'product',
         product_id: product.id,
         product_name: product.name,
         product_sku: product.sku,
@@ -230,7 +234,7 @@ function SaleFormPage() {
         discount_percentage: 0,
         tax_percentage: product.has_tax === false ? 0 : (product.tax_percentage || 19),
         price_includes_tax: product.price_includes_tax || false,
-        has_tax: product.has_tax !== false // true por defecto
+        has_tax: product.has_tax !== false
       };
       setItems([...items, calculateItemTotals(newItem)]);
     }
@@ -335,7 +339,9 @@ function SaleFormPage() {
       const saleData = {
         ...formData,
         items: items.map(item => ({
-          product_id: item.product_id,
+          item_type: item.item_type || 'product',
+          product_id: item.product_id || null,
+          product_name: item.product_name,
           quantity: toInteger(item.quantity),
           unit_price: toInteger(item.unit_price),
           discount_percentage: toInteger(item.discount_percentage),
@@ -559,6 +565,27 @@ function SaleFormPage() {
                   </p>
                 </div>
 
+                {/* Kilometraje */}
+                <div className="mt-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Kilometraje
+                    <span className="text-gray-400 text-xs ml-2">(Opcional)</span>
+                  </label>
+                  <input
+                    type="number"
+                    name="mileage"
+                    value={formData.mileage}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                    placeholder="Ej: 85000"
+                    min="0"
+                    max="9999999"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Kilometraje del vehículo al momento del servicio
+                  </p>
+                </div>
+
                 {/* Cliente Rápido */}
                 {showQuickCustomer && (
                   <div className="mt-6 p-5 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg">
@@ -648,6 +675,28 @@ function SaleFormPage() {
                     </Button>
                     <button
                       type="button"
+                      onClick={() => {
+                        const newFreeLine = {
+                          item_type: 'free_line',
+                          product_id: null,
+                          product_name: '',
+                          product_sku: null,
+                          quantity: 1,
+                          unit_price: 0,
+                          discount_percentage: 0,
+                          tax_percentage: formData.document_type !== 'remision' ? 19 : 0,
+                          price_includes_tax: false,
+                          has_tax: true,
+                        };
+                        setItems([...items, calculateItemTotals(newFreeLine)]);
+                      }}
+                      className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors flex items-center gap-2 text-sm font-medium shadow-sm"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Línea Libre
+                    </button>
+                    <button
+                      type="button"
                       onClick={() => setShowScanner(true)}
                       className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors flex items-center gap-2 text-sm font-medium shadow-sm"
                       title="Escanear código de barras con cámara o pistola USB"
@@ -724,17 +773,37 @@ function SaleFormPage() {
                         {items.map((item, index) => (
                           <tr key={index} className="hover:bg-gray-50 transition-colors">
                             <td className="py-4 px-4">
-                              <div className="font-medium text-gray-900">{item.product_name}</div>
-                              <div className="text-sm text-gray-500">SKU: {item.product_sku}</div>
+                              {item.item_type === 'free_line' ? (
+                                <input
+                                  type="text"
+                                  value={item.product_name}
+                                  onChange={(e) => {
+                                    const updated = [...items];
+                                    updated[index].product_name = e.target.value;
+                                    setItems(updated);
+                                  }}
+                                  placeholder="Descripción del ítem..."
+                                  className="w-full px-2 py-1 border border-indigo-300 rounded text-sm font-medium text-gray-900 focus:ring-2 focus:ring-indigo-400"
+                                />
+                              ) : (
+                                <div className="font-medium text-gray-900">{item.product_name}</div>
+                              )}
+                              <div className="flex items-center gap-2 mt-1">
+                                {item.item_type === 'service' && (
+                                  <span className="text-xs font-semibold text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full">🔧 Servicio</span>
+                                )}
+                                {item.item_type === 'free_line' && (
+                                  <span className="text-xs font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">✏️ Línea libre</span>
+                                )}
+                                {item.item_type !== 'free_line' && item.product_sku && (
+                                  <span className="text-sm text-gray-500">SKU: {item.product_sku}</span>
+                                )}
+                              </div>
                               {item.price_includes_tax && (
-                                <div className="text-xs text-blue-600 mt-1 font-medium">
-                                  💡 Precio incluye IVA
-                                </div>
+                                <div className="text-xs text-blue-600 mt-1 font-medium">💡 Precio incluye IVA</div>
                               )}
                               {item.has_tax === false && (
-                                <div className="text-xs text-green-600 mt-1 font-medium">
-                                  ✓ Exento de IVA
-                                </div>
+                                <div className="text-xs text-green-600 mt-1 font-medium">✓ Exento de IVA</div>
                               )}
                             </td>
                             <td className="py-4 px-4">
@@ -930,13 +999,17 @@ function SaleFormPage() {
                         <p className="font-medium text-gray-900">{product.name}</p>
                         <p className="text-sm text-gray-500 mt-1">SKU: {product.sku}</p>
                         <div className="flex items-center gap-3 mt-2">
-                          <span className={`text-sm font-medium ${
-                            product.current_stock > 0 
-                              ? 'text-green-600' 
-                              : 'text-red-600'
-                          }`}>
-                            Stock: {product.current_stock || 0}
-                          </span>
+                          {product.product_type === 'service' ? (
+                            <span className="text-xs font-semibold text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full">🔧 Servicio</span>
+                          ) : (
+                            <span className={`text-sm font-medium ${
+                              product.current_stock > 0 
+                                ? 'text-green-600' 
+                                : 'text-red-600'
+                            }`}>
+                              Stock: {product.current_stock || 0}
+                            </span>
+                          )}
                           {product.category?.name && (
                             <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">
                               {product.category.name}

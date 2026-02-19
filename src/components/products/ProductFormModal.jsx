@@ -21,6 +21,7 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
     profit_margin_percentage: '',
     base_price: '',
     current_stock: '',
+    product_type: 'product',
     track_inventory: true,
     allow_negative_stock: false,
     is_active: true,
@@ -69,7 +70,8 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
         profit_margin_percentage: fmtNum(product.profit_margin_percentage),
         base_price: fmtNum(product.base_price),
         current_stock: fmtNum(product.current_stock),
-        track_inventory: product.track_inventory !== false,
+        product_type: product.product_type || 'product',
+        track_inventory: product.product_type === 'service' ? false : (product.track_inventory !== false),
         allow_negative_stock: product.allow_negative_stock || false,
         is_active: product.is_active !== false,
         // Campos de IVA - ✅ Corregido
@@ -91,6 +93,7 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
         profit_margin_percentage: '',
         base_price: '',
         current_stock: '',
+        product_type: 'product',
         track_inventory: true,
         allow_negative_stock: false,
         is_active: true,
@@ -567,7 +570,7 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
                 step="1"
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="0.00"
-                disabled={!!product}
+                disabled={formData.product_type === 'service' || !!product}
               />
               {product && (
                 <p className="mt-1 text-xs text-gray-500">
@@ -584,6 +587,7 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
                 type="number"
                 onWheel={(e) => e.target.blur()}
                 name="min_stock"
+              disabled={formData.product_type === 'service'}
                 value={formData.min_stock}
                 onChange={handleChange}
                 step="1"
@@ -630,6 +634,65 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="0"
               />
+            </div>
+
+            {/* Tipo de ítem */}
+            <div className="md:col-span-2 mt-4">
+              <h3 className="text-lg font-semibold text-gray-900 mb-3 pb-2 border-b">
+                Tipo de ítem
+              </h3>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFormData(prev => ({
+                      ...prev,
+                      product_type: 'product',
+                      track_inventory: true,
+                    }));
+                  }}
+                  className={`flex items-center gap-3 p-4 rounded-xl border-2 text-left transition-all ${
+                    formData.product_type === 'product'
+                      ? 'border-blue-500 bg-blue-50'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <span className="text-2xl">📦</span>
+                  <div>
+                    <p className={`font-semibold text-sm ${formData.product_type === 'product' ? 'text-blue-700' : 'text-gray-700'}`}>
+                      Producto físico
+                    </p>
+                    <p className="text-xs text-gray-500">Maneja inventario y stock</p>
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFormData(prev => ({
+                      ...prev,
+                      product_type: 'service',
+                      track_inventory: false,
+                      current_stock: '',
+                      min_stock: '',
+                      max_stock: '',
+                      average_cost: '',
+                    }));
+                  }}
+                  className={`flex items-center gap-3 p-4 rounded-xl border-2 text-left transition-all ${
+                    formData.product_type === 'service'
+                      ? 'border-purple-500 bg-purple-50'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <span className="text-2xl">🔧</span>
+                  <div>
+                    <p className={`font-semibold text-sm ${formData.product_type === 'service' ? 'text-purple-700' : 'text-gray-700'}`}>
+                      Servicio
+                    </p>
+                    <p className="text-xs text-gray-500">Sin inventario, solo facturación</p>
+                  </div>
+                </button>
+              </div>
             </div>
 
             {/* Configuración */}

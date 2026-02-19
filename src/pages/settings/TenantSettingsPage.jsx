@@ -22,7 +22,8 @@ const TenantSettingsPage = () => {
     website: '',
     logo_url: '',
     primary_color: '#2563eb',
-    secondary_color: '#475569'
+    secondary_color: '#475569',
+    pdf_config: { payment_notes: '', legal_note: '' }
   });
   const [logoPreview, setLogoPreview] = useState(null);
   const [logoFile, setLogoFile] = useState(null);
@@ -304,6 +305,45 @@ const TenantSettingsPage = () => {
                     onChange={handleChange}
                     rows={3}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+            </div>
+          </Card>
+
+          {/* Configuración de Facturas / PDF */}
+          <Card>
+            <div className="p-6">
+              <h2 className="text-xl font-semibold mb-1">Configuración de Facturas</h2>
+              <p className="text-sm text-gray-500 mb-5">
+                Estos textos aparecerán en el pie de cada factura, remisión o cotización generada.
+              </p>
+              <div className="space-y-5">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Observaciones de pago
+                    <span className="ml-2 text-xs text-gray-400 font-normal">(cuentas bancarias, instrucciones, etc.)</span>
+                  </label>
+                  <textarea
+                    value={config.pdf_config?.payment_notes || ''}
+                    onChange={(e) => setConfig(prev => ({ ...prev, pdf_config: { ...prev.pdf_config, payment_notes: e.target.value } }))}
+                    rows={4}
+                    placeholder={"Ej: Pagos a cuenta Bancolombia Ahorros Nro. 000-123456-78\nTitular: MI EMPRESA S.A.S.\nEnviar comprobante a: pagos@miempresa.com"}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm font-mono resize-y"
+                  />
+                  <p className="text-xs text-gray-400 mt-1">Puedes usar varias líneas. Se imprimen tal como las escribas.</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Texto legal / pie de página
+                    <span className="ml-2 text-xs text-gray-400 font-normal">(opcional)</span>
+                  </label>
+                  <textarea
+                    value={config.pdf_config?.legal_note || ''}
+                    onChange={(e) => setConfig(prev => ({ ...prev, pdf_config: { ...prev.pdf_config, legal_note: e.target.value } }))}
+                    rows={2}
+                    placeholder="Ej: Este documento se asimila a una Letra de Cambio según el Art. 774 del Código de Comercio."
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm resize-y"
                   />
                 </div>
               </div>
