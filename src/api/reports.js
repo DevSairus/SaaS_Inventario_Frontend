@@ -1,8 +1,8 @@
 import api from './axios';
 
 export const reportsAPI = {
+  // Acepta { months } o { from_date, to_date } igual que los demás endpoints
   getMovementsByMonth: async (params = {}) => {
-    // legacy: if number passed, treat as months
     const queryParams = typeof params === 'number' ? { months: params } : params;
     const response = await api.get('/inventory/reports/movements', { params: queryParams });
     return response.data;
