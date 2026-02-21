@@ -29,5 +29,17 @@ export const authAPI = {
   changePassword: async (data) => {
     const response = await api.post('/auth/change-password', data);
     return response.data;
-  }
+  },
+
+  // Recuperar contraseña
+  forgotPassword: async (email) => {
+    const response = await api.post('/auth/forgot-password', { email });
+    return response.data;
+  },
+
+  // Restablecer contraseña
+  resetPassword: async (token, password) => {
+    const response = await api.post('/auth/reset-password', { token, password });
+    return response.data;
+  },
 };

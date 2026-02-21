@@ -7,12 +7,13 @@ const CREDIT_DAYS_OPTIONS = [15, 30, 60, 90];
 const ConfirmSaleWithPaymentModal = ({ isOpen, onClose, onConfirm, saleTotal, loading = false }) => {
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [paidAmount, setPaidAmount]       = useState(saleTotal);
-  const [paymentType, setPaymentType]     = useState('full'); // 'full' | 'partial' | 'credit'
+  const [paymentType, setPaymentType]     = useState('full');
   const [creditDays, setCreditDays]       = useState(30);
   const [customDays, setCustomDays]       = useState('');
   const [useCustomDays, setUseCustomDays] = useState(false);
+  // Cash received (only for cash payment)
+  const [cashReceived, setCashReceived]   = useState('');
 
-  // Reset cuando se abre
   useEffect(() => {
     if (isOpen) {
       setPaymentMethod('cash');
@@ -21,15 +22,22 @@ const ConfirmSaleWithPaymentModal = ({ isOpen, onClose, onConfirm, saleTotal, lo
       setCreditDays(30);
       setCustomDays('');
       setUseCustomDays(false);
+      setCashReceived('');
     }
   }, [isOpen, saleTotal]);
 
-  // Ajustar monto según tipo
   useEffect(() => {
     if (paymentType === 'full')    setPaidAmount(saleTotal);
     if (paymentType === 'credit')  setPaidAmount(0);
     if (paymentType === 'partial' && paidAmount === saleTotal) setPaidAmount(Math.round(saleTotal / 2));
+    // Reset cash received when payment type changes
+    setCashReceived('');
   }, [paymentType, saleTotal]);
+
+  // Reset cash received when switching away from cash
+  useEffect(() => {
+    if (paymentMethod !== 'cash') setCashReceived('');
+  }, [paymentMethod]);
 
   const effectiveCreditDays = useCustomDays ? parseInt(customDays || 0) : creditDays;
 
@@ -40,22 +48,27 @@ const ConfirmSaleWithPaymentModal = ({ isOpen, onClose, onConfirm, saleTotal, lo
     return d.toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' });
   };
 
+  // Calculate cash change
+  const amountToPay = paymentType === 'credit' ? 0 : parseFloat(paidAmount || 0);
+  const cashReceivedNum = parseFloat(cashReceived || 0);
+  const cashChange = paymentMethod === 'cash' && cashReceived !== ''
+    ? cashReceivedNum - amountToPay
+    : null;
+  const cashChangePositive = cashChange !== null && cashChange >= 0;
+
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    if (!paymentMethod) {
-      return;
-    }
+    if (!paymentMethod) return;
 
     const finalAmount = paymentType === 'credit' ? 0 : parseFloat(paidAmount);
 
-    if (paymentType === 'partial' && (finalAmount <= 0 || finalAmount >= saleTotal)) {
-      return;
-    }
+    if (paymentType === 'partial' && (finalAmount <= 0 || finalAmount >= saleTotal)) return;
 
-    if ((paymentType === 'partial' || paymentType === 'credit') && effectiveCreditDays <= 0) {
-      return;
-    }
+    if ((paymentType === 'partial' || paymentType === 'credit') && effectiveCreditDays <= 0) return;
+
+    // Validate cash received covers the amount
+    if (paymentMethod === 'cash' && cashReceived !== '' && cashReceivedNum < amountToPay) return;
 
     onConfirm({
       payment_method: paymentMethod,
@@ -69,22 +82,28 @@ const ConfirmSaleWithPaymentModal = ({ isOpen, onClose, onConfirm, saleTotal, lo
   const pendingAmount = saleTotal - parseFloat(paidAmount || 0);
 
   const paymentMethods = [
-    { value: 'cash',        label: 'Efectivo',          icon: BanknotesIcon },
-    { value: 'credit_card', label: 'T. Crédito',        icon: CreditCardIcon },
-    { value: 'debit_card',  label: 'T. Débito',         icon: CreditCardIcon },
-    { value: 'transfer',    label: 'Transferencia',     icon: DevicePhoneMobileIcon },
-    { value: 'check',       label: 'Cheque',            icon: BanknotesIcon },
+    { value: 'cash',        label: 'Efectivo',      icon: BanknotesIcon },
+    { value: 'credit_card', label: 'T. Crédito',    icon: CreditCardIcon },
+    { value: 'debit_card',  label: 'T. Débito',     icon: CreditCardIcon },
+    { value: 'transfer',    label: 'Transferencia', icon: DevicePhoneMobileIcon },
+    { value: 'check',       label: 'Cheque',        icon: BanknotesIcon },
   ];
 
   const needsCreditSection = paymentType === 'partial' || paymentType === 'credit';
   const dueDate = getDueDate();
+  const isCash = paymentMethod === 'cash';
+
+  // Quick cash amounts (round up to next convenient denomination)
+  const quickAmounts = isCash && paymentType !== 'credit'
+    ? [amountToPay, ...[50000, 100000, 200000, 500000]
+        .filter(v => v > amountToPay)
+        .slice(0, 3)]
+    : [];
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto" role="dialog" aria-modal="true">
       <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:p-0">
-        {/* Overlay */}
         <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={onClose} />
-
         <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
 
         <div className="inline-block align-bottom bg-white rounded-xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
@@ -114,20 +133,16 @@ const ConfirmSaleWithPaymentModal = ({ isOpen, onClose, onConfirm, saleTotal, lo
                 <label className="block text-sm font-medium text-gray-700 mb-3">Tipo de Pago</label>
                 <div className="grid grid-cols-3 gap-3">
                   {[
-                    { key: 'full',    label: 'Contado',  color: 'green' },
-                    { key: 'partial', label: 'Parcial',  color: 'yellow' },
-                    { key: 'credit',  label: 'Crédito',  color: 'red' },
+                    { key: 'full',    label: 'Contado', color: 'green' },
+                    { key: 'partial', label: 'Parcial', color: 'yellow' },
+                    { key: 'credit',  label: 'Crédito', color: 'red' },
                   ].map(({ key, label, color }) => (
-                    <button
-                      key={key}
-                      type="button"
-                      onClick={() => setPaymentType(key)}
+                    <button key={key} type="button" onClick={() => setPaymentType(key)}
                       className={`px-4 py-3 rounded-lg border-2 text-sm font-medium transition-all ${
                         paymentType === key
                           ? `border-${color}-500 bg-${color}-50 text-${color}-700`
                           : `border-gray-300 bg-white text-gray-700 hover:border-${color}-300`
-                      }`}
-                    >
+                      }`}>
                       {label}
                     </button>
                   ))}
@@ -139,16 +154,12 @@ const ConfirmSaleWithPaymentModal = ({ isOpen, onClose, onConfirm, saleTotal, lo
                 <label className="block text-sm font-medium text-gray-700 mb-3">Método de Pago</label>
                 <div className="grid grid-cols-2 gap-2">
                   {paymentMethods.map(({ value, label, icon: Icon }) => (
-                    <button
-                      key={value}
-                      type="button"
-                      onClick={() => setPaymentMethod(value)}
+                    <button key={value} type="button" onClick={() => setPaymentMethod(value)}
                       className={`flex items-center gap-2 px-3 py-2.5 rounded-lg border-2 text-sm font-medium transition-all ${
                         paymentMethod === value
                           ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
                           : 'border-gray-300 bg-white text-gray-700 hover:border-indigo-300'
-                      }`}
-                    >
+                      }`}>
                       <Icon className="w-4 h-4 flex-shrink-0" />
                       {label}
                     </button>
@@ -156,22 +167,15 @@ const ConfirmSaleWithPaymentModal = ({ isOpen, onClose, onConfirm, saleTotal, lo
                 </div>
               </div>
 
-              {/* Monto abono (solo parcial) */}
+              {/* Abono (parcial) */}
               {paymentType === 'partial' && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Abono inicial</label>
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">$</span>
-                    <input
-                      type="number"
-                      value={paidAmount}
-                      onChange={(e) => setPaidAmount(e.target.value)}
+                    <input type="number" value={paidAmount} onChange={(e) => setPaidAmount(e.target.value)}
                       className="w-full pl-8 pr-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-lg font-medium"
-                      min="1"
-                      max={saleTotal - 1}
-                      step="any"
-                      required
-                    />
+                      min="1" max={saleTotal - 1} step="any" required />
                   </div>
                   {pendingAmount > 0 && (
                     <p className="mt-1.5 text-sm text-orange-600 font-medium">
@@ -181,63 +185,118 @@ const ConfirmSaleWithPaymentModal = ({ isOpen, onClose, onConfirm, saleTotal, lo
                 </div>
               )}
 
-              {/* ── Sección de plazo (parcial o crédito) ── */}
+              {/* ── EFECTIVO: Monto recibido y cambio ── */}
+              {isCash && paymentType !== 'credit' && (
+                <div className="rounded-xl border-2 border-emerald-100 bg-emerald-50 p-4 space-y-3">
+                  <div className="flex items-center gap-2 text-emerald-800 font-semibold text-sm">
+                    <BanknotesIcon className="w-4 h-4" />
+                    Cobro en efectivo
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-emerald-700 mb-2">Monto recibido del cliente</label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-600 font-bold">$</span>
+                      <input
+                        type="number"
+                        value={cashReceived}
+                        onChange={(e) => setCashReceived(e.target.value)}
+                        placeholder={amountToPay.toLocaleString('es-CO')}
+                        min={amountToPay}
+                        step="any"
+                        className={`w-full pl-8 pr-4 py-3 border-2 rounded-lg text-lg font-bold focus:outline-none focus:ring-2 transition-all ${
+                          cashChange !== null && !cashChangePositive
+                            ? 'border-red-400 bg-red-50 focus:ring-red-300'
+                            : 'border-emerald-300 bg-white focus:ring-emerald-400 focus:border-emerald-400'
+                        }`}
+                      />
+                    </div>
+
+                    {/* Quick amount buttons */}
+                    {quickAmounts.length > 0 && (
+                      <div className="flex gap-2 mt-2 flex-wrap">
+                        {quickAmounts.map((amt) => (
+                          <button
+                            key={amt}
+                            type="button"
+                            onClick={() => setCashReceived(String(amt))}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold border-2 transition-all ${
+                              parseFloat(cashReceived) === amt
+                                ? 'border-emerald-600 bg-emerald-600 text-white'
+                                : 'border-emerald-300 bg-white text-emerald-700 hover:border-emerald-500'
+                            }`}
+                          >
+                            ${amt.toLocaleString('es-CO')}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Cambio */}
+                    {cashChange !== null && (
+                      <div className={`mt-3 flex items-center justify-between rounded-lg px-4 py-3 border-2 ${
+                        cashChangePositive
+                          ? 'bg-green-50 border-green-300'
+                          : 'bg-red-50 border-red-300'
+                      }`}>
+                        <div className="flex items-center gap-2">
+                          {cashChangePositive
+                            ? <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                            : <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                          }
+                          <span className={`text-sm font-semibold ${cashChangePositive ? 'text-green-700' : 'text-red-600'}`}>
+                            {cashChangePositive ? 'Cambio a entregar:' : 'Monto insuficiente'}
+                          </span>
+                        </div>
+                        {cashChangePositive && (
+                          <span className="text-xl font-bold text-green-700">
+                            ${cashChange.toLocaleString('es-CO')}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Sección de plazo (parcial o crédito) */}
               {needsCreditSection && (
                 <div className="rounded-xl border-2 border-indigo-100 bg-indigo-50 p-4 space-y-3">
                   <div className="flex items-center gap-2 text-indigo-800 font-semibold text-sm">
                     <ClockIcon className="w-4 h-4" />
                     Plazo de pago
                   </div>
-
-                  {/* Días predefinidos */}
                   <div className="grid grid-cols-4 gap-2">
                     {CREDIT_DAYS_OPTIONS.map(days => (
-                      <button
-                        key={days}
-                        type="button"
+                      <button key={days} type="button"
                         onClick={() => { setCreditDays(days); setUseCustomDays(false); }}
                         className={`py-2 rounded-lg text-sm font-semibold border-2 transition-all ${
                           !useCustomDays && creditDays === days
                             ? 'border-indigo-500 bg-indigo-600 text-white'
                             : 'border-indigo-200 bg-white text-indigo-700 hover:border-indigo-400'
-                        }`}
-                      >
+                        }`}>
                         {days}d
                       </button>
                     ))}
                   </div>
-
-                  {/* Personalizado */}
                   <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setUseCustomDays(true)}
+                    <button type="button" onClick={() => setUseCustomDays(true)}
                       className={`px-3 py-1.5 rounded-lg text-xs font-semibold border-2 transition-all flex-shrink-0 ${
                         useCustomDays
                           ? 'border-indigo-500 bg-indigo-600 text-white'
                           : 'border-indigo-200 bg-white text-indigo-700 hover:border-indigo-400'
-                      }`}
-                    >
+                      }`}>
                       Personalizado
                     </button>
                     {useCustomDays && (
                       <div className="flex items-center gap-1.5 flex-1">
-                        <input
-                          type="number"
-                          value={customDays}
-                          onChange={(e) => setCustomDays(e.target.value)}
-                          placeholder="Días"
-                          min="1"
-                          max="365"
-                          className="w-20 px-2 py-1.5 border-2 border-indigo-300 rounded-lg text-sm font-medium focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                          autoFocus
-                        />
+                        <input type="number" value={customDays} onChange={(e) => setCustomDays(e.target.value)}
+                          placeholder="Días" min="1" max="365" autoFocus
+                          className="w-20 px-2 py-1.5 border-2 border-indigo-300 rounded-lg text-sm font-medium focus:ring-2 focus:ring-indigo-500 focus:border-transparent" />
                         <span className="text-sm text-indigo-700">días</span>
                       </div>
                     )}
                   </div>
-
-                  {/* Fecha de vencimiento calculada */}
                   {dueDate && effectiveCreditDays > 0 && (
                     <div className="flex items-center gap-2 pt-1 border-t border-indigo-200">
                       <CalendarDaysIcon className="w-4 h-4 text-indigo-500 flex-shrink-0" />
@@ -270,6 +329,14 @@ const ConfirmSaleWithPaymentModal = ({ isOpen, onClose, onConfirm, saleTotal, lo
                     </span>
                   </div>
                 )}
+                {isCash && cashChangePositive && cashChange > 0 && (
+                  <div className="flex justify-between pt-2 border-t border-blue-300">
+                    <span className="text-gray-600">Cambio:</span>
+                    <span className="font-bold text-emerald-600 text-base">
+                      ${cashChange.toLocaleString('es-CO')}
+                    </span>
+                  </div>
+                )}
                 {dueDate && effectiveCreditDays > 0 && (
                   <div className="flex justify-between">
                     <span className="text-gray-600">Fecha límite de pago:</span>
@@ -278,7 +345,6 @@ const ConfirmSaleWithPaymentModal = ({ isOpen, onClose, onConfirm, saleTotal, lo
                 )}
               </div>
 
-              {/* Aviso crédito */}
               {paymentType === 'credit' && (
                 <div className="bg-red-50 border-l-4 border-red-400 p-3 rounded-r-lg text-sm text-red-700">
                   Esta venta se registrará como <strong>pendiente de pago</strong>. El saldo completo queda en cartera.
@@ -288,19 +354,12 @@ const ConfirmSaleWithPaymentModal = ({ isOpen, onClose, onConfirm, saleTotal, lo
 
             {/* Footer */}
             <div className="bg-gray-50 px-6 py-4 flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
-              <button
-                type="button"
-                onClick={onClose}
-                disabled={loading}
-                className="w-full sm:w-auto inline-flex justify-center rounded-lg border-2 border-gray-300 px-6 py-3 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-all"
-              >
+              <button type="button" onClick={onClose} disabled={loading}
+                className="w-full sm:w-auto inline-flex justify-center rounded-lg border-2 border-gray-300 px-6 py-3 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-all">
                 Cancelar
               </button>
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full sm:w-auto inline-flex justify-center rounded-lg px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-base font-medium text-white hover:from-indigo-700 hover:to-purple-700 disabled:opacity-50 shadow-sm transition-all"
-              >
+              <button type="submit" disabled={loading || (isCash && cashReceived !== '' && !cashChangePositive)}
+                className="w-full sm:w-auto inline-flex justify-center rounded-lg px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-base font-medium text-white hover:from-indigo-700 hover:to-purple-700 disabled:opacity-50 shadow-sm transition-all">
                 {loading ? (
                   <span className="flex items-center gap-2">
                     <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
