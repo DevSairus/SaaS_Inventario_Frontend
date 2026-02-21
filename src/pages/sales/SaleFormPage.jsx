@@ -182,11 +182,10 @@ function SaleFormPage() {
     }
   }, [isEditMode, currentSale]);
 
-  // 🆕 Recalcular items cuando cambie el tipo de documento
+  // Recalcular totales cuando cambie el tipo de documento (afecta si se aplica IVA o no)
   useEffect(() => {
     if (items.length > 0) {
-      const recalculatedItems = items.map(item => calculateItemTotals(item));
-      setItems(recalculatedItems);
+      setItems(items.map(item => calculateItemTotals(item)));
     }
   }, [formData.document_type]);
 
@@ -224,15 +223,17 @@ function SaleFormPage() {
       newItems[existingIndex] = calculateItemTotals(newItems[existingIndex]);
       setItems(newItems);
     } else {
+      const taxPct = product.has_tax === false ? 0 : (product.tax_percentage || 19);
+
       const newItem = {
         item_type: product.product_type === 'service' ? 'service' : 'product',
         product_id: product.id,
         product_name: product.name,
         product_sku: product.sku,
         quantity: 1,
-        unit_price: toInteger(product.base_price, 0),
+        unit_price: toInteger(product.base_price, 0), // Precio tal cual, sin extraer IVA
         discount_percentage: 0,
-        tax_percentage: product.has_tax === false ? 0 : (product.tax_percentage || 19),
+        tax_percentage: taxPct,
         price_includes_tax: product.price_includes_tax || false,
         has_tax: product.has_tax !== false
       };
@@ -275,20 +276,15 @@ function SaleFormPage() {
     
     let tax = 0;
     let total = 0;
-    
-    // 🆕 Si es remisión, NO calcular IVA
-    if (formData.document_type === 'remision') {
-      tax = 0;
-      total = taxBase;
-    }
-    else if (!hasTax) {
+
+    if (!hasTax) {
       // Producto exento de IVA
       tax = 0;
       total = taxBase;
     } else if (priceIncludesTax) {
       // El precio YA INCLUYE el IVA - extraerlo
       tax = Math.round((taxBase * taxPercentage) / (100 + taxPercentage));
-      total = taxBase; // El total es el precio que ya incluye IVA
+      total = taxBase;
     } else {
       // El precio NO incluye IVA - sumarlo
       tax = Math.round((taxBase * taxPercentage) / 100);
@@ -684,7 +680,7 @@ function SaleFormPage() {
                           quantity: 1,
                           unit_price: 0,
                           discount_percentage: 0,
-                          tax_percentage: formData.document_type !== 'remision' ? 19 : 0,
+                          tax_percentage: 19,
                           price_includes_tax: false,
                           has_tax: true,
                         };
@@ -883,40 +879,62 @@ function SaleFormPage() {
                 <div className="p-6">
                   <div className="max-w-md ml-auto">
                     <div className="space-y-3">
-                      <div className="flex justify-between text-sm text-gray-600">
-                        <span>Subtotal:</span>
-                        <span className="font-medium text-gray-900">
-                          ${formatCurrency(totals.subtotal)}
-                        </span>
-                      </div>
-                      
-                      {totals.discount > 0 && (
-                        <div className="flex justify-between text-sm text-red-600">
-                          <span>Descuento:</span>
-                          <span className="font-medium">
-                            -${formatCurrency(totals.discount)}
-                          </span>
-                        </div>
+                      {formData.document_type === 'remision' ? (
+                        /* Remisión: mostrar solo el total (IVA incluido pero no discriminado) */
+                        <>
+                          {totals.discount > 0 && (
+                            <div className="flex justify-between text-sm text-red-600">
+                              <span>Descuento:</span>
+                              <span className="font-medium">
+                                -${formatCurrency(totals.discount)}
+                              </span>
+                            </div>
+                          )}
+                          <div className="border-t-2 border-gray-300 pt-3">
+                            <div className="flex justify-between items-center">
+                              <span className="text-lg font-bold text-gray-900">TOTAL:</span>
+                              <span className="text-2xl font-bold text-blue-600">
+                                ${formatCurrency(totals.total)}
+                              </span>
+                            </div>
+                          </div>
+                        </>
+                      ) : (
+                        /* Factura / Cotización: mostrar subtotal + IVA + total discriminados */
+                        <>
+                          <div className="flex justify-between text-sm text-gray-600">
+                            <span>Subtotal:</span>
+                            <span className="font-medium text-gray-900">
+                              ${formatCurrency(totals.subtotal)}
+                            </span>
+                          </div>
+
+                          {totals.discount > 0 && (
+                            <div className="flex justify-between text-sm text-red-600">
+                              <span>Descuento:</span>
+                              <span className="font-medium">
+                                -${formatCurrency(totals.discount)}
+                              </span>
+                            </div>
+                          )}
+
+                          <div className="flex justify-between text-sm text-gray-600">
+                            <span>IVA:</span>
+                            <span className="font-medium text-gray-900">
+                              ${formatCurrency(totals.tax)}
+                            </span>
+                          </div>
+
+                          <div className="border-t-2 border-gray-300 pt-3">
+                            <div className="flex justify-between items-center">
+                              <span className="text-lg font-bold text-gray-900">TOTAL:</span>
+                              <span className="text-2xl font-bold text-blue-600">
+                                ${formatCurrency(totals.total)}
+                              </span>
+                            </div>
+                          </div>
+                        </>
                       )}
-                      
-                      {/* Solo mostrar IVA si NO es remisión */}
-                      {formData.document_type !== 'remision' && (
-                        <div className="flex justify-between text-sm text-gray-600">
-                          <span>IVA:</span>
-                          <span className="font-medium text-gray-900">
-                            ${formatCurrency(totals.tax)}
-                          </span>
-                        </div>
-                      )}
-                      
-                      <div className="border-t-2 border-gray-300 pt-3">
-                        <div className="flex justify-between items-center">
-                          <span className="text-lg font-bold text-gray-900">TOTAL:</span>
-                          <span className="text-2xl font-bold text-blue-600">
-                            ${formatCurrency(totals.total)}
-                          </span>
-                        </div>
-                      </div>
                     </div>
                   </div>
                 </div>
