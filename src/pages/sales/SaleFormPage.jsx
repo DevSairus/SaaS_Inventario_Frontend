@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import useSalesStore from '../../store/salesStore';
+import useTenantStore from '../../store/tenantStore';
 import useCustomersStore from '../../store/customersStore';
 import useProductsStore from '../../store/productsStore';
 import { warehousesService } from '../../api/warehouses';
@@ -38,6 +39,9 @@ function SaleFormPage() {
   const navigate = useNavigate();
   const { id } = useParams();
   const { createSale, updateSale, fetchSaleById, currentSale, loading } = useSalesStore();
+  const { features, fetchFeatures } = useTenantStore();
+  // true = ocultar IVA en remisiones (el store aplica este default si no está configurado)
+  const hideRemisionTax = features?.hide_remision_tax === true;
   const { customers, fetchCustomers } = useCustomersStore();
   const { searchProducts } = useProductsStore();
 
@@ -99,6 +103,7 @@ function SaleFormPage() {
 
   useEffect(() => {
     fetchCustomers();
+    fetchFeatures();
   }, [fetchCustomers]);
 
   useEffect(() => {
@@ -756,9 +761,11 @@ function SaleFormPage() {
                           <th className="text-right py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wider w-24">
                             Desc. %
                           </th>
+                          {!(hideRemisionTax && formData.document_type === 'remision') && (
                           <th className="text-right py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wider w-24">
                             IVA %
                           </th>
+                          )}
                           <th className="text-right py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wider w-32">
                             Total
                           </th>
@@ -829,6 +836,7 @@ function SaleFormPage() {
                                 className="text-right w-full"
                               />
                             </td>
+                            {!(hideRemisionTax && formData.document_type === 'remision') && (
                             <td className="py-4 px-4">
                               <Input
                                 type="number"
@@ -850,6 +858,7 @@ function SaleFormPage() {
                                 }
                               />
                             </td>
+                            )}
                             <td className="py-4 px-4 text-right">
                               <span className="font-semibold text-gray-900">
                                 ${formatCurrency(item.total)}
@@ -879,7 +888,7 @@ function SaleFormPage() {
                 <div className="p-6">
                   <div className="max-w-md ml-auto">
                     <div className="space-y-3">
-                      {formData.document_type === 'remision' ? (
+                      {(hideRemisionTax && formData.document_type === 'remision') ? (
                         /* Remisión: mostrar solo el total (IVA incluido pero no discriminado) */
                         <>
                           {totals.discount > 0 && (

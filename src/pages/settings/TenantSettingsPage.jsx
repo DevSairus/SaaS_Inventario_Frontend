@@ -7,8 +7,10 @@ import Input from '../../components/common/Input';
 import Loading from '../../components/common/Loading';
 import Layout from '../../components/layout/Layout';
 import toast from 'react-hot-toast';
+import useTenantStore from '../../store/tenantStore';
 
 const TenantSettingsPage = () => {
+  const { setFeatures } = useTenantStore();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
@@ -23,7 +25,8 @@ const TenantSettingsPage = () => {
     logo_url: '',
     primary_color: '#2563eb',
     secondary_color: '#475569',
-    pdf_config: { payment_notes: '', legal_note: '' }
+    pdf_config: { payment_notes: '', legal_note: '' },
+    features: {}
   });
   const [logoPreview, setLogoPreview] = useState(null);
   const [logoFile, setLogoFile] = useState(null);
@@ -32,12 +35,25 @@ const TenantSettingsPage = () => {
     loadConfig();
   }, []);
 
+  const toggleFeature = (key) => {
+    setConfig(prev => ({
+      ...prev,
+      features: { ...prev.features, [key]: !prev.features?.[key] }
+    }));
+  };
+
   const loadConfig = async () => {
     try {
       setLoading(true);
       const response = await axios.get('/tenant/config');
       if (response.data.success) {
-        setConfig(response.data.data);
+        const data = response.data.data;
+        // Normalizar features: si hide_remision_tax no existe, default = true
+        const normalizedFeatures = {
+          hide_remision_tax: true,
+          ...(data.features || {}),
+        };
+        setConfig({ ...data, features: normalizedFeatures });
         // ✅ Manejar tanto URLs locales como de Cloudinary
         if (response.data.data.logo_url) {
           const logoUrl = response.data.data.logo_url;
@@ -151,7 +167,9 @@ const TenantSettingsPage = () => {
       const response = await axios.put('/tenant/config', config);
       
       if (response.data.success) {
-        toast.success('Configuración actualizada exitosamente');
+        toast.success('Configuración guardada exitosamente');
+        // Sincronizar features en el store global para que otros componentes lo lean
+        setFeatures(config.features || {});
       }
     } catch (error) {
       toast.error('Error al guardar la configuración');
@@ -346,6 +364,41 @@ const TenantSettingsPage = () => {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm resize-y"
                   />
                 </div>
+              </div>
+            </div>
+          </Card>
+
+          {/* Módulos y funcionalidades */}
+          <Card>
+            <div className="p-6">
+              <h2 className="text-xl font-semibold mb-1">Módulos y funcionalidades</h2>
+              <p className="text-sm text-gray-500 mb-5">
+                Activa o desactiva funciones según las necesidades de tu negocio.
+              </p>
+              <div className="space-y-4">
+
+                {/* Toggle: Ocultar IVA en remisiones */}
+                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
+                  <div className="flex-1 mr-4">
+                    <p className="font-medium text-gray-900 text-sm">Ocultar IVA en remisiones</p>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      Las remisiones incluyen IVA internamente, pero no se muestra ni discrimina en pantalla ni en el PDF.
+                      Útil para negocios que manejan remisiones sin desglose tributario.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => toggleFeature('hide_remision_tax')}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0 ${
+                      config.features?.hide_remision_tax ? 'bg-blue-600' : 'bg-gray-300'
+                    }`}
+                  >
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                      config.features?.hide_remision_tax ? 'translate-x-6' : 'translate-x-1'
+                    }`} />
+                  </button>
+                </div>
+
               </div>
             </div>
           </Card>
