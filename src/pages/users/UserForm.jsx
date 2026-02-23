@@ -180,6 +180,7 @@ const UserForm = () => {
                 <option value="manager">📊 Gerente</option>
                 <option value="seller">🛒 Vendedor</option>
                 <option value="warehouse_keeper">📦 Bodeguero</option>
+                <option value="technician">🔧 Técnico</option>
                 <option value="user">👤 Usuario</option>
                 <option value="viewer">👁️ Visualizador</option>
               </select>
@@ -191,6 +192,7 @@ const UserForm = () => {
                   {formData.role === 'manager' && '📊 Gerente - Gestión y Reportes'}
                   {formData.role === 'seller' && '🛒 Vendedor - Ventas y Clientes'}
                   {formData.role === 'warehouse_keeper' && '📦 Bodeguero - Inventario'}
+                  {formData.role === 'technician' && '🔧 Técnico - Órdenes de Trabajo'}
                   {formData.role === 'user' && '👤 Usuario - Acceso Estándar'}
                   {formData.role === 'viewer' && '👁️ Visualizador - Solo Lectura'}
                 </p>
@@ -288,6 +290,28 @@ const UserForm = () => {
                     </>
                   )}
                   
+                  {formData.role === 'technician' && (
+                    <>
+                      <p className="font-medium">✅ Puede:</p>
+                      <ul className="list-disc list-inside ml-2 space-y-0.5">
+                        <li>Ver y gestionar órdenes de trabajo asignadas</li>
+                        <li>Registrar trabajo realizado y repuestos usados</li>
+                        <li>Subir fotos de ingreso y salida</li>
+                        <li>Cambiar estado de las OT</li>
+                        <li>Consultar historial de vehículos</li>
+                      </ul>
+                      <p className="font-medium text-red-700 mt-2">❌ NO puede:</p>
+                      <ul className="list-disc list-inside ml-2 space-y-0.5">
+                        <li>Ver reportes financieros o cartera</li>
+                        <li>Gestionar usuarios o configuraciones</li>
+                        <li>Crear ventas o compras</li>
+                      </ul>
+                      <p className="italic mt-2 text-blue-600">
+                        💡 Ideal para mecánicos y personal de taller
+                      </p>
+                    </>
+                  )}
+
                   {formData.role === 'viewer' && (
                     <>
                       <p className="font-medium">✅ Puede SOLO VER:</p>

@@ -113,6 +113,7 @@ const UsersPage = () => {
     manager: 'blue',
     seller: 'green',
     warehouse_keeper: 'yellow',
+    technician: 'orange',
     user: 'gray',
     viewer: 'indigo',
   };
@@ -123,6 +124,7 @@ const UsersPage = () => {
     manager: 'Gerente',
     seller: 'Vendedor',
     warehouse_keeper: 'Bodeguero',
+    technician: 'Técnico',
     user: 'Usuario',
     viewer: 'Visualizador',
   };
@@ -186,6 +188,7 @@ const UsersPage = () => {
                   <option value="manager">Gerente</option>
                   <option value="seller">Vendedor</option>
                   <option value="warehouse_keeper">Bodeguero</option>
+                  <option value="technician">Técnico</option>
                   <option value="user">Usuario</option>
                   <option value="viewer">Visualizador</option>
                 </select>

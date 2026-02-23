@@ -1,6 +1,5 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { productsAPI } from '../../api/products';
 
 function StockAlerts() {
   const [isOpen, setIsOpen] = useState(false);
@@ -11,19 +10,18 @@ function StockAlerts() {
   const fetchAllLowStockProducts = useCallback(async () => {
     setIsLoading(true);
     try {
-      // Obtener TODOS los productos sin paginación
-      const response = await productsAPI.getAll({
-        is_active: 'true',
-        limit: 10000, // Límite alto para obtener todos los productos
-        page: 1,
-        _t: Date.now() // Evitar cache
-      });
-
+      // Usar el endpoint dedicado de alertas de stock en lugar de traer todos los productos
+      const { getStockAlerts } = await import('../../api/stockAlerts');
+      const response = await getStockAlerts({ status: 'active', limit: 500 });
       if (response && response.success) {
-        setAllProducts(response.data || []);
+        // Mapear alertas a formato de producto para compatibilidad con el resto del componente
+        const products = (response.data || [])
+          .filter(a => a.product)
+          .map(a => a.product);
+        setAllProducts(products);
       }
     } catch (error) {
-      console.error('Error al cargar productos para alertas:', error);
+      console.error('Error al cargar alertas de stock:', error);
     } finally {
       setIsLoading(false);
     }

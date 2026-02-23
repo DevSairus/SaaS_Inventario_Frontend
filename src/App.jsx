@@ -20,6 +20,13 @@ import SalesPage from './pages/sales/SalesPage';
 import SaleFormPage from './pages/sales/SaleFormPage';
 import SaleDetailPage from './pages/sales/SaleDetailPage';
 import AccountsReceivablePage from './pages/sales/AccountsReceivablePage';
+import WorkOrdersPage from './pages/workshop/WorkOrdersPage';
+import WorkOrderFormPage from './pages/workshop/WorkOrderFormPage';
+import WorkOrderDetailPage from './pages/workshop/WorkOrderDetailPage';
+import VehiclesPage from './pages/workshop/VehiclesPage';
+import TechnicianProductivityPage from './pages/workshop/productivity/TechnicianProductivityPage';
+import CommissionSettlementsPage from './pages/workshop/commissions/CommissionSettlementsPage';
+import CommissionSettlementDetailPage from './pages/workshop/commissions/CommissionSettlementDetailPage';
 import CustomersPage from './pages/customers/CustomersPage';
 import WarehousesPage from './pages/warehouses/WarehousesPage';
 import TenantSettingsPage from './pages/settings/TenantSettingsPage';
@@ -238,6 +245,15 @@ function App() {
         
         {/* Cartera (Cuentas por Cobrar) */}
         <Route path="accounts-receivable" element={<TenantRoute><AccountsReceivablePage /></TenantRoute>} />
+
+        {/* ── TALLER ── */}
+        <Route path="workshop/work-orders" element={<TenantRoute><WorkOrdersPage /></TenantRoute>} />
+        <Route path="workshop/work-orders/new" element={<TenantRoute><WorkOrderFormPage /></TenantRoute>} />
+        <Route path="workshop/work-orders/:id" element={<TenantRoute><WorkOrderDetailPage /></TenantRoute>} />
+        <Route path="workshop/vehicles" element={<TenantRoute><VehiclesPage /></TenantRoute>} />
+        <Route path="workshop/productivity" element={<TenantRoute><TechnicianProductivityPage /></TenantRoute>} />
+        <Route path="workshop/commission-settlements" element={<TenantRoute><CommissionSettlementsPage /></TenantRoute>} />
+        <Route path="workshop/commission-settlements/:id" element={<TenantRoute><CommissionSettlementDetailPage /></TenantRoute>} />
         
         {/* Customer Returns - ANTES de la ruta dinámica :id */}
         <Route path="sales/customer-returns" element={<TenantRoute><CustomerReturnsPage /></TenantRoute>} />

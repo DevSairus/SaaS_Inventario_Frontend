@@ -25,60 +25,50 @@ import {
   XMarkIcon
 } from '@heroicons/react/24/outline';
 
-import { PackageX, Truck, ClipboardList } from 'lucide-react';
+import { PackageX, Truck, ClipboardList, Wrench, Car, TrendingUp, DollarSign } from 'lucide-react';
+
+const INITIAL_MENUS = {
+  sales: false,
+  inventory: false,
+  workshop: false,
+  settings: false,
+};
 
 function Sidebar({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobileOpen }) {
-  const [expandedMenus, setExpandedMenus] = useState({
-    sales: false,
-    inventory: false,
-    settings: false,
-  });
+  const [expandedMenus, setExpandedMenus] = useState(INITIAL_MENUS);
 
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuthStore();
 
-  // 🔹 CERRAR MENÚ MÓVIL AL CAMBIAR DE RUTA
+  // Cerrar menú móvil y colapsar secciones al cambiar de ruta
   useEffect(() => {
     setIsMobileOpen(false);
-    setExpandedMenus({
-      sales: false,
-      inventory: false,
-      settings: false,
-    });
+    setExpandedMenus(INITIAL_MENUS);
   }, [location.pathname]);
 
-  // 🔹 SOLO UN MENÚ ABIERTO A LA VEZ
+  // Solo un menú abierto a la vez
   const toggleMenu = (key) => {
     setExpandedMenus(prev => {
       const updated = {};
-      Object.keys(prev).forEach(k => {
-        updated[k] = k === key ? !prev[k] : false;
-      });
+      Object.keys(prev).forEach(k => { updated[k] = k === key ? !prev[k] : false; });
       return updated;
     });
   };
 
-  const isActive = (route) => location.pathname === route;
+  const isActive = (route) => location.pathname === route || location.pathname.startsWith(route + '/');
+  const isSectionActive = (children) => children?.some(c => isActive(c.route));
 
   const handleNavigate = (route, available) => {
     if (!available) return;
     navigate(route);
     setIsMobileOpen(false);
-
-    setExpandedMenus({
-      sales: false,
-      inventory: false,
-      settings: false,
-    });
+    setExpandedMenus(INITIAL_MENUS);
   };
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
+  const handleLogout = () => { logout(); navigate('/login'); };
 
-    const menuItems = [
+  const menuItems = [
     {
       id: 'dashboard',
       title: 'Dashboard',
@@ -91,41 +81,11 @@ function Sidebar({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobileOpen })
       title: 'Ventas',
       icon: CurrencyDollarIcon,
       children: [
-        {
-          id: 'sales-new',
-          title: 'Nueva Venta',
-          route: '/sales/new',
-          available: true,
-          icon: DocumentTextIcon
-        },
-        {
-          id: 'sales-list',
-          title: 'Remisiones',
-          route: '/sales',
-          available: true,
-          icon: DocumentTextIcon
-        },
-        {
-          id: 'accounts-receivable',
-          title: 'Cartera',
-          route: '/accounts-receivable',
-          available: true,
-          icon: CreditCardIcon
-        },
-        {
-          id: 'customer-returns',
-          title: 'Devoluciones',
-          route: '/sales/customer-returns',
-          available: true,
-          icon: PackageX,          
-        },
-        {
-          id: 'customers',
-          title: 'Clientes',
-          route: '/customers',
-          available: true,
-          icon: UsersIcon
-        },
+        { id: 'sales-new',           title: 'Nueva Venta',   route: '/sales/new',              available: true, icon: DocumentTextIcon },
+        { id: 'sales-list',          title: 'Remisiones',    route: '/sales',                   available: true, icon: DocumentTextIcon },
+        { id: 'accounts-receivable', title: 'Cartera',       route: '/accounts-receivable',     available: true, icon: CreditCardIcon },
+        { id: 'customer-returns',    title: 'Devoluciones',  route: '/sales/customer-returns',  available: true, icon: PackageX },
+        { id: 'customers',           title: 'Clientes',      route: '/customers',               available: true, icon: UsersIcon },
       ],
     },
     {
@@ -133,12 +93,12 @@ function Sidebar({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobileOpen })
       title: 'Inventario',
       icon: CubeIcon,
       children: [
-        { id: 'products', title: 'Productos', route: '/products', available: true, icon: CubeIcon },
-        { id: 'categories', title: 'Categorías', route: '/categories', available: true, icon: Squares2X2Icon },
-        { id: 'movements', title: 'Movimientos', route: '/movements', available: true, icon: ArrowsRightLeftIcon },
-        { id: 'adjustments', title: 'Ajustes', route: '/adjustments', available: true, icon: AdjustmentsHorizontalIcon },
-        {id:'transferencias',  title: 'Transferencias', route: '/inventory/transfers', available: true, icon: Truck},
-        {id: 'internal-consumptions',  title: 'Consumos Internos', route: '/inventory/internal-consumptions', available: true, icon: ClipboardList}
+        { id: 'products',              title: 'Productos',         route: '/products',                              available: true, icon: CubeIcon },
+        { id: 'categories',            title: 'Categorías',        route: '/categories',                            available: true, icon: Squares2X2Icon },
+        { id: 'movements',             title: 'Movimientos',       route: '/movements',                             available: true, icon: ArrowsRightLeftIcon },
+        { id: 'adjustments',           title: 'Ajustes',           route: '/adjustments',                           available: true, icon: AdjustmentsHorizontalIcon },
+        { id: 'transferencias',        title: 'Transferencias',    route: '/inventory/transfers',                   available: true, icon: Truck },
+        { id: 'internal-consumptions', title: 'Consumos Internos', route: '/inventory/internal-consumptions',       available: true, icon: ClipboardList },
       ],
     },
     {
@@ -170,6 +130,17 @@ function Sidebar({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobileOpen })
       icon: BuildingStorefrontIcon,
     },
     {
+      id: 'workshop',
+      title: 'Taller',
+      icon: Wrench,
+      children: [
+        { id: 'work-orders',  title: 'Órdenes de Trabajo', route: '/workshop/work-orders',  available: true, icon: Wrench },
+        { id: 'vehicles',     title: 'Vehículos',          route: '/workshop/vehicles',     available: true, icon: Car },
+        { id: 'productivity', title: 'Productividad',      route: '/workshop/productivity', available: true, icon: TrendingUp },
+        { id: 'commissions',  title: 'Comisiones',           route: '/workshop/commission-settlements', available: true, icon: DollarSign },
+      ],
+    },
+    {
       id: 'reports',
       title: 'Reportes',
       route: '/reports',
@@ -181,66 +152,33 @@ function Sidebar({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobileOpen })
       title: 'Configuración',
       icon: Cog6ToothIcon,
       children: [
-        {
-          id: 'my-profile',
-          title: 'Mi Perfil',
-          route: '/profile',
-          available: true,
-          icon: UserCircleIcon,
-        },
-        {
-          id: 'general-settings',
-          title: 'Configuración General',
-          route: '/settings',
-          available: user?.role === 'admin',  // Solo admin
-          icon: Cog6ToothIcon,
-        },
-        {
-          id: 'users-management',
-          title: 'Gestión de Usuarios',
-          route: '/users',
-          available: user?.role === 'admin',  // Solo admin
-          icon: UsersIcon,
-        },
+        { id: 'my-profile',       title: 'Mi Perfil',              route: '/profile',   available: true,                    icon: UserCircleIcon },
+        { id: 'general-settings', title: 'Configuración General',  route: '/settings',  available: user?.role === 'admin',  icon: Cog6ToothIcon },
+        { id: 'users-management', title: 'Gestión de Usuarios',    route: '/users',     available: user?.role === 'admin',  icon: UsersIcon },
       ],
     },
   ];
 
   return (
     <>
-      {/* 📱 OVERLAY PARA MÓVIL */}
+      {/* Overlay móvil */}
       {isMobileOpen && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
-          onClick={() => setIsMobileOpen(false)}
-        />
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden" onClick={() => setIsMobileOpen(false)} />
       )}
 
-      {/* 🎯 SIDEBAR */}
-      <aside
-        className={`
-          fixed top-0 left-0 bottom-0 z-50
-          bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900
-          text-white
-          transition-all duration-300
-          flex flex-col
-          ${isCollapsed ? 'lg:w-20' : 'lg:w-64'}
-          ${isMobileOpen 
-            ? 'translate-x-0 w-64' 
-            : '-translate-x-full lg:translate-x-0'
-          }
-        `}
-      >
-        {/* ❌ BOTÓN CERRAR MÓVIL */}
-        <button
-          onClick={() => setIsMobileOpen(false)}
-          className="lg:hidden absolute top-4 right-4 text-white hover:text-gray-300"
-          aria-label="Cerrar menú"
-        >
+      <aside className={`
+        fixed top-0 left-0 bottom-0 z-50
+        bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900
+        text-white transition-all duration-300 flex flex-col
+        ${isCollapsed ? 'lg:w-20' : 'lg:w-64'}
+        ${isMobileOpen ? 'translate-x-0 w-64' : '-translate-x-full lg:translate-x-0'}
+      `}>
+        {/* Botón cerrar móvil */}
+        <button onClick={() => setIsMobileOpen(false)} className="lg:hidden absolute top-4 right-4 text-white hover:text-gray-300">
           <XMarkIcon className="w-6 h-6" />
         </button>
 
-        {/* 📱 HEADER */}
+        {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-gray-700">
           {!isCollapsed && (
             <div className="pr-8">
@@ -248,68 +186,71 @@ function Sidebar({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobileOpen })
               <p className="text-xs text-gray-400">v1.0.0</p>
             </div>
           )}
-          <button
-            onClick={() => setIsCollapsed(!isCollapsed)}
-            className="hidden lg:block hover:bg-gray-700 p-2 rounded"
-            aria-label="Toggle sidebar"
-          >
+          <button onClick={() => setIsCollapsed(!isCollapsed)} className="hidden lg:block hover:bg-gray-700 p-2 rounded">
             ⇔
           </button>
         </div>
 
-        {/* 👤 USER INFO */}
+        {/* User info */}
         <div className="p-4 border-b border-gray-700 flex items-center gap-3">
           <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center font-bold flex-shrink-0">
             {user?.first_name?.[0]}{user?.last_name?.[0]}
           </div>
           {!isCollapsed && (
             <div className="overflow-hidden">
-              <p className="text-sm font-semibold truncate">
-                {user?.first_name} {user?.last_name}
-              </p>
+              <p className="text-sm font-semibold truncate">{user?.first_name} {user?.last_name}</p>
               <p className="text-xs text-gray-400 truncate">{user?.email}</p>
             </div>
           )}
         </div>
 
-        {/* 🧭 NAVEGACIÓN */}
+        {/* Navegación */}
         <nav className="flex-1 overflow-y-auto p-2 space-y-1">
           {menuItems.map(item => {
             const Icon = item.icon;
 
+            // Item con submenú (children)
             if (item.children) {
+              const sectionActive = isSectionActive(item.children);
+              const isExpanded = expandedMenus[item.id];
+
               return (
                 <div key={item.id}>
                   <button
                     onClick={() => toggleMenu(item.id)}
-                    className="w-full flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-gray-700 transition-colors"
+                    className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-colors
+                      ${sectionActive && !isExpanded ? 'bg-gray-700 text-blue-400' : 'hover:bg-gray-700'}
+                    `}
                   >
                     <Icon className="w-5 h-5 md:w-6 md:h-6 flex-shrink-0" />
                     {!isCollapsed && (
                       <>
                         <span className="flex-1 text-left text-sm md:text-base">{item.title}</span>
-                        {expandedMenus[item.id]
+                        {isExpanded
                           ? <ChevronDownIcon className="w-4 h-4 flex-shrink-0" />
-                          : <ChevronRightIcon className="w-4 h-4 flex-shrink-0" />}
+                          : <ChevronRightIcon className="w-4 h-4 flex-shrink-0" />
+                        }
                       </>
                     )}
                   </button>
 
-                  {expandedMenus[item.id] && !isCollapsed && (
+                  {isExpanded && !isCollapsed && (
                     <div className="ml-6 space-y-1 mt-1">
                       {item.children.map(child => {
                         const ChildIcon = child.icon;
+                        const childActive = isActive(child.route);
                         return (
                           <button
                             key={child.id}
                             disabled={!child.available}
                             onClick={() => handleNavigate(child.route, child.available)}
                             className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors
-                              ${child.available
-                                ? isActive(child.route)
-                                  ? 'bg-blue-600'
+                              ${!child.available
+                                ? 'opacity-50 cursor-not-allowed'
+                                : childActive
+                                  ? 'bg-blue-600 text-white'
                                   : 'hover:bg-gray-700'
-                                : 'opacity-50 cursor-not-allowed'}
+                              }
                             `}
                           >
                             <ChildIcon className="w-4 h-4 md:w-5 md:h-5 flex-shrink-0" />
@@ -323,15 +264,14 @@ function Sidebar({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobileOpen })
               );
             }
 
+            // Item simple (sin submenú)
             return (
               <button
                 key={item.id}
                 disabled={!item.available}
                 onClick={() => handleNavigate(item.route, item.available)}
                 className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-colors
-                  ${isActive(item.route)
-                    ? 'bg-blue-600'
-                    : 'hover:bg-gray-700'}
+                  ${isActive(item.route) ? 'bg-blue-600' : 'hover:bg-gray-700'}
                   ${!item.available ? 'opacity-50 cursor-not-allowed' : ''}
                 `}
               >
@@ -342,7 +282,7 @@ function Sidebar({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobileOpen })
           })}
         </nav>
 
-        {/* 🚪 LOGOUT */}
+        {/* Logout */}
         <div className="p-4 border-t border-gray-700">
           <button
             onClick={handleLogout}

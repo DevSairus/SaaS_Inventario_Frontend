@@ -20,6 +20,7 @@ import Layout from '../../components/layout/Layout';
 import salesApi from '../../api/sales';
 import { movementsAPI } from '../../api/movements';
 import ConfirmSaleWithPaymentModal from '../../components/sales/ConfirmSaleWithPaymentModal';
+import useTenantStore from '../../store/tenantStore';
 import toast from 'react-hot-toast';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
@@ -28,6 +29,8 @@ export default function SaleDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { currentSale, loading, fetchSaleById, confirmSale, cancelSale } = useSalesStore();
+  const { features, fetchFeatures } = useTenantStore();
+  const hideRemisionTax = features?.hide_remision_tax === true;
   const [confirmDialog, setConfirmDialog] = useState({ show: false, action: null });
   const [showConfirmWithPayment, setShowConfirmWithPayment] = useState(false);
   const [confirmingPayment, setConfirmingPayment] = useState(false);
@@ -43,6 +46,7 @@ export default function SaleDetailPage() {
   useEffect(() => {
     if (id) {
       fetchSaleById(id);
+      fetchFeatures();
     }
   }, [id]);
 
@@ -66,11 +70,21 @@ export default function SaleDetailPage() {
   const handleConfirmWithPayment = async (paymentData) => {
     try {
       setConfirmingPayment(true);
-      await confirmSale(id, paymentData);
+      if (currentSale?.status === 'pending') {
+        // Remisión ya confirmada (generada desde OT): solo registrar pago
+        await salesApi.registerPayment(id, {
+          amount: paymentData.paid_amount ?? currentSale?.total_amount,
+          payment_method: paymentData.payment_method,
+          payment_date: new Date().toISOString().split('T')[0],
+        });
+      } else {
+        // Borrador normal: confirmar + mover stock + registrar pago
+        await confirmSale(id, paymentData);
+      }
       setShowConfirmWithPayment(false);
       fetchSaleById(id);
     } catch (error) {
-      toast.error('Error confirmando venta: ' + error.response?.data?.message || error.message);
+      toast.error('Error registrando pago: ' + (error.response?.data?.message || error.message));
     } finally {
       setConfirmingPayment(false);
     }
@@ -227,6 +241,15 @@ export default function SaleDetailPage() {
                   </Button>
                 </>
               )}
+              {sale.status === 'pending' && sale.payment_status !== 'paid' && (
+                <Button
+                  variant="primary"
+                  icon={CheckIcon}
+                  onClick={() => setShowConfirmWithPayment(true)}
+                >
+                  Registrar Pago
+                </Button>
+              )}
 
               {sale.status === 'draft' && (
                 <Button
@@ -337,9 +360,11 @@ export default function SaleDetailPage() {
                         <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">
                           Desc.
                         </th>
-                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">
-                          IVA
-                        </th>
+                        {!(hideRemisionTax && sale.document_type === 'remision') && (
+                          <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">
+                            IVA
+                          </th>
+                        )}
                         <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">
                           Total
                         </th>
@@ -363,9 +388,11 @@ export default function SaleDetailPage() {
                           <td className="px-4 py-3 text-right text-sm text-red-600">
                             {item.discount_amount > 0 ? `-${formatCurrency(item.discount_amount)}` : '-'}
                           </td>
-                          <td className="px-4 py-3 text-right text-sm">
-                            {formatCurrency(item.tax_amount)}
-                          </td>
+                          {!(hideRemisionTax && sale.document_type === 'remision') && (
+                            <td className="px-4 py-3 text-right text-sm">
+                              {formatCurrency(item.tax_amount)}
+                            </td>
+                          )}
                           <td className="px-4 py-3 text-right text-sm font-semibold">
                             {formatCurrency(item.total)}
                           </td>
@@ -379,20 +406,24 @@ export default function SaleDetailPage() {
                 <div className="mt-6 pt-6 border-t">
                   <div className="flex justify-end">
                     <div className="w-80 space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">Subtotal:</span>
-                        <span className="font-medium">{formatCurrency(sale.subtotal)}</span>
-                      </div>
+                      {!(hideRemisionTax && sale.document_type === 'remision') && (
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-600">Subtotal:</span>
+                          <span className="font-medium">{formatCurrency(sale.subtotal)}</span>
+                        </div>
+                      )}
                       {sale.discount_amount > 0 && (
                         <div className="flex justify-between text-sm text-red-600">
                           <span>Descuento:</span>
                           <span>-{formatCurrency(sale.discount_amount)}</span>
                         </div>
                       )}
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">IVA:</span>
-                        <span className="font-medium">{formatCurrency(sale.tax_amount)}</span>
-                      </div>
+                      {!(hideRemisionTax && sale.document_type === 'remision') && (
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-600">IVA:</span>
+                          <span className="font-medium">{formatCurrency(sale.tax_amount)}</span>
+                        </div>
+                      )}
                       <div className="flex justify-between text-xl font-bold border-t pt-2">
                         <span>TOTAL:</span>
                         <span className="text-blue-600">{formatCurrency(sale.total_amount)}</span>
