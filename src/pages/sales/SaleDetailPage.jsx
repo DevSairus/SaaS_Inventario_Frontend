@@ -71,12 +71,15 @@ export default function SaleDetailPage() {
     try {
       setConfirmingPayment(true);
       if (currentSale?.status === 'pending') {
-        // Remisión ya confirmada (generada desde OT): solo registrar pago
-        await salesApi.registerPayment(id, {
-          amount: paymentData.paid_amount ?? currentSale?.total_amount,
-          payment_method: paymentData.payment_method,
-          payment_date: new Date().toISOString().split('T')[0],
-        });
+        // Remisión ya confirmada (generada desde OT): solo registrar pago si hay monto > 0
+        const amountToPay = paymentData.paid_amount ?? currentSale?.total_amount;
+        if (amountToPay && parseFloat(amountToPay) > 0) {
+          await salesApi.registerPayment(id, {
+            amount: amountToPay,
+            payment_method: paymentData.payment_method,
+            payment_date: new Date().toISOString().split('T')[0],
+          });
+        }
       } else {
         // Borrador normal: confirmar + mover stock + registrar pago
         await confirmSale(id, paymentData);
