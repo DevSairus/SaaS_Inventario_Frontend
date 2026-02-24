@@ -24,10 +24,12 @@ import WorkOrdersPage from './pages/workshop/WorkOrdersPage';
 import WorkOrderFormPage from './pages/workshop/WorkOrderFormPage';
 import WorkOrderDetailPage from './pages/workshop/WorkOrderDetailPage';
 import VehiclesPage from './pages/workshop/VehiclesPage';
+import VehicleDetailPage from './pages/workshop/VehicleDetailPage';
 import TechnicianProductivityPage from './pages/workshop/productivity/TechnicianProductivityPage';
 import CommissionSettlementsPage from './pages/workshop/commissions/CommissionSettlementsPage';
 import CommissionSettlementDetailPage from './pages/workshop/commissions/CommissionSettlementDetailPage';
 import CustomersPage from './pages/customers/CustomersPage';
+import CustomerDetailPage from './pages/customers/CustomerDetailPage';
 import WarehousesPage from './pages/warehouses/WarehousesPage';
 import TenantSettingsPage from './pages/settings/TenantSettingsPage';
 import ReportsPage from './pages/reports/ReportsPage';
@@ -251,6 +253,7 @@ function App() {
         <Route path="workshop/work-orders/new" element={<TenantRoute><WorkOrderFormPage /></TenantRoute>} />
         <Route path="workshop/work-orders/:id" element={<TenantRoute><WorkOrderDetailPage /></TenantRoute>} />
         <Route path="workshop/vehicles" element={<TenantRoute><VehiclesPage /></TenantRoute>} />
+        <Route path="workshop/vehicles/:id" element={<TenantRoute><VehicleDetailPage /></TenantRoute>} />
         <Route path="workshop/productivity" element={<TenantRoute><TechnicianProductivityPage /></TenantRoute>} />
         <Route path="workshop/commission-settlements" element={<TenantRoute><CommissionSettlementsPage /></TenantRoute>} />
         <Route path="workshop/commission-settlements/:id" element={<TenantRoute><CommissionSettlementDetailPage /></TenantRoute>} />
@@ -265,6 +268,7 @@ function App() {
 
         {/* Clientes */}
         <Route path="customers" element={<TenantRoute><CustomersPage /></TenantRoute>} />
+        <Route path="customers/:id" element={<TenantRoute><CustomerDetailPage /></TenantRoute>} />
 
         {/* ============================================ */}
         {/* INVENTARIO - MOVIMIENTOS AVANZADOS */}

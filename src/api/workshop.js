@@ -22,6 +22,11 @@ export const workOrdersApi = {
   uploadPhotos: (id, phase, formData) =>
     axios.post(`/workshop/work-orders/${id}/photos/${phase}`, formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
   deletePhoto: (id, phase, index) => axios.delete(`/workshop/work-orders/${id}/photos/${phase}/${index}`),
+  // PDFs
+  getPDF: (id, type, params = {}) =>
+    axios.get(`/workshop/work-orders/${id}/pdf`, { params: { type, ...params }, responseType: 'blob' }),
+  // Checklist ingreso
+  updateChecklist: (id, data) => axios.patch(`/workshop/work-orders/${id}/checklist`, data),
 };
 // ── Commission Settlements ────────────────────────────────
 export const commissionApi = {

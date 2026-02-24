@@ -45,6 +45,7 @@ const salesApi = {
 
   // Generar PDF
   generatePDF: (id) => api.get(`/sales/${id}/pdf`, { responseType: 'blob' }),
+  generatePaymentReceipt: (id, paymentIndex) => api.get(`/sales/${id}/payment-receipt`, { params: { payment_index: paymentIndex }, responseType: 'blob' }),
 
   // Obtener estadísticas
   getStats: (filters = {}) => {

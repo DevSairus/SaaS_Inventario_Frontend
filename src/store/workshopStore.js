@@ -47,6 +47,13 @@ const useWorkshopStore = create((set, get) => ({
     } catch { set({ orderLoading: false }); }
   },
 
+  // Parcha campos específicos de currentOrder sin hacer refetch
+  patchCurrentOrder: (fields) => {
+    set(state => ({
+      currentOrder: state.currentOrder ? { ...state.currentOrder, ...fields } : state.currentOrder
+    }));
+  },
+
   createOrder: async (data) => {
     const res = await workOrdersApi.create(data);
     toast.success(`OT ${res.data.data.order_number} creada`);

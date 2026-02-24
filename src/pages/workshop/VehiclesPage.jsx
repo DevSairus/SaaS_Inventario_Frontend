@@ -6,7 +6,7 @@ import { vehiclesApi } from '../../api/workshop';
 import {
   Car, Plus, Search, History, X, Wrench, Clock,
   AlertTriangle, CheckCircle, ChevronRight, Gauge,
-  User, FileText, Package, Banknote, XCircle,
+  User, FileText, Package, Banknote, XCircle, PencilLine,
 } from 'lucide-react';
 
 const FUEL_LABELS = {
@@ -134,11 +134,19 @@ export default function VehiclesPage() {
                         </p>
                       )}
                     </div>
-                    <button
-                      onClick={() => openHistory(v)}
-                      className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition">
-                      <History size={13} /> Historial
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => navigate(`/workshop/vehicles/${v.id}`)}
+                        className="flex items-center gap-1 px-2 py-1.5 text-xs font-medium text-gray-500 bg-gray-100 hover:bg-gray-200 rounded-lg transition"
+                        title="Ver y editar detalle">
+                        <PencilLine size={12} /> Editar
+                      </button>
+                      <button
+                        onClick={() => openHistory(v)}
+                        className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition">
+                        <History size={13} /> Historial
+                      </button>
+                    </div>
                   </div>
                 </div>
               );

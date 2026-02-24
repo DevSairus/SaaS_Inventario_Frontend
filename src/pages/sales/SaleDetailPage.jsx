@@ -35,6 +35,18 @@ export default function SaleDetailPage() {
   const [showConfirmWithPayment, setShowConfirmWithPayment] = useState(false);
   const [confirmingPayment, setConfirmingPayment] = useState(false);
   const [showPaymentForm, setShowPaymentForm] = useState(false);
+  const [lastPaymentIndex, setLastPaymentIndex] = useState(null);
+
+  const openPaymentReceipt = async (paymentIndex) => {
+    try {
+      const res = await salesApi.generatePaymentReceipt(id, paymentIndex);
+      const url = URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
+      window.open(url, '_blank');
+    } catch {
+      toast.error('Error al generar recibo');
+    }
+  };
+
   const [paymentData, setPaymentData] = useState({
     amount: '',
     payment_method: 'efectivo',
@@ -70,16 +82,13 @@ export default function SaleDetailPage() {
   const handleConfirmWithPayment = async (paymentData) => {
     try {
       setConfirmingPayment(true);
-      if (currentSale?.status === 'pending') {
-        // Remisión ya confirmada (generada desde OT): solo registrar pago si hay monto > 0
-        const amountToPay = paymentData.paid_amount ?? currentSale?.total_amount;
-        if (amountToPay && parseFloat(amountToPay) > 0) {
-          await salesApi.registerPayment(id, {
-            amount: amountToPay,
-            payment_method: paymentData.payment_method,
-            payment_date: new Date().toISOString().split('T')[0],
-          });
-        }
+      if (['pending', 'completed'].includes(currentSale?.status)) {
+        // Venta confirmada o completada: solo registrar pago
+        await salesApi.registerPayment(id, {
+          amount: paymentData.paid_amount ?? currentSale?.total_amount,
+          payment_method: paymentData.payment_method,
+          payment_date: new Date().toISOString().split('T')[0],
+        });
       } else {
         // Borrador normal: confirmar + mover stock + registrar pago
         await confirmSale(id, paymentData);
@@ -106,14 +115,17 @@ export default function SaleDetailPage() {
   const handleRegisterPayment = async () => {
     try {
       setSavingPayment(true);
-      await salesApi.registerPayment(id, {
+      const result = await salesApi.registerPayment(id, {
         amount: parseFloat(paymentData.amount),
         payment_method: paymentData.payment_method,
         payment_date: paymentData.payment_date
       });
       setShowPaymentForm(false);
       setPaymentData({ amount: '', payment_method: 'efectivo', payment_date: new Date().toISOString().split('T')[0] });
-      fetchSaleById(id);
+      // Guardar índice del pago recién registrado para ofrecer recibo
+      const newHistory = result?.data?.data?.payment_history || [];
+      setLastPaymentIndex(newHistory.length - 1);
+      await fetchSaleById(id);
     } catch (error) {
       toast.error('Error registrando pago: ' + (error.response?.data?.message || error.message));
     } finally {
@@ -244,7 +256,7 @@ export default function SaleDetailPage() {
                   </Button>
                 </>
               )}
-              {sale.status === 'pending' && sale.payment_status !== 'paid' && (
+              {['pending', 'completed'].includes(sale.status) && sale.payment_status !== 'paid' && (
                 <Button
                   variant="primary"
                   icon={CheckIcon}
@@ -432,100 +444,38 @@ export default function SaleDetailPage() {
                         <span className="text-blue-600">{formatCurrency(sale.total_amount)}</span>
                       </div>
 
-                      {sale.payment_status !== 'paid' && (
-                        <>
-                          <div className="flex justify-between text-sm text-green-600 border-t pt-2">
+                      {/* Resumen de pagos — siempre visible si hay algo pagado o pendiente */}
+                      <div className="border-t pt-2 space-y-1.5 mt-1">
+                        {(sale.paid_amount > 0) && (
+                          <div className="flex justify-between text-sm text-green-600">
                             <span>Pagado:</span>
-                            <span>{formatCurrency(sale.paid_amount || 0)}</span>
+                            <span className="font-medium">{formatCurrency(sale.paid_amount)}</span>
                           </div>
+                        )}
+                        {sale.payment_status !== 'paid' && (
                           <div className="flex justify-between text-sm text-orange-600">
-                            <span>Pendiente:</span>
-                            <span>{formatCurrency(sale.total_amount - (sale.paid_amount || 0))}</span>
+                            <span>Saldo pendiente:</span>
+                            <span className="font-medium">{formatCurrency(sale.total_amount - (sale.paid_amount || 0))}</span>
                           </div>
-
-                          {/* Botón registrar pago - CORREGIDO con step="any" */}
-                          {!showPaymentForm && (sale.status === 'pending' || sale.status === 'completed') && (
-                            <button
-                              onClick={() => {
-                                setPaymentData(prev => ({
-                                  ...prev,
-                                  amount: String(sale.total_amount - (sale.paid_amount || 0))
-                                }));
-                                setShowPaymentForm(true);
-                              }}
-                              className="mt-3 w-full text-sm font-medium text-white bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg transition-colors flex items-center justify-center gap-2"
-                            >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                              </svg>
-                              Registrar Pago
-                            </button>
-                          )}
-
-                          {/* Formulario de pago inline - CORREGIDO */}
-                          {showPaymentForm && (
-                            <div className="mt-4 pt-4 border-t border-gray-200 space-y-3">
-                              <div>
-                                <label className="block text-xs font-medium text-gray-600 mb-1">Monto</label>
-                                <input
-                                  type="number"
-                                  min="0"
-                                  step="any"
-                                  value={paymentData.amount}
-                                  onChange={(e) => setPaymentData(prev => ({ ...prev, amount: e.target.value }))}
-                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                                  placeholder="Ingrese el monto del pago"
-                                />
-                                <p className="mt-1 text-xs text-gray-500">Puede ingresar pagos parciales</p>
-                              </div>
-                              <div>
-                                <label className="block text-xs font-medium text-gray-600 mb-1">Método de Pago</label>
-                                <select
-                                  value={paymentData.payment_method}
-                                  onChange={(e) => setPaymentData(prev => ({ ...prev, payment_method: e.target.value }))}
-                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                                >
-                                  <option value="efectivo">Efectivo</option>
-                                  <option value="tarjeta">Tarjeta</option>
-                                  <option value="transferencia">Transferencia</option>
-                                  <option value="credito">Crédito</option>
-                                </select>
-                              </div>
-                              <div>
-                                <label className="block text-xs font-medium text-gray-600 mb-1">Fecha</label>
-                                <input
-                                  type="date"
-                                  value={paymentData.payment_date}
-                                  onChange={(e) => setPaymentData(prev => ({ ...prev, payment_date: e.target.value }))}
-                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                                />
-                              </div>
-                              <div className="flex gap-2 pt-1">
-                                <button
-                                  onClick={handleRegisterPayment}
-                                  disabled={savingPayment || !paymentData.amount || parseFloat(paymentData.amount) <= 0}
-                                  className="flex-1 text-sm font-medium text-white bg-green-600 hover:bg-green-700 disabled:bg-gray-400 px-3 py-2 rounded-lg transition-colors"
-                                >
-                                  {savingPayment ? 'Guardando...' : 'Confirmar Pago'}
-                                </button>
-                                <button
-                                  onClick={() => setShowPaymentForm(false)}
-                                  className="text-sm font-medium text-gray-600 hover:text-gray-800 px-3 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
-                                >
-                                  Cancelar
-                                </button>
-                              </div>
-                            </div>
-                          )}
-                        </>
-                      )}
-
-                      {sale.payment_status === 'paid' && (
-                        <div className="flex justify-between text-sm text-green-600 border-t pt-2">
-                          <span>Estado:</span>
-                          <span className="font-semibold">Completamente Pagada ✓</span>
-                        </div>
-                      )}
+                        )}
+                        {sale.payment_status === 'paid' && (
+                          <div className="flex justify-between text-sm text-green-600">
+                            <span className="font-semibold">Completamente Pagada ✓</span>
+                          </div>
+                        )}
+                        {/* Botón recibo — visible si hay pagos (con o sin historial) */}
+                        {(sale.paid_amount > 0) && (
+                          <button
+                            onClick={() => openPaymentReceipt(sale.payment_history ? sale.payment_history.length - 1 : -1)}
+                            className="mt-1 w-full flex items-center justify-center gap-1.5 text-xs text-blue-600 border border-blue-200 rounded-lg px-3 py-1.5 hover:bg-blue-50 transition"
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                            </svg>
+                            Imprimir recibo de pago
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -550,10 +500,19 @@ export default function SaleDetailPage() {
                             {payment.notes && ` • ${payment.notes}`}
                           </div>
                         </div>
-                        <div className="text-right">
+                        <div className="text-right flex flex-col items-end gap-1.5">
                           <div className="text-lg font-bold text-green-600">
                             {formatCurrency(payment.amount)}
                           </div>
+                          <button
+                            onClick={() => openPaymentReceipt(index)}
+                            className="no-print flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 border border-blue-200 rounded-md px-2 py-0.5 hover:bg-blue-50 transition"
+                          >
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                            </svg>
+                            Recibo
+                          </button>
                         </div>
                       </div>
                     ))}
@@ -708,7 +667,7 @@ export default function SaleDetailPage() {
             isOpen={showConfirmWithPayment}
             onClose={() => setShowConfirmWithPayment(false)}
             onConfirm={handleConfirmWithPayment}
-            saleTotal={sale?.total_amount || 0}
+            saleTotal={Math.max(0, (sale?.total_amount || 0) - (sale?.paid_amount || 0))}
             loading={confirmingPayment}
           />
 

@@ -5,10 +5,14 @@ import useWorkshopStore from '../../store/workshopStore';
 import useProductsStore from '../../store/productsStore';
 import useTenantStore from '../../store/tenantStore';
 import { productsAPI } from '../../api/products';
+import { workOrdersApi } from '../../api/workshop';
+import axios from '../../api/axios';
+import Combobox from '../../components/common/Combobox';
 import BarcodeScanner from '../../components/common/BarcodeScanner';
 import {
   ArrowLeft, Wrench, Car, User, Package, Plus, Trash2,
-  Camera, FileText, AlertTriangle, CheckCircle, Clock, DollarSign
+  Camera, FileText, AlertTriangle, CheckCircle, Clock, DollarSign,
+  Printer, Download, ClipboardList,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -43,7 +47,7 @@ export default function WorkOrderDetailPage() {
   const navigate = useNavigate();
   const {
     currentOrder: order, orderLoading,
-    fetchOrder, changeStatus, addItem, removeItem, generateSale, uploadPhotos, deletePhoto,
+    fetchOrder, patchCurrentOrder, changeStatus, addItem, removeItem, generateSale, uploadPhotos, deletePhoto,
   } = useWorkshopStore();
   const { searchProducts } = useProductsStore();
   const { features, fetchFeatures } = useTenantStore();
@@ -165,6 +169,72 @@ export default function WorkOrderDetailPage() {
     }
   };
 
+  // ── PDF handlers ────────────────────────────────────────────────
+  const openPDF = async (type, params = {}) => {
+    try {
+      const res = await workOrdersApi.getPDF(id, type, params);
+      const url = URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
+      window.open(url, '_blank');
+    } catch {
+      toast.error('Error al generar el PDF');
+    }
+  };
+
+  // ── Checklist de ingreso ─────────────────────────────────────────
+  const [showChecklist, setShowChecklist]     = useState(false);
+  const [checklist,     setChecklist]         = useState({});
+  const [savingChecklist, setSavingChecklist] = useState(false);
+
+  const openChecklist = () => {
+    setChecklist(order.checklist_in || {});
+    setShowChecklist(true);
+  };
+
+  const saveChecklist = async () => {
+    setSavingChecklist(true);
+    try {
+      await workOrdersApi.updateChecklist(id, checklist);
+      // Actualizar store directamente — Sequelize no devuelve checklist_in en el refetch
+      patchCurrentOrder({ checklist_in: { ...checklist } });
+      setShowChecklist(false);
+      toast.success('Inventario guardado');
+    } catch (e) {
+      console.error('Error guardando checklist:', e?.response?.data || e);
+      toast.error(e?.response?.data?.message || 'Error al guardar inventario');
+    } finally {
+      setSavingChecklist(false);
+    }
+  };
+
+  const setCL = (key, val) => setChecklist(p => ({ ...p, [key]: val }));
+
+  // ── Estado técnico ────────────────────────────────────────────
+  const [technicians,      setTechnicians]      = useState([]);
+  const [editingTech,      setEditingTech]      = useState(false);
+  const [selectedTechId,   setSelectedTechId]   = useState('');
+  const [savingTech,       setSavingTech]        = useState(false);
+
+  useEffect(() => {
+    axios.get('/users?limit=100&role=technician').then(r => {
+      const list = r.data.data?.users || r.data.users || r.data.data || [];
+      setTechnicians(Array.isArray(list) ? list.filter(t => t.is_active !== false) : []);
+    }).catch(() => {});
+  }, []);
+
+  const saveTechnician = async () => {
+    setSavingTech(true);
+    try {
+      await workOrdersApi.update(id, { technician_id: selectedTechId || null });
+      await fetchOrder(id);
+      setEditingTech(false);
+      toast.success('Técnico actualizado');
+    } catch {
+      toast.error('Error al actualizar técnico');
+    } finally {
+      setSavingTech(false);
+    }
+  };
+
   // ── Loading / Not found ──
   if (orderLoading) {
     return (
@@ -221,7 +291,7 @@ export default function WorkOrderDetailPage() {
             </div>
           </div>
 
-          <div className="flex gap-2 flex-wrap">
+          <div className="flex gap-2 flex-wrap items-center">
             {!isClosed && nextStatuses.map(s => (
               <button key={s} onClick={() => changeStatus(id, s)}
                 className="px-3 py-1.5 text-xs font-medium border border-gray-200 rounded-lg hover:bg-gray-50 transition">
@@ -247,6 +317,26 @@ export default function WorkOrderDetailPage() {
                 <FileText size={13} /> Ver Remisión {order.sale?.sale_number}
               </button>
             )}
+
+            {/* ── Separador ── */}
+            <div className="w-px h-6 bg-gray-200 mx-1" />
+
+            {/* ── Botones PDF ── */}
+            <button onClick={openChecklist}
+              className="px-3 py-1.5 text-xs font-medium text-purple-700 bg-purple-50 border border-purple-200 rounded-lg hover:bg-purple-100 flex items-center gap-1.5 transition"
+              title="Inventario de ingreso">
+              <ClipboardList size={13} /> Inventario
+            </button>
+            <button onClick={() => openPDF('intake')}
+              className="px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 flex items-center gap-1.5 transition"
+              title="Imprimir orden de ingreso">
+              <Printer size={13} /> Ingreso
+            </button>
+            <button onClick={() => openPDF('workorder')}
+              className="px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 flex items-center gap-1.5 transition"
+              title="Imprimir OT completa">
+              <Download size={13} /> OT
+            </button>
           </div>
         </div>
 
@@ -520,6 +610,14 @@ export default function WorkOrderDetailPage() {
                   )}
                 </div>
               )}
+
+                {/* Botón imprimir OT desde sección ítems */}
+                {order.items?.length > 0 && (
+                  <button onClick={() => openPDF('workorder')}
+                    className="mt-3 w-full flex items-center justify-center gap-2 text-xs text-blue-600 border border-blue-200 rounded-lg py-2 hover:bg-blue-50 transition">
+                    <Download size={12}/> Descargar OT completa (PDF)
+                  </button>
+                )}
             </div>
 
             {/* Fotos */}
@@ -593,13 +691,52 @@ export default function WorkOrderDetailPage() {
 
             {/* Técnico */}
             <div className="bg-white border border-gray-100 rounded-xl p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <Wrench size={15} className="text-blue-600" />
-                <h2 className="font-semibold text-sm text-gray-800">Técnico</h2>
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <Wrench size={15} className="text-blue-600" />
+                  <h2 className="font-semibold text-sm text-gray-800">Técnico</h2>
+                </div>
+                {!isClosed && !editingTech && (
+                  <button
+                    onClick={() => { setSelectedTechId(order.technician?.id || ''); setEditingTech(true); }}
+                    className="text-xs text-blue-600 font-medium hover:underline">
+                    {order.technician ? 'Cambiar' : 'Asignar'}
+                  </button>
+                )}
               </div>
-              {order.technician
-                ? <p className="text-sm font-medium text-gray-900">{order.technician.first_name} {order.technician.last_name}</p>
-                : <p className="text-sm text-gray-400">Sin asignar</p>}
+              {editingTech ? (
+                <div className="space-y-2">
+                  <Combobox
+                    placeholder="Buscar técnico..."
+                    items={technicians}
+                    value={selectedTechId}
+                    displayValue={(() => {
+                      const t = technicians.find(t => t.id === selectedTechId);
+                      return t ? `${t.first_name} ${t.last_name}` : '';
+                    })()}
+                    onSelect={t => setSelectedTechId(t.id)}
+                    onClear={() => setSelectedTechId('')}
+                    filterFn={(t, q) => `${t.first_name} ${t.last_name}`.toLowerCase().includes(q.toLowerCase())}
+                    renderItem={t => (
+                      <span className="font-medium text-gray-800">{t.first_name} {t.last_name}</span>
+                    )}
+                  />
+                  <div className="flex gap-2">
+                    <button onClick={() => setEditingTech(false)}
+                      className="flex-1 py-1.5 text-xs border border-gray-200 rounded-lg text-gray-500 hover:bg-gray-50">
+                      Cancelar
+                    </button>
+                    <button onClick={saveTechnician} disabled={savingTech}
+                      className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-60 font-medium">
+                      {savingTech ? '...' : 'Guardar'}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                order.technician
+                  ? <p className="text-sm font-medium text-gray-900">{order.technician.first_name} {order.technician.last_name}</p>
+                  : <p className="text-sm text-gray-400 italic">Sin asignar</p>
+              )}
             </div>
 
             {/* Bodega */}
@@ -633,6 +770,66 @@ export default function WorkOrderDetailPage() {
                 </button>
               </div>
             )}
+
+            {/* ── Inventario de ingreso (resumen) ── */}
+            <div className="bg-white border border-gray-100 rounded-xl p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <ClipboardList size={15} className="text-purple-600" />
+                  <h2 className="font-semibold text-sm text-gray-800">Inventario ingreso</h2>
+                </div>
+                <button onClick={openChecklist}
+                  className="text-xs text-purple-600 font-medium hover:underline">
+                  {order.checklist_in && Object.keys(order.checklist_in).length > 0 ? 'Editar' : 'Completar'}
+                </button>
+              </div>
+              {order.checklist_in && Object.keys(order.checklist_in).length > 0 ? (
+                <div className="space-y-1.5">
+                  {typeof order.checklist_in.fuel_level === 'number' && (
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-gray-500">⛽ Combustible</span>
+                      <span className="font-medium text-gray-800">
+                        {['Vacío','1/4','1/2','3/4','Lleno'][order.checklist_in.fuel_level]}
+                      </span>
+                    </div>
+                  )}
+                  {[
+                    { key: 'estado_general', label: 'Estado general' },
+                    { key: 'testigos',       label: 'Testigos' },
+                    { key: 'espejos',        label: 'Espejos' },
+                    { key: 'luces',          label: 'Luces' },
+                  ].map(({ key, label }) => {
+                    const v = order.checklist_in[key];
+                    if (v === undefined || v === null) return null;
+                    return (
+                      <div key={key} className="flex items-center justify-between text-xs">
+                        <span className="text-gray-500">{label}</span>
+                        <span className={v ? 'text-green-600 font-medium' : 'text-red-500 font-medium'}>
+                          {v ? '✓ OK' : '✗ No'}
+                        </span>
+                      </div>
+                    );
+                  })}
+                  {order.checklist_in.observations && (
+                    <p className="text-xs text-gray-500 italic pt-1 border-t border-gray-100 mt-1">
+                      {order.checklist_in.observations.slice(0, 80)}{order.checklist_in.observations.length > 80 ? '…' : ''}
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <p className="text-xs text-gray-400 italic">No completado aún</p>
+              )}
+              <div className="mt-3 flex gap-2">
+                <button onClick={() => openPDF('intake')}
+                  className="flex-1 flex items-center justify-center gap-1.5 text-xs text-gray-600 border border-gray-200 rounded-lg py-1.5 hover:bg-gray-50 transition">
+                  <Printer size={12}/> Imprimir ingreso
+                </button>
+                <button onClick={() => openPDF('workorder')}
+                  className="flex-1 flex items-center justify-center gap-1.5 text-xs text-blue-600 border border-blue-200 rounded-lg py-1.5 hover:bg-blue-50 transition">
+                  <Download size={12}/> OT PDF
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -644,6 +841,183 @@ export default function WorkOrderDetailPage() {
           onClose={() => setShowScanner(false)}
         />
       )}
+
+      {/* ── MODAL CHECKLIST INGRESO ─────────────────────────────── */}
+      {showChecklist && (() => {
+        // Solo editable en estado "recibido"
+        const checklistReadonly = order.status !== 'recibido';
+        const ITEMS = [
+          { key: 'estado_general', label: 'Estado general' },
+          { key: 'testigos',       label: 'Testigos' },
+          { key: 'tanque',         label: 'Tanque combustible' },
+          { key: 'espejos',        label: 'Espejos' },
+          { key: 'sillin',         label: 'Sillín' },
+          { key: 'luces',          label: 'Luces' },
+          { key: 'carenaje',       label: 'Carenaje / plásticos' },
+          { key: 'llantas',        label: 'Llantas' },
+          { key: 'rele_encendido', label: 'Rele de encendido' },
+        ];
+        return (
+          <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+            <div className="bg-gray-50 rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl">
+
+              {/* Header */}
+              <div className="flex items-center justify-between p-5 border-b border-gray-200 bg-white rounded-t-2xl">
+                <div className="flex items-center gap-2">
+                  <ClipboardList size={18} className="text-purple-600" />
+                  <h2 className="font-bold text-gray-900">Inventario de ingreso</h2>
+                  {checklistReadonly && (
+                    <span className="ml-1 px-2 py-0.5 bg-amber-100 text-amber-700 text-xs font-medium rounded-full">
+                      Solo lectura
+                    </span>
+                  )}
+                </div>
+                <button onClick={() => setShowChecklist(false)} className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-500">
+                  ✕
+                </button>
+              </div>
+
+              {/* Aviso readonly */}
+              {checklistReadonly && (
+                <div className="mx-5 mt-4 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-700 flex items-center gap-2">
+                  <AlertTriangle size={13} />
+                  El inventario solo puede editarse cuando la OT está en estado <strong className="ml-1">Recibido</strong>.
+                </div>
+              )}
+
+              <div className="p-5 space-y-4">
+
+                {/* Nivel de combustible */}
+                <div className="bg-white rounded-xl p-3 border border-gray-200">
+                  <p className="text-sm font-semibold text-gray-700 mb-2">Nivel de combustible</p>
+                  <div className="flex gap-2">
+                    {[
+                      { val: 0, label: 'Vacío' },
+                      { val: 1, label: '1/4' },
+                      { val: 2, label: '1/2' },
+                      { val: 3, label: '3/4' },
+                      { val: 4, label: 'Lleno' },
+                    ].map(({ val, label }) => {
+                      const active = (checklist.fuel_level ?? -1) === val;
+                      return (
+                        <button key={val} type="button"
+                          disabled={checklistReadonly}
+                          onClick={() => !checklistReadonly && setCL('fuel_level', val)}
+                          className={`flex-1 py-2 rounded-lg text-xs font-medium border transition ${
+                            active
+                              ? 'bg-green-500 text-white border-green-500'
+                              : checklistReadonly
+                                ? 'border-gray-100 text-gray-300 cursor-default'
+                                : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                          }`}>
+                          {label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Items */}
+                <div className="bg-white rounded-xl p-3 border border-gray-200">
+                  <p className="text-sm font-semibold text-gray-700 mb-3">Estado de elementos</p>
+                  <div className="grid grid-cols-1 gap-1.5">
+                    {ITEMS.map(({ key, label }) => {
+                      const v = checklist[key]; // true | false | null | undefined
+                      // undefined = sin registrar, null = N/A explícito
+                      const isOk  = v === true;
+                      const isBad = v === false;
+                      const isNA  = v === null;
+                      const isUnset = v === undefined;
+                      return (
+                        <div key={key} className={`flex items-center justify-between rounded-lg px-3 py-2 ${
+                          isUnset ? 'bg-gray-50' : isOk ? 'bg-green-50' : isBad ? 'bg-red-50' : 'bg-gray-50'
+                        }`}>
+                          <span className="text-sm text-gray-700 font-medium">{label}</span>
+                          <div className="flex gap-1.5">
+                            <button type="button"
+                              disabled={checklistReadonly}
+                              onClick={() => !checklistReadonly && setCL(key, true)}
+                              className={`px-3 py-1 rounded-md text-xs font-semibold border transition ${
+                                isOk
+                                  ? 'bg-green-500 text-white border-green-500 shadow-sm'
+                                  : checklistReadonly
+                                    ? 'bg-gray-50 text-gray-300 border-gray-200 cursor-default'
+                                    : 'bg-white text-gray-400 border-gray-300 hover:border-green-400 hover:text-green-600'
+                              }`}>
+                              OK
+                            </button>
+                            <button type="button"
+                              disabled={checklistReadonly}
+                              onClick={() => !checklistReadonly && setCL(key, false)}
+                              className={`px-3 py-1 rounded-md text-xs font-semibold border transition ${
+                                isBad
+                                  ? 'bg-red-500 text-white border-red-500 shadow-sm'
+                                  : checklistReadonly
+                                    ? 'bg-gray-50 text-gray-300 border-gray-200 cursor-default'
+                                    : 'bg-white text-gray-400 border-gray-300 hover:border-red-400 hover:text-red-500'
+                              }`}>
+                              MAL
+                            </button>
+                            <button type="button"
+                              disabled={checklistReadonly}
+                              onClick={() => !checklistReadonly && setCL(key, null)}
+                              className={`px-2 py-1 rounded-md text-xs font-semibold border transition ${
+                                isNA
+                                  ? 'bg-gray-400 text-white border-gray-400 shadow-sm'
+                                  : checklistReadonly
+                                    ? 'bg-gray-50 text-gray-300 border-gray-200 cursor-default'
+                                    : 'bg-white text-gray-300 border-gray-200 hover:border-gray-400 hover:text-gray-500'
+                              }`}>
+                              N/A
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Observaciones */}
+                <div className="bg-white rounded-xl p-3 border border-gray-200">
+                  <p className="text-sm font-semibold text-gray-700 mb-1">
+                    Observaciones (rayones, golpes, faltantes)
+                  </p>
+                  <textarea
+                    value={checklist.observations || ''}
+                    onChange={e => !checklistReadonly && setCL('observations', e.target.value)}
+                    readOnly={checklistReadonly}
+                    rows={3}
+                    placeholder={checklistReadonly ? '' : 'Ej: Rayón en guardabarro derecho, espejo izquierdo roto...'}
+                    className={`w-full border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none focus:outline-none ${
+                      checklistReadonly ? 'bg-gray-50 text-gray-500 cursor-default' : 'focus:ring-2 focus:ring-purple-400'
+                    }`}
+                  />
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="flex gap-3 p-5 border-t border-gray-100 bg-white rounded-b-2xl">
+                <button onClick={() => openPDF('intake')}
+                  className="flex items-center gap-2 px-4 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm hover:bg-gray-50 transition">
+                  <Printer size={14} /> Imprimir ingreso
+                </button>
+                {!checklistReadonly && (
+                  <button onClick={saveChecklist} disabled={savingChecklist}
+                    className="flex-1 flex items-center justify-center gap-2 bg-purple-600 text-white py-2 rounded-lg text-sm font-medium hover:bg-purple-700 disabled:opacity-60 transition">
+                    {savingChecklist ? 'Guardando...' : 'Guardar inventario'}
+                  </button>
+                )}
+                {checklistReadonly && (
+                  <button onClick={() => setShowChecklist(false)}
+                    className="flex-1 py-2 rounded-lg text-sm font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 transition">
+                    Cerrar
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </Layout>
   );
 }
