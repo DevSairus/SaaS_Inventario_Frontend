@@ -210,7 +210,7 @@ const CustomerReturnDetailPage = () => {
               <div>
                 <p className="text-sm text-gray-600">Fecha de Devolución</p>
                 <p className="font-medium">
-                  {new Date(customerReturn.return_date).toLocaleDateString()}
+                  {new Date(customerReturn.return_date + 'T12:00:00').toLocaleDateString()}
                 </p>
               </div>
               <div>

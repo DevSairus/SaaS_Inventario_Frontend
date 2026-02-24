@@ -140,7 +140,7 @@ const AdjustmentDetailPage = () => {
           <div className="bg-white rounded-lg shadow p-6">
             <h3 className="text-sm font-medium text-gray-500 mb-2">Fecha</h3>
             <p className="text-lg font-semibold text-gray-900">
-              {new Date(adjustment.adjustment_date).toLocaleDateString()}
+              {new Date(adjustment.adjustment_date + 'T12:00:00').toLocaleDateString()}
             </p>
           </div>
         </div>

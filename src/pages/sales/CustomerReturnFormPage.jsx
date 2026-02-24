@@ -178,7 +178,7 @@ const CustomerReturnFormPage = () => {
                       <div className="text-right">
                         <p className="font-medium">${parseFloat(sale.total_amount).toFixed(2)}</p>
                         <p className="text-sm text-gray-600">
-                          {new Date(sale.sale_date).toLocaleDateString()}
+                          {new Date(sale.sale_date + 'T12:00:00').toLocaleDateString()}
                         </p>
                       </div>
                     </div>
@@ -199,7 +199,7 @@ const CustomerReturnFormPage = () => {
                   <h2 className="text-lg font-semibold">Venta: {selectedSale.sale_number}</h2>
                   <p className="text-gray-600">Cliente: {selectedSale.customer_name}</p>
                   <p className="text-sm text-gray-500">
-                    Fecha: {new Date(selectedSale.sale_date).toLocaleDateString()}
+                    Fecha: {new Date(selectedSale.sale_date + 'T12:00:00').toLocaleDateString()}
                   </p>
                 </div>
                 <button

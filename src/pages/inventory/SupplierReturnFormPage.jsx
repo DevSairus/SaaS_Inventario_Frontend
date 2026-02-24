@@ -164,7 +164,7 @@ const SupplierReturnFormPage = () => {
                       <div className="text-right">
                         <p className="font-medium">${parseFloat(purchase.total_amount).toFixed(2)}</p>
                         <p className="text-sm text-gray-600">
-                          {new Date(purchase.purchase_date).toLocaleDateString()}
+                          {new Date(purchase.purchase_date + 'T12:00:00').toLocaleDateString()}
                         </p>
                       </div>
                     </div>
@@ -183,7 +183,7 @@ const SupplierReturnFormPage = () => {
                   <h2 className="text-lg font-semibold">Compra: {selectedPurchase.purchase_number}</h2>
                   <p className="text-gray-600">Proveedor: {selectedPurchase.supplier?.name}</p>
                   <p className="text-sm text-gray-500">
-                    Fecha: {new Date(selectedPurchase.purchase_date).toLocaleDateString()}
+                    Fecha: {new Date(selectedPurchase.purchase_date + 'T12:00:00').toLocaleDateString()}
                   </p>
                 </div>
                 <button

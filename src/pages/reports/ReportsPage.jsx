@@ -108,6 +108,7 @@ const DateFilterBar = ({ dateMode, setDateMode, periodMonths, setPeriodMonths, c
 const ReportsPage = () => {
   const { customers, fetchCustomers } = useCustomersStore();
   const [tab, setTab] = useState('movements');
+  const [profitTypeFilter, setProfitTypeFilter] = useState('product'); // 'product' | 'service'
   const [loading, setLoading] = useState(true);
 
   // Data states
@@ -481,7 +482,18 @@ const ReportsPage = () => {
           )
 
           /* ===== GANANCIA ===== */
-          || tab === 'profit' && (
+          || tab === 'profit' && (() => {
+            const filteredProducts = profitData.products.filter(p =>
+              profitTypeFilter === 'service' ? p.product_type === 'service' : p.product_type !== 'service'
+            );
+            const filteredTotals = filteredProducts.reduce((acc, p) => ({
+              total_revenue: acc.total_revenue + (p.total_revenue || 0),
+              total_cost: acc.total_cost + (p.total_cost || 0),
+              total_profit: acc.total_profit + (p.profit || 0),
+            }), { total_revenue: 0, total_cost: 0, total_profit: 0 });
+            filteredTotals.margin_percentage = filteredTotals.total_cost > 0
+              ? (filteredTotals.total_profit / filteredTotals.total_cost) * 100 : 0;
+            return (
             <div className="space-y-6">
               <DateFilterBar {...dateFilterProps}
                 extraActions={
@@ -495,12 +507,26 @@ const ReportsPage = () => {
                 }
               />
 
+              {/* Sub-tabs producto vs servicio */}
+              <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit">
+                {[
+                  { id: 'product', label: '📦 Productos físicos', count: profitData.products.filter(p => p.product_type !== 'service').length },
+                  { id: 'service', label: '🔧 Servicios', count: profitData.products.filter(p => p.product_type === 'service').length },
+                ].map(opt => (
+                  <button key={opt.id} onClick={() => setProfitTypeFilter(opt.id)}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${profitTypeFilter === opt.id ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}>
+                    {opt.label}
+                    <span className={`text-xs px-1.5 py-0.5 rounded-full ${profitTypeFilter === opt.id ? 'bg-teal-100 text-teal-700' : 'bg-gray-200 text-gray-500'}`}>{opt.count}</span>
+                  </button>
+                ))}
+              </div>
+
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 {[
-                  { label: 'Ingresos Total', value: formatCOP(profitData.totals.total_revenue), color: 'border-green-500', textColor: 'text-green-700' },
-                  { label: 'Costo de Ventas', value: formatCOP(profitData.totals.total_cost), color: 'border-red-500', textColor: 'text-red-700' },
-                  { label: 'Ganancia Bruta', value: formatCOP(profitData.totals.total_profit), color: 'border-emerald-500', textColor: 'text-emerald-700' },
-                  { label: 'Margen Promedio', value: `${(profitData.totals.margin_percentage || 0).toFixed(1)}%`, color: 'border-blue-500', textColor: 'text-blue-700' }
+                  { label: 'Ingresos Total', value: formatCOP(filteredTotals.total_revenue), color: 'border-green-500', textColor: 'text-green-700' },
+                  { label: 'Costo de Ventas', value: formatCOP(filteredTotals.total_cost), color: 'border-red-500', textColor: 'text-red-700' },
+                  { label: 'Ganancia Bruta', value: formatCOP(filteredTotals.total_profit), color: 'border-emerald-500', textColor: 'text-emerald-700' },
+                  { label: 'Margen Promedio', value: `${(filteredTotals.margin_percentage || 0).toFixed(1)}%`, color: 'border-blue-500', textColor: 'text-blue-700' }
                 ].map((kpi, i) => (
                   <div key={i} className={`bg-white rounded-xl shadow p-5 border-l-4 ${kpi.color}`}>
                     <p className="text-xs font-medium text-gray-500 uppercase">{kpi.label}</p>
@@ -509,12 +535,12 @@ const ReportsPage = () => {
                 ))}
               </div>
 
-              {profitData.products.length > 0 && (
+              {filteredProducts.length > 0 && (
                 <div className="bg-white rounded-xl shadow p-6">
                   <h3 className="text-lg font-bold text-gray-800 mb-1">Top productos por ganancia</h3>
                   <p className="text-sm text-gray-500 mb-4">Ingresos vs Costo</p>
                   <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={profitData.products.slice(0, 8)} layout="vertical">
+                    <BarChart data={filteredProducts.slice(0, 8)} layout="vertical">
                       <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                       <XAxis type="number" tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 11 }} />
                       <YAxis type="category" dataKey="product_name" width={100} tick={{ fontSize: 11 }} />
@@ -529,7 +555,7 @@ const ReportsPage = () => {
 
               <div className="bg-white rounded-xl shadow overflow-hidden">
                 <div className="p-5 border-b"><h3 className="text-lg font-bold text-gray-800">Detalle por producto</h3></div>
-                {profitData.products.length === 0 ? (
+                {filteredProducts.length === 0 ? (
                   <div className="p-10 text-center text-gray-500">No hay ventas en el período seleccionado</div>
                 ) : (
                   <div className="overflow-x-auto">
@@ -545,7 +571,7 @@ const ReportsPage = () => {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
-                        {profitData.products.map((p, i) => (
+                        {filteredProducts.map((p, i) => (
                           <tr key={i} className="hover:bg-gray-50">
                             <td className="px-4 py-2.5">
                               <p className="text-sm font-semibold text-gray-800">{p.product_name}</p>
@@ -568,7 +594,8 @@ const ReportsPage = () => {
                 )}
               </div>
             </div>
-          )
+            );
+          })()
 
           /* ===== ROTACIÓN ===== */
           || tab === 'rotation' && (
@@ -866,7 +893,7 @@ const ReportsPage = () => {
                                 <tr key={i} className={`hover:bg-gray-50 ${isOverdue ? 'bg-red-50' : ''}`}>
                                   <td className="px-6 py-4 text-sm font-medium text-gray-900">{inv.sale_number}</td>
                                   <td className="px-6 py-4 text-sm text-gray-600">{inv.customer_name}</td>
-                                  <td className="px-6 py-4 text-sm text-gray-500">{inv.sale_date ? new Date(inv.sale_date).toLocaleDateString('es-CO') : '-'}</td>
+                                  <td className="px-6 py-4 text-sm text-gray-500">{inv.sale_date ? new Date(inv.sale_date + 'T12:00:00').toLocaleDateString('es-CO') : '-'}</td>
                                   <td className="px-6 py-4 text-sm text-right text-gray-900">{formatCOP(inv.total_amount)}</td>
                                   <td className="px-6 py-4 text-sm text-right text-green-600">{formatCOP(inv.paid_amount)}</td>
                                   <td className="px-6 py-4 text-sm text-right font-semibold text-blue-600">{formatCOP(inv.balance)}</td>

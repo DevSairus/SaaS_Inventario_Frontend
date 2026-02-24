@@ -207,7 +207,7 @@ const MovementsPage = () => {
                   {movements.map((movement) => (
                     <tr key={movement.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {new Date(movement.movement_date).toLocaleDateString()}
+                        {new Date(movement.movement_date + 'T12:00:00').toLocaleDateString('es-CO')}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                         {movement.movement_number}
@@ -304,7 +304,7 @@ const MovementsPage = () => {
                     {kardex.movements.map((mov) => (
                       <tr key={mov.id}>
                         <td className="px-4 py-2 text-sm text-gray-600">
-                          {new Date(mov.movement_date).toLocaleDateString()}
+                          {new Date(mov.movement_date + 'T12:00:00').toLocaleDateString('es-CO')}
                         </td>
                         <td className="px-4 py-2">{getTypeBadge(mov.movement_type)}</td>
                         <td className="px-4 py-2 text-sm text-gray-600">{mov.movement_reason}</td>

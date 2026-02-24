@@ -217,7 +217,7 @@ const AdjustmentsPage = () => {
                           <div className="text-sm font-medium text-gray-900">{adjustment.adjustment_number}</div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {new Date(adjustment.adjustment_date).toLocaleDateString()}
+                          {new Date(adjustment.adjustment_date + 'T12:00:00').toLocaleDateString()}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           {getTypeBadge(adjustment.adjustment_type)}
