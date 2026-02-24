@@ -392,7 +392,13 @@ export default function SaleDetailPage() {
                             <div className="text-sm font-medium text-gray-900">
                               {item.product_name}
                             </div>
-                            <div className="text-xs text-gray-500">{item.product_sku}</div>
+                            {item.item_type === 'free_line' ? (
+                              <span className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full mt-0.5">
+                                ✏️ Línea libre · No mueve inventario
+                              </span>
+                            ) : (
+                              <div className="text-xs text-gray-500">{item.product_sku}</div>
+                            )}
                           </td>
                           <td className="px-4 py-3 text-right text-sm">
                             {item.quantity}
@@ -416,6 +422,24 @@ export default function SaleDetailPage() {
                     </tbody>
                   </table>
                 </div>
+
+                {/* Aviso líneas libres - no-print para que no salga en PDF/impresión */}
+                {sale.items?.some(i => i.item_type === 'free_line') && (
+                  <div className="no-print flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mt-4">
+                    <svg className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                    </svg>
+                    <div>
+                      <p className="text-sm font-semibold text-amber-800">Esta venta contiene líneas libres</p>
+                      <p className="text-xs text-amber-700 mt-0.5">
+                        {sale.items.filter(i => i.item_type === 'free_line').length === 1
+                          ? 'Una línea libre no descuenta stock del inventario. '
+                          : `${sale.items.filter(i => i.item_type === 'free_line').length} líneas libres no descontaron stock del inventario. `}
+                        Si se vendió un repuesto físico con línea libre, ajusta el inventario manualmente.
+                      </p>
+                    </div>
+                  </div>
+                )}
 
                 {/* Totales */}
                 <div className="mt-6 pt-6 border-t">

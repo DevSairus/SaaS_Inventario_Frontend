@@ -796,7 +796,7 @@ function SaleFormPage() {
                                   <span className="text-xs font-semibold text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full">🔧 Servicio</span>
                                 )}
                                 {item.item_type === 'free_line' && (
-                                  <span className="text-xs font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">✏️ Línea libre</span>
+                                  <span className="text-xs font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">✏️ Línea libre · No mueve inventario</span>
                                 )}
                                 {item.item_type !== 'free_line' && item.product_sku && (
                                   <span className="text-sm text-gray-500">SKU: {item.product_sku}</span>
@@ -881,6 +881,24 @@ function SaleFormPage() {
                 )}
               </div>
             </Card>
+
+            {/* Aviso líneas libres - solo formulario, no aparece en PDF */}
+            {items.some(i => i.item_type === 'free_line') && (
+              <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-4">
+                <svg className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                </svg>
+                <div>
+                  <p className="text-sm font-semibold text-amber-800">Las líneas libres no afectan el inventario</p>
+                  <p className="text-xs text-amber-700 mt-0.5">
+                    {items.filter(i => i.item_type === 'free_line').length === 1
+                      ? 'Tienes 1 línea libre en esta venta. '
+                      : `Tienes ${items.filter(i => i.item_type === 'free_line').length} líneas libres en esta venta. `}
+                    Si vendiste un repuesto físico, usa <strong>Agregar Producto</strong> para que el stock se descuente automáticamente.
+                  </p>
+                </div>
+              </div>
+            )}
 
             {/* Totales */}
             {items.length > 0 && (
