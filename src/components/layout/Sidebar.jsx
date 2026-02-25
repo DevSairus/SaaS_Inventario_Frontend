@@ -110,6 +110,7 @@ function Sidebar({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobileOpen })
         { id: 'vehicles',     title: 'Vehículos',          route: '/workshop/vehicles',     available: true, icon: Car },
         { id: 'productivity', title: 'Productividad',      route: '/workshop/productivity', available: true, icon: TrendingUp },
         { id: 'commissions',  title: 'Comisiones',           route: '/workshop/commission-settlements', available: true, icon: DollarSign },
+        { id: 'workshop-report', title: 'Reporte Taller',      route: '/workshop/report',               available: true, icon: TrendingUp },
       ],
     },
     {

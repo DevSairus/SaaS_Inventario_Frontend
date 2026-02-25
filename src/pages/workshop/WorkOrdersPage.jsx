@@ -5,12 +5,54 @@ import useWorkshopStore from '../../store/workshopStore';
 import { Wrench, Plus, Search, Car, User, Clock, ChevronRight } from 'lucide-react';
 
 const STATUS_CONFIG = {
-  recibido:   { label: 'Recibido',    color: 'bg-blue-100 text-blue-700' },
-  en_proceso: { label: 'En Proceso',  color: 'bg-yellow-100 text-yellow-700' },
-  en_espera:  { label: 'En Espera',   color: 'bg-orange-100 text-orange-700' },
-  listo:      { label: 'Listo',       color: 'bg-green-100 text-green-700' },
-  entregado:  { label: 'Entregado',   color: 'bg-gray-100 text-gray-600' },
-  cancelado:  { label: 'Cancelado',   color: 'bg-red-100 text-red-600' },
+  recibido:   {
+    label: 'Recibido',   emoji: '📥',
+    badge:  'bg-blue-100 text-blue-700 ring-1 ring-blue-200',
+    card:   'bg-blue-50/60 border-blue-200 border-l-blue-500',
+    icon:   'bg-blue-100 text-blue-600',
+    hover:  'hover:bg-blue-50 hover:border-blue-300 hover:shadow-blue-100',
+    number: 'text-blue-900',
+  },
+  en_proceso: {
+    label: 'En Proceso', emoji: '🔧',
+    badge:  'bg-yellow-100 text-yellow-800 ring-1 ring-yellow-300',
+    card:   'bg-yellow-50/70 border-yellow-200 border-l-yellow-500',
+    icon:   'bg-yellow-100 text-yellow-700',
+    hover:  'hover:bg-yellow-50 hover:border-yellow-300 hover:shadow-yellow-100',
+    number: 'text-yellow-900',
+  },
+  en_espera: {
+    label: 'En Espera',  emoji: '⏳',
+    badge:  'bg-orange-100 text-orange-800 ring-1 ring-orange-300',
+    card:   'bg-orange-50/60 border-orange-200 border-l-orange-500',
+    icon:   'bg-orange-100 text-orange-600',
+    hover:  'hover:bg-orange-50 hover:border-orange-300 hover:shadow-orange-100',
+    number: 'text-orange-900',
+  },
+  listo: {
+    label: 'Listo',      emoji: '✅',
+    badge:  'bg-green-100 text-green-800 ring-1 ring-green-300',
+    card:   'bg-green-50/60 border-green-200 border-l-green-500',
+    icon:   'bg-green-100 text-green-600',
+    hover:  'hover:bg-green-50 hover:border-green-300 hover:shadow-green-100',
+    number: 'text-green-900',
+  },
+  entregado: {
+    label: 'Entregado',  emoji: '🏁',
+    badge:  'bg-gray-100 text-gray-500 ring-1 ring-gray-200',
+    card:   'bg-gray-50/40 border-gray-200 border-l-gray-400',
+    icon:   'bg-gray-100 text-gray-500',
+    hover:  'hover:bg-gray-50 hover:border-gray-300 hover:shadow-gray-100',
+    number: 'text-gray-700',
+  },
+  cancelado: {
+    label: 'Cancelado',  emoji: '🚫',
+    badge:  'bg-red-100 text-red-600 ring-1 ring-red-200',
+    card:   'bg-red-50/30 border-red-200 border-l-red-400',
+    icon:   'bg-red-100 text-red-500',
+    hover:  'hover:bg-red-50 hover:border-red-300 hover:shadow-red-100',
+    number: 'text-red-800',
+  },
 };
 
 const COP = (n) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(n || 0);
@@ -19,11 +61,13 @@ export default function WorkOrdersPage() {
   const navigate = useNavigate();
   const { workOrders, workOrdersTotal, workOrdersLoading, fetchWorkOrders } = useWorkshopStore();
   const [search, setSearch] = useState('');
-  const [status, setStatus] = useState('');
+  const [status, setStatus] = useState('activas'); // activas = excluye entregado/cancelado
   const [page, setPage] = useState(1);
 
+  const activeStatuses = ['recibido','en_proceso','en_espera','listo'];
   useEffect(() => {
-    fetchWorkOrders({ search, status, page, limit: 20 });
+    const statusParam = status === 'activas' ? activeStatuses.join(',') : status;
+    fetchWorkOrders({ search, status: statusParam, page, limit: 20 });
   }, [search, status, page]);
 
   const statuses = Object.entries(STATUS_CONFIG);
@@ -53,18 +97,26 @@ export default function WorkOrdersPage() {
       {/* Filtros rápidos por estado */}
       <div className="flex gap-2 flex-wrap mb-4">
         <button
+          onClick={() => { setStatus('activas'); setPage(1); }}
+          className={`px-3 py-1.5 rounded-full text-xs font-medium transition ${status === 'activas' ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+        >
+          🔧 Activas
+        </button>
+        <button
           onClick={() => { setStatus(''); setPage(1); }}
-          className={`px-3 py-1.5 rounded-full text-xs font-medium transition ${!status ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+          className={`px-3 py-1.5 rounded-full text-xs font-medium transition ${status === '' ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
         >
           Todas
         </button>
-        {statuses.filter(([k]) => k !== 'cancelado').map(([key, cfg]) => (
+        {statuses.map(([key, cfg]) => (
           <button
             key={key}
             onClick={() => { setStatus(key); setPage(1); }}
-            className={`px-3 py-1.5 rounded-full text-xs font-medium transition ${status === key ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+            className={`px-3 py-1.5 rounded-full text-xs font-medium transition ${
+              status === key ? 'bg-gray-800 text-white' : `${cfg.badge} hover:opacity-80`
+            }`}
           >
-            {cfg.label}
+            {cfg.emoji} {cfg.label}
           </button>
         ))}
       </div>
@@ -102,17 +154,17 @@ export default function WorkOrdersPage() {
               <div
                 key={order.id}
                 onClick={() => navigate(`/workshop/work-orders/${order.id}`)}
-                className="bg-white border border-gray-100 rounded-xl p-4 hover:border-blue-200 hover:shadow-sm transition cursor-pointer"
+                className={`border border-l-4 rounded-xl p-4 shadow-sm transition cursor-pointer ${sc.card} ${sc.hover}`}
               >
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="p-2 bg-gray-50 rounded-lg flex-shrink-0">
-                      <Car size={18} className="text-gray-500" />
+                    <div className={`p-2 rounded-lg flex-shrink-0 ${sc.icon}`}>
+                      <Car size={18} />
                     </div>
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-semibold text-gray-900 text-sm">{order.order_number}</span>
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${sc.color}`}>{sc.label}</span>
+                        <span className={`font-bold text-sm ${sc.number}`}>{order.order_number}</span>
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${sc.badge}`}>{sc.emoji} {sc.label}</span>
                       </div>
                       <div className="flex items-center gap-3 mt-0.5 text-xs text-gray-500 flex-wrap">
                         <span className="font-mono font-bold text-gray-700">{order.vehicle?.plate || '—'}</span>

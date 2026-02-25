@@ -17,5 +17,10 @@ export const dashboardAPI = {
   getAlerts: async () => {
     const response = await axios.get('/dashboard/alerts');
     return response.data;
+  },
+
+  getWorkshopKPIs: async () => {
+    const response = await axios.get('/dashboard/workshop');
+    return response.data;
   }
 };

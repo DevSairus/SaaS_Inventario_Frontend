@@ -21,6 +21,7 @@ const MovementsPage = () => {
   const [localFilters, setLocalFilters] = useState(filters);
   const [showKardex, setShowKardex] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const [kardexPage, setKardexPage] = useState(1);
 
   useEffect(() => {
     fetchProducts();
@@ -38,14 +39,18 @@ const MovementsPage = () => {
     setPage(1);
   };
 
-  const handleViewKardex = async (productId) => {
-    const product = products.find(p => p.id === productId);
-    setSelectedProduct(product);
+  const handleViewKardex = async (productId, page = 1) => {
+    // Abrir modal primero para que el usuario vea el loading
+    const product = products.find(p => p.id === productId) || selectedProduct;
+    setSelectedProduct(product || { id: productId, name: 'Producto', sku: '' });
+    setKardexPage(page);
+    setShowKardex(true);
     await fetchKardex(productId, {
       start_date: localFilters.start_date,
-      end_date: localFilters.end_date
+      end_date: localFilters.end_date,
+      page,
+      limit: 25
     });
-    setShowKardex(true);
   };
 
   const closeKardex = () => {
@@ -248,8 +253,32 @@ const MovementsPage = () => {
           )}
         </div>
 
+        {/* Paginación lista principal */}
+        {pagination.total > 0 && (
+          <div className="flex items-center justify-between py-3 px-1">
+            <p className="text-sm text-gray-500">
+              Mostrando {((pagination.page - 1) * pagination.limit) + 1}–{Math.min(pagination.page * pagination.limit, pagination.total)} de {pagination.total} movimientos
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                disabled={pagination.page <= 1}
+                onClick={() => { setPage(pagination.page - 1); }}
+                className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg disabled:opacity-40 hover:bg-gray-50 transition"
+              >← Anterior</button>
+              <span className="text-sm text-gray-600 px-1">
+                Página {pagination.page} de {pagination.pages}
+              </span>
+              <button
+                disabled={pagination.page >= pagination.pages}
+                onClick={() => { setPage(pagination.page + 1); }}
+                className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg disabled:opacity-40 hover:bg-gray-50 transition"
+              >Siguiente →</button>
+            </div>
+          </div>
+        )}
+
         {/* Modal de Kardex */}
-        {showKardex && kardex && selectedProduct && (
+        {showKardex && selectedProduct && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
             <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-auto">
               <div className="p-6 border-b border-gray-200 flex justify-between items-center">
@@ -267,27 +296,45 @@ const MovementsPage = () => {
                 </button>
               </div>
 
+              {/* Loading / Error state */}
+              {isLoading && (
+                <div className="p-8 text-center">
+                  <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-3"></div>
+                  <p className="text-sm text-gray-500">Cargando kardex...</p>
+                </div>
+              )}
+
+              {!isLoading && !kardex && (
+                <div className="p-8 text-center text-red-500">
+                  <p className="font-medium">Error al cargar el kardex</p>
+                  <p className="text-sm text-gray-400 mt-1">Verifica la consola del navegador</p>
+                </div>
+              )}
+
               {/* Resumen */}
-              <div className="p-6 bg-gray-50 grid grid-cols-4 gap-4">
+              {!isLoading && kardex && (
+                <div className="p-6 bg-gray-50 grid grid-cols-4 gap-4">
                 <div>
                   <p className="text-sm text-gray-600">Total Movimientos</p>
-                  <p className="text-xl font-bold text-gray-900">{kardex.summary.total_movements}</p>
+                  <p className="text-xl font-bold text-gray-900">{kardex?.summary?.total_movements ?? 0}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-600">Total Entradas</p>
-                  <p className="text-xl font-bold text-green-600">{kardex.summary.total_entradas}</p>
+                  <p className="text-xl font-bold text-green-600">{kardex?.summary?.total_entradas ?? 0}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-600">Total Salidas</p>
-                  <p className="text-xl font-bold text-red-600">{kardex.summary.total_salidas}</p>
+                  <p className="text-xl font-bold text-red-600">{kardex?.summary?.total_salidas ?? 0}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-600">Stock Actual</p>
-                  <p className="text-xl font-bold text-blue-600">{kardex.summary.stock_actual}</p>
+                  <p className="text-xl font-bold text-blue-600">{kardex?.summary?.stock_actual ?? 0}</p>
                 </div>
               </div>
+              )}
 
               {/* Movimientos */}
+              {!isLoading && kardex && (
               <div className="p-6">
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
@@ -301,7 +348,7 @@ const MovementsPage = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
-                    {kardex.movements.map((mov) => (
+                    {kardex?.movements?.map((mov) => (
                       <tr key={mov.id}>
                         <td className="px-4 py-2 text-sm text-gray-600">
                           {new Date(mov.movement_date + 'T12:00:00').toLocaleDateString('es-CO')}
@@ -321,7 +368,31 @@ const MovementsPage = () => {
                     ))}
                   </tbody>
                 </table>
+
+                {kardex.pagination && (
+                  <div className="flex items-center justify-between mt-4 pt-4 border-t">
+                    <p className="text-sm text-gray-500">
+                      Mostrando {((kardexPage - 1) * 25) + 1}–{Math.min(kardexPage * 25, kardex?.pagination?.total ?? 0)} de {kardex?.pagination?.total ?? 0} movimientos
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <button
+                        disabled={kardexPage <= 1}
+                        onClick={() => handleViewKardex(selectedProduct.id, kardexPage - 1)}
+                        className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg disabled:opacity-40 hover:bg-gray-50"
+                      >← Anterior</button>
+                      <span className="text-sm text-gray-600">
+                        Página {kardexPage} de {kardex?.pagination?.pages ?? 1}
+                      </span>
+                      <button
+                        disabled={kardexPage >= kardex?.pagination?.pages ?? 1}
+                        onClick={() => handleViewKardex(selectedProduct.id, kardexPage + 1)}
+                        className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg disabled:opacity-40 hover:bg-gray-50"
+                      >Siguiente →</button>
+                    </div>
+                  </div>
+                )}
               </div>
+              )}
             </div>
           </div>
         )}

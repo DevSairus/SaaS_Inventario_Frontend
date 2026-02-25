@@ -99,7 +99,7 @@ export default function VehiclesPage() {
           />
         </div>
 
-        {/* Grid */}
+        {/* Lista compacta */}
         {vehiclesLoading ? (
           <div className="text-center py-16 text-gray-400">Cargando...</div>
         ) : vehicles.length === 0 ? (
@@ -108,49 +108,66 @@ export default function VehiclesPage() {
             <p className="text-gray-500">No hay vehículos registrados</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {vehicles.map(v => {
-              const owner = v.customer
-                ? (v.customer.business_name || `${v.customer.first_name} ${v.customer.last_name}`)
-                : '—';
-              return (
-                <div key={v.id} className="bg-white border border-gray-100 rounded-xl p-4 hover:border-blue-200 hover:shadow-sm transition">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="font-mono font-bold text-gray-900 text-base">{v.plate}</span>
-                        {v.fuel_type && (
-                          <span className="text-xs text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">
-                            {FUEL_LABELS[v.fuel_type]}
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-sm text-gray-700">{v.brand} {v.model} {v.year}</p>
-                      {v.color && <p className="text-xs text-gray-400">{v.color}</p>}
-                      <p className="text-xs text-gray-500 mt-1.5">👤 {owner}</p>
-                      {v.current_mileage && (
-                        <p className="text-xs text-gray-400 flex items-center gap-1 mt-0.5">
-                          <Gauge size={11} /> {v.current_mileage.toLocaleString()} km
+          <div className="bg-white border border-gray-100 rounded-xl overflow-hidden">
+            <table className="min-w-full divide-y divide-gray-100">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase">Placa</th>
+                  <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase">Vehículo</th>
+                  <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase hidden sm:table-cell">Propietario</th>
+                  <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase hidden md:table-cell">Km</th>
+                  <th className="px-4 py-2.5 text-right text-xs font-semibold text-gray-500 uppercase">Acciones</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {vehicles.map(v => {
+                  const owner = v.customer
+                    ? (v.customer.business_name || `${v.customer.first_name} ${v.customer.last_name}`)
+                    : '—';
+                  return (
+                    <tr key={v.id} className="hover:bg-gray-50 transition">
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono font-bold text-gray-900 text-sm">{v.plate}</span>
+                          {v.fuel_type && (
+                            <span className="text-xs text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded hidden sm:inline">
+                              {FUEL_LABELS[v.fuel_type]}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <p className="text-sm font-medium text-gray-800">{v.brand} {v.model}</p>
+                        <p className="text-xs text-gray-400">{v.year}{v.color ? ` · ${v.color}` : ''}</p>
+                      </td>
+                      <td className="px-4 py-3 hidden sm:table-cell">
+                        <p className="text-sm text-gray-600">{owner}</p>
+                      </td>
+                      <td className="px-4 py-3 hidden md:table-cell">
+                        <p className="text-sm text-gray-500">
+                          {v.current_mileage ? `${v.current_mileage.toLocaleString()} km` : '—'}
                         </p>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => navigate(`/workshop/vehicles/${v.id}`)}
-                        className="flex items-center gap-1 px-2 py-1.5 text-xs font-medium text-gray-500 bg-gray-100 hover:bg-gray-200 rounded-lg transition"
-                        title="Ver y editar detalle">
-                        <PencilLine size={12} /> Editar
-                      </button>
-                      <button
-                        onClick={() => openHistory(v)}
-                        className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition">
-                        <History size={13} /> Historial
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            onClick={() => navigate(`/workshop/vehicles/${v.id}`)}
+                            className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition"
+                            title="Editar">
+                            <PencilLine size={14} />
+                          </button>
+                          <button
+                            onClick={() => openHistory(v)}
+                            className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition">
+                            <History size={12} /> Historial
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         )}
 

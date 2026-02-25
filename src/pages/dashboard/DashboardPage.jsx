@@ -76,25 +76,17 @@ function DashboardPage() {
   const loadWorkshopStats = async () => {
     setWorkshopLoading(true);
     try {
-      const res = await axios.get('/workshop/work-orders?limit=200');
-      const orders = res.data.data || [];
-      const active = orders.filter(o => !['entregado', 'cancelado'].includes(o.status));
-      const byStatus = {};
-      active.forEach(o => { byStatus[o.status] = (byStatus[o.status] || 0) + 1; });
-      const pendingBilling = orders.filter(o => o.status === 'listo' && !o.sale_id);
-      const now = new Date();
-      const deliveredThisMonth = orders.filter(o => {
-        if (o.status !== 'entregado') return false;
-        const d = new Date(o.delivered_at || o.updated_at);
-        return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-      });
+      const res = await axios.get('/dashboard/workshop');
+      const d = res.data.data || {};
       setWorkshopStats({
-        active: active.length,
-        byStatus,
-        pendingBilling: pendingBilling.length,
-        pendingBillingAmount: pendingBilling.reduce((s, o) => s + parseFloat(o.total_amount || 0), 0),
-        deliveredThisMonth: deliveredThisMonth.length,
-        recentOrders: orders.slice(0, 5),
+        active: d.open_ots || 0,
+        completedThisMonth: d.completed_this_month || 0,
+        laborRevenue: d.labor_revenue_month || 0,
+        partsRevenue: d.parts_revenue_month || 0,
+        totalRevenue: d.total_revenue_month || 0,
+        avgResolutionDays: d.avg_resolution_days || 0,
+        byStatus: d.by_status || {},
+        pendingBilling: (d.by_status?.listo || 0),
       });
     } catch {
       setWorkshopStats(null);
@@ -286,49 +278,38 @@ function DashboardPage() {
             </div>
           ) : workshopStats ? (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <div
-                  onClick={() => navigate('/workshop/work-orders')}
-                  className="bg-blue-50 border border-blue-100 rounded-xl p-3 cursor-pointer hover:shadow-sm transition"
-                >
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                <div onClick={() => navigate('/workshop/work-orders')}
+                  className="bg-blue-50 border border-blue-100 rounded-xl p-3 cursor-pointer hover:shadow-sm transition">
                   <p className="text-2xl font-bold text-blue-700">{workshopStats.active}</p>
                   <p className="text-xs text-blue-500 mt-0.5">OT activas</p>
                 </div>
-                <div
-                  onClick={() => navigate('/workshop/work-orders?status=listo')}
+                <div onClick={() => navigate('/workshop/work-orders?status=listo')}
                   className={`rounded-xl p-3 border cursor-pointer hover:shadow-sm transition ${
                     workshopStats.pendingBilling > 0 ? 'bg-amber-50 border-amber-200' : 'bg-gray-50 border-gray-100'
-                  }`}
-                >
+                  }`}>
                   <p className={`text-2xl font-bold ${workshopStats.pendingBilling > 0 ? 'text-amber-700' : 'text-gray-500'}`}>
                     {workshopStats.pendingBilling}
                   </p>
                   <p className={`text-xs mt-0.5 ${workshopStats.pendingBilling > 0 ? 'text-amber-500' : 'text-gray-400'}`}>
                     Listas sin facturar
                   </p>
-                  {workshopStats.pendingBilling > 0 && (
-                    <p className="text-xs font-semibold text-amber-600 mt-0.5">{fmtCompact(workshopStats.pendingBillingAmount)}</p>
-                  )}
                 </div>
                 <div className="bg-green-50 border border-green-100 rounded-xl p-3">
-                  <p className="text-2xl font-bold text-green-700">{workshopStats.deliveredThisMonth}</p>
+                  <p className="text-2xl font-bold text-green-700">{workshopStats.completedThisMonth}</p>
                   <p className="text-xs text-green-500 mt-0.5">Entregadas este mes</p>
                 </div>
+                <div className="bg-purple-50 border border-purple-100 rounded-xl p-3">
+                  <p className="text-lg font-bold text-purple-700">{fmtCompact(workshopStats.laborRevenue)}</p>
+                  <p className="text-xs text-purple-500 mt-0.5">Mano de obra (mes)</p>
+                </div>
+                <div className="bg-teal-50 border border-teal-100 rounded-xl p-3">
+                  <p className="text-lg font-bold text-teal-700">{fmtCompact(workshopStats.partsRevenue)}</p>
+                  <p className="text-xs text-teal-500 mt-0.5">Repuestos (mes)</p>
+                </div>
                 <div className="bg-gray-50 border border-gray-100 rounded-xl p-3">
-                  <p className="text-xs font-semibold text-gray-600 mb-1.5">Por estado</p>
-                  <div className="space-y-1">
-                    {Object.entries(OT_STATUS).map(([key, cfg]) => {
-                      const count = workshopStats.byStatus[key] || 0;
-                      if (!count) return null;
-                      return (
-                        <div key={key} className="flex items-center justify-between">
-                          <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${cfg.bg} ${cfg.text}`}>{cfg.label}</span>
-                          <span className="text-xs font-bold text-gray-700">{count}</span>
-                        </div>
-                      );
-                    })}
-                    {workshopStats.active === 0 && <p className="text-xs text-gray-400">Sin OT activas</p>}
-                  </div>
+                  <p className="text-2xl font-bold text-gray-700">{workshopStats.avgResolutionDays}<span className="text-sm font-normal text-gray-400 ml-1">días</span></p>
+                  <p className="text-xs text-gray-500 mt-0.5">Tiempo prom. resolución</p>
                 </div>
               </div>
 

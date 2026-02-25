@@ -28,6 +28,7 @@ import VehicleDetailPage from './pages/workshop/VehicleDetailPage';
 import TechnicianProductivityPage from './pages/workshop/productivity/TechnicianProductivityPage';
 import CommissionSettlementsPage from './pages/workshop/commissions/CommissionSettlementsPage';
 import CommissionSettlementDetailPage from './pages/workshop/commissions/CommissionSettlementDetailPage';
+import WorkshopReportPage from './pages/workshop/WorkshopReportPage';
 import CustomersPage from './pages/customers/CustomersPage';
 import CustomerDetailPage from './pages/customers/CustomerDetailPage';
 import WarehousesPage from './pages/warehouses/WarehousesPage';
@@ -250,6 +251,7 @@ function App() {
 
         {/* ── TALLER ── */}
         <Route path="workshop/work-orders" element={<TenantRoute><WorkOrdersPage /></TenantRoute>} />
+        <Route path="workshop/report" element={<TenantRoute><WorkshopReportPage /></TenantRoute>} />
         <Route path="workshop/work-orders/new" element={<TenantRoute><WorkOrderFormPage /></TenantRoute>} />
         <Route path="workshop/work-orders/:id" element={<TenantRoute><WorkOrderDetailPage /></TenantRoute>} />
         <Route path="workshop/vehicles" element={<TenantRoute><VehiclesPage /></TenantRoute>} />

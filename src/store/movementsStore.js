@@ -53,6 +53,8 @@ export const useMovementsStore = create((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const response = await movementsAPI.getKardex(productId, params);
+      // Backend returns { success, data: { movements, summary, pagination } }
+      // We store only the inner 'data' so component accesses kardex.movements directly
       set({
         kardex: response.data,
         isLoading: false
