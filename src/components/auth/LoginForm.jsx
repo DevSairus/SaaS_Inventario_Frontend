@@ -37,8 +37,9 @@ const LoginForm = () => {
 
     if (!formData.password) {
       newErrors.password = 'La contraseña es requerida';
-    } else if (formData.password.length < 6) {
-      newErrors.password = 'La contraseña debe tener al menos 6 caracteres';
+    } else if (formData.password.length < 8) {
+      // ✅ FIX 2: Cambiado de 6 a 8 para coincidir con validación del backend
+      newErrors.password = 'La contraseña debe tener al menos 8 caracteres';
     }
 
     return newErrors;
@@ -56,7 +57,8 @@ const LoginForm = () => {
     setLoading(true);
 
     try {
-      const result = await login(formData);
+      // ✅ FIX 1: Pasar email y password como argumentos separados, no como objeto
+      const result = await login(formData.email, formData.password);
 
       if (result.success) {
         toast.success(`¡Bienvenido, ${result.user.first_name}!`);
