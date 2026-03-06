@@ -760,6 +760,16 @@ function ProductsPage() {
         isOpen={!!barcodePrintProduct}
         onClose={() => setBarcodePrintProduct(null)}
         product={barcodePrintProduct}
+        onBarcodeGenerated={(productId, newBarcode) => {
+          // Actualiza el producto en el store local sin re-fetch
+          useProductsStore.setState(state => ({
+            products: state.products.map(p =>
+              p.id === productId ? { ...p, barcode: newBarcode } : p
+            )
+          }));
+          // También actualiza el producto activo del modal
+          setBarcodePrintProduct(prev => prev ? { ...prev, barcode: newBarcode } : prev);
+        }}
       />
       </div>
     </Layout>
