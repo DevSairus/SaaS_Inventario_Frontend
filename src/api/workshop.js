@@ -27,6 +27,8 @@ export const workOrdersApi = {
     axios.get(`/workshop/work-orders/${id}/pdf`, { params: { type, ...params }, responseType: 'blob' }),
   // Checklist ingreso
   updateChecklist: (id, data) => axios.patch(`/workshop/work-orders/${id}/checklist`, data),
+  // ✅ NUEVO: Generar/obtener link de compartir para WhatsApp
+  generateShareToken: (id) => axios.post(`/workshop/work-orders/${id}/share-token`),
 };
 // ── Commission Settlements ────────────────────────────────
 export const commissionApi = {

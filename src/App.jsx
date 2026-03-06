@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useEffect } from 'react';
 import LoginPage from './pages/auth/LoginPage';
 import ResetPasswordPage from './pages/auth/ResetPasswordPage';
+import WorkOrderPublicPage from './pages/workshop/WorkOrderPublicPage';
 import DashboardPage from './pages/dashboard/DashboardPage';
 import ProductsPage from './pages/products/ProductsPage';
 import CategoriesPage from './pages/categories/CategoriesPage';
@@ -175,6 +176,8 @@ function App() {
         {/* Public routes */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
+        {/* ✅ NUEVA: Ruta pública — el cliente consulta su OT sin autenticarse */}
+        <Route path="/ot/:token" element={<WorkOrderPublicPage />} />
 
         {/* ============================================ */}
         {/* RUTAS DE SUPER ADMIN */}

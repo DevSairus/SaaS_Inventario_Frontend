@@ -4,6 +4,7 @@ import useAuthStore from '../../store/authStore';
 import useCategoriesStore from '../../store/categoriesStore';
 import ProductFormModal from '../../components/products/ProductFormModal';
 import ImportProductsModal from '../../components/products/ImportProductsModal';
+import BarcodePrintModal from '../../components/products/BarcodePrintModal';
 import Layout from '../../components/layout/Layout';
 import { exportProductsToExcel } from '../../utils/excelExport';
 import toast from 'react-hot-toast';
@@ -33,6 +34,7 @@ function ProductsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
+  const [barcodePrintProduct, setBarcodePrintProduct] = useState(null);
 
   // ✅ Refresh al entrar a la página
   useEffect(() => {
@@ -538,6 +540,16 @@ function ProductsPage() {
                         </td>
                         <td className="px-6 py-4 text-right text-sm font-medium">
                           <div className="flex justify-end gap-2">
+                            {/* Imprimir etiqueta */}
+                            <button
+                              onClick={() => setBarcodePrintProduct(product)}
+                              className="text-gray-500 hover:text-gray-800"
+                              title="Imprimir etiqueta de código de barras"
+                            >
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                              </svg>
+                            </button>
                             <button
                               onClick={() => handleEdit(product)}
                               className="text-blue-600 hover:text-blue-900"
@@ -742,6 +754,12 @@ function ProductsPage() {
         isOpen={isImportModalOpen}
         onClose={() => setIsImportModalOpen(false)}
         onImport={handleImport}
+      />
+
+      <BarcodePrintModal
+        isOpen={!!barcodePrintProduct}
+        onClose={() => setBarcodePrintProduct(null)}
+        product={barcodePrintProduct}
       />
       </div>
     </Layout>
