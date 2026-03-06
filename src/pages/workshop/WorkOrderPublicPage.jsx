@@ -323,10 +323,7 @@ export default function WorkOrderPublicPage() {
           </h3>
           <div className="space-y-2">
             {[
-              { label: 'Ingreso',          val: order.received_at  },
-              { label: 'Entrega estimada', val: order.promised_at  },
-              { label: 'Completado',       val: order.completed_at },
-              { label: 'Entregado',        val: order.delivered_at },
+              { label: 'Ingreso', val: order.received_at },
             ].filter(f => f.val).map(({ label, val }) => (
               <div key={label} className="flex justify-between items-center py-1.5 border-b border-gray-50 last:border-0">
                 <span className="text-sm text-gray-500">{label}</span>
