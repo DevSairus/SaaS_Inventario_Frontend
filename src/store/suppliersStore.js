@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import toast from 'react-hot-toast';
 import { suppliersAPI } from '../api/suppliers';
 
 export const useSuppliersStore = create((set, get) => ({
@@ -156,7 +157,6 @@ export const useSuppliersStore = create((set, get) => ({
       const response = await suppliersAPI.getStats();
       set({ stats: response.data });
     } catch (error) {
-      console.error('Error al obtener estadísticas:', error);
     }
   },
 

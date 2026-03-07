@@ -1,5 +1,6 @@
 // src/store/announcementsStore.js
 import { create } from 'zustand';
+import toast from 'react-hot-toast';
 import {
   getPendingAnnouncements,
   markAnnouncementAsViewed,
@@ -54,7 +55,6 @@ const useAnnouncementsStore = create((set, get) => ({
       set({ isLoading: false });
       return data.success;
     } catch (error) {
-      console.error('Error al obtener anuncios pendientes:', error);
       set({ 
         error: error.message,
         isLoading: false,
@@ -72,7 +72,6 @@ const useAnnouncementsStore = create((set, get) => ({
       const data = await markAnnouncementAsViewed(announcementId);
       return data.success;
     } catch (error) {
-      console.error('Error al marcar como visto:', error);
       return false;
     }
   },
@@ -85,7 +84,6 @@ const useAnnouncementsStore = create((set, get) => ({
       const data = await dismissAnnouncement(announcementId);
       return data.success;
     } catch (error) {
-      console.error('Error al descartar anuncio:', error);
       return false;
     }
   },
@@ -101,7 +99,6 @@ const useAnnouncementsStore = create((set, get) => ({
       try {
         await dismissAnnouncement(announcement.id);
       } catch (error) {
-        console.error('Error al descartar:', error);
       }
     }
     
@@ -140,7 +137,6 @@ const useAnnouncementsStore = create((set, get) => ({
       set({ isLoading: false });
       return data.success;
     } catch (error) {
-      console.error('Error al obtener anuncios:', error);
       set({ 
         error: error.message,
         isLoading: false
@@ -165,7 +161,6 @@ const useAnnouncementsStore = create((set, get) => ({
       set({ isLoading: false });
       return data.success;
     } catch (error) {
-      console.error('Error al crear anuncio:', error);
       set({ 
         error: error.response?.data?.message || error.message,
         isLoading: false
@@ -190,7 +185,6 @@ const useAnnouncementsStore = create((set, get) => ({
       set({ isLoading: false });
       return data.success;
     } catch (error) {
-      console.error('Error al actualizar anuncio:', error);
       set({ 
         error: error.response?.data?.message || error.message,
         isLoading: false
@@ -215,7 +209,6 @@ const useAnnouncementsStore = create((set, get) => ({
       set({ isLoading: false });
       return data.success;
     } catch (error) {
-      console.error('Error al eliminar anuncio:', error);
       set({ 
         error: error.message,
         isLoading: false
@@ -239,7 +232,6 @@ const useAnnouncementsStore = create((set, get) => ({
       set({ isLoading: false });
       return data.success ? data.stats : null;
     } catch (error) {
-      console.error('Error al obtener estadísticas:', error);
       set({ 
         error: error.message,
         isLoading: false,

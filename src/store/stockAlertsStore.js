@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import toast from 'react-hot-toast';
 import * as stockAlertsApi from '../api/stockAlerts';
 
 const useStockAlertsStore = create((set, get) => ({
@@ -71,33 +72,16 @@ const useStockAlertsStore = create((set, get) => ({
         limit: pagination.limit
       };
       
-      console.log('🔍 [StockAlerts] Fetching alerts...');
-      console.log('📊 [StockAlerts] Params:', params);
-      console.log('📄 [StockAlerts] Página actual:', pagination.page);
-      console.log('📦 [StockAlerts] Límite por página:', pagination.limit);
-      
-      const response = await stockAlertsApi.getStockAlerts(params);
-      
-      console.log('✅ [StockAlerts] Response completa:', response);
-      console.log('📋 [StockAlerts] Alertas recibidas:', response.data?.length || 0);
-      console.log('📊 [StockAlerts] Paginación:', response.pagination);
-      console.log('🔢 [StockAlerts] Total de alertas:', response.pagination?.total);
-      console.log('📄 [StockAlerts] Total de páginas:', response.pagination?.pages);
-      
+      const response = await stockAlertsApi.getStockAlerts(params);      
       set({
         alerts: response.data,
         pagination: response.pagination,
         loading: false
       });
-      
-      console.log('✅ [StockAlerts] Estado actualizado correctamente');
     } catch (error) {
-      console.error('❌ [StockAlerts] Error en fetchAlerts:', error);
-      console.error('❌ [StockAlerts] Error response:', error.response);
-      set({ 
-        error: error.response?.data?.message || 'Error al cargar alertas',
-        loading: false 
-      });
+      const msg = error.response?.data?.message || 'No se pudieron cargar las alertas de stock.';
+      toast.error(msg);
+      set({ error: msg, loading: false });
     }
   },
 
@@ -123,7 +107,7 @@ const useStockAlertsStore = create((set, get) => ({
       const response = await stockAlertsApi.getStockAlertsStats();
       set({ stats: response.data });
     } catch (error) {
-      console.error('Error al cargar estadísticas:', error);
+
     }
   },
 
@@ -131,25 +115,17 @@ const useStockAlertsStore = create((set, get) => ({
   checkAlerts: async () => {
     set({ loading: true, error: null });
     try {
-      console.log('🔍 Verificando alertas manualmente...');
       const response = await stockAlertsApi.checkStockAlerts();
-      console.log('✅ Respuesta de checkAlerts:', response);
-      console.log('✅ Alertas creadas:', response.data?.alerts_created);
-      console.log('✅ Productos revisados:', response.data?.products_checked);
-      
       // Recargar alertas y estadísticas
-      console.log('🔄 Recargando alertas y stats...');
       await get().fetchAlerts();
       await get().fetchStats();
       
       set({ loading: false });
       return response.data;
     } catch (error) {
-      console.error('❌ Error en checkAlerts:', error);
-      set({ 
-        error: error.response?.data?.message || 'Error al verificar alertas',
-        loading: false 
-      });
+      const errMsg = error.response?.data?.message || 'No se pudieron verificar las alertas de stock.';
+      toast.error(errMsg);
+      set({ error: errMsg, loading: false });
       throw error;
     }
   },

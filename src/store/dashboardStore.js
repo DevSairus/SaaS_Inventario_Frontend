@@ -1,5 +1,6 @@
 // frontend/src/store/dashboardStore.js
 import { create } from 'zustand';
+import toast from 'react-hot-toast';
 import { dashboardAPI } from '../api/dashboard';
 
 const useDashboardStore = create((set, get) => ({
@@ -28,7 +29,6 @@ const useDashboardStore = create((set, get) => ({
         loading: false
       });
     } catch (error) {
-      console.error('Error fetching KPIs:', error);
       set({
         error: error.message || 'Error al cargar KPIs',
         loading: false
@@ -41,7 +41,6 @@ const useDashboardStore = create((set, get) => ({
       const alerts = await dashboardAPI.getAlerts();
       set({ alerts });
     } catch (error) {
-      console.error('Error fetching alerts:', error);
       set({ alerts: [] });
     }
   },

@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import toast from 'react-hot-toast';
 import { adjustmentsAPI } from '../api/adjustments';
 
 export const useAdjustmentsStore = create((set, get) => ({
@@ -179,7 +180,6 @@ export const useAdjustmentsStore = create((set, get) => ({
       const response = await adjustmentsAPI.getStats();
       set({ stats: response.data });
     } catch (error) {
-      console.error('Error al obtener estadísticas:', error);
     }
   },
 

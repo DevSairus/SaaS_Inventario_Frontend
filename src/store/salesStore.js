@@ -1,5 +1,6 @@
 // frontend/src/store/salesStore.js
 import { create } from 'zustand';
+import toast from 'react-hot-toast';
 import salesApi from '../api/sales';
 
 const useSalesStore = create((set, get) => ({
@@ -204,7 +205,6 @@ const useSalesStore = create((set, get) => ({
       const response = await salesApi.getStats(filters);
       set({ stats: response.data.data });
     } catch (error) {
-      console.error('Error cargando estadísticas:', error);
     }
   },
 

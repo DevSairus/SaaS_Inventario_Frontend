@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import toast from 'react-hot-toast';
 import { movementsAPI } from '../api/movements';
 
 export const useMovementsStore = create((set, get) => ({
@@ -73,7 +74,6 @@ export const useMovementsStore = create((set, get) => ({
       const response = await movementsAPI.getStats();
       set({ stats: response.data });
     } catch (error) {
-      console.error('Error al obtener estadísticas:', error);
     }
   },
 

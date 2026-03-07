@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import { Eye, RefreshCw } from 'lucide-react';
 import api from '@api/axios';
@@ -20,7 +21,7 @@ const SuperAdminSubscriptionsList = () => {
       setSubscriptions(data.subscriptions || []);
       setError(null);
     } catch (err) {
-      console.error('Error fetching subscriptions:', err);
+      toast.error(err.response?.data?.message || 'No se pudo cargar la lista de suscripciones.');
       setError(err.response?.data?.error || 'Error al cargar suscripciones');
     } finally {
       setLoading(false);

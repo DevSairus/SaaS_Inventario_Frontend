@@ -82,7 +82,6 @@ class SessionKeepAlive extends Component {
   refreshToken = async () => {
     // Solo refrescar si el usuario ha estado activo
     if (!this.isUserActive()) {
-      console.log('Usuario inactivo, no se refresca el token');
       this.scheduleNextRefresh();
       return;
     }
@@ -92,7 +91,6 @@ class SessionKeepAlive extends Component {
       const response = await authAPI.refreshToken();
       
       if (response.success && response.data?.token) {
-        console.log('Token refrescado exitosamente');
         
         // Actualizar token en localStorage
         const newToken = response.data.token;
@@ -102,7 +100,6 @@ class SessionKeepAlive extends Component {
         this.scheduleNextRefresh();
       }
     } catch (error) {
-      console.error('Error al refrescar token:', error);
       // No cerrar sesión por errores de refresh - simplemente reintentar luego
       this.scheduleNextRefresh();
     }

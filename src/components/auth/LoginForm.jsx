@@ -73,7 +73,6 @@ const LoginForm = () => {
         toast.error(result.error || 'Error al iniciar sesión');
       }
     } catch (error) {
-      console.error('Error en login:', error);
       toast.error('Error inesperado al iniciar sesión');
     } finally {
       setLoading(false);

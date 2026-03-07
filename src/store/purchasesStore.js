@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import toast from 'react-hot-toast';
 import { purchasesAPI } from '../api/purchases';
 
 export const usePurchasesStore = create((set, get) => ({
@@ -140,13 +141,9 @@ export const usePurchasesStore = create((set, get) => ({
   receivePurchase: async (id, receivedItems, productsStore = null) => {
     set({ isLoading: true, error: null });
     try {
-      console.log('📦 Recibiendo compra:', id);
-      
       // Recibir la compra
       await purchasesAPI.receive(id, receivedItems);
-      
-      console.log('✅ Compra recibida exitosamente');
-      
+
       // Actualizar la compra actual
       await get().fetchPurchaseById(id);
       
@@ -155,18 +152,15 @@ export const usePurchasesStore = create((set, get) => ({
       
       // ✅ Si se pasó el store de productos, refrescarlo
       if (productsStore && typeof productsStore.refreshAfterPurchase === 'function') {
-        console.log('🔄 Actualizando productos automáticamente...');
         await productsStore.refreshAfterPurchase();
       }
       
       set({ isLoading: false });
       return true;
     } catch (error) {
-      console.error('❌ Error al recibir compra:', error);
-      set({
-        error: error.response?.data?.message || 'Error al recibir compra',
-        isLoading: false
-      });
+      const msg = error.response?.data?.message || 'No se pudo recibir la compra.';
+      toast.error(msg);
+      set({ error: msg, isLoading: false });
       return false;
     }
   },
@@ -213,7 +207,7 @@ export const usePurchasesStore = create((set, get) => ({
       const response = await purchasesAPI.getStats();
       set({ stats: response.data });
     } catch (error) {
-      console.error('Error al obtener estadísticas:', error);
+
     }
   },
 

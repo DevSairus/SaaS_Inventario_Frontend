@@ -43,7 +43,6 @@ api.interceptors.response.use(
     if (status === 401) {
       const isLoginAttempt = url.includes('/auth/login') || url.includes('/auth/register');
       if (!isLoginAttempt) {
-        console.warn('⚠️ Error 401 - Token inválido o expirado. Auto-logout deshabilitado.');
       }
     }
 
@@ -53,7 +52,7 @@ api.interceptors.response.use(
      * El componente puede manejar este error mostrando un mensaje
      */
     if (status === 403) {
-      console.warn('⚠️ No tienes permisos para acceder a este recurso');
+      toast.error('No tienes permisos para realizar esta acción.');
     }
 
     return Promise.reject(error);

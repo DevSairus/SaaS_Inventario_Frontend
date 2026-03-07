@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import toast from 'react-hot-toast';
 import { superAdminAPI } from '../api/superadmin';
 
 const useSuperAdminStore = create((set, get) => ({
@@ -44,7 +45,6 @@ const useSuperAdminStore = create((set, get) => ({
       const response = await superAdminAPI.getExpiringTrials(days);
       set({ expiringTrials: response });
     } catch (error) {
-      console.error('Error fetching expiring trials:', error);
     }
   },
 
@@ -218,7 +218,6 @@ const useSuperAdminStore = create((set, get) => ({
       const response = await superAdminAPI.getTenantsAnalytics();
       set({ tenantsAnalytics: response });
     } catch (error) {
-      console.error('Error fetching tenants analytics:', error);
     }
   },
 

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import Layout from '../../components/layout/Layout';
 import { reportsAPI } from '../../api/reports';
@@ -156,42 +157,38 @@ const ReportsPage = () => {
 
       if (movResult.status === 'fulfilled') {
         const movData = movResult.value.data || [];
-        console.log('Datos de movimientos:', movData);
-        console.log('Primer elemento:', movData[0]);
         setMovementsData(movData);
       } else {
-        console.error('Error en movimientos:', movResult.reason);
+        toast.error('No se pudieron cargar los movimientos de inventario.');
         setMovementsData([]);
       }
 
       if (valResult.status === 'fulfilled') {
         setValuationData(valResult.value.data || { by_category: [], totals: { product_count: 0, total_stock: 0, total_value: 0 } });
       } else {
-        console.error('Error en valorización:', valResult.reason);
+        toast.error('No se pudo cargar el reporte de valorización.');
         setValuationData({ by_category: [], totals: { product_count: 0, total_stock: 0, total_value: 0 } });
       }
 
       if (profResult.status === 'fulfilled') {
         setProfitData(profResult.value.data || { products: [], totals: { total_revenue: 0, total_cost: 0, total_profit: 0, margin_percentage: 0 } });
       } else {
-        console.error('Error en ganancia:', profResult.reason);
+        toast.error('No se pudo cargar el reporte de ganancias.');
         setProfitData({ products: [], totals: { total_revenue: 0, total_cost: 0, total_profit: 0, margin_percentage: 0 } });
       }
 
       if (rotResult.status === 'fulfilled') {
         setRotationData(rotResult.value.data || { high_rotation: [], low_rotation: [], total_products: 0, products_with_sales: 0, products_without_sales: 0 });
       } else {
-        console.error('Error en rotación:', rotResult.reason);
+        toast.error('No se pudo cargar el reporte de rotación.');
         setRotationData({ high_rotation: [], low_rotation: [], total_products: 0, products_with_sales: 0, products_without_sales: 0 });
       }
 
       if (recvResult.status === 'fulfilled') {
         const receivablesResult = recvResult.value.data || { summary: {}, by_customer: [], all_invoices: [] };
-        console.log('Datos de cartera cargados:', receivablesResult);
         setReceivablesData(receivablesResult);
       } else {
         const error = recvResult.reason;
-        console.error('Error en cartera:', error);
         if (error.response?.status === 403) {
           setReceivablesData({ summary: {}, by_customer: [], all_invoices: [], error: { type: 'permission', message: 'No tienes permisos para ver la cartera' } });
         } else {
@@ -199,8 +196,7 @@ const ReportsPage = () => {
         }
       }
     } catch (e) {
-      console.error('Error cargando reportes:', e);
-      console.error('Detalles del error:', { message: e.message, response: e.response?.data, status: e.response?.status });
+      toast.error(e.response?.data?.message || 'No se pudieron cargar los reportes. Intenta de nuevo.');
       setMovementsData([]);
       setValuationData({ by_category: [], totals: { product_count: 0, total_stock: 0, total_value: 0 } });
       setProfitData({ products: [], totals: { total_revenue: 0, total_cost: 0, total_profit: 0, margin_percentage: 0 } });
@@ -218,24 +214,6 @@ const ReportsPage = () => {
 
   useEffect(() => { fetchCustomers(); }, []);
 
-  // Debug: Ver cuando cambian los datos de cartera
-  useEffect(() => {
-    console.log('receivablesData actualizado:', {
-      summary: receivablesData.summary,
-      customers: receivablesData.by_customer?.length,
-      invoices: receivablesData.all_invoices?.length
-    });
-  }, [receivablesData]);
-
-  // Debug: Ver totales de movimientos
-  useEffect(() => {
-    if (movementsData.length > 0) {
-      const totalEntradas = movementsData.reduce((s, d) => s + (parseFloat(d?.entradas) || 0), 0);
-      const totalSalidas = movementsData.reduce((s, d) => s + (parseFloat(d?.salidas) || 0), 0);
-      console.log('Movimientos - Totales:', { registros: movementsData.length, totalEntradas, totalSalidas, ejemplo: movementsData[0] });
-    }
-  }, [movementsData]);
-
   const handleApplyCustomDates = () => {
     if (customDates.from_date && customDates.to_date) fetchAll();
   };
@@ -244,15 +222,12 @@ const ReportsPage = () => {
     const cleanFilters = Object.fromEntries(
       Object.entries(receivablesFilters).filter(([_, v]) => v !== '')
     );
-    console.log('Aplicando filtros de cartera:', cleanFilters);
     setLoading(true);
     try {
       const recv = await accountsReceivableAPI.getSummary(cleanFilters);
-      console.log('Respuesta de cartera:', recv);
       setReceivablesData(recv.data || { summary: {}, by_customer: [], all_invoices: [] });
     } catch (e) {
-      console.error('Error cargando cartera:', e);
-      console.error('Detalles:', { filtros: cleanFilters, error: e.message, response: e.response?.data, status: e.response?.status });
+      toast.error(e.response?.data?.message || 'No se pudo filtrar la cartera. Intenta de nuevo.');
       setReceivablesData({ summary: {}, by_customer: [], all_invoices: [] });
     } finally {
       setLoading(false);
@@ -267,7 +242,6 @@ const ReportsPage = () => {
       const recv = await accountsReceivableAPI.getSummary({});
       setReceivablesData(recv.data || { summary: {}, by_customer: [], all_invoices: [] });
     } catch (e) {
-      console.error('Error cargando cartera:', e);
       setReceivablesData({ summary: {}, by_customer: [], all_invoices: [] });
     } finally {
       setLoading(false);

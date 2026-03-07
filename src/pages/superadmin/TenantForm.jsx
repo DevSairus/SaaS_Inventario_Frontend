@@ -42,7 +42,7 @@ const TenantForm = () => {
       const { data } = await api.get('/superadmin/subscription-plans');
       setPlans(data.plans || []);
     } catch (error) {
-      console.error('Error fetching plans:', error);
+      toast.error(error.response?.data?.message || 'No se pudieron cargar los planes disponibles.');
       toast.error('Error al cargar planes');
     }
   };
@@ -51,8 +51,6 @@ const TenantForm = () => {
     try {
       setLoading(true);
       const { data } = await api.get(`/superadmin/tenants/${id}`);
-
-      console.log('✅ Tenant data received:', data);
 
       // IMPORTANTE: El backend devuelve { tenant: {...}, stats: {...} }
       if (data && data.tenant) {
@@ -73,7 +71,7 @@ const TenantForm = () => {
         });
       }
     } catch (error) {
-      console.error('Error fetching tenant:', error);
+      toast.error(error.response?.data?.message || 'No se pudo cargar la información del tenant.');
       toast.error('Error al cargar información del tenant');
     } finally {
       setLoading(false);
@@ -126,7 +124,7 @@ const TenantForm = () => {
 
       navigate('/superadmin/tenants');
     } catch (error) {
-      console.error('Error saving tenant:', error);
+      toast.error(error.response?.data?.message || 'No se pudo guardar el tenant.');
       toast.error(error.response?.data?.error || 'Error al guardar tenant');
     } finally {
       setSaving(false);

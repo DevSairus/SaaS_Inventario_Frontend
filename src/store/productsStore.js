@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import toast from 'react-hot-toast';
 import { productsAPI } from '../api/products';
 
 const useProductsStore = create((set, get) => ({
@@ -52,17 +53,15 @@ const useProductsStore = create((set, get) => ({
         set({ isLoading: false });
       }
     } catch (error) {
-      console.error('Error al cargar productos:', error);
-      set({
-        error: error.response?.data?.message || 'Error al cargar productos',
-        isLoading: false
-      });
+      const msg = error.response?.data?.message || 'No se pudieron cargar los productos.';
+      toast.error(msg);
+      set({ error: msg, isLoading: false });
     }
   },
 
   // ✅ Método específico para refrescar después de operaciones de compra
   refreshAfterPurchase: async () => {
-    console.log('🔄 Refrescando productos después de operación de compra...');
+
     await get().fetchProducts(true); // Forzar refresh
     await get().fetchStats(); // Actualizar estadísticas también
   },
@@ -75,7 +74,7 @@ const useProductsStore = create((set, get) => ({
         set({ stats: response.data });
       }
     } catch (error) {
-      console.error('Error al cargar estadísticas:', error);
+
     }
   },
 
@@ -104,9 +103,7 @@ const useProductsStore = create((set, get) => ({
   createProduct: async (productData) => {
     set({ isLoading: true, error: null });
     try {
-      console.log('📤 Enviando producto:', productData);
       const response = await productsAPI.create(productData);
-      console.log('✅ Respuesta:', response);
       if (response && response.success) {
         await get().fetchProducts(true); // ✅ Forzar refresh
         set({ isLoading: false });
@@ -228,7 +225,7 @@ const useProductsStore = create((set, get) => ({
       }
       return [];
     } catch (error) {
-      console.error('Error buscando productos:', error);
+
       return [];
     }
   },

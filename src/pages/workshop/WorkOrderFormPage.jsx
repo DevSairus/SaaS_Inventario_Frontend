@@ -163,13 +163,29 @@ export default function WorkOrderFormPage() {
   };
 
   const handleSubmit = async () => {
-    if (!form.vehicle_id) return toast.error('Selecciona un vehículo');
+    if (!form.vehicle_id)        return toast.error('⚠️ Debes seleccionar un vehículo');
+    if (!form.mileage_in && form.mileage_in !== 0) {
+      return toast.error('⚠️ El kilometraje de ingreso es requerido');
+    }
+    if (isNaN(Number(form.mileage_in)) || Number(form.mileage_in) < 0) {
+      return toast.error('⚠️ El kilometraje debe ser un número válido');
+    }
+    if (!form.problem_description?.trim()) {
+      return toast.error('⚠️ Ingresa la descripción del problema reportado por el cliente');
+    }
+    if (!form.promised_at) {
+      return toast.error('⚠️ La fecha prometida de entrega es requerida — el cliente necesita saber cuándo recoger su vehículo');
+    }
     setSaving(true);
     try {
       const order = await createOrder(form);
       navigate(`/workshop/work-orders/${order.id}`);
-    } catch (e) { toast.error(e.response?.data?.message || 'Error al crear la OT'); }
-    finally { setSaving(false); }
+    } catch (e) {
+      const msg = e.response?.data?.message || 'Error al crear la OT';
+      toast.error(`❌ ${msg}`);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -280,8 +296,8 @@ export default function WorkOrderFormPage() {
             )}
 
             <div className="grid grid-cols-2 gap-3 mt-3">
-              <Field label="Kilometraje de ingreso">
-                <input type="number" value={form.mileage_in} placeholder="85000" className={inputCls}
+              <Field label="Kilometraje de ingreso *">
+                <input type="number" value={form.mileage_in} placeholder="85000" className={`${inputCls} ${!form.mileage_in ? 'border-amber-300' : ''}`}
                   onChange={e => setForm(f => ({ ...f, mileage_in: e.target.value }))} />
               </Field>
             </div>
@@ -398,9 +414,13 @@ export default function WorkOrderFormPage() {
                   renderItem={w => <span className="font-medium text-gray-800">{w.name}</span>}
                 />
               </Field>
-              <Field label="Fecha prometida">
-                <input type="datetime-local" value={form.promised_at} className={inputCls}
+              <Field label="Fecha prometida de entrega *">
+                <input type="datetime-local" value={form.promised_at}
+                  className={`${inputCls} ${!form.promised_at ? 'border-amber-300' : 'border-green-300'}`}
                   onChange={e => setForm(f => ({ ...f, promised_at: e.target.value }))} />
+                {!form.promised_at && (
+                  <p className="text-xs text-amber-500 mt-1">Campo obligatorio — indica al cliente cuándo estará listo su vehículo</p>
+                )}
               </Field>
             </div>
           </div>
@@ -409,12 +429,15 @@ export default function WorkOrderFormPage() {
           <div className="bg-white border border-gray-100 rounded-xl p-4">
             <div className="flex items-center gap-2 mb-4">
               <Wrench size={16} className="text-blue-600" />
-              <h2 className="font-semibold text-gray-800 text-sm">Problema reportado</h2>
+              <h2 className="font-semibold text-gray-800 text-sm">Problema reportado *</h2>
             </div>
-            <Field label="Descripción">
-              <textarea value={form.problem_description} className={`${inputCls} h-24 resize-none`}
+            <Field label="Descripción *">
+              <textarea value={form.problem_description} className={`${inputCls} h-24 resize-none ${!form.problem_description?.trim() ? 'border-amber-300' : ''}`}
                 placeholder="Describir el problema que reporta el cliente..."
                 onChange={e => setForm(f => ({ ...f, problem_description: e.target.value }))} />
+              {!form.problem_description?.trim() && (
+                <p className="text-xs text-amber-500 mt-1">Campo obligatorio</p>
+              )}
             </Field>
             <div className="mt-3">
               <Field label="Notas internas">
@@ -431,7 +454,7 @@ export default function WorkOrderFormPage() {
             className="flex-1 border border-gray-200 text-gray-600 py-2.5 rounded-xl text-sm font-medium hover:bg-gray-50 transition">
             Cancelar
           </button>
-          <button type="button" onClick={handleSubmit} disabled={saving || !form.vehicle_id}
+          <button type="button" onClick={handleSubmit} disabled={saving || !form.vehicle_id || !form.problem_description?.trim() || !form.mileage_in || !form.promised_at}
             className="flex-1 bg-blue-600 text-white py-2.5 rounded-xl text-sm font-medium flex items-center justify-center gap-2 hover:bg-blue-700 disabled:opacity-60 transition">
             <Save size={16}/>
             {saving ? 'Guardando...' : 'Crear Orden'}

@@ -1,3 +1,4 @@
+import toast from 'react-hot-toast';
 // frontend/src/components/products/BarcodePrintModal.jsx
 // Dependencia requerida: npm install jsbarcode
 import { useState, useCallback, useEffect } from 'react';
@@ -35,7 +36,7 @@ const generateBarcodeDataURL = (value, barcodeH) => {
     });
     return canvas.toDataURL('image/png');
   } catch (e) {
-    console.error('Error generando código de barras:', e);
+    toast.error('No se pudo generar el código de barras.');
     return null;
   }
 };

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -52,7 +53,7 @@ const SubscriptionManagement = () => {
       const plansRes = await api.get('/superadmin/subscription-plans');
       setPlans(plansRes.data.plans || []);
     } catch (error) {
-      console.error('Error:', error);
+      toast.error(error.response?.data?.message || 'Error al cargar suscripciones.');
     } finally {
       setLoading(false);
     }
@@ -68,7 +69,7 @@ const SubscriptionManagement = () => {
       fetchData();
       setSelectedPlan('');
     } catch (error) {
-      console.error('Error changing plan:', error);
+      toast.error(error.response?.data?.message || 'No se pudo cambiar el plan.');
     }
   };
 
@@ -83,7 +84,7 @@ const SubscriptionManagement = () => {
       setShowStatusModal(false);
       setSelectedStatus('');
     } catch (error) {
-      console.error('Error changing status:', error);
+      toast.error(error.response?.data?.message || 'No se pudo cambiar el estado.');
     }
   };
 
@@ -92,7 +93,7 @@ const SubscriptionManagement = () => {
       await api.post(`/superadmin/tenants/${id}/extend-trial`, { days });
       fetchData();
     } catch (error) {
-      console.error('Error extending trial:', error);
+      toast.error(error.response?.data?.message || 'No se pudo extender el periodo de prueba.');
     }
   };
 
@@ -106,7 +107,7 @@ const SubscriptionManagement = () => {
       fetchData();
       setCustomDate('');
     } catch (error) {
-      console.error('Error setting trial date:', error);
+      toast.error(error.response?.data?.message || 'No se pudo establecer la fecha de prueba.');
     }
   };
 

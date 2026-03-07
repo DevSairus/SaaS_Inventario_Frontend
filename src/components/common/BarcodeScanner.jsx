@@ -98,7 +98,6 @@ const BarcodeScanner = ({ onDetect, onClose }) => {
 
       scan();
     } catch (err) {
-      console.warn('BarcodeDetector no disponible, usando Quagga', err);
       startQuagga();
     }
   }, [onDetect]);

@@ -16,7 +16,7 @@ const useWorkshopStore = create((set, get) => ({
       const res = await vehiclesApi.list(params);
       set({ vehicles: res.data.data, vehiclesTotal: res.data.total, vehiclesLoading: false });
     } catch (err) {
-      const msg = err?.response?.data?.message || 'Error al cargar vehículos';
+      const msg = err?.response?.data?.message || 'No se pudieron cargar los vehículos. Verifica tu conexión.';
       set({ vehiclesLoading: false, vehiclesError: msg });
       toast.error(msg);
     }
@@ -28,7 +28,7 @@ const useWorkshopStore = create((set, get) => ({
       toast.success('Vehículo registrado');
       return res.data.data;
     } catch (err) {
-      const msg = err?.response?.data?.message || 'Error al registrar vehículo';
+      const msg = err?.response?.data?.message || 'No se pudo registrar el vehículo.';
       toast.error(msg);
       throw err;
     }
@@ -40,7 +40,7 @@ const useWorkshopStore = create((set, get) => ({
       toast.success('Vehículo actualizado');
       return res.data.data;
     } catch (err) {
-      const msg = err?.response?.data?.message || 'Error al actualizar vehículo';
+      const msg = err?.response?.data?.message || 'No se pudo actualizar el vehículo.';
       toast.error(msg);
       throw err;
     }
@@ -53,7 +53,7 @@ const useWorkshopStore = create((set, get) => ({
       const res = await workOrdersApi.list(params);
       set({ workOrders: res.data.data, workOrdersTotal: res.data.total, workOrdersLoading: false });
     } catch (err) {
-      const msg = err?.response?.data?.message || 'Error al cargar órdenes de trabajo';
+      const msg = err?.response?.data?.message || 'No se pudieron cargar las órdenes de trabajo.';
       set({ workOrdersLoading: false, workOrdersError: msg });
       toast.error(msg);
     }
@@ -65,7 +65,7 @@ const useWorkshopStore = create((set, get) => ({
       const res = await workOrdersApi.getById(id);
       set({ currentOrder: res.data.data, orderLoading: false });
     } catch (err) {
-      const msg = err?.response?.data?.message || 'Error al cargar la orden';
+      const msg = err?.response?.data?.message || 'No se pudo cargar la orden de trabajo.';
       set({ orderLoading: false, orderError: msg });
       toast.error(msg);
     }
@@ -81,10 +81,10 @@ const useWorkshopStore = create((set, get) => ({
   createOrder: async (data) => {
     try {
       const res = await workOrdersApi.create(data);
-      toast.success(`OT ${res.data.data.order_number} creada`);
+      toast.success(`OT ${res.data.data.order_number} creada exitosamente`);
       return res.data.data;
     } catch (err) {
-      const msg = err?.response?.data?.message || 'Error al crear la orden';
+      const msg = err?.response?.data?.message || 'No se pudo crear la orden de trabajo.';
       toast.error(msg);
       throw err;
     }
@@ -94,23 +94,24 @@ const useWorkshopStore = create((set, get) => ({
     try {
       const res = await workOrdersApi.update(id, data);
       set({ currentOrder: res.data.data });
-      toast.success('OT actualizada');
+      toast.success('OT actualizada correctamente');
       return res.data.data;
     } catch (err) {
-      const msg = err?.response?.data?.message || 'Error al actualizar la orden';
+      const msg = err?.response?.data?.message || 'No se pudo actualizar la orden de trabajo.';
       toast.error(msg);
       throw err;
     }
   },
 
   changeStatus: async (id, status, extra = {}) => {
+    const labels = { en_proceso: 'En Proceso', en_espera: 'En Espera', listo: 'Listo', entregado: 'Entregado', cancelado: 'Cancelado' };
     try {
       const res = await workOrdersApi.changeStatus(id, { status, ...extra });
-      set({ currentOrder: res.data.data });
-      toast.success(`Estado: ${status}`);
+      await get().fetchOrder(id);
+      toast.success(`Estado cambiado a: ${labels[status] || status}`);
       return res.data.data;
     } catch (err) {
-      const msg = err?.response?.data?.message || 'Error al cambiar estado';
+      const msg = err?.response?.data?.message || `No se pudo cambiar el estado a "${labels[status] || status}".`;
       toast.error(msg);
       throw err;
     }
@@ -119,11 +120,11 @@ const useWorkshopStore = create((set, get) => ({
   addItem: async (id, data) => {
     try {
       const res = await workOrdersApi.addItem(id, data);
-      toast.success('Ítem agregado');
+      toast.success('Ítem agregado a la OT');
       await get().fetchOrder(id);
       return res.data.data;
     } catch (err) {
-      const msg = err?.response?.data?.message || 'Error al agregar ítem';
+      const msg = err?.response?.data?.message || 'No se pudo agregar el ítem.';
       toast.error(msg);
       throw err;
     }
@@ -135,7 +136,7 @@ const useWorkshopStore = create((set, get) => ({
       toast.success('Ítem eliminado');
       await get().fetchOrder(orderId);
     } catch (err) {
-      const msg = err?.response?.data?.message || 'Error al eliminar ítem';
+      const msg = err?.response?.data?.message || 'No se pudo eliminar el ítem.';
       toast.error(msg);
       throw err;
     }
@@ -148,7 +149,7 @@ const useWorkshopStore = create((set, get) => ({
       await get().fetchOrder(id);
       return res.data.data;
     } catch (err) {
-      const msg = err?.response?.data?.message || 'Error al generar remisión';
+      const msg = err?.response?.data?.message || 'No se pudo generar la remisión.';
       toast.error(msg);
       throw err;
     }
@@ -159,10 +160,10 @@ const useWorkshopStore = create((set, get) => ({
       const fd = new FormData();
       files.forEach(f => fd.append('photos', f));
       await workOrdersApi.uploadPhotos(id, phase, fd);
-      toast.success('Fotos subidas');
+      toast.success(`${files.length > 1 ? `${files.length} fotos subidas` : 'Foto subida'} correctamente`);
       await get().fetchOrder(id);
     } catch (err) {
-      const msg = err?.response?.data?.message || 'Error al subir fotos';
+      const msg = err?.response?.data?.message || 'No se pudieron subir las fotos.';
       toast.error(msg);
       throw err;
     }
@@ -174,7 +175,7 @@ const useWorkshopStore = create((set, get) => ({
       toast.success('Foto eliminada');
       await get().fetchOrder(id);
     } catch (err) {
-      const msg = err?.response?.data?.message || 'Error al eliminar foto';
+      const msg = err?.response?.data?.message || 'No se pudo eliminar la foto.';
       toast.error(msg);
       throw err;
     }
@@ -182,4 +183,3 @@ const useWorkshopStore = create((set, get) => ({
 }));
 
 export default useWorkshopStore;
-

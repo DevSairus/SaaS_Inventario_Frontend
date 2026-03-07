@@ -44,7 +44,7 @@ const SuperAdminMercadoPagoConfig = () => {
         });
       }
     } catch (error) {
-      console.error('Error:', error);
+      toast.error(error.response?.data?.message || 'Ocurrió un error. Intenta de nuevo.');
       toast.error('Error al cargar configuración');
     } finally {
       setLoading(false);
@@ -66,7 +66,7 @@ const SuperAdminMercadoPagoConfig = () => {
       setHasConfig(true);
       fetchConfig();
     } catch (error) {
-      console.error('Error:', error);
+      toast.error(error.response?.data?.message || 'Ocurrió un error. Intenta de nuevo.');
       toast.error(
         error.response?.data?.error || 'Error al guardar configuración'
       );
@@ -98,7 +98,7 @@ const SuperAdminMercadoPagoConfig = () => {
 
       toast.success('Configuración eliminada correctamente');
     } catch (error) {
-      console.error('Error:', error);
+      toast.error(error.response?.data?.message || 'Ocurrió un error. Intenta de nuevo.');
       toast.error(
         error.response?.data?.error || 'Error al eliminar configuración'
       );

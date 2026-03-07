@@ -212,13 +212,6 @@ function SaleFormPage() {
 
   const handleAddItem = (product) => {
     // 🔍 DEBUG: Ver qué información trae el producto
-    console.log('📦 Producto agregado:', {
-      name: product.name,
-      tax_percentage: product.tax_percentage,
-      price_includes_tax: product.price_includes_tax,
-      has_tax: product.has_tax,
-      base_price: product.base_price
-    });
     
     const existingIndex = items.findIndex(item => item.product_id === product.id);
     

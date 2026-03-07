@@ -1,3 +1,4 @@
+import toast from 'react-hot-toast';
 import { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AlertTriangle, CheckCircle, XCircle, Eye, RefreshCw, Package, ShoppingCart, TrendingDown, Award } from 'lucide-react';
@@ -31,7 +32,6 @@ const StockAlertsPage = () => {
 
   // Cargar alertas y stats al montar el componente
   useEffect(() => {
-    console.log('📊 StockAlertsPage montado - cargando datos...');
     if (fetchAlerts) fetchAlerts();
     if (fetchStats) fetchStats();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -39,9 +39,6 @@ const StockAlertsPage = () => {
 
   // Debug: Monitorear cambios en alerts
   useEffect(() => {
-    console.log('🔔 Alerts actualizadas:', alerts);
-    console.log('🔔 Número de alertas:', alerts?.length || 0);
-    console.log('🔔 Es array?:', Array.isArray(alerts));
   }, [alerts]);
 
   const handleFilterChange = (field, value) => {
@@ -115,7 +112,7 @@ const StockAlertsPage = () => {
 
   const fetchSuppliersForProduct = async (productId) => {
     if (!productId) {
-      console.error('No product ID provided');
+      toast.error('ID de producto no encontrado.');
       setSuppliers([]);
       return;
     }
@@ -136,13 +133,12 @@ const StockAlertsPage = () => {
       }
 
       const data = await res.json();
-      console.log('Proveedores cargados:', data);
       
       // Asegurar que siempre sea un array
       const suppliersData = Array.isArray(data?.data) ? data.data : [];
       setSuppliers(suppliersData);
     } catch (err) {
-      console.error('Error cargando proveedores:', err);
+      toast.error('No se pudieron cargar los proveedores del producto.');
       setSuppliers([]);
     } finally {
       setLoadingSuppliers(false);
@@ -175,7 +171,6 @@ const StockAlertsPage = () => {
       
       return [...sorted, ...suppliersWithoutPrice];
     } catch (error) {
-      console.error('Error sorting suppliers:', error);
       return suppliers;
     }
   }, [suppliers]);
@@ -196,7 +191,6 @@ const StockAlertsPage = () => {
       
       return parseFloat(withPrices[0].last_price);
     } catch (error) {
-      console.error('Error calculating best price:', error);
       return null;
     }
   }, [sortedSuppliers]);
@@ -497,7 +491,6 @@ const StockAlertsPage = () => {
                             )}
                             <button
                               onClick={() => {
-                                console.log('Opening suppliers modal for alert:', alert);
                                 setSelectedAlert(alert);
                                 fetchSuppliersForProduct(alert.product?.id);
                                 setShowSuppliersModal(true);

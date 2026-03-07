@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -44,7 +45,6 @@ const TenantDetail = () => {
 
       // Obtener tenant
       const tenantResponse = await api.get(`/superadmin/tenants/${id}`);
-      console.log('✅ Tenant Response:', tenantResponse.data);
 
       // IMPORTANTE: El backend devuelve { tenant: {...}, stats: {...} }
       if (tenantResponse.data && tenantResponse.data.tenant) {
@@ -58,10 +58,9 @@ const TenantDetail = () => {
       const usersResponse = await api.get(
         `/superadmin/tenants/${id}/users?limit=5`
       );
-      console.log('✅ Users Response:', usersResponse.data);
       setUsers(usersResponse.data.users || []);
     } catch (err) {
-      console.error('❌ Error:', err);
+      toast.error(err.response?.data?.message || 'No se pudo cargar la información del tenant.');
       setError(err.response?.data?.error || 'Error al cargar información');
     } finally {
       setLoading(false);
@@ -74,7 +73,7 @@ const TenantDetail = () => {
       await api.post(`/superadmin/tenants/${id}/toggle-status`);
       await fetchData();
     } catch (err) {
-      console.error('Error toggling status:', err);
+      toast.error(err.response?.data?.message || 'No se pudo cambiar el estado del tenant.');
     } finally {
       setToggling(false);
     }

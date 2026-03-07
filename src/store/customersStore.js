@@ -1,5 +1,6 @@
 // frontend/src/store/customersStore.js
 import { create } from 'zustand';
+import toast from 'react-hot-toast';
 import customersApi from '../api/customers';
 
 const useCustomersStore = create((set, get) => ({
@@ -115,7 +116,6 @@ const useCustomersStore = create((set, get) => ({
       const response = await customersApi.search(query);
       set({ searchResults: response.data.data });
     } catch (error) {
-      console.error('Error buscando clientes:', error);
       set({ searchResults: [] });
     }
   },

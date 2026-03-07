@@ -1,3 +1,4 @@
+import toast from 'react-hot-toast';
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 
@@ -21,7 +22,6 @@ function StockAlerts() {
         setAllProducts(products);
       }
     } catch (error) {
-      console.error('Error al cargar alertas de stock:', error);
     } finally {
       setIsLoading(false);
     }

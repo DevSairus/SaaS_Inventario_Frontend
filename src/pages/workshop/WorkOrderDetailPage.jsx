@@ -77,7 +77,8 @@ export default function WorkOrderDetailPage() {
       const data = res.data?.data || res.data;
       setShareData(data);
     } catch (err) {
-      toast.error('No se pudo generar el enlace');
+      const msg = err?.response?.data?.message || '';
+      toast.error(msg ? `No se pudo generar el enlace: ${msg}` : 'No se pudo generar el enlace para compartir. Intenta de nuevo.');
     } finally {
       setSharingLink(false);
     }
@@ -130,10 +131,10 @@ export default function WorkOrderDetailPage() {
         setShowAddItem(true);
         if (navigator.vibrate) navigator.vibrate(200);
       } else {
-        toast.error('Producto no encontrado: ' + code);
+        toast.error(`Código "${code}" no corresponde a ningún producto registrado.`);
       }
     } catch {
-      toast.error('Producto no encontrado: ' + code);
+      toast.error(`No se encontró ningún producto con el código "${code}". Verifica que esté registrado en el inventario.`);
     }
   };
 
@@ -145,8 +146,8 @@ export default function WorkOrderDetailPage() {
   };
 
   const handleAddItem = async () => {
-    if (!newItem.product_id) return toast.error('Selecciona un producto');
-    if (!newItem.unit_price)  return toast.error('Ingresa el precio');
+    if (!newItem.product_id) return toast.error('Debes seleccionar un producto antes de agregar.');
+    if (!newItem.unit_price)  return toast.error('El precio unitario es requerido. Verifica que el producto tenga un precio configurado.');
     setAddingItem(true);
     try {
       await addItem(id, {
@@ -157,7 +158,14 @@ export default function WorkOrderDetailPage() {
       });
       resetAddForm();
     } catch (e) {
-      toast.error(e?.response?.data?.message || 'Error al agregar ítem');
+      const msg = e?.response?.data?.message || '';
+      if (msg.toLowerCase().includes('stock')) {
+        toast.error(`Sin stock suficiente: ${msg}`);
+      } else if (msg.toLowerCase().includes('bodega')) {
+        toast.error('La OT no tiene bodega asignada. Asigna una bodega en el panel lateral antes de agregar repuestos.');
+      } else {
+        toast.error(msg || 'No se pudo agregar el ítem. Intenta de nuevo.');
+      }
     } finally {
       setAddingItem(false);
     }
@@ -167,9 +175,16 @@ export default function WorkOrderDetailPage() {
     if (!window.confirm('¿Generar remisión desde esta OT? La OT quedará marcada como entregada.')) return;
     setGeneratingSale(true);
     try {
-      await generateSale(id); // el store ya muestra el toast
+      await generateSale(id);
     } catch (e) {
-      toast.error(e?.response?.data?.message || 'Error al generar remisión');
+      const msg = e?.response?.data?.message || '';
+      if (msg.toLowerCase().includes('ítems') || msg.toLowerCase().includes('items')) {
+        toast.error('La OT no tiene ítems. Agrega al menos un repuesto o servicio antes de generar la remisión.');
+      } else if (msg.toLowerCase().includes('estado') || msg.toLowerCase().includes('listo')) {
+        toast.error('La OT debe estar en estado "Listo" para generar la remisión.');
+      } else {
+        toast.error(msg || 'No se pudo generar la remisión. Intenta de nuevo.');
+      }
     } finally {
       setGeneratingSale(false);
     }
@@ -180,7 +195,8 @@ export default function WorkOrderDetailPage() {
     try {
       await uploadPhotos(id, phase, Array.from(files));
     } catch (e) {
-      toast.error(e?.response?.data?.message || 'Error al subir fotos');
+      const msg = e?.response?.data?.message || '';
+      toast.error(msg || `No se pudieron subir las fotos de ${phase === 'in' ? 'ingreso' : 'salida'}. Verifica el formato y tamaño de los archivos.`);
     }
   };
 
@@ -191,7 +207,7 @@ export default function WorkOrderDetailPage() {
       const url = URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
       window.open(url, '_blank');
     } catch {
-      toast.error('Error al generar el PDF');
+      toast.error('No se pudo generar el PDF. Si el problema persiste, recarga la página e intenta de nuevo.');
     }
   };
 
@@ -214,8 +230,7 @@ export default function WorkOrderDetailPage() {
       setShowChecklist(false);
       toast.success('Inventario guardado');
     } catch (e) {
-      console.error('Error guardando checklist:', e?.response?.data || e);
-      toast.error(e?.response?.data?.message || 'Error al guardar inventario');
+      toast.error(e?.response?.data?.message || 'No se pudo guardar el inventario de ingreso. Intenta de nuevo.');
     } finally {
       setSavingChecklist(false);
     }
@@ -229,10 +244,19 @@ export default function WorkOrderDetailPage() {
   const [selectedTechId,   setSelectedTechId]   = useState('');
   const [savingTech,       setSavingTech]        = useState(false);
 
+  // ── Estado bodega ─────────────────────────────────────────────
+  const [warehouses,       setWarehouses]        = useState([]);
+  const [editingWarehouse, setEditingWarehouse]  = useState(false);
+  const [selectedWarehouseId, setSelectedWarehouseId] = useState('');
+  const [savingWarehouse,  setSavingWarehouse]   = useState(false);
+
   useEffect(() => {
     axios.get('/users?limit=100&role=technician').then(r => {
       const list = r.data.data?.users || r.data.users || r.data.data || [];
       setTechnicians(Array.isArray(list) ? list.filter(t => t.is_active !== false) : []);
+    }).catch(() => {});
+    axios.get('/inventory/warehouses').then(r => {
+      setWarehouses(r.data.data || []);
     }).catch(() => {});
   }, []);
 
@@ -244,9 +268,24 @@ export default function WorkOrderDetailPage() {
       setEditingTech(false);
       toast.success('Técnico actualizado');
     } catch {
-      toast.error('Error al actualizar técnico');
+      toast.error('No se pudo actualizar el técnico. Verifica tu conexión e intenta de nuevo.');
     } finally {
       setSavingTech(false);
+    }
+  };
+
+  const saveWarehouse = async () => {
+    if (!selectedWarehouseId) return toast.error('Debes seleccionar una bodega de la lista.');
+    setSavingWarehouse(true);
+    try {
+      await workOrdersApi.update(id, { warehouse_id: selectedWarehouseId });
+      await fetchOrder(id);
+      setEditingWarehouse(false);
+      toast.success('Bodega asignada');
+    } catch {
+      toast.error('No se pudo asignar la bodega. Verifica tu conexión e intenta de nuevo.');
+    } finally {
+      setSavingWarehouse(false);
     }
   };
 
@@ -314,7 +353,14 @@ export default function WorkOrderDetailPage() {
               </button>
             ))}
             {!isClosed && (
-              <button onClick={() => changeStatus(id, 'cancelado')}
+              <button
+                onClick={() => {
+                  const itemsConStock = order.items?.filter(i => i.item_type === 'repuesto' && i.inventory_movement_id) || [];
+                  const msg = itemsConStock.length > 0
+                    ? `¿Cancelar la OT ${order.order_number}?\n\nSe devolverán al inventario ${itemsConStock.length} repuesto(s) descontados:\n${itemsConStock.map(i => `• ${i.product_name} (×${parseFloat(i.quantity)})`).join('\n')}\n\nEsta acción no se puede deshacer.`
+                    : `¿Cancelar la OT ${order.order_number}?\n\nEsta acción no se puede deshacer.`;
+                  if (window.confirm(msg)) changeStatus(id, 'cancelado');
+                }}
                 className="px-3 py-1.5 text-xs font-medium text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition">
                 Cancelar OT
               </button>
@@ -377,8 +423,6 @@ export default function WorkOrderDetailPage() {
                   <p className="font-medium">{order.vehicle?.color || '—'}</p></div>
                 <div><span className="text-gray-400 text-xs block">Km entrada</span>
                   <p className="font-medium">{order.mileage_in?.toLocaleString() || '—'}</p></div>
-                <div><span className="text-gray-400 text-xs block">Km salida</span>
-                  <p className="font-medium">{order.mileage_out?.toLocaleString() || '—'}</p></div>
               </div>
             </div>
 
@@ -755,12 +799,57 @@ export default function WorkOrderDetailPage() {
             </div>
 
             {/* Bodega */}
-            {order.warehouse && (
-              <div className="bg-white border border-gray-100 rounded-xl p-4">
-                <h2 className="font-semibold text-sm text-gray-800 mb-1">Bodega</h2>
-                <p className="text-sm text-gray-600">{order.warehouse.name}</p>
+            <div className="bg-white border border-gray-100 rounded-xl p-4">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <Package size={15} className="text-blue-600" />
+                  <h2 className="font-semibold text-sm text-gray-800">Bodega de repuestos</h2>
+                </div>
+                {!isClosed && !editingWarehouse && (
+                  <button
+                    onClick={() => { setSelectedWarehouseId(order.warehouse_id || ''); setEditingWarehouse(true); }}
+                    className="text-xs text-blue-600 font-medium hover:underline">
+                    {order.warehouse ? 'Cambiar' : 'Asignar'}
+                  </button>
+                )}
               </div>
-            )}
+              {editingWarehouse ? (
+                <div className="space-y-2">
+                  <Combobox
+                    placeholder="Buscar bodega..."
+                    items={warehouses}
+                    value={selectedWarehouseId}
+                    displayValue={(() => {
+                      const w = warehouses.find(w => w.id === selectedWarehouseId);
+                      return w ? w.name : '';
+                    })()}
+                    onSelect={w => setSelectedWarehouseId(w.id)}
+                    onClear={() => setSelectedWarehouseId('')}
+                    filterFn={(w, q) => w.name.toLowerCase().includes(q.toLowerCase())}
+                    renderItem={w => <span className="font-medium text-gray-800">{w.name}</span>}
+                  />
+                  <div className="flex gap-2">
+                    <button onClick={() => setEditingWarehouse(false)}
+                      className="flex-1 py-1.5 text-xs border border-gray-200 rounded-lg text-gray-500 hover:bg-gray-50">
+                      Cancelar
+                    </button>
+                    <button onClick={saveWarehouse} disabled={savingWarehouse || !selectedWarehouseId}
+                      className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-60 font-medium">
+                      {savingWarehouse ? '...' : 'Guardar'}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                order.warehouse
+                  ? <p className="text-sm font-medium text-gray-900">{order.warehouse.name}</p>
+                  : (
+                    <div className="flex items-center gap-2 text-xs bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
+                      <AlertTriangle size={12} className="text-amber-500" />
+                      <span className="text-amber-700">Sin bodega — necesaria para agregar repuestos</span>
+                    </div>
+                  )
+              )}
+            </div>
 
             {/* Notas */}
             {order.notes && (
