@@ -70,19 +70,22 @@ export default function WorkOrderDetailPage() {
   const [sendingWA, setSendingWA]            = useState(false);
 
   const handleSendWhatsApp = async () => {
+    const win = window.open('', '_blank');
     setSendingWA(true);
     try {
-      if (typeof workOrdersApi.sendWhatsApp !== 'function') {
-        throw new Error('sendWhatsApp no está definido en workOrdersApi. Verifica que el archivo src/api/workshop.js fue actualizado correctamente.');
-      }
       const res = await workOrdersApi.sendWhatsApp(id);
-      toast.success(res.data.message || 'Enlace enviado por WhatsApp ✓');
+      const { waLink } = res.data;
+      if (waLink && win) {
+        win.location.href = waLink;
+        toast.success('Se abrió WhatsApp con el enlace de la OT. Presiona Enviar ↑', { duration: 5000 });
+      } else {
+        win?.close();
+        toast.error('No se pudo generar el enlace de WhatsApp.');
+      }
     } catch (e) {
-      const serverMsg = e.response?.data?.message;
-      const clientMsg = e.message;
-      const displayMsg = serverMsg || clientMsg || 'Error al enviar por WhatsApp';
-      console.error('[WhatsApp OT] Error:', { serverMsg, clientMsg, status: e.response?.status, full: e });
-      toast.error(displayMsg, { duration: 6000 });
+      win?.close();
+      const msg = e.response?.data?.message || e.message || 'Error al generar enlace de WhatsApp';
+      toast.error(msg, { duration: 6000 });
     } finally {
       setSendingWA(false);
     }

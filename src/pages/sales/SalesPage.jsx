@@ -77,12 +77,22 @@ export default function SalesPage() {
   };
 
   const handleSendWhatsApp = async (saleId) => {
+    // Abrir ventana ANTES del await para evitar el bloqueador de popups
+    const win = window.open('', '_blank');
     try {
       setSendingWA(saleId);
       const res = await salesApi.sendWhatsApp(saleId);
-      toast.success(res.data.message || 'Enviado por WhatsApp ✓');
+      const { waLink } = res.data;
+      if (waLink && win) {
+        win.location.href = waLink;
+        toast.success('Se abrió WhatsApp con el mensaje listo. Presiona Enviar ↑', { duration: 5000 });
+      } else {
+        win?.close();
+        toast.error('No se pudo generar el enlace de WhatsApp.');
+      }
     } catch (e) {
-      toast.error(e.response?.data?.message || 'Error al enviar por WhatsApp');
+      win?.close();
+      toast.error(e.response?.data?.message || 'Error al generar enlace de WhatsApp');
     } finally {
       setSendingWA(null);
     }
