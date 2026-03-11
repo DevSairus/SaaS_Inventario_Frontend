@@ -107,9 +107,15 @@ export default function SaleDetailPage() {
     try {
       setSendingWA(true);
       const res = await salesApi.sendWhatsApp(id);
-      toast.success(res.data.message || 'Enviado por WhatsApp ✓');
+      const { waLink } = res.data;
+      if (waLink) {
+        window.open(waLink, '_blank', 'noopener,noreferrer');
+        toast.success('Se abrió WhatsApp con el PDF listo. Presiona Enviar ↑', { duration: 5000 });
+      } else {
+        toast.error('No se pudo generar el enlace de WhatsApp.');
+      }
     } catch (e) {
-      const msg = e.response?.data?.message || 'Error al enviar por WhatsApp';
+      const msg = e.response?.data?.message || 'Error al generar enlace de WhatsApp';
       toast.error(msg);
     } finally {
       setSendingWA(false);
@@ -312,7 +318,7 @@ export default function SaleDetailPage() {
                 className="inline-flex items-center gap-2 px-3 py-2 bg-green-500 hover:bg-green-600 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg transition-colors"
               >
                 <WhatsAppSvg />
-                {sendingWA ? 'Enviando...' : 'WhatsApp'}
+                {sendingWA ? 'Preparando...' : 'WhatsApp'}
               </button>
             </div>
           </div>
