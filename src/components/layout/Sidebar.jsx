@@ -22,15 +22,18 @@ import {
   ChevronDownIcon,
   ChevronRightIcon,
   ArrowRightOnRectangleIcon,
-  XMarkIcon
+  XMarkIcon,
+  DocumentCheckIcon,
+  ChatBubbleLeftRightIcon,
 } from '@heroicons/react/24/outline';
 
-import { PackageX, Truck, ClipboardList, Wrench, Car, TrendingUp, DollarSign } from 'lucide-react';
+import { PackageX, Truck, ClipboardList, Wrench, Car, TrendingUp, DollarSign, FileText } from 'lucide-react';
 
 const INITIAL_MENUS = {
   sales: false,
   inventory: false,
   workshop: false,
+  dian: false,
   settings: false,
 };
 
@@ -41,13 +44,11 @@ function Sidebar({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobileOpen })
   const location = useLocation();
   const { user, logout } = useAuthStore();
 
-  // Cerrar menú móvil y colapsar secciones al cambiar de ruta
   useEffect(() => {
     setIsMobileOpen(false);
     setExpandedMenus(INITIAL_MENUS);
   }, [location.pathname]);
 
-  // Solo un menú abierto a la vez
   const toggleMenu = (key) => {
     setExpandedMenus(prev => {
       const updated = {};
@@ -81,11 +82,11 @@ function Sidebar({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobileOpen })
       title: 'Ventas',
       icon: CurrencyDollarIcon,
       children: [
-        { id: 'sales-new',           title: 'Nueva Venta',   route: '/sales/new',              available: true, icon: DocumentTextIcon },
-        { id: 'sales-list',          title: 'Remisiones',    route: '/sales',                   available: true, icon: DocumentTextIcon },
-        { id: 'accounts-receivable', title: 'Cartera',       route: '/accounts-receivable',     available: true, icon: CreditCardIcon },
-        { id: 'customer-returns',    title: 'Devoluciones',  route: '/sales/customer-returns',  available: true, icon: PackageX },
-        { id: 'customers',           title: 'Clientes',      route: '/customers',               available: true, icon: UsersIcon },
+        { id: 'sales-new',           title: 'Nueva Venta',   route: '/sales/new',             available: true, icon: DocumentTextIcon },
+        { id: 'sales-list',          title: 'Remisiones',    route: '/sales',                  available: true, icon: DocumentTextIcon },
+        { id: 'accounts-receivable', title: 'Cartera',       route: '/accounts-receivable',    available: true, icon: CreditCardIcon },
+        { id: 'customer-returns',    title: 'Devoluciones',  route: '/sales/customer-returns', available: true, icon: PackageX },
+        { id: 'customers',           title: 'Clientes',      route: '/customers',              available: true, icon: UsersIcon },
       ],
     },
     {
@@ -93,12 +94,12 @@ function Sidebar({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobileOpen })
       title: 'Inventario',
       icon: CubeIcon,
       children: [
-        { id: 'products',              title: 'Productos',         route: '/products',                              available: true, icon: CubeIcon },
-        { id: 'categories',            title: 'Categorías',        route: '/categories',                            available: true, icon: Squares2X2Icon },
-        { id: 'movements',             title: 'Movimientos',       route: '/movements',                             available: true, icon: ArrowsRightLeftIcon },
-        { id: 'adjustments',           title: 'Ajustes',           route: '/adjustments',                           available: true, icon: AdjustmentsHorizontalIcon },
-        { id: 'transferencias',        title: 'Transferencias',    route: '/inventory/transfers',                   available: true, icon: Truck },
-        { id: 'internal-consumptions', title: 'Consumos Internos', route: '/inventory/internal-consumptions',       available: true, icon: ClipboardList },
+        { id: 'products',              title: 'Productos',         route: '/products',                        available: true, icon: CubeIcon },
+        { id: 'categories',            title: 'Categorías',        route: '/categories',                      available: true, icon: Squares2X2Icon },
+        { id: 'movements',             title: 'Movimientos',       route: '/movements',                       available: true, icon: ArrowsRightLeftIcon },
+        { id: 'adjustments',           title: 'Ajustes',           route: '/adjustments',                     available: true, icon: AdjustmentsHorizontalIcon },
+        { id: 'transferencias',        title: 'Transferencias',    route: '/inventory/transfers',             available: true, icon: Truck },
+        { id: 'internal-consumptions', title: 'Consumos Internos', route: '/inventory/internal-consumptions', available: true, icon: ClipboardList },
       ],
     },
     {
@@ -106,11 +107,11 @@ function Sidebar({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobileOpen })
       title: 'Taller',
       icon: Wrench,
       children: [
-        { id: 'work-orders',  title: 'Órdenes de Trabajo', route: '/workshop/work-orders',  available: true, icon: Wrench },
-        { id: 'vehicles',     title: 'Vehículos',          route: '/workshop/vehicles',     available: true, icon: Car },
-        { id: 'productivity', title: 'Productividad',      route: '/workshop/productivity', available: true, icon: TrendingUp },
-        { id: 'commissions',  title: 'Comisiones',           route: '/workshop/commission-settlements', available: true, icon: DollarSign },
-        { id: 'workshop-report', title: 'Reporte Taller',      route: '/workshop/report',               available: true, icon: TrendingUp },
+        { id: 'work-orders',     title: 'Órdenes de Trabajo', route: '/workshop/work-orders',           available: true, icon: Wrench },
+        { id: 'vehicles',        title: 'Vehículos',          route: '/workshop/vehicles',              available: true, icon: Car },
+        { id: 'productivity',    title: 'Productividad',      route: '/workshop/productivity',          available: true, icon: TrendingUp },
+        { id: 'commissions',     title: 'Comisiones',         route: '/workshop/commission-settlements',available: true, icon: DollarSign },
+        { id: 'workshop-report', title: 'Reporte Taller',     route: '/workshop/report',                available: true, icon: TrendingUp },
       ],
     },
     {
@@ -148,14 +149,25 @@ function Sidebar({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobileOpen })
       available: true,
       icon: ChartBarIcon,
     },
+    // ✅ DIAN — solo visible para admin
+    ...(user?.role === 'admin' ? [{
+      id: 'dian',
+      title: 'DIAN',
+      icon: DocumentCheckIcon,
+      children: [
+        { id: 'dian-config',  title: 'Configuración',  route: '/dian/config',  available: true, icon: Cog6ToothIcon },
+        { id: 'dian-eventos', title: 'Eventos / Log',  route: '/dian/eventos', available: true, icon: FileText },
+      ],
+    }] : []),
     {
       id: 'settings',
       title: 'Configuración',
       icon: Cog6ToothIcon,
       children: [
-        { id: 'my-profile',       title: 'Mi Perfil',              route: '/profile',   available: true,                    icon: UserCircleIcon },
-        { id: 'general-settings', title: 'Configuración General',  route: '/settings',  available: user?.role === 'admin',  icon: Cog6ToothIcon },
-        { id: 'users-management', title: 'Gestión de Usuarios',    route: '/users',     available: user?.role === 'admin',  icon: UsersIcon },
+        { id: 'my-profile',       title: 'Mi Perfil',             route: '/profile',  available: true,                   icon: UserCircleIcon },
+        { id: 'general-settings', title: 'Configuración General', route: '/settings', available: user?.role === 'admin', icon: Cog6ToothIcon },
+        { id: 'users-management', title: 'Gestión de Usuarios',   route: '/users',    available: user?.role === 'admin', icon: UsersIcon },
+        { id: 'whatsapp',         title: 'WhatsApp',               route: '/settings/whatsapp', available: user?.role === 'admin', icon: ChatBubbleLeftRightIcon },
       ],
     },
   ];
@@ -210,7 +222,6 @@ function Sidebar({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobileOpen })
           {menuItems.map(item => {
             const Icon = item.icon;
 
-            // Item con submenú (children)
             if (item.children) {
               const sectionActive = isSectionActive(item.children);
               const isExpanded = expandedMenus[item.id];
@@ -265,7 +276,6 @@ function Sidebar({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobileOpen })
               );
             }
 
-            // Item simple (sin submenú)
             return (
               <button
                 key={item.id}

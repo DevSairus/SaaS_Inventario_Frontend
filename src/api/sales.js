@@ -45,6 +45,9 @@ const salesApi = {
 
   // Generar PDF
   generatePDF: (id) => api.get(`/sales/${id}/pdf`, { responseType: 'blob' }),
+  // Enviar por WhatsApp
+  sendWhatsApp: (id) => api.post(`/sales/${id}/send-whatsapp`),
+
   generatePaymentReceipt: (id, paymentIndex) => api.get(`/sales/${id}/payment-receipt`, { params: { payment_index: paymentIndex }, responseType: 'blob' }),
 
   // Obtener estadísticas

@@ -27,9 +27,12 @@ export const workOrdersApi = {
     axios.get(`/workshop/work-orders/${id}/pdf`, { params: { type, ...params }, responseType: 'blob' }),
   // Checklist ingreso
   updateChecklist: (id, data) => axios.patch(`/workshop/work-orders/${id}/checklist`, data),
-  // ✅ NUEVO: Generar/obtener link de compartir para WhatsApp
+  // Compartir link público
   generateShareToken: (id) => axios.post(`/workshop/work-orders/${id}/share-token`),
+  // Enviar enlace OT por WhatsApp (WPPConnect)
+  sendWhatsApp: (id) => axios.post(`/workshop/work-orders/${id}/send-whatsapp`),
 };
+
 // ── Commission Settlements ────────────────────────────────
 export const commissionApi = {
   getTechnicians: () => axios.get('/workshop/commission-settlements/technicians'),
