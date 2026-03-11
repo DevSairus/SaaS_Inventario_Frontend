@@ -1,6 +1,8 @@
 // frontend/src/pages/settings/WhatsAppSettingsPage.jsx
-import React from 'react';
+import React, { useState } from 'react';
 import Layout from '../../components/layout/Layout';
+import api from '../../api/axios';
+import toast from 'react-hot-toast';
 
 function WhatsAppIcon({ className }) {
   return (
@@ -10,7 +12,43 @@ function WhatsAppIcon({ className }) {
   );
 }
 
+function CheckIcon({ className }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+    </svg>
+  );
+}
+
+function XIcon({ className }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+    </svg>
+  );
+}
+
 export default function WhatsAppSettingsPage() {
+  const [testing, setTesting]     = useState(false);
+  const [testResult, setTestResult] = useState(null); // null | { success, message, diagnosis }
+
+  const handleTestCloudinary = async () => {
+    setTesting(true);
+    setTestResult(null);
+    try {
+      const { data } = await api.get('/whatsapp/test-cloudinary');
+      setTestResult(data);
+      if (data.success) toast.success('Cloudinary OK ✅');
+      else toast.error('Error con Cloudinary');
+    } catch (e) {
+      const data = e.response?.data || { success: false, message: e.message, diagnosis: null };
+      setTestResult(data);
+      toast.error('Error conectando con Cloudinary');
+    } finally {
+      setTesting(false);
+    }
+  };
+
   return (
     <Layout>
       <div className="max-w-2xl mx-auto px-4 py-8 space-y-6">
@@ -40,41 +78,110 @@ export default function WhatsAppSettingsPage() {
             <h2 className="font-semibold text-gray-800 text-sm">Facturas y Órdenes de Trabajo</h2>
           </div>
           <ol className="text-sm text-gray-600 space-y-3 list-decimal list-inside">
-            <li>
-              Abre una venta o una orden de trabajo y haz clic en{' '}
-              <strong>Enviar por WhatsApp</strong>.
-            </li>
-            <li>
-              El sistema prepara el mensaje con el resumen del documento
-              {' '}(y el PDF si Cloudinary está configurado).
-            </li>
-            <li>
-              Se abre WhatsApp Web o la app con el mensaje listo.
-              Solo presiona <strong className="text-green-700">Enviar ↑</strong>.
-            </li>
+            <li>Abre una venta o una orden de trabajo y haz clic en <strong>Enviar por WhatsApp</strong>.</li>
+            <li>El sistema prepara el mensaje con los datos del documento (y el PDF si Cloudinary está activo).</li>
+            <li>Se abre WhatsApp Web o la app con el mensaje listo. Solo presiona <strong className="text-green-700">Enviar ↑</strong>.</li>
           </ol>
           <p className="text-xs text-gray-400 mt-4">
             * El mensaje se envía desde <strong>tu propio WhatsApp</strong>.
           </p>
         </div>
 
-        {/* PDF adjunto — Cloudinary */}
-        <div className="p-5 bg-white border border-gray-200 rounded-xl">
-          <div className="flex items-center justify-between mb-1">
-            <h2 className="font-semibold text-gray-800 text-sm">PDF adjunto en facturas</h2>
-            <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium">Opcional</span>
+        {/* Cloudinary — PDF */}
+        <div className="p-5 bg-white border border-gray-200 rounded-xl space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="font-semibold text-gray-800 text-sm">PDF adjunto — Cloudinary</h2>
+              <p className="text-xs text-gray-500 mt-0.5">
+                Sube el PDF a la nube y envía el enlace de descarga por WhatsApp.
+              </p>
+            </div>
+            <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium shrink-0">Opcional</span>
           </div>
-          <p className="text-xs text-gray-500 mb-3">
-            Para enviar el PDF como enlace de descarga, configura Cloudinary (plan gratuito: 25 GB).
-          </p>
+
           <div className="bg-gray-50 rounded-lg p-3 text-xs font-mono text-gray-700 space-y-1">
-            <p>CLOUDINARY_CLOUD_NAME=tu_cloud_name</p>
-            <p>CLOUDINARY_API_KEY=tu_api_key</p>
-            <p>CLOUDINARY_API_SECRET=tu_api_secret</p>
+            <p>CLOUDINARY_CLOUD_NAME=<span className="text-blue-600">tu_cloud_name</span></p>
+            <p>CLOUDINARY_API_KEY=<span className="text-blue-600">tu_api_key</span></p>
+            <p>CLOUDINARY_API_SECRET=<span className="text-blue-600">tu_api_secret</span></p>
           </div>
-          <p className="text-xs text-gray-400 mt-2">
-            Sin estas variables el botón funciona igual, pero envía un resumen de texto en lugar del PDF.
+
+          <p className="text-xs text-gray-400">
+            Sin estas variables el botón funciona igual pero envía un resumen de texto en lugar del PDF.
+            Crea tu cuenta gratis en{' '}
+            <a href="https://cloudinary.com" target="_blank" rel="noopener noreferrer" className="text-blue-500 underline">
+              cloudinary.com
+            </a>
+            {' '}(plan gratuito: 25 GB).
           </p>
+
+          {/* Botón de prueba */}
+          <div className="pt-1">
+            <button
+              onClick={handleTestCloudinary}
+              disabled={testing}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-900 disabled:opacity-50 text-white text-xs font-semibold rounded-lg transition-colors"
+            >
+              {testing ? (
+                <>
+                  <svg className="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                  </svg>
+                  Probando conexión...
+                </>
+              ) : '🔌 Probar conexión con Cloudinary'}
+            </button>
+          </div>
+
+          {/* Resultado del test */}
+          {testResult && (
+            <div className={`rounded-lg border p-4 space-y-3 text-xs ${
+              testResult.success
+                ? 'bg-green-50 border-green-200'
+                : 'bg-red-50 border-red-200'
+            }`}>
+              <div className="flex items-center gap-2">
+                {testResult.success
+                  ? <CheckIcon className="w-4 h-4 text-green-600" />
+                  : <XIcon className="w-4 h-4 text-red-600" />
+                }
+                <span className={`font-semibold ${testResult.success ? 'text-green-800' : 'text-red-800'}`}>
+                  {testResult.message}
+                </span>
+              </div>
+
+              {testResult.diagnosis && (
+                <div className="space-y-1 font-mono text-gray-600">
+                  <p className="font-sans font-medium text-gray-700 mb-1">Variables de entorno:</p>
+                  {Object.entries(testResult.diagnosis.env || {}).map(([key, val]) => (
+                    key !== 'cloud_name_value' && (
+                      <div key={key} className="flex items-center gap-2">
+                        {val
+                          ? <CheckIcon className="w-3 h-3 text-green-500 shrink-0" />
+                          : <XIcon className="w-3 h-3 text-red-500 shrink-0" />
+                        }
+                        <span className={val ? 'text-green-700' : 'text-red-700'}>{key}</span>
+                      </div>
+                    )
+                  ))}
+                  {testResult.diagnosis.env?.cloud_name_value && (
+                    <p className="text-gray-500 mt-1">
+                      Cloud name: <span className="text-gray-800">{testResult.diagnosis.env.cloud_name_value}</span>
+                    </p>
+                  )}
+                  {testResult.diagnosis.upload && (
+                    <div className="mt-2 pt-2 border-t border-gray-200">
+                      <p className="font-sans text-green-700">✅ Archivo de prueba subido y eliminado correctamente.</p>
+                      <p className="text-gray-500 mt-0.5 break-all">URL: {testResult.diagnosis.upload.secure_url}</p>
+                    </div>
+                  )}
+                  {testResult.diagnosis.error && (
+                    <p className="mt-2 text-red-700 font-sans">Error: {testResult.diagnosis.error}</p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Recordatorios */}
