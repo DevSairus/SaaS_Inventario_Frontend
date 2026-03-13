@@ -42,6 +42,7 @@ function SaleFormPage() {
   const { features, fetchFeatures } = useTenantStore();
   // true = ocultar IVA en remisiones (el store aplica este default si no está configurado)
   const hideRemisionTax = features?.hide_remision_tax === true;
+  const vehiclePlateEnabled = features?.vehicle_field_enabled !== false; // default true
   const { customers, fetchCustomers } = useCustomersStore();
   const { searchProducts } = useProductsStore();
 
@@ -52,7 +53,7 @@ function SaleFormPage() {
     customer_id: '',
     warehouse_id: '',
     payment_method: 'efectivo',
-    document_type: 'remision',
+    document_type: null,
     sale_date: new Date().toISOString().split('T')[0],
     notes: '',
     vehicle_plate: '',
@@ -153,7 +154,7 @@ function SaleFormPage() {
         customer_id: currentSale.customer_id || '',
         warehouse_id: currentSale.warehouse_id || '',
         payment_method: currentSale.payment_method || 'efectivo',
-        document_type: currentSale.document_type || 'remision',
+        document_type: currentSale.document_type || null,
         sale_date: currentSale.sale_date 
           ? new Date(currentSale.sale_date).toISOString().split('T')[0] 
           : new Date().toISOString().split('T')[0],
@@ -322,13 +323,15 @@ function SaleFormPage() {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-
+    e?.preventDefault();
     if (items.length === 0) {
       toast('Debe agregar al menos un producto');
       return;
     }
+    await submitSale(formData.document_type);
+  };
 
+  const submitSale = async (docType) => {
     try {
       const saleData = {
         ...formData,
@@ -343,6 +346,11 @@ function SaleFormPage() {
         }))
       };
 
+      // El document_type NO se envía al crear — se elige al confirmar la venta
+      if (!isEditMode) {
+        delete saleData.document_type;
+      }
+
       if (showQuickCustomer && quickCustomer.full_name) {
         saleData.customer_data = quickCustomer;
         delete saleData.customer_id;
@@ -354,7 +362,8 @@ function SaleFormPage() {
         navigate(`/sales/${id}`);
       } else {
         const result = await createSale(saleData);
-        toast.success('Venta creada exitosamente');
+        const docLabel = docType === 'factura' ? 'Factura' : docType === 'cotizacion' ? 'Cotización' : 'Remisión';
+        toast.success(`${docLabel} creada exitosamente`);
         navigate(`/sales/${result.id}`);
       }
     } catch (error) {
@@ -412,10 +421,11 @@ function SaleFormPage() {
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {/* Tipo de Documento */}
+                  {/* Tipo de Documento — solo visible en modo edición */}
+                  {isEditMode && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Tipo de Documento *
+                      Tipo de Documento
                     </label>
                     <select
                       name="document_type"
@@ -429,6 +439,7 @@ function SaleFormPage() {
                       <option value="cotizacion">💼 Cotización</option>
                     </select>
                   </div>
+                  )}
 
                   {/* Fecha */}
                   <div>
@@ -539,6 +550,9 @@ function SaleFormPage() {
                   </div>
                 </div>
 
+                {/* Placa del Vehículo y Kilometraje — controlado por configuración del tenant */}
+                {vehiclePlateEnabled && (
+                <>
                 {/* Placa del Vehículo */}
                 <div className="mt-6">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -579,6 +593,8 @@ function SaleFormPage() {
                     Kilometraje del vehículo al momento del servicio
                   </p>
                 </div>
+                </>
+                )}
 
                 {/* Cliente Rápido */}
                 {showQuickCustomer && (

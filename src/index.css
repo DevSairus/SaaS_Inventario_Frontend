@@ -2,6 +2,64 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ============================================================================
+   DARK MODE — variables que sobreescriben los colores base de Tailwind
+   ============================================================================ */
+html.dark {
+  color-scheme: dark;
+}
+
+html.dark body {
+  background-color: #0f172a;
+  color: #e2e8f0;
+}
+
+/* Fondo general de páginas */
+html.dark .bg-gray-50  { background-color: #0f172a !important; }
+html.dark .bg-gray-100 { background-color: #1e293b !important; }
+html.dark .bg-gray-200 { background-color: #334155 !important; }
+
+/* Superficies (cards, paneles, sidebar) */
+html.dark .bg-white { background-color: #1e293b !important; }
+
+/* Bordes */
+html.dark .border-gray-100 { border-color: #334155 !important; }
+html.dark .border-gray-200 { border-color: #334155 !important; }
+html.dark .border-gray-300 { border-color: #475569 !important; }
+
+/* Texto */
+html.dark .text-gray-900 { color: #f1f5f9 !important; }
+html.dark .text-gray-800 { color: #e2e8f0 !important; }
+html.dark .text-gray-700 { color: #cbd5e1 !important; }
+html.dark .text-gray-600 { color: #94a3b8 !important; }
+html.dark .text-gray-500 { color: #64748b !important; }
+html.dark .text-gray-400 { color: #475569 !important; }
+
+/* Inputs y selects */
+html.dark input,
+html.dark select,
+html.dark textarea {
+  background-color: #0f172a !important;
+  border-color: #475569 !important;
+  color: #f1f5f9 !important;
+}
+html.dark input::placeholder,
+html.dark textarea::placeholder { color: #475569 !important; }
+
+/* Tables */
+html.dark .bg-gray-50.rounded-lg,
+html.dark thead.bg-gray-50,
+html.dark .bg-gray-50 { background-color: #1e293b !important; }
+html.dark tbody tr:hover { background-color: #334155 !important; }
+html.dark .divide-gray-200 > * { border-color: #334155 !important; }
+
+/* Shadows */
+html.dark .shadow,
+html.dark .shadow-sm { box-shadow: 0 1px 3px rgba(0,0,0,0.5) !important; }
+
+/* Sidebar específico */
+html.dark aside { background-color: #0f172a !important; border-color: #1e293b !important; }
+
 body {
   margin: 0;
   padding: 0;

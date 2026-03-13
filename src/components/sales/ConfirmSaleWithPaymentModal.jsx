@@ -4,18 +4,56 @@ import { XMarkIcon, CreditCardIcon, BanknotesIcon, DevicePhoneMobileIcon, Calend
 
 const CREDIT_DAYS_OPTIONS = [15, 30, 60, 90];
 
-const ConfirmSaleWithPaymentModal = ({ isOpen, onClose, onConfirm, saleTotal, loading = false }) => {
+const DOC_TYPES = [
+  {
+    value: 'remision',
+    icon: '📋',
+    label: 'Remisión',
+    desc: 'Entrega de mercancía. Sin efecto fiscal.',
+    color: 'border-blue-200 hover:border-blue-400',
+    activeColor: 'border-blue-500 bg-blue-50',
+    badge: 'text-blue-700 bg-blue-100',
+  },
+  {
+    value: 'factura',
+    icon: '📄',
+    label: 'Factura',
+    desc: 'Documento fiscal válido ante la DIAN.',
+    color: 'border-emerald-200 hover:border-emerald-400',
+    activeColor: 'border-emerald-500 bg-emerald-50',
+    badge: 'text-emerald-700 bg-emerald-100',
+  },
+  {
+    value: 'cotizacion',
+    icon: '💼',
+    label: 'Cotización',
+    desc: 'Propuesta de precio. No mueve inventario.',
+    color: 'border-amber-200 hover:border-amber-400',
+    activeColor: 'border-amber-500 bg-amber-50',
+    badge: 'text-amber-700 bg-amber-100',
+  },
+];
+
+const ConfirmSaleWithPaymentModal = ({
+  isOpen,
+  onClose,
+  onConfirm,
+  saleTotal,
+  currentDocType,   // document_type actual de la venta
+  loading = false,
+}) => {
+  const [docType, setDocType]           = useState(currentDocType || 'remision');
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [paidAmount, setPaidAmount]       = useState(saleTotal);
   const [paymentType, setPaymentType]     = useState('full');
   const [creditDays, setCreditDays]       = useState(30);
   const [customDays, setCustomDays]       = useState('');
   const [useCustomDays, setUseCustomDays] = useState(false);
-  // Cash received (only for cash payment)
   const [cashReceived, setCashReceived]   = useState('');
 
   useEffect(() => {
     if (isOpen) {
+      setDocType(currentDocType || 'remision');
       setPaymentMethod('cash');
       setPaidAmount(saleTotal);
       setPaymentType('full');
@@ -24,17 +62,15 @@ const ConfirmSaleWithPaymentModal = ({ isOpen, onClose, onConfirm, saleTotal, lo
       setUseCustomDays(false);
       setCashReceived('');
     }
-  }, [isOpen, saleTotal]);
+  }, [isOpen, saleTotal, currentDocType]);
 
   useEffect(() => {
     if (paymentType === 'full')    setPaidAmount(saleTotal);
     if (paymentType === 'credit')  setPaidAmount(0);
     if (paymentType === 'partial' && paidAmount === saleTotal) setPaidAmount(Math.round(saleTotal / 2));
-    // Reset cash received when payment type changes
     setCashReceived('');
   }, [paymentType, saleTotal]);
 
-  // Reset cash received when switching away from cash
   useEffect(() => {
     if (paymentMethod !== 'cash') setCashReceived('');
   }, [paymentMethod]);
@@ -48,29 +84,21 @@ const ConfirmSaleWithPaymentModal = ({ isOpen, onClose, onConfirm, saleTotal, lo
     return d.toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' });
   };
 
-  // Calculate cash change
-  const amountToPay = paymentType === 'credit' ? 0 : parseFloat(paidAmount || 0);
-  const cashReceivedNum = parseFloat(cashReceived || 0);
-  const cashChange = paymentMethod === 'cash' && cashReceived !== ''
-    ? cashReceivedNum - amountToPay
-    : null;
+  const amountToPay       = paymentType === 'credit' ? 0 : parseFloat(paidAmount || 0);
+  const cashReceivedNum   = parseFloat(cashReceived || 0);
+  const cashChange        = paymentMethod === 'cash' && cashReceived !== '' ? cashReceivedNum - amountToPay : null;
   const cashChangePositive = cashChange !== null && cashChange >= 0;
 
   const handleSubmit = (e) => {
     e.preventDefault();
-
     if (!paymentMethod) return;
-
     const finalAmount = paymentType === 'credit' ? 0 : parseFloat(paidAmount);
-
     if (paymentType === 'partial' && (finalAmount <= 0 || finalAmount >= saleTotal)) return;
-
     if ((paymentType === 'partial' || paymentType === 'credit') && effectiveCreditDays <= 0) return;
-
-    // Validate cash received covers the amount
     if (paymentMethod === 'cash' && cashReceived !== '' && cashReceivedNum < amountToPay) return;
 
     onConfirm({
+      document_type: docType,
       payment_method: paymentMethod,
       paid_amount: finalAmount,
       credit_days: paymentType !== 'full' ? effectiveCreditDays : undefined,
@@ -80,7 +108,6 @@ const ConfirmSaleWithPaymentModal = ({ isOpen, onClose, onConfirm, saleTotal, lo
   if (!isOpen) return null;
 
   const pendingAmount = saleTotal - parseFloat(paidAmount || 0);
-
   const paymentMethods = [
     { value: 'cash',        label: 'Efectivo',      icon: BanknotesIcon },
     { value: 'credit_card', label: 'T. Crédito',    icon: CreditCardIcon },
@@ -88,16 +115,11 @@ const ConfirmSaleWithPaymentModal = ({ isOpen, onClose, onConfirm, saleTotal, lo
     { value: 'transfer',    label: 'Transferencia', icon: DevicePhoneMobileIcon },
     { value: 'check',       label: 'Cheque',        icon: BanknotesIcon },
   ];
-
   const needsCreditSection = paymentType === 'partial' || paymentType === 'credit';
   const dueDate = getDueDate();
   const isCash = paymentMethod === 'cash';
-
-  // Quick cash amounts (round up to next convenient denomination)
   const quickAmounts = isCash && paymentType !== 'credit'
-    ? [amountToPay, ...[50000, 100000, 200000, 500000]
-        .filter(v => v > amountToPay)
-        .slice(0, 3)]
+    ? [amountToPay, ...[50000, 100000, 200000, 500000].filter(v => v > amountToPay).slice(0, 3)]
     : [];
 
   return (
@@ -113,7 +135,7 @@ const ConfirmSaleWithPaymentModal = ({ isOpen, onClose, onConfirm, saleTotal, lo
               <div className="flex items-center justify-between">
                 <h3 className="text-xl font-bold text-white flex items-center gap-2">
                   <CreditCardIcon className="w-6 h-6" />
-                  Confirmar Venta y Pago
+                  Confirmar Venta
                 </h3>
                 <button type="button" onClick={onClose} className="text-white hover:text-gray-200 transition-colors">
                   <XMarkIcon className="w-6 h-6" />
@@ -122,6 +144,30 @@ const ConfirmSaleWithPaymentModal = ({ isOpen, onClose, onConfirm, saleTotal, lo
             </div>
 
             <div className="px-6 py-5 space-y-5">
+
+              {/* ── Tipo de documento ── */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Tipo de documento
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {DOC_TYPES.map(({ value, icon, label, desc, color, activeColor, badge }) => (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => setDocType(value)}
+                      className={`flex flex-col items-center gap-1 p-3 border-2 rounded-xl text-center transition-all ${
+                        docType === value ? activeColor : `bg-white ${color}`
+                      }`}
+                    >
+                      <span className="text-xl">{icon}</span>
+                      <span className={`text-xs font-semibold px-1.5 py-0.5 rounded-full ${badge}`}>{label}</span>
+                      <span className="text-[10px] text-gray-400 leading-tight">{desc}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {/* Total */}
               <div className="bg-gray-50 rounded-lg p-4 border-2 border-gray-200">
                 <p className="text-sm text-gray-600 mb-1">Total de la Venta</p>
@@ -167,7 +213,7 @@ const ConfirmSaleWithPaymentModal = ({ isOpen, onClose, onConfirm, saleTotal, lo
                 </div>
               </div>
 
-              {/* Abono (parcial) */}
+              {/* Abono parcial */}
               {paymentType === 'partial' && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Abono inicial</label>
@@ -185,14 +231,13 @@ const ConfirmSaleWithPaymentModal = ({ isOpen, onClose, onConfirm, saleTotal, lo
                 </div>
               )}
 
-              {/* ── EFECTIVO: Monto recibido y cambio ── */}
+              {/* Efectivo: cambio */}
               {isCash && paymentType !== 'credit' && (
                 <div className="rounded-xl border-2 border-emerald-100 bg-emerald-50 p-4 space-y-3">
                   <div className="flex items-center gap-2 text-emerald-800 font-semibold text-sm">
                     <BanknotesIcon className="w-4 h-4" />
                     Cobro en efectivo
                   </div>
-
                   <div>
                     <label className="block text-xs font-medium text-emerald-700 mb-2">Monto recibido del cliente</label>
                     <div className="relative">
@@ -211,33 +256,23 @@ const ConfirmSaleWithPaymentModal = ({ isOpen, onClose, onConfirm, saleTotal, lo
                         }`}
                       />
                     </div>
-
-                    {/* Quick amount buttons */}
                     {quickAmounts.length > 0 && (
                       <div className="flex gap-2 mt-2 flex-wrap">
                         {quickAmounts.map((amt) => (
-                          <button
-                            key={amt}
-                            type="button"
-                            onClick={() => setCashReceived(String(amt))}
+                          <button key={amt} type="button" onClick={() => setCashReceived(String(amt))}
                             className={`px-3 py-1.5 rounded-lg text-xs font-semibold border-2 transition-all ${
                               parseFloat(cashReceived) === amt
                                 ? 'border-emerald-600 bg-emerald-600 text-white'
                                 : 'border-emerald-300 bg-white text-emerald-700 hover:border-emerald-500'
-                            }`}
-                          >
+                            }`}>
                             ${amt.toLocaleString('es-CO')}
                           </button>
                         ))}
                       </div>
                     )}
-
-                    {/* Cambio */}
                     {cashChange !== null && (
                       <div className={`mt-3 flex items-center justify-between rounded-lg px-4 py-3 border-2 ${
-                        cashChangePositive
-                          ? 'bg-green-50 border-green-300'
-                          : 'bg-red-50 border-red-300'
+                        cashChangePositive ? 'bg-green-50 border-green-300' : 'bg-red-50 border-red-300'
                       }`}>
                         <div className="flex items-center gap-2">
                           {cashChangePositive
@@ -249,9 +284,7 @@ const ConfirmSaleWithPaymentModal = ({ isOpen, onClose, onConfirm, saleTotal, lo
                           </span>
                         </div>
                         {cashChangePositive && (
-                          <span className="text-xl font-bold text-green-700">
-                            ${cashChange.toLocaleString('es-CO')}
-                          </span>
+                          <span className="text-xl font-bold text-green-700">${cashChange.toLocaleString('es-CO')}</span>
                         )}
                       </div>
                     )}
@@ -259,7 +292,7 @@ const ConfirmSaleWithPaymentModal = ({ isOpen, onClose, onConfirm, saleTotal, lo
                 </div>
               )}
 
-              {/* Sección de plazo (parcial o crédito) */}
+              {/* Plazo crédito / parcial */}
               {needsCreditSection && (
                 <div className="rounded-xl border-2 border-indigo-100 bg-indigo-50 p-4 space-y-3">
                   <div className="flex items-center gap-2 text-indigo-800 font-semibold text-sm">
@@ -332,14 +365,12 @@ const ConfirmSaleWithPaymentModal = ({ isOpen, onClose, onConfirm, saleTotal, lo
                 {isCash && cashChangePositive && cashChange > 0 && (
                   <div className="flex justify-between pt-2 border-t border-blue-300">
                     <span className="text-gray-600">Cambio:</span>
-                    <span className="font-bold text-emerald-600 text-base">
-                      ${cashChange.toLocaleString('es-CO')}
-                    </span>
+                    <span className="font-bold text-emerald-600 text-base">${cashChange.toLocaleString('es-CO')}</span>
                   </div>
                 )}
                 {dueDate && effectiveCreditDays > 0 && (
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Fecha límite de pago:</span>
+                    <span className="text-gray-600">Fecha límite:</span>
                     <span className="font-semibold text-indigo-700">{dueDate}</span>
                   </div>
                 )}

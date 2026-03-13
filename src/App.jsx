@@ -29,6 +29,7 @@ import VehicleDetailPage from './pages/workshop/VehicleDetailPage';
 import TechnicianProductivityPage from './pages/workshop/productivity/TechnicianProductivityPage';
 import CommissionSettlementsPage from './pages/workshop/commissions/CommissionSettlementsPage';
 import CommissionSettlementDetailPage from './pages/workshop/commissions/CommissionSettlementDetailPage';
+import CommissionProductsReportPage from './pages/workshop/commissions/CommissionProductsReportPage';
 import WorkshopReportPage from './pages/workshop/WorkshopReportPage';
 import CustomersPage from './pages/customers/CustomersPage';
 import CustomerDetailPage from './pages/customers/CustomerDetailPage';
@@ -188,6 +189,7 @@ function App() {
         <Route path="workshop/productivity"            element={<TenantRoute><TechnicianProductivityPage /></TenantRoute>} />
         <Route path="workshop/commission-settlements"  element={<TenantRoute><CommissionSettlementsPage /></TenantRoute>} />
         <Route path="workshop/commission-settlements/:id" element={<TenantRoute><CommissionSettlementDetailPage /></TenantRoute>} />
+        <Route path="workshop/commission-products"     element={<TenantRoute><CommissionProductsReportPage /></TenantRoute>} />
 
         {/* Customer Returns — ANTES de la ruta dinámica :id */}
         <Route path="sales/customer-returns"      element={<TenantRoute><CustomerReturnsPage /></TenantRoute>} />

@@ -46,7 +46,7 @@ export default function CommissionSettlementsPage() {
 
   // ── Load technicians ──────────────────────────────────────────────────────
   useEffect(() => {
-    commissionApi.getTechnicians()
+    commissionApi.getTechniciansFiltered('technician')
       .then(r => setTechnicians(r.data.data || []))
       .catch(() => {});
   }, []);

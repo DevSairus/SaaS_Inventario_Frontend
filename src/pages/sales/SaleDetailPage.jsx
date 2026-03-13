@@ -252,10 +252,12 @@ export default function SaleDetailPage() {
               <div className="flex items-center space-x-4 mt-2">
                 {getStatusBadge(sale.status)}
                 {getPaymentStatusBadge(sale.payment_status)}
-                <span className="text-sm text-gray-600">
-                  {sale.document_type === 'remision' ? 'Remisión' :
-                  sale.document_type === 'factura' ? 'Factura' : 'Cotización'}
-                </span>
+                {sale.document_type && (
+                  <span className="text-sm text-gray-600">
+                    {sale.document_type === 'remision' ? 'Remisión' :
+                    sale.document_type === 'factura' ? 'Factura' : 'Cotización'}
+                  </span>
+                )}
               </div>
             </div>
 
@@ -341,9 +343,10 @@ export default function SaleDetailPage() {
           <div className="print-header-only">
             <h1 className="text-2xl font-bold">{sale.sale_number}</h1>
             <p className="text-sm text-gray-600">
-              {sale.document_type === 'remision' ? 'Remisión' :
-              sale.document_type === 'factura' ? 'Factura' : 'Cotización'}
-              {' · '}Estado: {sale.status === 'draft' ? 'Borrador' : sale.status === 'pending' ? 'Confirmada' : sale.status === 'completed' ? 'Entregada' : 'Cancelada'}
+              {sale.document_type === 'remision' ? 'Remisión · ' :
+              sale.document_type === 'factura' ? 'Factura · ' :
+              sale.document_type === 'cotizacion' ? 'Cotización · ' : ''}
+              Estado: {sale.status === 'draft' ? 'Borrador' : sale.status === 'pending' ? 'Confirmada' : sale.status === 'completed' ? 'Entregada' : 'Cancelada'}
             </p>
           </div>
 

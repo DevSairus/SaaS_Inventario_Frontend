@@ -369,10 +369,10 @@ function DashboardPage() {
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {[
-                { label: 'Total pendiente', value: fmtCompact(receivableStats.total_pending || receivableStats.totalPending || 0), color: 'text-red-600', bg: 'bg-red-50 border-red-100' },
-                { label: 'Facturas abiertas', value: fmtNum(receivableStats.pending_count || receivableStats.pendingCount || 0), color: 'text-orange-600', bg: 'bg-orange-50 border-orange-100' },
-                { label: 'Pagado este mes', value: fmtCompact(receivableStats.paid_this_month || receivableStats.paidThisMonth || 0), color: 'text-green-600', bg: 'bg-green-50 border-green-100' },
-                { label: 'Vencido', value: fmtCompact(receivableStats.overdue || receivableStats.totalOverdue || 0), color: 'text-rose-700', bg: 'bg-rose-50 border-rose-100' },
+                { label: 'Total pendiente', value: fmtCompact(receivableStats.total_receivable || receivableStats.total_pending || receivableStats.totalPending || 0), color: 'text-red-600', bg: 'bg-red-50 border-red-100' },
+                { label: 'Facturas abiertas', value: fmtNum(receivableStats.total_invoices || receivableStats.pending_count || receivableStats.pendingCount || 0), color: 'text-orange-600', bg: 'bg-orange-50 border-orange-100' },
+                { label: 'Clientes con saldo', value: fmtNum(receivableStats.total_customers || 0), color: 'text-green-600', bg: 'bg-green-50 border-green-100' },
+                { label: 'Vencido', value: fmtCompact(receivableStats.total_overdue || receivableStats.overdue || receivableStats.totalOverdue || 0), color: 'text-rose-700', bg: 'bg-rose-50 border-rose-100' },
               ].map(({ label, value, color, bg }) => (
                 <div key={label} className={`rounded-xl p-3 border ${bg}`}>
                   <p className={`text-xl font-bold ${color}`}>{value}</p>

@@ -68,6 +68,12 @@ export default function WorkOrderDetailPage() {
 
   const [generatingSale, setGeneratingSale] = useState(false);
   const [sendingWA, setSendingWA]            = useState(false);
+  // Modal de tipo de documento al generar venta desde OT
+  const [showGenSaleModal, setShowGenSaleModal] = useState(false);
+  // Edición de km de salida
+  const [editingMileageOut, setEditingMileageOut] = useState(false);
+  const [mileageOutVal, setMileageOutVal]         = useState('');
+  const [savingMileageOut, setSavingMileageOut]   = useState(false);
 
   const handleSendWhatsApp = async () => {
     const win = window.open('', '_blank');
@@ -180,22 +186,43 @@ export default function WorkOrderDetailPage() {
     }
   };
 
-  const handleGenerateSale = async () => {
-    if (!window.confirm('¿Generar remisión desde esta OT? La OT quedará marcada como entregada.')) return;
+  const handleGenerateSale = () => {
+    setShowGenSaleModal(true);
+  };
+
+  const confirmGenerateSale = async (docType) => {
+    setShowGenSaleModal(false);
     setGeneratingSale(true);
     try {
-      await generateSale(id);
+      await generateSale(id, { document_type: docType });
     } catch (e) {
       const msg = e?.response?.data?.message || '';
       if (msg.toLowerCase().includes('ítems') || msg.toLowerCase().includes('items')) {
-        toast.error('La OT no tiene ítems. Agrega al menos un repuesto o servicio antes de generar la remisión.');
+        toast.error('La OT no tiene ítems. Agrega al menos un repuesto o servicio antes de generar el documento.');
       } else if (msg.toLowerCase().includes('estado') || msg.toLowerCase().includes('listo')) {
-        toast.error('La OT debe estar en estado "Listo" para generar la remisión.');
+        toast.error('La OT debe estar en estado "Listo" para generar el documento.');
       } else {
-        toast.error(msg || 'No se pudo generar la remisión. Intenta de nuevo.');
+        toast.error(msg || 'No se pudo generar el documento. Intenta de nuevo.');
       }
     } finally {
       setGeneratingSale(false);
+    }
+  };
+
+  const saveMileageOut = async () => {
+    if (!mileageOutVal && mileageOutVal !== 0) return toast.error('Ingresa el kilometraje de entrega');
+    const km = parseInt(mileageOutVal);
+    if (isNaN(km) || km < 0) return toast.error('El kilometraje debe ser un número válido');
+    setSavingMileageOut(true);
+    try {
+      await workOrdersApi.update(id, { mileage_out: km });
+      patchCurrentOrder({ mileage_out: km });
+      setEditingMileageOut(false);
+      toast.success('Km de entrega guardado');
+    } catch {
+      toast.error('No se pudo guardar el kilometraje de entrega');
+    } finally {
+      setSavingMileageOut(false);
     }
   };
 
@@ -378,7 +405,7 @@ export default function WorkOrderDetailPage() {
               <button onClick={handleGenerateSale} disabled={generatingSale}
                 className="px-4 py-1.5 text-xs font-medium bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-60 flex items-center gap-1.5 transition">
                 <FileText size={13} />
-                {generatingSale ? 'Generando...' : 'Generar Remisión'}
+                {generatingSale ? 'Generando...' : 'Generar Documento'}
               </button>
             )}
             {order.sale_id && (
@@ -432,6 +459,38 @@ export default function WorkOrderDetailPage() {
                   <p className="font-medium">{order.vehicle?.color || '—'}</p></div>
                 <div><span className="text-gray-400 text-xs block">Km entrada</span>
                   <p className="font-medium">{order.mileage_in?.toLocaleString() || '—'}</p></div>
+                <div>
+                  <span className="text-gray-400 text-xs block">Km salida</span>
+                  {editingMileageOut ? (
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      <input
+                        type="number"
+                        value={mileageOutVal}
+                        onChange={e => setMileageOutVal(e.target.value)}
+                        placeholder="Ej: 87500"
+                        autoFocus
+                        className="w-24 border border-gray-300 rounded px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                      <button onClick={saveMileageOut} disabled={savingMileageOut}
+                        className="text-xs bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700 disabled:opacity-50">
+                        {savingMileageOut ? '...' : '✓'}
+                      </button>
+                      <button onClick={() => setEditingMileageOut(false)}
+                        className="text-xs text-gray-400 hover:text-gray-600">✕</button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium">{order.mileage_out ? order.mileage_out.toLocaleString() : '—'}</p>
+                      {!isClosed && (
+                        <button
+                          onClick={() => { setMileageOutVal(order.mileage_out || ''); setEditingMileageOut(true); }}
+                          className="text-xs text-blue-500 hover:text-blue-700 underline">
+                          {order.mileage_out ? 'Editar' : 'Registrar'}
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -1138,8 +1197,66 @@ export default function WorkOrderDetailPage() {
               </div>
             </div>
           </div>
-        );
-      })()}
+        )
+        })()}
+
+        {/* ── Modal: selección de tipo de documento al generar desde OT ── */}
+        {showGenSaleModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+              <div className="p-6 border-b border-gray-100">
+                <h2 className="text-lg font-bold text-gray-900">¿Qué documento deseas generar?</h2>
+                <p className="text-sm text-gray-500 mt-1">
+                  La OT quedará marcada como <strong>Entregada</strong>
+                </p>
+              </div>
+              <div className="p-5 space-y-3">
+                {[
+                  {
+                    type: 'remision',
+                    icon: '📋',
+                    label: 'Remisión',
+                    desc: 'Documento de entrega. Sin efecto fiscal inmediato.',
+                    color: 'border-blue-200 hover:border-blue-400 hover:bg-blue-50',
+                    badge: 'text-blue-700 bg-blue-100',
+                  },
+                  {
+                    type: 'factura',
+                    icon: '📄',
+                    label: 'Factura',
+                    desc: 'Documento fiscal con validez ante la DIAN.',
+                    color: 'border-emerald-200 hover:border-emerald-400 hover:bg-emerald-50',
+                    badge: 'text-emerald-700 bg-emerald-100',
+                  },
+                ].map(({ type, icon, label, desc, color, badge }) => (
+                  <button
+                    key={type}
+                    disabled={generatingSale}
+                    onClick={() => confirmGenerateSale(type)}
+                    className={`w-full flex items-start gap-4 p-4 border-2 rounded-xl transition-all text-left disabled:opacity-60 ${color}`}
+                  >
+                    <span className="text-2xl shrink-0">{icon}</span>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <p className="font-semibold text-gray-900">{label}</p>
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${badge}`}>{label}</span>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-0.5">{desc}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+              <div className="px-5 pb-5">
+                <button
+                  onClick={() => setShowGenSaleModal(false)}
+                  className="w-full py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-500 hover:bg-gray-50 transition"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
     </Layout>
   );
 }

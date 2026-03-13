@@ -20,6 +20,7 @@ const useTenantStore = create((set, get) => ({
         // Aplicar defaults: hide_remision_tax es true si nunca se configuró
         const features = {
           hide_remision_tax: true,
+          vehicle_field_enabled: true,
           ...rawFeatures,
         };
         set({ features, loading: false });
@@ -34,6 +35,7 @@ const useTenantStore = create((set, get) => ({
   setFeatures: (rawFeatures) => {
     const features = {
       hide_remision_tax: true,
+      vehicle_field_enabled: true,
       ...rawFeatures,
     };
     set({ features });

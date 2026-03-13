@@ -142,14 +142,15 @@ const useWorkshopStore = create((set, get) => ({
     }
   },
 
-  generateSale: async (id) => {
+  generateSale: async (id, data = {}) => {
     try {
-      const res = await workOrdersApi.generateSale(id);
-      toast.success(`Remisión ${res.data.data.sale_number} generada`);
+      const res = await workOrdersApi.generateSale(id, data);
+      const docLabel = data.document_type === 'factura' ? 'Factura' : 'Remisión';
+      toast.success(`${docLabel} ${res.data.data.sale_number} generada`);
       await get().fetchOrder(id);
       return res.data.data;
     } catch (err) {
-      const msg = err?.response?.data?.message || 'No se pudo generar la remisión.';
+      const msg = err?.response?.data?.message || 'No se pudo generar el documento.';
       toast.error(msg);
       throw err;
     }

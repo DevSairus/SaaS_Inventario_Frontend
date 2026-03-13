@@ -399,6 +399,28 @@ const TenantSettingsPage = () => {
                   </button>
                 </div>
 
+                {/* Toggle: Campo de vehículo y placa en ventas */}
+                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
+                  <div className="flex-1 mr-4">
+                    <p className="font-medium text-gray-900 text-sm">Habilitar campo de vehículo y placa en ventas</p>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      Muestra los campos de placa del vehículo y kilometraje en el formulario de ventas.
+                      Ideal para talleres mecánicos. Desactívalo si tu negocio no maneja vehículos en ventas directas.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => toggleFeature('vehicle_field_enabled')}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0 ${
+                      config.features?.vehicle_field_enabled ? 'bg-blue-600' : 'bg-gray-300'
+                    }`}
+                  >
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                      config.features?.vehicle_field_enabled ? 'translate-x-6' : 'translate-x-1'
+                    }`} />
+                  </button>
+                </div>
+
               </div>
             </div>
           </Card>

@@ -32,6 +32,7 @@ const AccountsReceivablePage = () => {
     from_date: '',
     to_date: ''
   });
+  const [search, setSearch] = useState('');
 
   useEffect(() => {
     loadData();
@@ -85,6 +86,21 @@ const AccountsReceivablePage = () => {
     return new Date(date).toLocaleDateString('es-CO');
   };
 
+  // Filtrar por nombre o documento
+  const searchLower = search.toLowerCase().trim();
+  const filteredByCustomer = searchLower
+    ? byCustomer.filter(c =>
+        (c.customer_name || '').toLowerCase().includes(searchLower) ||
+        (c.customer?.tax_id || '').toLowerCase().includes(searchLower)
+      )
+    : byCustomer;
+  const filteredAllInvoices = searchLower
+    ? allInvoices.filter(inv =>
+        (inv.customer_name || '').toLowerCase().includes(searchLower) ||
+        (inv.customer?.tax_id || '').toLowerCase().includes(searchLower)
+      )
+    : allInvoices;
+
   if (loading) {
     return (
       <Layout>
@@ -114,6 +130,28 @@ const AccountsReceivablePage = () => {
           <ArrowPathIcon className="h-5 w-5 mr-2" />
           Actualizar
         </button>
+      </div>
+
+      {/* Buscador */}
+      <div className="flex items-center gap-3">
+        <div className="relative flex-1 max-w-sm">
+          <FunnelIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Buscar por nombre o documento (NIT/cédula)..."
+            className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          />
+        </div>
+        {search && (
+          <button
+            onClick={() => setSearch('')}
+            className="text-sm text-gray-500 hover:text-gray-700 underline"
+          >
+            Limpiar
+          </button>
+        )}
       </div>
 
       {/* Resumen */}
@@ -250,7 +288,14 @@ const AccountsReceivablePage = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {byCustomer.map((customer) => (
+              {filteredByCustomer.length === 0 && (
+                <tr>
+                  <td colSpan="5" className="px-6 py-8 text-center text-sm text-gray-400">
+                    {search ? 'No hay resultados para la búsqueda.' : 'No hay clientes con saldo pendiente.'}
+                  </td>
+                </tr>
+              )}
+              {filteredByCustomer.map((customer) => (
                 <React.Fragment key={customer.customer_id || 'sin_cliente'}>
                   <tr className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -264,15 +309,15 @@ const AccountsReceivablePage = () => {
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {customer.total_invoices}
+                      {customer.invoice_count ?? customer.total_invoices}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {formatCurrency(customer.total_balance)}
+                      {formatCurrency(customer.balance ?? customer.total_balance)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      {customer.overdue_balance > 0 ? (
+                      {(customer.overdue_amount ?? customer.overdue_balance) > 0 ? (
                         <span className="text-red-600 font-medium">
-                          {formatCurrency(customer.overdue_balance)}
+                          {formatCurrency(customer.overdue_amount ?? customer.overdue_balance)}
                         </span>
                       ) : (
                         <span className="text-gray-400">-</span>
@@ -382,7 +427,14 @@ const AccountsReceivablePage = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {allInvoices.map((invoice) => (
+              {filteredAllInvoices.length === 0 && (
+                <tr>
+                  <td colSpan="8" className="px-6 py-8 text-center text-sm text-gray-400">
+                    {search ? 'No hay resultados para la búsqueda.' : 'No hay facturas pendientes.'}
+                  </td>
+                </tr>
+              )}
+              {filteredAllInvoices.map((invoice) => (
                 <tr key={invoice.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                     {invoice.sale_number}
