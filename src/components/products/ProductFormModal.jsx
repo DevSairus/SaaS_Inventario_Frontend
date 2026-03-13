@@ -2,11 +2,15 @@ import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import useProductsStore from '../../store/productsStore';
 import useCategoriesStore from '../../store/categoriesStore';
-import BarcodeScanner from '../common/BarcodeScanner'; // ✅ Ya usa el componente mejorado
+import BarcodeScanner from '../common/BarcodeScanner';
+import { warehousesService } from '../../api/warehouses';
 
 const ProductFormModal = ({ isOpen, onClose, product = null }) => {
   const { createProduct, updateProduct, loading } = useProductsStore();
   const { categories, fetchCategories } = useCategoriesStore();
+
+  const [warehouses, setWarehouses] = useState([]);
+  const [loadingWarehouses, setLoadingWarehouses] = useState(false);
 
   const [formData, setFormData] = useState({
     sku: '',
@@ -21,11 +25,11 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
     profit_margin_percentage: '',
     base_price: '',
     current_stock: '',
+    warehouse_id: '',
     product_type: 'product',
     track_inventory: true,
     allow_negative_stock: false,
     is_active: true,
-    // Campos de IVA
     has_tax: true,
     tax_percentage: 19,
     price_includes_tax: false
@@ -35,12 +39,10 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
   const [showScanner, setShowScanner] = useState(false);
   const [saveError, setSaveError] = useState('');
 
-  // Formatear número para mostrar en el input (sin decimales innecesarios)
   const fmtNum = (v) => {
     if (v === '' || v === null || v === undefined) return '';
     const n = parseFloat(v);
     if (isNaN(n)) return '';
-    // Si es número entero, sin decimales; si tiene decimales, máximo 2
     return Number.isInteger(n) ? String(n) : parseFloat(n.toFixed(2)).toString();
   };
 
@@ -49,14 +51,28 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
   }, [fetchCategories]);
 
   useEffect(() => {
+    if (!isOpen) return;
+    setLoadingWarehouses(true);
+    warehousesService.getAll()
+      .then(data => {
+        const list = Array.isArray(data) ? data : (data?.data ?? []);
+        setWarehouses(list);
+        // Si hay solo una bodega y no hay producto, preseleccionarla
+        if (list.length === 1 && !product) {
+          setFormData(prev => ({ ...prev, warehouse_id: list[0].id }));
+        }
+      })
+      .catch(() => setWarehouses([]))
+      .finally(() => setLoadingWarehouses(false));
+  }, [isOpen]);
+
+  useEffect(() => {
     if (product) {
-      // ✅ Determinar correctamente el estado del IVA
-      const productTaxPercentage = product.tax_percentage !== null && product.tax_percentage !== undefined 
-        ? parseFloat(product.tax_percentage) 
+      const productTaxPercentage = product.tax_percentage !== null && product.tax_percentage !== undefined
+        ? parseFloat(product.tax_percentage)
         : 19;
-      
       const productHasTax = product.has_tax !== false && productTaxPercentage > 0;
-      
+
       setFormData({
         sku: product.sku || '',
         barcode: product.barcode || '',
@@ -70,17 +86,17 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
         profit_margin_percentage: fmtNum(product.profit_margin_percentage),
         base_price: fmtNum(product.base_price),
         current_stock: fmtNum(product.current_stock),
+        warehouse_id: product.warehouse_id || '',
         product_type: product.product_type || 'product',
         track_inventory: product.product_type === 'service' ? false : (product.track_inventory !== false),
         allow_negative_stock: product.allow_negative_stock || false,
         is_active: product.is_active !== false,
-        // Campos de IVA - ✅ Corregido
         has_tax: productHasTax,
         tax_percentage: productTaxPercentage,
         price_includes_tax: product.price_includes_tax || false
       });
     } else {
-      setFormData({
+      setFormData(prev => ({
         sku: '',
         barcode: '',
         name: '',
@@ -93,29 +109,26 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
         profit_margin_percentage: '',
         base_price: '',
         current_stock: '',
+        warehouse_id: prev.warehouse_id, // conservar bodega preseleccionada
         product_type: 'product',
         track_inventory: true,
         allow_negative_stock: false,
         is_active: true,
-        // Campos de IVA
         has_tax: true,
         tax_percentage: 19,
         price_includes_tax: false
-      });
+      }));
       setCalculatedPrice(null);
       setSaveError('');
     }
   }, [product, isOpen]);
 
-  // Calcular precio sugerido cuando cambie el margen o el costo
   useEffect(() => {
     if (formData.average_cost && formData.profit_margin_percentage) {
       const cost = parseFloat(formData.average_cost);
       const margin = parseFloat(formData.profit_margin_percentage);
-      
       if (!isNaN(cost) && !isNaN(margin) && cost > 0 && margin >= 0) {
-        const suggestedPrice = cost * (1 + margin / 100);
-        setCalculatedPrice(fmtNum(suggestedPrice));
+        setCalculatedPrice(fmtNum(cost * (1 + margin / 100)));
       } else {
         setCalculatedPrice(null);
       }
@@ -126,14 +139,11 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setSaveError(''); // limpiar error previo al cambiar algo
-    
-    // ✅ Lógica especial para el manejo de IVA
+    setSaveError('');
     if (name === 'has_tax') {
       setFormData(prev => ({
         ...prev,
         has_tax: checked,
-        // Si se desmarca "tiene IVA", poner tax_percentage en 0
         tax_percentage: checked ? (prev.tax_percentage || 19) : 0
       }));
     } else if (name === 'tax_percentage') {
@@ -141,7 +151,6 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
       setFormData(prev => ({
         ...prev,
         tax_percentage: taxValue,
-        // Si se selecciona 0%, también actualizar has_tax a false
         has_tax: taxValue > 0
       }));
     } else {
@@ -154,10 +163,7 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
 
   const handleUseCalculatedPrice = () => {
     if (calculatedPrice) {
-      setFormData(prev => ({
-        ...prev,
-        base_price: calculatedPrice
-      }));
+      setFormData(prev => ({ ...prev, base_price: calculatedPrice }));
     }
   };
 
@@ -165,7 +171,6 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
     e.preventDefault();
     setSaveError('');
 
-    // Preparar datos con lógica de IVA correcta
     const dataToSend = {
       ...formData,
       average_cost: formData.average_cost ? parseFloat(formData.average_cost) : 0,
@@ -175,7 +180,8 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
       base_price: formData.base_price ? parseFloat(formData.base_price) : null,
       current_stock: formData.current_stock ? parseFloat(formData.current_stock) : 0,
       has_tax: formData.has_tax && parseFloat(formData.tax_percentage) > 0,
-      tax_percentage: parseFloat(formData.tax_percentage) || 0
+      tax_percentage: parseFloat(formData.tax_percentage) || 0,
+      warehouse_id: formData.warehouse_id || null,
     };
 
     try {
@@ -188,7 +194,6 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
     } catch (err) {
       const msg = err?.response?.data?.message || err?.message || 'Error al guardar el producto';
       setSaveError(msg);
-      // NO cerramos el modal — el usuario puede corregir y reintentar
     }
   };
 
@@ -211,464 +216,445 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
             </button>
           </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Información Básica */}
-            <div className="md:col-span-2">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b">
-                Información Básica
-              </h3>
-            </div>
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Información Básica */}
+              <div className="md:col-span-2">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b">
+                  Información Básica
+                </h3>
+              </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                SKU <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                name="sku"
-                value={formData.sku}
-                onChange={handleChange}
-                required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Ej: PROD-001"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Código de Barras
-              </label>
-              <div className="flex gap-2">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  SKU <span className="text-red-500">*</span>
+                </label>
                 <input
                   type="text"
-                  name="barcode"
-                  value={formData.barcode}
+                  name="sku"
+                  value={formData.sku}
                   onChange={handleChange}
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Ej: 7501234567890"
+                  required
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Ej: PROD-001"
                 />
-                {/* ✅ Botón de escaneo con mejor diseño */}
-                <button
-                  type="button"
-                  onClick={() => setShowScanner(true)}
-                  className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
-                  title="Escanear código de barras con cámara o pistola USB"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
-                          d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
-                          d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                </button>
               </div>
-              <p className="mt-1 text-xs text-gray-500">
-                Escanea con cámara o pistola USB
-              </p>
-            </div>
 
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Nombre del Producto <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Ej: Laptop Dell Inspiron 15"
-              />
-            </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Código de Barras
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    name="barcode"
+                    value={formData.barcode}
+                    onChange={handleChange}
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Ej: 7501234567890"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowScanner(true)}
+                    className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+                    title="Escanear código de barras con cámara o pistola USB"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                            d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                            d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                  </button>
+                </div>
+                <p className="mt-1 text-xs text-gray-500">Escanea con cámara o pistola USB</p>
+              </div>
 
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Descripción
-              </label>
-              <textarea
-                name="description"
-                value={formData.description}
-                onChange={handleChange}
-                rows="3"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                placeholder="Descripción detallada del producto..."
-              />
-            </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Nombre del Producto <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  required
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Ej: Laptop Dell Inspiron 15"
+                />
+              </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Categoría
-              </label>
-              <select
-                name="category_id"
-                value={formData.category_id}
-                onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="">Sin categoría</option>
-                {categories.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Descripción
+                </label>
+                <textarea
+                  name="description"
+                  value={formData.description}
+                  onChange={handleChange}
+                  rows="3"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                  placeholder="Descripción detallada del producto..."
+                />
+              </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Unidad de Medida
-              </label>
-              <select
-                name="unit_of_measure"
-                value={formData.unit_of_measure}
-                onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="unit">Unidad</option>
-                <option value="kg">Kilogramo</option>
-                <option value="g">Gramo</option>
-                <option value="l">Litro</option>
-                <option value="ml">Mililitro</option>
-                <option value="m">Metro</option>
-                <option value="cm">Centímetro</option>
-                <option value="pack">Paquete</option>
-                <option value="box">Caja</option>
-              </select>
-            </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Categoría
+                </label>
+                <select
+                  name="category_id"
+                  value={formData.category_id}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="">Sin categoría</option>
+                  {categories.map((category) => (
+                    <option key={category.id} value={category.id}>
+                      {category.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-            {/* Costos y Precios */}
-            <div className="md:col-span-2 mt-4">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b">
-                Costos y Precios
-              </h3>
-            </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Unidad de Medida
+                </label>
+                <select
+                  name="unit_of_measure"
+                  value={formData.unit_of_measure}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="unit">Unidad</option>
+                  <option value="kg">Kilogramo</option>
+                  <option value="g">Gramo</option>
+                  <option value="l">Litro</option>
+                  <option value="ml">Mililitro</option>
+                  <option value="m">Metro</option>
+                  <option value="cm">Centímetro</option>
+                  <option value="pack">Paquete</option>
+                  <option value="box">Caja</option>
+                </select>
+              </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Costo Promedio
-                <span className="ml-2 text-xs text-blue-600 font-normal">
-                  Ingresa el costo SIN IVA
-                </span>
-              </label>
-              <input
-                type="number"
-                onWheel={(e) => e.target.blur()}
-                name="average_cost"
-                value={formData.average_cost}
-                onChange={handleChange}
-                step="0.01"
-                min="0"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="0.00"
-              />
-              <p className="mt-1 text-xs text-gray-500">
-                Ejemplo: Si compras a $11,900 (con IVA 19%), ingresa $10,000
-              </p>
-              <p className="mt-0.5 text-xs text-gray-400">
-                Se actualiza automáticamente con las compras
-              </p>
-            </div>
+              {/* Costos y Precios */}
+              <div className="md:col-span-2 mt-4">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b">
+                  Costos y Precios
+                </h3>
+              </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Margen de Ganancia (%)
-              </label>
-              <input
-                type="number"
-                onWheel={(e) => e.target.blur()}
-                name="profit_margin_percentage"
-                value={formData.profit_margin_percentage}
-                onChange={handleChange}
-                step="0.01"
-                min="0"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="0.00"
-              />
-              {calculatedPrice && (
-                <p className="mt-1 text-xs text-green-600 font-medium">
-                  Precio sugerido: ${calculatedPrice}
-                </p>
-              )}
-            </div>
-
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Precio de Venta
-              </label>
-              <div className="flex gap-2">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Costo Promedio
+                  <span className="ml-2 text-xs text-blue-600 font-normal">Ingresa el costo SIN IVA</span>
+                </label>
                 <input
                   type="number"
-                onWheel={(e) => e.target.blur()}
-                  name="base_price"
-                  value={formData.base_price}
+                  onWheel={(e) => e.target.blur()}
+                  name="average_cost"
+                  value={formData.average_cost}
                   onChange={handleChange}
                   step="0.01"
                   min="0"
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="0.00"
+                />
+                <p className="mt-1 text-xs text-gray-500">Ejemplo: Si compras a $11,900 (con IVA 19%), ingresa $10,000</p>
+                <p className="mt-0.5 text-xs text-gray-400">Se actualiza automáticamente con las compras</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Margen de Ganancia (%)
+                </label>
+                <input
+                  type="number"
+                  onWheel={(e) => e.target.blur()}
+                  name="profit_margin_percentage"
+                  value={formData.profit_margin_percentage}
+                  onChange={handleChange}
+                  step="0.01"
+                  min="0"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="0.00"
                 />
                 {calculatedPrice && (
-                  <button
-                    type="button"
-                    onClick={handleUseCalculatedPrice}
-                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium whitespace-nowrap"
-                  >
-                    Usar Sugerido
-                  </button>
+                  <p className="mt-1 text-xs text-green-600 font-medium">
+                    Precio sugerido: ${calculatedPrice}
+                  </p>
                 )}
               </div>
-              {calculatedPrice && formData.base_price && parseFloat(formData.base_price) !== parseFloat(calculatedPrice) && (
-                <p className="mt-1 text-xs text-amber-600">
-                  Diferencia con precio sugerido: ${(parseFloat(formData.base_price) - parseFloat(calculatedPrice)).toFixed(2)}
-                </p>
-              )}
-            </div>
 
-            {/* Configuración de IVA */}
-            <div className="md:col-span-2 mt-4">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b">
-                Configuración de IVA / Impuestos
-              </h3>
-            </div>
-
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Tipo de IVA
-              </label>
-              <select
-                name="tax_percentage"
-                value={formData.tax_percentage}
-                onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="0">Exento (0%)</option>
-                <option value="5">Reducido (5%)</option>
-                <option value="10">Intermedio (10%)</option>
-                <option value="19">General (19%)</option>
-                <option value="21">Otro (21%)</option>
-              </select>
-              <p className="mt-1 text-xs text-gray-500">
-                {formData.tax_percentage === 0 || formData.tax_percentage === '0' 
-                  ? '⚠️ Producto exento de IVA' 
-                  : `✓ IVA del ${formData.tax_percentage}% aplicable según normativa`}
-              </p>
-            </div>
-
-            {formData.has_tax && parseFloat(formData.tax_percentage) > 0 && (
-              <>
-                <div>
-                  <label className="flex items-center space-x-3 p-3 bg-blue-50 rounded-lg cursor-pointer hover:bg-blue-100 transition-colors border border-blue-200">
-                    <input
-                      type="checkbox"
-                      name="price_includes_tax"
-                      checked={formData.price_includes_tax}
-                      onChange={handleChange}
-                      className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                    />
-                    <div>
-                      <span className="text-sm font-medium text-gray-900">
-                        El precio YA incluye IVA
-                      </span>
-                      <p className="text-xs text-gray-600">
-                        {formData.price_includes_tax 
-                          ? '✓ El precio mostrado incluye IVA' 
-                          : '✗ El IVA se suma al precio mostrado'}
-                      </p>
-                    </div>
-                  </label>
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Precio de Venta
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    onWheel={(e) => e.target.blur()}
+                    name="base_price"
+                    value={formData.base_price}
+                    onChange={handleChange}
+                    step="0.01"
+                    min="0"
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="0.00"
+                  />
+                  {calculatedPrice && (
+                    <button
+                      type="button"
+                      onClick={handleUseCalculatedPrice}
+                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium whitespace-nowrap"
+                    >
+                      Usar Sugerido
+                    </button>
+                  )}
                 </div>
-
-                {/* Calculadora de IVA */}
-                {formData.base_price && (
-                  <div className="md:col-span-2 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-200">
-                    <div className="text-sm font-medium text-gray-900 mb-3 flex items-center gap-2">
-                      Desglose de Precio
-                      <span className="text-xs font-normal text-gray-600">
-                        (Lo que verá el cliente)
-                      </span>
-                    </div>
-                    {formData.price_includes_tax ? (
-                      <>
-                        <div className="grid grid-cols-2 gap-2 text-sm mb-3">
-                          <div className="text-gray-600">Precio final al cliente:</div>
-                          <div className="font-bold text-blue-600">
-                            ${parseFloat(formData.base_price).toFixed(2)}
-                          </div>
-                          <div className="text-gray-600">Base imponible (sin IVA):</div>
-                          <div className="font-medium text-gray-900">
-                            ${(parseFloat(formData.base_price) / (1 + parseFloat(formData.tax_percentage) / 100)).toFixed(2)}
-                          </div>
-                          <div className="text-gray-600">IVA ({formData.tax_percentage}%):</div>
-                          <div className="font-medium text-green-600">
-                            ${(parseFloat(formData.base_price) - (parseFloat(formData.base_price) / (1 + parseFloat(formData.tax_percentage) / 100))).toFixed(2)}
-                          </div>
-                        </div>
-                        <div className="text-xs text-gray-600 bg-white p-2 rounded border border-gray-200">
-                          El cliente pagará exactamente ${parseFloat(formData.base_price).toFixed(2)} (ya con IVA incluido)
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <div className="grid grid-cols-2 gap-2 text-sm mb-3">
-                          <div className="text-gray-600">Precio base (sin IVA):</div>
-                          <div className="font-medium text-gray-900">
-                            ${parseFloat(formData.base_price).toFixed(2)}
-                          </div>
-                          <div className="text-gray-600">+ IVA ({formData.tax_percentage}%):</div>
-                          <div className="font-medium text-green-600">
-                            ${(parseFloat(formData.base_price) * parseFloat(formData.tax_percentage) / 100).toFixed(2)}
-                          </div>
-                          <div className="text-gray-600">= Total al cliente:</div>
-                          <div className="font-bold text-blue-600">
-                            ${(parseFloat(formData.base_price) * (1 + parseFloat(formData.tax_percentage) / 100)).toFixed(2)}
-                          </div>
-                        </div>
-                        <div className="text-xs text-gray-600 bg-white p-2 rounded border border-gray-200">
-                          El cliente pagará ${(parseFloat(formData.base_price) * (1 + parseFloat(formData.tax_percentage) / 100)).toFixed(2)} (precio + IVA)
-                        </div>
-                      </>
-                    )}
-                    {formData.average_cost && formData.base_price && (
-                      <div className="mt-3 pt-3 border-t border-blue-300">
-                        <div className="grid grid-cols-2 gap-2 text-xs">
-                          <div className="text-gray-600">Tu costo (sin IVA):</div>
-                          <div className="font-medium text-gray-700">
-                            ${parseFloat(formData.average_cost).toFixed(2)}
-                          </div>
-                          <div className="text-gray-600">Tu ganancia:</div>
-                          <div className="font-bold text-green-700">
-                            ${(parseFloat(formData.base_price) - parseFloat(formData.average_cost)).toFixed(2)}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
+                {calculatedPrice && formData.base_price && parseFloat(formData.base_price) !== parseFloat(calculatedPrice) && (
+                  <p className="mt-1 text-xs text-amber-600">
+                    Diferencia con precio sugerido: ${(parseFloat(formData.base_price) - parseFloat(calculatedPrice)).toFixed(2)}
+                  </p>
                 )}
-              </>
-            )}
+              </div>
 
-            {/* Inventario */}
-            <div className="md:col-span-2 mt-4">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b">
-                Control de Inventario
-              </h3>
-            </div>
+              {/* Configuración de IVA */}
+              <div className="md:col-span-2 mt-4">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b">
+                  Configuración de IVA / Impuestos
+                </h3>
+              </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Stock Actual
-              </label>
-              <input
-                type="number"
-                onWheel={(e) => e.target.blur()}
-                name="current_stock"
-                value={formData.current_stock}
-                onChange={handleChange}
-                step="1"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="0.00"
-                disabled={formData.product_type === 'service' || !!product}
-              />
-              {product && (
-                <p className="mt-1 text-xs text-gray-500">
-                  Usa Ajustes o Compras para modificar el stock
-                </p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Stock Mínimo <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="number"
-                onWheel={(e) => e.target.blur()}
-                name="min_stock"
-              disabled={formData.product_type === 'service'}
-                value={formData.min_stock}
-                onChange={handleChange}
-                step="1"
-                min="0"
-                required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="0.00"
-              />
-              <p className="mt-1 text-xs text-gray-500">
-                Genera alertas cuando se alcance este nivel
-              </p>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Stock Máximo
-              </label>
-              <input
-                type="number"
-                onWheel={(e) => e.target.blur()}
-                name="max_stock"
-                value={formData.max_stock}
-                onChange={handleChange}
-                step="1"
-                min="0"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="0.00"
-              />
-              <p className="mt-1 text-xs text-gray-500">
-                Opcional: para control de sobre-stock
-              </p>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Punto de Reorden
-              </label>
-              <input
-                type="number"
-                onWheel={(e) => e.target.blur()}
-                onChange={handleChange}
-                step="1"
-                min="0"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="0"
-              />
-            </div>
-
-            {/* Tipo de ítem */}
-            <div className="md:col-span-2 mt-4">
-              <h3 className="text-lg font-semibold text-gray-900 mb-3 pb-2 border-b">
-                Tipo de ítem
-              </h3>
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setFormData(prev => ({
-                      ...prev,
-                      product_type: 'product',
-                      track_inventory: true,
-                    }));
-                  }}
-                  className={`flex items-center gap-3 p-4 rounded-xl border-2 text-left transition-all ${
-                    formData.product_type === 'product'
-                      ? 'border-blue-500 bg-blue-50'
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Tipo de IVA</label>
+                <select
+                  name="tax_percentage"
+                  value={formData.tax_percentage}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
-                  <span className="text-2xl">📦</span>
+                  <option value="0">Exento (0%)</option>
+                  <option value="5">Reducido (5%)</option>
+                  <option value="10">Intermedio (10%)</option>
+                  <option value="19">General (19%)</option>
+                  <option value="21">Otro (21%)</option>
+                </select>
+                <p className="mt-1 text-xs text-gray-500">
+                  {formData.tax_percentage === 0 || formData.tax_percentage === '0'
+                    ? 'Producto exento de IVA'
+                    : `IVA del ${formData.tax_percentage}% aplicable según normativa`}
+                </p>
+              </div>
+
+              {formData.has_tax && parseFloat(formData.tax_percentage) > 0 && (
+                <>
                   <div>
-                    <p className={`font-semibold text-sm ${formData.product_type === 'product' ? 'text-blue-700' : 'text-gray-700'}`}>
-                      Producto físico
-                    </p>
-                    <p className="text-xs text-gray-500">Maneja inventario y stock</p>
+                    <label className="flex items-center space-x-3 p-3 bg-blue-50 rounded-lg cursor-pointer hover:bg-blue-100 transition-colors border border-blue-200">
+                      <input
+                        type="checkbox"
+                        name="price_includes_tax"
+                        checked={formData.price_includes_tax}
+                        onChange={handleChange}
+                        className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      />
+                      <div>
+                        <span className="text-sm font-medium text-gray-900">El precio YA incluye IVA</span>
+                        <p className="text-xs text-gray-600">
+                          {formData.price_includes_tax
+                            ? 'El precio mostrado incluye IVA'
+                            : 'El IVA se suma al precio mostrado'}
+                        </p>
+                      </div>
+                    </label>
                   </div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setFormData(prev => ({
+
+                  {formData.base_price && (
+                    <div className="md:col-span-2 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-200">
+                      <div className="text-sm font-medium text-gray-900 mb-3 flex items-center gap-2">
+                        Desglose de Precio
+                        <span className="text-xs font-normal text-gray-600">(Lo que verá el cliente)</span>
+                      </div>
+                      {formData.price_includes_tax ? (
+                        <>
+                          <div className="grid grid-cols-2 gap-2 text-sm mb-3">
+                            <div className="text-gray-600">Precio final al cliente:</div>
+                            <div className="font-bold text-blue-600">${parseFloat(formData.base_price).toFixed(2)}</div>
+                            <div className="text-gray-600">Base imponible (sin IVA):</div>
+                            <div className="font-medium text-gray-900">${(parseFloat(formData.base_price) / (1 + parseFloat(formData.tax_percentage) / 100)).toFixed(2)}</div>
+                            <div className="text-gray-600">IVA ({formData.tax_percentage}%):</div>
+                            <div className="font-medium text-green-600">${(parseFloat(formData.base_price) - (parseFloat(formData.base_price) / (1 + parseFloat(formData.tax_percentage) / 100))).toFixed(2)}</div>
+                          </div>
+                          <div className="text-xs text-gray-600 bg-white p-2 rounded border border-gray-200">
+                            El cliente pagará exactamente ${parseFloat(formData.base_price).toFixed(2)} (ya con IVA incluido)
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="grid grid-cols-2 gap-2 text-sm mb-3">
+                            <div className="text-gray-600">Precio base (sin IVA):</div>
+                            <div className="font-medium text-gray-900">${parseFloat(formData.base_price).toFixed(2)}</div>
+                            <div className="text-gray-600">+ IVA ({formData.tax_percentage}%):</div>
+                            <div className="font-medium text-green-600">${(parseFloat(formData.base_price) * parseFloat(formData.tax_percentage) / 100).toFixed(2)}</div>
+                            <div className="text-gray-600">= Total al cliente:</div>
+                            <div className="font-bold text-blue-600">${(parseFloat(formData.base_price) * (1 + parseFloat(formData.tax_percentage) / 100)).toFixed(2)}</div>
+                          </div>
+                          <div className="text-xs text-gray-600 bg-white p-2 rounded border border-gray-200">
+                            El cliente pagará ${(parseFloat(formData.base_price) * (1 + parseFloat(formData.tax_percentage) / 100)).toFixed(2)} (precio + IVA)
+                          </div>
+                        </>
+                      )}
+                      {formData.average_cost && formData.base_price && (
+                        <div className="mt-3 pt-3 border-t border-blue-300">
+                          <div className="grid grid-cols-2 gap-2 text-xs">
+                            <div className="text-gray-600">Tu costo (sin IVA):</div>
+                            <div className="font-medium text-gray-700">${parseFloat(formData.average_cost).toFixed(2)}</div>
+                            <div className="text-gray-600">Tu ganancia:</div>
+                            <div className="font-bold text-green-700">${(parseFloat(formData.base_price) - parseFloat(formData.average_cost)).toFixed(2)}</div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* Inventario */}
+              <div className="md:col-span-2 mt-4">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b">
+                  Control de Inventario
+                </h3>
+              </div>
+
+              {/* ── BODEGA ── */}
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Bodega <span className="text-red-500">*</span>
+                </label>
+                {loadingWarehouses ? (
+                  <div className="w-full px-4 py-2 border border-gray-200 rounded-lg bg-gray-50 text-sm text-gray-400">
+                    Cargando bodegas...
+                  </div>
+                ) : warehouses.length === 0 ? (
+                  <div className="w-full px-4 py-2 border border-yellow-200 rounded-lg bg-yellow-50 text-sm text-yellow-700">
+                    No hay bodegas configuradas. Crea una en Inventario → Bodegas.
+                  </div>
+                ) : (
+                  <select
+                    name="warehouse_id"
+                    value={formData.warehouse_id}
+                    onChange={handleChange}
+                    required={formData.product_type === 'product'}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="">Selecciona una bodega</option>
+                    {warehouses.map(w => (
+                      <option key={w.id} value={w.id}>
+                        {w.name}{w.location ? ` — ${w.location}` : ''}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                <p className="mt-1 text-xs text-gray-500">
+                  Bodega donde se registrará el stock de este producto
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Stock Actual</label>
+                <input
+                  type="number"
+                  onWheel={(e) => e.target.blur()}
+                  name="current_stock"
+                  value={formData.current_stock}
+                  onChange={handleChange}
+                  step="1"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="0.00"
+                  disabled={formData.product_type === 'service' || !!product}
+                />
+                {product && (
+                  <p className="mt-1 text-xs text-gray-500">Usa Ajustes o Compras para modificar el stock</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Stock Mínimo <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  onWheel={(e) => e.target.blur()}
+                  name="min_stock"
+                  disabled={formData.product_type === 'service'}
+                  value={formData.min_stock}
+                  onChange={handleChange}
+                  step="1"
+                  min="0"
+                  required
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="0.00"
+                />
+                <p className="mt-1 text-xs text-gray-500">Genera alertas cuando se alcance este nivel</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Stock Máximo</label>
+                <input
+                  type="number"
+                  onWheel={(e) => e.target.blur()}
+                  name="max_stock"
+                  value={formData.max_stock}
+                  onChange={handleChange}
+                  step="1"
+                  min="0"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="0.00"
+                />
+                <p className="mt-1 text-xs text-gray-500">Opcional: para control de sobre-stock</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Punto de Reorden</label>
+                <input
+                  type="number"
+                  onWheel={(e) => e.target.blur()}
+                  onChange={handleChange}
+                  step="1"
+                  min="0"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="0"
+                />
+              </div>
+
+              {/* Tipo de ítem */}
+              <div className="md:col-span-2 mt-4">
+                <h3 className="text-lg font-semibold text-gray-900 mb-3 pb-2 border-b">Tipo de ítem</h3>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setFormData(prev => ({ ...prev, product_type: 'product', track_inventory: true }))}
+                    className={`flex items-center gap-3 p-4 rounded-xl border-2 text-left transition-all ${
+                      formData.product_type === 'product' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <svg className="w-7 h-7 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10" />
+                    </svg>
+                    <div>
+                      <p className={`font-semibold text-sm ${formData.product_type === 'product' ? 'text-blue-700' : 'text-gray-700'}`}>
+                        Producto físico
+                      </p>
+                      <p className="text-xs text-gray-500">Maneja inventario y stock</p>
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFormData(prev => ({
                       ...prev,
                       product_type: 'service',
                       track_inventory: false,
@@ -676,129 +662,116 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
                       min_stock: '',
                       max_stock: '',
                       average_cost: '',
-                    }));
-                  }}
-                  className={`flex items-center gap-3 p-4 rounded-xl border-2 text-left transition-all ${
-                    formData.product_type === 'service'
-                      ? 'border-purple-500 bg-purple-50'
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  <span className="text-2xl">🔧</span>
+                    }))}
+                    className={`flex items-center gap-3 p-4 rounded-xl border-2 text-left transition-all ${
+                      formData.product_type === 'service' ? 'border-purple-500 bg-purple-50' : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <svg className="w-7 h-7 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z" />
+                    </svg>
+                    <div>
+                      <p className={`font-semibold text-sm ${formData.product_type === 'service' ? 'text-purple-700' : 'text-gray-700'}`}>
+                        Servicio
+                      </p>
+                      <p className="text-xs text-gray-500">Sin inventario, solo facturación</p>
+                    </div>
+                  </button>
+                </div>
+              </div>
+
+              {/* Configuración */}
+              <div className="md:col-span-2 mt-4">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b">Configuración</h3>
+              </div>
+
+              <div className="md:col-span-2 space-y-3">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    name="track_inventory"
+                    checked={formData.track_inventory}
+                    onChange={handleChange}
+                    className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  />
                   <div>
-                    <p className={`font-semibold text-sm ${formData.product_type === 'service' ? 'text-purple-700' : 'text-gray-700'}`}>
-                      Servicio
-                    </p>
-                    <p className="text-xs text-gray-500">Sin inventario, solo facturación</p>
+                    <span className="text-sm font-medium text-gray-900">Controlar inventario</span>
+                    <p className="text-xs text-gray-500">Registrar movimientos de entrada y salida</p>
                   </div>
+                </label>
+
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    name="allow_negative_stock"
+                    checked={formData.allow_negative_stock}
+                    onChange={handleChange}
+                    className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  />
+                  <div>
+                    <span className="text-sm font-medium text-gray-900">Permitir stock negativo</span>
+                    <p className="text-xs text-gray-500">Permitir ventas aunque no haya stock disponible</p>
+                  </div>
+                </label>
+
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    name="is_active"
+                    checked={formData.is_active}
+                    onChange={handleChange}
+                    className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  />
+                  <div>
+                    <span className="text-sm font-medium text-gray-900">Producto activo</span>
+                    <p className="text-xs text-gray-500">Desactivar para ocultar el producto sin eliminarlo</p>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="flex flex-col gap-3 mt-8 pt-6 border-t">
+              {saveError && (
+                <div className="w-full px-4 py-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 font-medium flex items-center gap-2">
+                  <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                  </svg>
+                  {saveError}
+                </div>
+              )}
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="flex-1 px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {loading ? 'Guardando...' : product ? 'Actualizar' : 'Crear Producto'}
                 </button>
               </div>
             </div>
-
-            {/* Configuración */}
-            <div className="md:col-span-2 mt-4">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b">
-                Configuración
-              </h3>
-            </div>
-
-            <div className="md:col-span-2 space-y-3">
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  name="track_inventory"
-                  checked={formData.track_inventory}
-                  onChange={handleChange}
-                  className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                />
-                <div>
-                  <span className="text-sm font-medium text-gray-900">
-                    Controlar inventario
-                  </span>
-                  <p className="text-xs text-gray-500">
-                    Registrar movimientos de entrada y salida
-                  </p>
-                </div>
-              </label>
-
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  name="allow_negative_stock"
-                  checked={formData.allow_negative_stock}
-                  onChange={handleChange}
-                  className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                />
-                <div>
-                  <span className="text-sm font-medium text-gray-900">
-                    Permitir stock negativo
-                  </span>
-                  <p className="text-xs text-gray-500">
-                    Permitir ventas aunque no haya stock disponible
-                  </p>
-                </div>
-              </label>
-
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  name="is_active"
-                  checked={formData.is_active}
-                  onChange={handleChange}
-                  className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                />
-                <div>
-                  <span className="text-sm font-medium text-gray-900">
-                    Producto activo
-                  </span>
-                  <p className="text-xs text-gray-500">
-                    Desactivar para ocultar el producto sin eliminarlo
-                  </p>
-                </div>
-              </label>
-            </div>
-          </div>
-
-          {/* Footer */}
-          <div className="flex flex-col gap-3 mt-8 pt-6 border-t">
-            {saveError && (
-              <div className="w-full px-4 py-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 font-medium">
-                ⚠️ {saveError}
-              </div>
-            )}
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={onClose}
-                className="flex-1 px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                type="submit"
-                disabled={loading}
-                className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {loading ? 'Guardando...' : product ? 'Actualizar' : 'Crear Producto'}
-              </button>
-            </div>
-          </div>
-        </form>
+          </form>
+        </div>
       </div>
-    </div>
-    
-    {/* ✅ BarcodeScanner con componente mejorado */}
-    {showScanner && (
-      <BarcodeScanner
-        onDetect={(code) => {
-          setFormData(prev => ({ ...prev, barcode: code }));
-          setShowScanner(false);
-        }}
-        onClose={() => setShowScanner(false)}
-      />
-    )}
+
+      {showScanner && (
+        <BarcodeScanner
+          onDetect={(code) => {
+            setFormData(prev => ({ ...prev, barcode: code }));
+            setShowScanner(false);
+          }}
+          onClose={() => setShowScanner(false)}
+        />
+      )}
     </>
   );
-};  
+};
 
 export default ProductFormModal;
