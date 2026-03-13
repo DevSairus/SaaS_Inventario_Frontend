@@ -5,6 +5,19 @@ import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';
 import Loading from '../../components/common/Loading';
 import Badge from '../../components/common/Badge';
+import {
+  ChartBarIcon,
+  UsersIcon,
+  DocumentTextIcon,
+  CurrencyDollarIcon,
+  ClipboardDocumentListIcon,
+  ChartBarSquareIcon,
+  UserIcon,
+  Cog6ToothIcon,
+  FolderIcon,
+  BeakerIcon,
+  SignalIcon,
+} from '@heroicons/react/24/outline';
 
 const RolePermissionsPage = () => {
   const [selectedRole, setSelectedRole] = useState('admin');
@@ -79,18 +92,18 @@ const RolePermissionsPage = () => {
 
   const getModuleIcon = (moduleName) => {
     const icons = {
-      dashboard: '📊',
-      clients: '👥',
-      invoices: '🧾',
-      payments: '💰',
-      readings: '📏',
-      consumptions: '💧',
-      pqrs: '📝',
-      reports: '📈',
-      users: '👤',
-      settings: '⚙️',
+      dashboard:    <ChartBarIcon className="w-6 h-6 text-gray-500" />,
+      clients:      <UsersIcon className="w-6 h-6 text-gray-500" />,
+      invoices:     <DocumentTextIcon className="w-6 h-6 text-gray-500" />,
+      payments:     <CurrencyDollarIcon className="w-6 h-6 text-gray-500" />,
+      readings:     <SignalIcon className="w-6 h-6 text-gray-500" />,
+      consumptions: <BeakerIcon className="w-6 h-6 text-gray-500" />,
+      pqrs:         <ClipboardDocumentListIcon className="w-6 h-6 text-gray-500" />,
+      reports:      <ChartBarSquareIcon className="w-6 h-6 text-gray-500" />,
+      users:        <UserIcon className="w-6 h-6 text-gray-500" />,
+      settings:     <Cog6ToothIcon className="w-6 h-6 text-gray-500" />,
     };
-    return icons[moduleName] || '📁';
+    return icons[moduleName] || <FolderIcon className="w-6 h-6 text-gray-500" />;
   };
 
   if (isLoading) {
@@ -171,7 +184,7 @@ const RolePermissionsPage = () => {
           ([module, modulePermissions]) => (
             <Card key={module}>
               <div className="flex items-center gap-3 mb-4 pb-3 border-b border-gray-200">
-                <span className="text-2xl">{getModuleIcon(module)}</span>
+                <div className="flex-shrink-0">{getModuleIcon(module)}</div>
                 <h3 className="text-lg font-semibold text-gray-900 capitalize">
                   {module === 'pqrs' ? 'PQRS' : module}
                 </h3>

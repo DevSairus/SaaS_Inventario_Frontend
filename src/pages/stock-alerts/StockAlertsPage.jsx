@@ -2,6 +2,7 @@ import toast from 'react-hot-toast';
 import { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AlertTriangle, CheckCircle, XCircle, Eye, RefreshCw, Package, ShoppingCart, TrendingDown, Award } from 'lucide-react';
+import { InformationCircleIcon, ExclamationTriangleIcon, XCircleIcon as XCircleSolid, UserIcon, CurrencyDollarIcon, CalendarDaysIcon, PhoneIcon, EnvelopeIcon } from '@heroicons/react/24/outline';
 import useStockAlertsStore from '../../store/stockAlertsStore';
 import Layout from '../../components/layout/Layout';
 
@@ -366,8 +367,8 @@ const StockAlertsPage = () => {
           {/* Banner informativo si hay paginación */}
           {pagination?.total > pagination?.limit && (
             <div className="bg-yellow-50 border-b border-yellow-200 px-6 py-3">
-              <p className="text-sm text-yellow-800">
-                ℹ️ Mostrando <strong>{alerts.length}</strong> de <strong>{pagination.total}</strong> alertas totales. 
+              <p className="text-sm text-yellow-800 flex items-center gap-1">
+                <InformationCircleIcon className="w-4 h-4 flex-shrink-0" /> Mostrando <strong>{alerts.length}</strong> de <strong>{pagination.total}</strong> alertas totales. 
                 {pagination.pages > 1 && (
                   <span> Estás en la página {pagination.page} de {pagination.pages}.</span>
                 )}
@@ -455,8 +456,12 @@ const StockAlertsPage = () => {
                         
                         {/* Columna de Severidad - Oculta en móvil */}
                         <td className="px-3 py-3 hidden lg:table-cell">
-                          <span className={`inline-flex items-center px-2 py-1 text-xs font-semibold rounded-lg ${getSeverityBadge(alert.severity)}`}>
-                            {alert.severity === 'critical' ? '🔴 Crítica' : alert.severity === 'warning' ? '⚠️ Alerta' : 'ℹ️ Info'}
+                          <span className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-lg ${getSeverityBadge(alert.severity)}`}>
+                            {alert.severity === 'critical'
+                              ? <><XCircleSolid className="w-3 h-3" /> Crítica</>
+                              : alert.severity === 'warning'
+                              ? <><ExclamationTriangleIcon className="w-3 h-3" /> Alerta</>
+                              : <><InformationCircleIcon className="w-3 h-3" /> Info</>}
                           </span>
                         </td>
                         
@@ -627,21 +632,21 @@ const StockAlertsPage = () => {
 
                             <div className="text-sm text-gray-600 mt-2 space-y-1">
                               {supplier.contact_name && (
-                                <p>👤 Contacto: {supplier.contact_name}</p>
+                                <p className="flex items-center gap-1"><UserIcon className="w-3.5 h-3.5 text-gray-400" /> Contacto: {supplier.contact_name}</p>
                               )}
-                              {supplier.phone && <p>📞 Tel: {supplier.phone}</p>}
-                              {supplier.email && <p>📧 Email: {supplier.email}</p>}
+                              {supplier.phone && <p className="flex items-center gap-1"><PhoneIcon className="w-3.5 h-3.5 text-gray-400" /> Tel: {supplier.phone}</p>}
+                              {supplier.email && <p className="flex items-center gap-1"><EnvelopeIcon className="w-3.5 h-3.5 text-gray-400" /> Email: {supplier.email}</p>}
                               {supplierPrice ? (
-                                <p className={`font-bold text-lg ${isBestPrice ? 'text-green-700' : 'text-gray-800'}`}>
-                                  💰 ${supplierPrice.toLocaleString('es-CO')}
+                                <p className={`font-bold text-lg flex items-center gap-1 ${isBestPrice ? 'text-green-700' : 'text-gray-800'}`}>
+                                  <CurrencyDollarIcon className="w-4 h-4" /> ${supplierPrice.toLocaleString('es-CO')}
                                   {isBestPrice && <span className="ml-2 text-xs font-normal text-green-600">(¡Precio más bajo!)</span>}
                                 </p>
                               ) : (
                                 <p className="text-gray-400 italic">Sin precio registrado</p>
                               )}
                               {supplier.last_purchase_date && (
-                                <p className="text-xs text-gray-500">
-                                  📅 Última compra: {new Date(supplier.last_purchase_date).toLocaleDateString('es-CO', {
+                                <p className="text-xs text-gray-500 flex items-center gap-1">
+                                  <CalendarDaysIcon className="w-3.5 h-3.5 text-gray-400" /> Última compra: {new Date(supplier.last_purchase_date).toLocaleDateString('es-CO', {
                                     year: 'numeric',
                                     month: 'long',
                                     day: 'numeric'

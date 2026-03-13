@@ -36,7 +36,7 @@ function ProductsPage() {
   const [editingProduct, setEditingProduct] = useState(null);
   const [barcodePrintProduct, setBarcodePrintProduct] = useState(null);
 
-  // ✅ Refresh al entrar a la página
+  // Refresh al entrar a la página
   useEffect(() => {
     fetchProducts(true);
     fetchStats();
@@ -69,7 +69,7 @@ function ProductsPage() {
   };
 
   const handleDelete = async (id, name) => {
-    if (window.confirm(`⚠️ ¿ELIMINAR PERMANENTEMENTE "${name}"?\n\nEsta acción NO se puede deshacer.`)) {
+    if (window.confirm(`¿ELIMINAR PERMANENTEMENTE "${name}"?\n\nEsta acción NO se puede deshacer.`)) {
       const success = await deleteProduct(id);
       if (success) {
         fetchStats();
@@ -207,11 +207,11 @@ function ProductsPage() {
       // MOSTRAR RESUMEN COMPLETO
       // ========================================
       // Construir mensaje para el usuario
-      let message = '📊 RESUMEN DE IMPORTACIÓN\n\n';
+      let message = 'RESUMEN DE IMPORTACIÓN\n\n';
       message += `Total procesados: ${productsData.length}\n\n`;
       
       if (successCount > 0) {
-        message += `✅ ${successCount} productos importados correctamente\n`;
+        message += `${successCount} productos importados correctamente\n`;
         if (imported.length <= 5) {
           message += `   ${imported.join(', ')}\n`;
         } else {
@@ -231,7 +231,7 @@ function ProductsPage() {
       }
       
       if (errorCount > 0) {
-        message += `❌ ${errorCount} productos con errores\n\n`;
+        message += `${errorCount} productos con errores\n\n`;
         message += 'Detalles de errores:\n';
         errors.slice(0, 3).forEach(err => {
           message += `• ${err.sku}: ${err.error}\n`;
@@ -243,7 +243,7 @@ function ProductsPage() {
       }
       
       if (successCount === 0 && skippedCount === 0 && errorCount === 0) {
-        message = '⚠️ No se procesaron productos';
+        message = 'No se procesaron productos';
       }
 
       // Mostrar el resumen

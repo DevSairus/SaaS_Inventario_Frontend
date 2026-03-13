@@ -7,6 +7,20 @@ import { accountsReceivableAPI } from '../../api/accountsReceivable';
 import { exportReceivablesToExcel } from '../../utils/excelExport';
 import useCustomersStore from '../../store/customersStore';
 import CustomerSearchInput from '../../components/common/CustomerSearchInput';
+import {
+  ChartBarIcon,
+  SparklesIcon,
+  CurrencyDollarIcon,
+  ArrowPathIcon,
+  CreditCardIcon,
+  CubeIcon,
+  WrenchScrewdriverIcon,
+  RocketLaunchIcon,
+  ExclamationTriangleIcon,
+  BanknotesIcon,
+  CalendarDaysIcon,
+  UsersIcon,
+} from '@heroicons/react/24/outline';
 
 const COLORS = ['#6366f1', '#8b5cf6', '#a78bfa', '#c4b5fd', '#ddd6fe', '#ede9fe', '#f5f3ff', '#818cf8', '#7c3aed', '#5b21b6'];
 
@@ -267,11 +281,11 @@ const ReportsPage = () => {
   };
 
   const tabs = [
-    { id: 'movements', label: 'Movimientos', icon: '📊' },
-    { id: 'valuation', label: 'Valorización', icon: '💎' },
-    { id: 'profit', label: 'Ganancia', icon: '💰' },
-    { id: 'rotation', label: 'Rotación', icon: '🔄' },
-    { id: 'receivables', label: 'Cartera', icon: '💳' }
+    { id: 'movements',  label: 'Movimientos',  icon: <ChartBarIcon className="w-4 h-4" /> },
+    { id: 'valuation',  label: 'Valorización', icon: <SparklesIcon className="w-4 h-4" /> },
+    { id: 'profit',     label: 'Ganancia',     icon: <CurrencyDollarIcon className="w-4 h-4" /> },
+    { id: 'rotation',   label: 'Rotación',     icon: <ArrowPathIcon className="w-4 h-4" /> },
+    { id: 'receivables',label: 'Cartera',      icon: <CreditCardIcon className="w-4 h-4" /> },
   ];
 
   const movChartData = movementsData.map(d => ({
@@ -484,12 +498,12 @@ const ReportsPage = () => {
               {/* Sub-tabs producto vs servicio */}
               <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit">
                 {[
-                  { id: 'product', label: '📦 Productos físicos', count: profitData.products.filter(p => p.product_type !== 'service').length },
-                  { id: 'service', label: '🔧 Servicios', count: profitData.products.filter(p => p.product_type === 'service').length },
+                  { id: 'product', label: 'Productos físicos', icon: <CubeIcon className="w-4 h-4" />, count: profitData.products.filter(p => p.product_type !== 'service').length },
+                  { id: 'service', label: 'Servicios',         icon: <WrenchScrewdriverIcon className="w-4 h-4" />, count: profitData.products.filter(p => p.product_type === 'service').length },
                 ].map(opt => (
                   <button key={opt.id} onClick={() => setProfitTypeFilter(opt.id)}
                     className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${profitTypeFilter === opt.id ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}>
-                    {opt.label}
+                    {opt.icon}{opt.label}
                     <span className={`text-xs px-1.5 py-0.5 rounded-full ${profitTypeFilter === opt.id ? 'bg-teal-100 text-teal-700' : 'bg-gray-200 text-gray-500'}`}>{opt.count}</span>
                   </button>
                 ))}
@@ -593,7 +607,7 @@ const ReportsPage = () => {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="bg-white rounded-xl shadow overflow-hidden">
                   <div className="p-5 border-b flex items-center gap-2">
-                    <span className="text-lg">🚀</span>
+                    <RocketLaunchIcon className="w-5 h-5 text-emerald-500" />
                     <h3 className="text-lg font-bold text-gray-800">Alta Rotación</h3>
                   </div>
                   {rotationData.high_rotation.length === 0 ? (
@@ -621,7 +635,7 @@ const ReportsPage = () => {
 
                 <div className="bg-white rounded-xl shadow overflow-hidden">
                   <div className="p-5 border-b flex items-center gap-2">
-                    <span className="text-lg">⚠️</span>
+                    <ExclamationTriangleIcon className="w-5 h-5 text-orange-400" />
                     <h3 className="text-lg font-bold text-gray-800">Baja Rotación</h3>
                   </div>
                   {rotationData.low_rotation.length === 0 ? (
@@ -744,10 +758,10 @@ const ReportsPage = () => {
                 <>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     {[
-                      { label: 'Total Por Cobrar', value: formatCOP(receivablesData.summary?.total_receivable), color: 'border-blue-500', textColor: 'text-blue-700', icon: '💵' },
-                      { label: 'Vencido (+30 días)', value: formatCOP(receivablesData.summary?.total_overdue), color: 'border-red-500', textColor: 'text-red-700', icon: '⚠️' },
-                      { label: 'A Vencer (0-30 días)', value: formatCOP(receivablesData.summary?.total_current), color: 'border-yellow-500', textColor: 'text-yellow-700', icon: '📅' },
-                      { label: 'Clientes con Deuda', value: formatNum(receivablesData.summary?.total_customers), sub: `${receivablesData.summary?.total_invoices || 0} facturas`, color: 'border-purple-500', textColor: 'text-purple-700', icon: '👥' }
+                      { label: 'Total Por Cobrar',    value: formatCOP(receivablesData.summary?.total_receivable), color: 'border-blue-500',   textColor: 'text-blue-700',   icon: <BanknotesIcon className="w-7 h-7 text-blue-300" /> },
+                      { label: 'Vencido (+30 días)',  value: formatCOP(receivablesData.summary?.total_overdue),    color: 'border-red-500',    textColor: 'text-red-700',    icon: <ExclamationTriangleIcon className="w-7 h-7 text-red-300" /> },
+                      { label: 'A Vencer (0-30 días)',value: formatCOP(receivablesData.summary?.total_current),   color: 'border-yellow-500', textColor: 'text-yellow-700', icon: <CalendarDaysIcon className="w-7 h-7 text-yellow-300" /> },
+                      { label: 'Clientes con Deuda',  value: formatNum(receivablesData.summary?.total_customers), sub: `${receivablesData.summary?.total_invoices || 0} facturas`, color: 'border-purple-500', textColor: 'text-purple-700', icon: <UsersIcon className="w-7 h-7 text-purple-300" /> }
                     ].map((kpi, i) => (
                       <div key={i} className={`bg-white rounded-xl shadow p-5 border-l-4 ${kpi.color}`}>
                         <div className="flex items-center justify-between">
@@ -756,7 +770,7 @@ const ReportsPage = () => {
                             <p className={`text-2xl font-bold ${kpi.textColor} mt-1`}>{kpi.value}</p>
                             {kpi.sub && <p className="text-xs text-gray-400 mt-0.5">{kpi.sub}</p>}
                           </div>
-                          <span className="text-3xl">{kpi.icon}</span>
+                          <div>{kpi.icon}</div>
                         </div>
                       </div>
                     ))}
@@ -794,7 +808,7 @@ const ReportsPage = () => {
                   <div className="bg-white rounded-xl shadow overflow-hidden">
                     <div className="p-5 border-b flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <span className="text-lg">👥</span>
+                        <UsersIcon className="w-5 h-5 text-gray-400" />
                         <h3 className="text-lg font-bold text-gray-800">Cartera por Cliente</h3>
                       </div>
                       <p className="text-sm text-gray-500">{receivablesData.by_customer?.length || 0} clientes</p>
@@ -838,7 +852,7 @@ const ReportsPage = () => {
                   <div className="bg-white rounded-xl shadow overflow-hidden">
                     <div className="p-5 border-b flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <span className="text-lg">📄</span>
+                        <DocumentTextIcon className="w-5 h-5 text-gray-400" />
                         <h3 className="text-lg font-bold text-gray-800">Facturas Pendientes Recientes</h3>
                       </div>
                       <p className="text-sm text-gray-500">{receivablesData.all_invoices?.length || 0} facturas</p>

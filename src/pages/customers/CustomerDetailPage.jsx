@@ -4,7 +4,7 @@ import Layout from '../../components/layout/Layout';
 import customersApi from '../../api/customers';
 import { vehiclesApi, workOrdersApi } from '../../api/workshop';
 import { ArrowLeft, Phone, Mail, MapPin, FileText, Car, Wrench, ChevronRight } from 'lucide-react';
-import { PencilIcon } from '@heroicons/react/24/outline';
+import { PencilIcon, CurrencyDollarIcon, DocumentTextIcon, WrenchScrewdriverIcon as WrenchIcon, TruckIcon as MotorcycleIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 import Modal from '../../components/common/Modal';
 import Input from '../../components/common/Input';
 import Button from '../../components/common/Button';
@@ -153,13 +153,13 @@ export default function CustomerDetailPage() {
         {/* KPIs */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
-            { label: 'Total facturado', value: COP(totalFact),      emoji: '💰' },
-            { label: 'Facturas venta',  value: sales.length,        emoji: '📄' },
-            { label: 'Órd. de trabajo', value: workOrders.length,   emoji: '🔧' },
-            { label: 'Vehículos',       value: allVehicles.length,  emoji: '🏍️' },
-          ].map(({ label, value, emoji }) => (
+            { label: 'Total facturado', value: COP(totalFact),      Icon: CurrencyDollarIcon },
+            { label: 'Facturas venta',  value: sales.length,        Icon: DocumentTextIcon },
+            { label: 'Órd. de trabajo', value: workOrders.length,   Icon: WrenchIcon },
+            { label: 'Vehículos',       value: allVehicles.length,  Icon: MotorcycleIcon },
+          ].map(({ label, value, Icon }) => (
             <div key={label} className="bg-white border border-gray-100 rounded-xl p-4">
-              <div className="text-xl mb-1">{emoji}</div>
+              <div className="mb-1"><Icon className="w-5 h-5 text-gray-400" /></div>
               <p className="text-lg font-bold text-gray-900">{value}</p>
               <p className="text-xs text-gray-500">{label}</p>
             </div>
@@ -324,8 +324,9 @@ export default function CustomerDetailPage() {
           ) : (
             /* Sin vehículos vinculados pero hay OTs → mostrar solo OTs */
             <div className="space-y-2">
-              <p className="text-xs text-amber-600 bg-amber-50 px-3 py-2 rounded-lg mb-3">
-                ⚠️ Las motos de las OTs no están vinculadas a este cliente. Puedes asignarlas desde cada vehículo.
+              <p className="text-xs text-amber-600 bg-amber-50 px-3 py-2 rounded-lg mb-3 flex items-center gap-2">
+                <ExclamationTriangleIcon className="w-4 h-4 flex-shrink-0" />
+                Las motos de las OTs no están vinculadas a este cliente. Puedes asignarlas desde cada vehículo.
               </p>
               {workOrders.map(ot => {
                 const sc = OT_STATUS[ot.status] || OT_STATUS.recibido;

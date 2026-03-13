@@ -118,7 +118,7 @@ const Dashboard = () => {
 
       {/* Alertas */}
       {trialEndingSoon && trialEndingSoon.length > 0 && (
-        <Card title="⚠️ Trials Próximos a Vencer (7 días)">
+        <Card title="Trials Próximos a Vencer (7 días)">
           {expiringTrials?.data?.tenants?.length > 0 ? (
             <div className="space-y-3">
               {expiringTrials.data.tenants.map((tenant) => {

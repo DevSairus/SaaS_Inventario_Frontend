@@ -171,9 +171,9 @@ const SubscriptionPlansManagement = () => {
               </div>
 
               <div className="text-sm text-gray-600 space-y-1">
-                <p>👥 {plan.max_users} usuarios</p>
+                <p>{plan.max_users} usuarios</p>
                 <p>👨‍👩‍👧‍👦 {plan.max_clients} clientes</p>
-                <p>📄 {plan.max_invoices_per_month} facturas/mes</p>
+                <p>{plan.max_invoices_per_month} facturas/mes</p>
               </div>
 
               <div className="flex gap-2">

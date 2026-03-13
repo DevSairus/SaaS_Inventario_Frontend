@@ -58,7 +58,7 @@ function CategoriesPage() {
   };
 
   const handleDelete = async (id, name) => {
-    if (window.confirm(`⚠️ ¿ELIMINAR PERMANENTEMENTE "${name}"?\n\nEsta acción NO se puede deshacer.`)) {
+    if (window.confirm(`¿ELIMINAR PERMANENTEMENTE "${name}"?\n\nEsta acción NO se puede deshacer.`)) {
       await deleteCategory(id);
     }
   };

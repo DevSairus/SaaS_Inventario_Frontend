@@ -2,6 +2,15 @@
 import { useState, useEffect } from 'react';
 import { getDianEvents } from '../../api/dian';
 import Layout from '../../components/layout/Layout';
+import toast from 'react-hot-toast';
+import {
+  ArrowUpTrayIcon,
+  BeakerIcon,
+  MagnifyingGlassIcon,
+  ClipboardDocumentListIcon,
+  DocumentTextIcon,
+  InboxIcon,
+} from '@heroicons/react/24/outline';
 
 const STATUS_COLORS = {
   accepted: 'bg-green-100 text-green-800',
@@ -10,12 +19,12 @@ const STATUS_COLORS = {
   pending:  'bg-yellow-100 text-yellow-800',
 };
 
-const EVENT_ICONS = {
-  SendBillSync:       '📤',
-  SendTestSetAsync:   '🧪',
-  GetStatusZip:       '🔍',
-  GetStatus:          '🔍',
-  GetNumberingRange:  '📋',
+const EVENT_ICON_COMPONENTS = {
+  SendBillSync:       <ArrowUpTrayIcon className="w-4 h-4" />,
+  SendTestSetAsync:   <BeakerIcon className="w-4 h-4" />,
+  GetStatusZip:       <MagnifyingGlassIcon className="w-4 h-4" />,
+  GetStatus:          <MagnifyingGlassIcon className="w-4 h-4" />,
+  GetNumberingRange:  <ClipboardDocumentListIcon className="w-4 h-4" />,
 };
 
 export default function DianEventsPage() {
@@ -34,7 +43,7 @@ export default function DianEventsPage() {
       setEvents(r.data.data || []);
       setTotal(r.data.pagination?.total || 0);
     } catch (e) {
-      console.error(e);
+      toast.error('Error al cargar los eventos DIAN');
     } finally {
       setLoading(false);
     }
@@ -56,7 +65,7 @@ export default function DianEventsPage() {
           <div className="p-12 text-center text-gray-400">Cargando...</div>
         ) : events.length === 0 ? (
           <div className="p-12 text-center text-gray-400">
-            <div className="text-4xl mb-2">📭</div>
+            <InboxIcon className="w-10 h-10 mx-auto mb-2 text-gray-300" />
             <p>No hay eventos registrados</p>
           </div>
         ) : (
@@ -79,7 +88,7 @@ export default function DianEventsPage() {
                   </td>
                   <td className="px-4 py-3">
                     <span className="inline-flex items-center gap-1">
-                      <span>{EVENT_ICONS[ev.event_type] || '📄'}</span>
+                      <span className="text-gray-500">{EVENT_ICON_COMPONENTS[ev.event_type] || <DocumentTextIcon className="w-4 h-4" />}</span>
                       <span className="font-medium text-gray-900">{ev.event_type}</span>
                     </span>
                   </td>
@@ -95,7 +104,7 @@ export default function DianEventsPage() {
                   <td className="px-4 py-3">
                     <span className={`px-2 py-0.5 rounded-full text-xs
                       ${ev.is_test ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'}`}>
-                      {ev.is_test ? '🧪 Pruebas' : '✅ Producción'}
+                      {ev.is_test ? 'Pruebas' : 'Producción'}
                     </span>
                   </td>
                   <td className="px-4 py-3 max-w-xs">

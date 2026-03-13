@@ -9,6 +9,19 @@ import Layout from '../../components/layout/Layout';
 import useAuthStore from '../../store/authStore';
 import useDashboardStore from '../../store/dashboardStore';
 import axios from '../../api/axios';
+import {
+  ExclamationTriangleIcon,
+  ExclamationCircleIcon,
+  CurrencyDollarIcon,
+  ArrowTrendingUpIcon,
+  BoltIcon,
+  CubeIcon,
+  ShoppingCartIcon,
+  WrenchScrewdriverIcon,
+  ChartBarIcon,
+  TruckIcon,
+  TruckIcon as CarIcon,
+} from '@heroicons/react/24/outline';
 
 /* ── Formateadores ──────────────────────────────────────── */
 const fmtFull = (v) =>
@@ -167,7 +180,7 @@ function DashboardPage() {
               <div key={i} className={`p-3 rounded-lg border-l-4 flex items-start gap-3 ${
                 alert.type === 'error' ? 'bg-red-50 border-red-500' : 'bg-yellow-50 border-yellow-500'
               }`}>
-                <span className="text-lg flex-shrink-0">{alert.type === 'error' ? '🚨' : '⚠️'}</span>
+                <span className="flex-shrink-0">{alert.type === 'error' ? <ExclamationCircleIcon className="w-5 h-5 text-red-500" /> : <ExclamationTriangleIcon className="w-5 h-5 text-yellow-500" />}</span>
                 <div className="min-w-0">
                   <p className="font-semibold text-gray-900 text-sm">{alert.title}</p>
                   <p className="text-xs text-gray-600 mt-0.5 break-words">{alert.message}</p>
@@ -180,24 +193,24 @@ function DashboardPage() {
         {/* KPI Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           <KpiCard
-            icon="💰" from="from-blue-500" to="to-blue-600" labelCls="text-blue-100"
+            icon={<CurrencyDollarIcon className="w-5 h-5 text-white" />} from="from-blue-500" to="to-blue-600" labelCls="text-blue-100"
             label={`Ventas (${period}d)`} value={fmtCompact(salesKPI.revenue)}
             sub={`${fmtNum(salesKPI.count)} transacciones`}
             onClick={() => navigate('/sales')}
           />
           <KpiCard
-            icon="📈" from="from-green-500" to="to-green-600" labelCls="text-green-100"
+            icon={<ArrowTrendingUpIcon className="w-5 h-5 text-white" />} from="from-green-500" to="to-green-600" labelCls="text-green-100"
             label="Ganancia" value={fmtCompact(salesKPI.profit)}
             sub={`Margen: ${salesKPI.margin ?? 0}%`}
           />
           <KpiCard
-            icon="🎯" from="from-purple-500" to="to-purple-600" labelCls="text-purple-100"
+            icon={<BoltIcon className="w-5 h-5 text-white" />} from="from-purple-500" to="to-purple-600" labelCls="text-purple-100"
             label="Ventas de hoy" value={fmtCompact(todayKPI.revenue)}
             sub={`${fmtNum(todayKPI.count)} ventas`}
             onClick={() => navigate('/sales')}
           />
           <KpiCard
-            icon="📦" from="from-orange-500" to="to-orange-600" labelCls="text-orange-100"
+            icon={<CubeIcon className="w-5 h-5 text-white" />} from="from-orange-500" to="to-orange-600" labelCls="text-orange-100"
             label="Valor inventario" value={fmtCompact(inventoryKPI.total_value)}
             sub={`${fmtNum(inventoryKPI.total_products)} productos`}
             onClick={() => navigate('/products')}
@@ -208,7 +221,7 @@ function DashboardPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <div className="bg-white rounded-xl p-4 sm:p-5 shadow-sm border border-gray-100">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm sm:text-base font-semibold text-gray-800">📊 Ingresos vs Ganancia</h3>
+              <h3 className="text-sm sm:text-base font-semibold text-gray-800 flex items-center gap-2"><ChartBarIcon className="w-4 h-4 text-gray-500" /> Ingresos vs Ganancia</h3>
               <span className="text-xs text-gray-400">Últimos {period}d</span>
             </div>
             {chartData.length === 0 ? (
@@ -266,7 +279,7 @@ function DashboardPage() {
         {/* ── Taller ── */}
         <div className="bg-white rounded-xl p-4 sm:p-5 shadow-sm border border-gray-100">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm sm:text-base font-semibold text-gray-800">🔧 Taller — Estado actual</h3>
+            <h3 className="text-sm sm:text-base font-semibold text-gray-800 flex items-center gap-2"><WrenchScrewdriverIcon className="w-4 h-4 text-gray-500" /> Taller — Estado actual</h3>
             <button onClick={() => navigate('/workshop/work-orders')} className="text-xs text-indigo-600 hover:underline">
               Ver todas →
             </button>
@@ -362,7 +375,7 @@ function DashboardPage() {
         {receivableStats && (
           <div className="bg-white rounded-xl p-4 sm:p-5 shadow-sm border border-gray-100">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm sm:text-base font-semibold text-gray-800">💳 Cartera por cobrar</h3>
+              <h3 className="text-sm sm:text-base font-semibold text-gray-800">Cartera por cobrar</h3>
               <button onClick={() => navigate('/accounts-receivable')} className="text-xs text-indigo-600 hover:underline">
                 Ver cartera →
               </button>
@@ -385,22 +398,22 @@ function DashboardPage() {
 
         {/* Accesos rápidos */}
         <div className="bg-white rounded-xl p-4 sm:p-5 shadow-sm border border-gray-100">
-          <h3 className="text-sm sm:text-base font-semibold text-gray-800 mb-4">⚡ Accesos Rápidos</h3>
+          <h3 className="text-sm sm:text-base font-semibold text-gray-800 mb-4 flex items-center gap-2"><BoltIcon className="w-4 h-4 text-gray-500" /> Accesos Rápidos</h3>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
             {[
-              { icon: '🛒', label: 'Nueva Venta',   path: '/sales/new',               bg: 'bg-blue-50   hover:bg-blue-100',   text: 'text-blue-900'   },
-              { icon: '🔧', label: 'Nueva OT',       path: '/workshop/work-orders/new', bg: 'bg-sky-50    hover:bg-sky-100',    text: 'text-sky-900'    },
-              { icon: '📦', label: 'Productos',      path: '/products',                bg: 'bg-purple-50 hover:bg-purple-100', text: 'text-purple-900' },
-              { icon: '📊', label: 'Reportes',       path: '/reports',                 bg: 'bg-green-50  hover:bg-green-100',  text: 'text-green-900'  },
-              { icon: '🚚', label: 'Nueva Compra',   path: '/purchases/new',           bg: 'bg-orange-50 hover:bg-orange-100', text: 'text-orange-900' },
-              { icon: '🚗', label: 'Vehículos',      path: '/workshop/vehicles',       bg: 'bg-teal-50   hover:bg-teal-100',   text: 'text-teal-900'   },
+              { icon: <ShoppingCartIcon className="w-7 h-7" />, label: 'Nueva Venta',   path: '/sales/new',               bg: 'bg-blue-50   hover:bg-blue-100',   text: 'text-blue-900'   },
+              { icon: <WrenchScrewdriverIcon className="w-7 h-7" />, label: 'Nueva OT', path: '/workshop/work-orders/new', bg: 'bg-sky-50    hover:bg-sky-100',    text: 'text-sky-900'    },
+              { icon: <CubeIcon className="w-7 h-7" />, label: 'Productos',             path: '/products',                bg: 'bg-purple-50 hover:bg-purple-100', text: 'text-purple-900' },
+              { icon: <ChartBarIcon className="w-7 h-7" />, label: 'Reportes',          path: '/reports',                 bg: 'bg-green-50  hover:bg-green-100',  text: 'text-green-900'  },
+              { icon: <TruckIcon className="w-7 h-7" />, label: 'Nueva Compra',         path: '/purchases/new',           bg: 'bg-orange-50 hover:bg-orange-100', text: 'text-orange-900' },
+              { icon: <CarIcon className="w-7 h-7" />, label: 'Vehículos',              path: '/workshop/vehicles',       bg: 'bg-teal-50   hover:bg-teal-100',   text: 'text-teal-900'   },
             ].map(({ icon, label, path, bg, text }) => (
               <button
                 key={path}
                 onClick={() => navigate(path)}
                 className={`p-3 sm:p-4 ${bg} border border-gray-100 rounded-xl hover:shadow-md transition-all text-center group`}
               >
-                <div className="text-2xl sm:text-3xl mb-1.5 group-hover:scale-110 transition-transform">{icon}</div>
+                <div className={`flex justify-center mb-1.5 group-hover:scale-110 transition-transform ${text}`}>{icon}</div>
                 <div className={`text-xs sm:text-sm font-semibold ${text}`}>{label}</div>
               </button>
             ))}
@@ -411,7 +424,7 @@ function DashboardPage() {
         {inventoryKPI.low_stock_count > 0 && (
           <div className="bg-white rounded-xl p-4 sm:p-5 shadow-sm border border-yellow-200">
             <div className="flex items-center justify-between flex-wrap gap-2">
-              <h3 className="text-sm sm:text-base font-semibold text-gray-800">⚠️ Productos con Stock Bajo</h3>
+              <h3 className="text-sm sm:text-base font-semibold text-gray-800 flex items-center gap-2"><ExclamationTriangleIcon className="w-4 h-4 text-yellow-500" /> Productos con Stock Bajo</h3>
               <span className="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-semibold">
                 {inventoryKPI.low_stock_count} productos
               </span>

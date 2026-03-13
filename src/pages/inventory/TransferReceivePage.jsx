@@ -66,7 +66,7 @@ const TransferReceivePage = () => {
     // Confirmación si hay discrepancias
     if (hasDiscrepancies) {
       const confirmed = window.confirm(
-        '⚠️ Hay diferencias entre las cantidades enviadas y recibidas. ¿Deseas continuar?'
+        'Hay diferencias entre las cantidades enviadas y recibidas. ¿Deseas continuar?'
       );
       if (!confirmed) return;
     }

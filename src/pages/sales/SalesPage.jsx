@@ -425,7 +425,7 @@ export default function SaleDetailPage() {
                             </div>
                             {item.item_type === 'free_line' ? (
                               <span className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full mt-0.5">
-                                ✏️ Línea libre · No mueve inventario
+                                <PencilIcon className="w-3 h-3" /> Línea libre · No mueve inventario
                               </span>
                             ) : (
                               <div className="text-xs text-gray-500">{item.product_sku}</div>

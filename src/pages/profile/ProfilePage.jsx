@@ -7,6 +7,7 @@ import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
 import toast from 'react-hot-toast';
+import { ChartBarIcon, ShoppingCartIcon, UserIcon as UserSolidIcon, EyeIcon, CubeIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 
 const ProfilePage = () => {
   const { user } = useAuthStore();
@@ -67,12 +68,12 @@ const ProfilePage = () => {
 
   const getRoleName = (role) => {
     const roles = {
-      admin: '👑 Administrador',
-      manager: '📊 Gerente',
-      seller: '🛒 Vendedor',
-      warehouse_keeper: '📦 Bodeguero',
-      user: '👤 Usuario',
-      viewer: '👁️ Visualizador'
+      admin: 'Administrador',
+      manager: 'Gerente',
+      seller: 'Vendedor',
+      warehouse_keeper: 'Bodeguero',
+      user: 'Usuario',
+      viewer: 'Visualizador'
     };
     return roles[role] || role;
   };
@@ -202,8 +203,9 @@ const ProfilePage = () => {
               <p>• Nunca compartas tu contraseña con nadie</p>
               <p>• Si sospechas que tu cuenta fue comprometida, cambia tu contraseña inmediatamente</p>
               {user?.role !== 'admin' && (
-                <p className="text-yellow-700 bg-yellow-50 p-3 rounded-lg mt-3">
-                  ⚠️ Para cambios en tu información personal (nombre, email, teléfono), contacta al administrador del sistema.
+                <p className="flex items-start gap-2 text-yellow-700 bg-yellow-50 p-3 rounded-lg mt-3">
+                  <ExclamationTriangleIcon className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                  Para cambios en tu información personal (nombre, email, teléfono), contacta al administrador del sistema.
                 </p>
               )}
             </div>

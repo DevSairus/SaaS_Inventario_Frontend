@@ -34,6 +34,14 @@ import {
   INPUT_CONFIG 
 } from '../../utils/numberUtils';
 import toast from 'react-hot-toast';
+import {
+  ClipboardDocumentListIcon,
+  DocumentTextIcon,
+  WrenchScrewdriverIcon,
+  PencilSquareIcon,
+  LightBulbIcon,
+  MagnifyingGlassIcon as SearchSvgIcon,
+} from '@heroicons/react/24/outline';
 
 function SaleFormPage() {
   const navigate = useNavigate();
@@ -212,7 +220,7 @@ function SaleFormPage() {
   };
 
   const handleAddItem = (product) => {
-    // 🔍 DEBUG: Ver qué información trae el producto
+    // DEBUG: Ver qué información trae el producto
     
     const existingIndex = items.findIndex(item => item.product_id === product.id);
     
@@ -434,9 +442,9 @@ function SaleFormPage() {
                       required
                       className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                     >
-                      <option value="remision">📋 Remisión</option>
-                      <option value="factura">📄 Factura</option>
-                      <option value="cotizacion">💼 Cotización</option>
+                      <option value="remision">Remisión</option>
+                      <option value="factura">Factura</option>
+                      <option value="cotizacion">Cotización</option>
                     </select>
                   </div>
                   )}
@@ -802,17 +810,17 @@ function SaleFormPage() {
                               )}
                               <div className="flex items-center gap-2 mt-1">
                                 {item.item_type === 'service' && (
-                                  <span className="text-xs font-semibold text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full">🔧 Servicio</span>
+                                  <span className="inline-flex items-center gap-1 text-xs font-semibold text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full"><WrenchScrewdriverIcon className="w-3 h-3" /> Servicio</span>
                                 )}
                                 {item.item_type === 'free_line' && (
-                                  <span className="text-xs font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">✏️ Línea libre · No mueve inventario</span>
+                                  <span className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full"><PencilSquareIcon className="w-3 h-3" /> Línea libre · No mueve inventario</span>
                                 )}
                                 {item.item_type !== 'free_line' && item.product_sku && (
                                   <span className="text-sm text-gray-500">SKU: {item.product_sku}</span>
                                 )}
                               </div>
                               {item.price_includes_tax && (
-                                <div className="text-xs text-blue-600 mt-1 font-medium">💡 Precio incluye IVA</div>
+                                <div className="inline-flex items-center gap-1 text-xs text-blue-600 mt-1 font-medium"><LightBulbIcon className="w-3 h-3" /> Precio incluye IVA</div>
                               )}
                               {item.has_tax === false && (
                                 <div className="text-xs text-green-600 mt-1 font-medium">✓ Exento de IVA</div>
@@ -1011,8 +1019,8 @@ function SaleFormPage() {
             {/* Mensaje: escribir al menos 2 caracteres */}
             {searchTerm.length > 0 && searchTerm.length < 2 && (
               <div className="text-center py-8">
-                <p className="text-sm text-gray-500">
-                  ✏️ Escribe al menos 2 caracteres para buscar
+                <p className="text-sm text-gray-500 flex items-center justify-center gap-1">
+                  <PencilSquareIcon className="w-4 h-4" /> Escribe al menos 2 caracteres para buscar
                 </p>
               </div>
             )}
@@ -1028,8 +1036,8 @@ function SaleFormPage() {
             {/* Mensaje: no se encontraron productos */}
             {!isSearching && searchTerm.length >= 2 && searchResults.length === 0 && (
               <div className="text-center py-8">
-                <p className="text-sm text-gray-500">
-                  🔍 No se encontraron productos con "{searchTerm}"
+                <p className="text-sm text-gray-500 flex items-center justify-center gap-1">
+                  <SearchSvgIcon className="w-4 h-4" /> No se encontraron productos con "{searchTerm}"
                 </p>
               </div>
             )}
@@ -1054,7 +1062,7 @@ function SaleFormPage() {
                         <p className="text-sm text-gray-500 mt-1">SKU: {product.sku}</p>
                         <div className="flex items-center gap-3 mt-2">
                           {product.product_type === 'service' ? (
-                            <span className="text-xs font-semibold text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full">🔧 Servicio</span>
+                            <span className="inline-flex items-center gap-1 text-xs font-semibold text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full"><WrenchScrewdriverIcon className="w-3 h-3" /> Servicio</span>
                           ) : (
                             <span className={`text-sm font-medium ${
                               product.current_stock > 0 

@@ -7,6 +7,7 @@ import { vehiclesApi } from '../../api/workshop';
 import axios from '../../api/axios';
 import { ArrowLeft, Save, Car, User, Wrench, Plus, X, Search, Loader } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 
 const inputCls = "w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white";
 
@@ -163,18 +164,18 @@ export default function WorkOrderFormPage() {
   };
 
   const handleSubmit = async () => {
-    if (!form.vehicle_id)        return toast.error('⚠️ Debes seleccionar un vehículo');
+    if (!form.vehicle_id)        return toast.error('Debes seleccionar un vehículo');
     if (!form.mileage_in && form.mileage_in !== 0) {
-      return toast.error('⚠️ El kilometraje de ingreso es requerido');
+      return toast.error('El kilometraje de ingreso es requerido');
     }
     if (isNaN(Number(form.mileage_in)) || Number(form.mileage_in) < 0) {
-      return toast.error('⚠️ El kilometraje debe ser un número válido');
+      return toast.error('El kilometraje debe ser un número válido');
     }
     if (!form.problem_description?.trim()) {
-      return toast.error('⚠️ Ingresa la descripción del problema reportado por el cliente');
+      return toast.error('Ingresa la descripción del problema reportado por el cliente');
     }
     if (!form.promised_at) {
-      return toast.error('⚠️ La fecha prometida de entrega es requerida — el cliente necesita saber cuándo recoger su vehículo');
+      return toast.error('La fecha prometida de entrega es requerida — el cliente necesita saber cuándo recoger su vehículo');
     }
     setSaving(true);
     try {
@@ -182,7 +183,7 @@ export default function WorkOrderFormPage() {
       navigate(`/workshop/work-orders/${order.id}`);
     } catch (e) {
       const msg = e.response?.data?.message || 'Error al crear la OT';
-      toast.error(`❌ ${msg}`);
+      toast.error(`${msg}`);
     } finally {
       setSaving(false);
     }
@@ -233,7 +234,7 @@ export default function WorkOrderFormPage() {
                           <span className="text-xs text-gray-500">{v.brand} {v.model} {v.year}</span>
                         </div>
                         {v.customer
-                          ? <p className="text-xs text-blue-500 mt-0.5">👤 {v.customer.business_name || `${v.customer.first_name} ${v.customer.last_name}`}</p>
+                          ? <p className="text-xs text-blue-500 mt-0.5">{v.customer.business_name || `${v.customer.first_name} ${v.customer.last_name}`}</p>
                           : <p className="text-xs text-gray-300 mt-0.5">Sin propietario</p>
                         }
                       </div>
@@ -380,7 +381,7 @@ export default function WorkOrderFormPage() {
                     )}
                     {!loadingCust && selVehicle && !selCustomer && (
                       <div className="flex items-center gap-2 text-xs bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
-                        <span>⚠️</span>
+                        <ExclamationTriangleIcon className="w-4 h-4 text-amber-500 flex-shrink-0" />
                         <span className="text-amber-700">Sin propietario registrado</span>
                         <button type="button" onClick={() => setShowNewCustomer(true)}
                           className="ml-auto text-amber-600 font-medium hover:underline">+ Agregar</button>

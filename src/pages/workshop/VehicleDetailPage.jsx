@@ -306,7 +306,7 @@ export default function VehicleDetailPage() {
               {(soatSt?.cls.includes('red') || soatSt?.cls.includes('orange') ||
                 tecnomSt?.cls.includes('red') || tecnomSt?.cls.includes('orange')) && (
                 <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                  <p className="text-xs font-semibold text-amber-700 mb-1">⚠️ Atención documentos</p>
+                  <p className="text-xs font-semibold text-amber-700 mb-1">Atención documentos</p>
                   {soatSt?.cls.includes('red') && <p className="text-xs text-amber-700">SOAT vencido</p>}
                   {soatSt?.cls.includes('orange') && <p className="text-xs text-amber-700">SOAT por vencer</p>}
                   {tecnomSt?.cls.includes('red') && <p className="text-xs text-amber-700">Tecno-mecánica vencida</p>}

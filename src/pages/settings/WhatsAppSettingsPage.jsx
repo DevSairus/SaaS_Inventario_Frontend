@@ -38,7 +38,7 @@ export default function WhatsAppSettingsPage() {
     try {
       const { data } = await api.get('/whatsapp/test-cloudinary');
       setTestResult(data);
-      if (data.success) toast.success('Cloudinary OK ✅');
+      if (data.success) toast.success('Cloudinary OK');
       else toast.error('Error con Cloudinary');
     } catch (e) {
       const data = e.response?.data || { success: false, message: e.message, diagnosis: null };
@@ -129,7 +129,7 @@ export default function WhatsAppSettingsPage() {
                   </svg>
                   Probando conexión...
                 </>
-              ) : '🔌 Probar conexión con Cloudinary'}
+              ) : 'Probar conexión con Cloudinary'}
             </button>
           </div>
 
@@ -171,7 +171,7 @@ export default function WhatsAppSettingsPage() {
                   )}
                   {testResult.diagnosis.upload && (
                     <div className="mt-2 pt-2 border-t border-gray-200">
-                      <p className="font-sans text-green-700">✅ Archivo de prueba subido y eliminado correctamente.</p>
+                      <p className="font-sans text-green-700">Archivo de prueba subido y eliminado correctamente.</p>
                       <p className="text-gray-500 mt-0.5 break-all">URL: {testResult.diagnosis.upload.secure_url}</p>
                     </div>
                   )}

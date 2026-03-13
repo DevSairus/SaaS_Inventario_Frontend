@@ -212,7 +212,7 @@ const TransferFormPage = () => {
                 </select>
                 {formData.from_warehouse_id && formData.items.length > 0 && (
                   <p className="text-sm text-amber-600 mt-1">
-                    ⚠️ Cambiar la bodega borrará los productos agregados
+                    Cambiar la bodega borrará los productos agregados
                   </p>
                 )}
               </div>
@@ -295,7 +295,7 @@ const TransferFormPage = () => {
 
             {!formData.from_warehouse_id && (
               <div className="text-center py-8 text-amber-600 bg-amber-50 rounded-lg">
-                ⚠️ Primero selecciona la bodega de origen para agregar productos
+                Primero selecciona la bodega de origen para agregar productos
               </div>
             )}
 

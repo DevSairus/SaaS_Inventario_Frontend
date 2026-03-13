@@ -15,6 +15,7 @@ import {
   Printer, Download, ClipboardList, Share2,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { ClipboardDocumentListIcon, DocumentTextIcon } from '@heroicons/react/24/outline';
 
 const STATUS_FLOW = ['recibido', 'en_proceso', 'en_espera', 'listo', 'entregado'];
 
@@ -1214,7 +1215,7 @@ export default function WorkOrderDetailPage() {
                 {[
                   {
                     type: 'remision',
-                    icon: '📋',
+                    Icon: ClipboardDocumentListIcon,
                     label: 'Remisión',
                     desc: 'Documento de entrega. Sin efecto fiscal inmediato.',
                     color: 'border-blue-200 hover:border-blue-400 hover:bg-blue-50',
@@ -1222,20 +1223,20 @@ export default function WorkOrderDetailPage() {
                   },
                   {
                     type: 'factura',
-                    icon: '📄',
+                    Icon: DocumentTextIcon,
                     label: 'Factura',
                     desc: 'Documento fiscal con validez ante la DIAN.',
                     color: 'border-emerald-200 hover:border-emerald-400 hover:bg-emerald-50',
                     badge: 'text-emerald-700 bg-emerald-100',
                   },
-                ].map(({ type, icon, label, desc, color, badge }) => (
+                ].map(({ type, Icon, label, desc, color, badge }) => (
                   <button
                     key={type}
                     disabled={generatingSale}
                     onClick={() => confirmGenerateSale(type)}
                     className={`w-full flex items-start gap-4 p-4 border-2 rounded-xl transition-all text-left disabled:opacity-60 ${color}`}
                   >
-                    <span className="text-2xl shrink-0">{icon}</span>
+                    <Icon className="w-6 h-6 shrink-0 text-gray-500 mt-0.5" />
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
                         <p className="font-semibold text-gray-900">{label}</p>

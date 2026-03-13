@@ -3,10 +3,18 @@ import Layout from '../../components/layout/Layout';
 import { useNavigate } from 'react-router-dom';
 import useWorkshopStore from '../../store/workshopStore';
 import { Wrench, Plus, Search, Car, User, Clock, ChevronRight } from 'lucide-react';
+import {
+  InboxArrowDownIcon,
+  WrenchScrewdriverIcon,
+  PauseCircleIcon,
+  CheckCircleIcon,
+  TruckIcon,
+  XCircleIcon,
+} from '@heroicons/react/24/outline';
 
 const STATUS_CONFIG = {
   recibido:   {
-    label: 'Recibido',   emoji: '📥',
+    label: 'Recibido',   Icon: InboxArrowDownIcon,
     badge:  'bg-blue-100 text-blue-700 ring-1 ring-blue-200',
     card:   'bg-blue-50/60 border-blue-200 border-l-blue-500',
     icon:   'bg-blue-100 text-blue-600',
@@ -14,7 +22,7 @@ const STATUS_CONFIG = {
     number: 'text-blue-900',
   },
   en_proceso: {
-    label: 'En Proceso', emoji: '🔧',
+    label: 'En Proceso', Icon: WrenchScrewdriverIcon,
     badge:  'bg-yellow-100 text-yellow-800 ring-1 ring-yellow-300',
     card:   'bg-yellow-50/70 border-yellow-200 border-l-yellow-500',
     icon:   'bg-yellow-100 text-yellow-700',
@@ -22,7 +30,7 @@ const STATUS_CONFIG = {
     number: 'text-yellow-900',
   },
   en_espera: {
-    label: 'En Espera',  emoji: '⏳',
+    label: 'En Espera',  Icon: PauseCircleIcon,
     badge:  'bg-orange-100 text-orange-800 ring-1 ring-orange-300',
     card:   'bg-orange-50/60 border-orange-200 border-l-orange-500',
     icon:   'bg-orange-100 text-orange-600',
@@ -30,7 +38,7 @@ const STATUS_CONFIG = {
     number: 'text-orange-900',
   },
   listo: {
-    label: 'Listo',      emoji: '✅',
+    label: 'Listo',      Icon: CheckCircleIcon,
     badge:  'bg-green-100 text-green-800 ring-1 ring-green-300',
     card:   'bg-green-50/60 border-green-200 border-l-green-500',
     icon:   'bg-green-100 text-green-600',
@@ -38,7 +46,7 @@ const STATUS_CONFIG = {
     number: 'text-green-900',
   },
   entregado: {
-    label: 'Entregado',  emoji: '🏁',
+    label: 'Entregado',  Icon: TruckIcon,
     badge:  'bg-gray-100 text-gray-500 ring-1 ring-gray-200',
     card:   'bg-gray-50/40 border-gray-200 border-l-gray-400',
     icon:   'bg-gray-100 text-gray-500',
@@ -46,7 +54,7 @@ const STATUS_CONFIG = {
     number: 'text-gray-700',
   },
   cancelado: {
-    label: 'Cancelado',  emoji: '🚫',
+    label: 'Cancelado',  Icon: XCircleIcon,
     badge:  'bg-red-100 text-red-600 ring-1 ring-red-200',
     card:   'bg-red-50/30 border-red-200 border-l-red-400',
     icon:   'bg-red-100 text-red-500',
@@ -100,7 +108,7 @@ export default function WorkOrdersPage() {
           onClick={() => { setStatus('activas'); setPage(1); }}
           className={`px-3 py-1.5 rounded-full text-xs font-medium transition ${status === 'activas' ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
         >
-          🔧 Activas
+          <WrenchScrewdriverIcon className="w-3.5 h-3.5 inline mr-1" />Activas
         </button>
         <button
           onClick={() => { setStatus(''); setPage(1); }}
@@ -116,7 +124,7 @@ export default function WorkOrdersPage() {
               status === key ? 'bg-gray-800 text-white' : `${cfg.badge} hover:opacity-80`
             }`}
           >
-            {cfg.emoji} {cfg.label}
+            {cfg.Icon && <cfg.Icon className="w-3 h-3 inline mr-1" />}{cfg.label}
           </button>
         ))}
       </div>
@@ -164,7 +172,7 @@ export default function WorkOrdersPage() {
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className={`font-bold text-sm ${sc.number}`}>{order.order_number}</span>
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${sc.badge}`}>{sc.emoji} {sc.label}</span>
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${sc.badge} inline-flex items-center gap-1`}>{sc.Icon && <sc.Icon className="w-3 h-3" />}{sc.label}</span>
                       </div>
                       <div className="flex items-center gap-3 mt-0.5 text-xs text-gray-500 flex-wrap">
                         <span className="font-mono font-bold text-gray-700">{order.vehicle?.plate || '—'}</span>
