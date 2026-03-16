@@ -4,6 +4,8 @@ import useProductsStore from '../../store/productsStore';
 import useCategoriesStore from '../../store/categoriesStore';
 import BarcodeScanner from '../common/BarcodeScanner';
 import { warehousesService } from '../../api/warehouses';
+import ProductImageUpload from './ProductImageUpload';
+import { productsAPI } from '../../api/products';
 
 const ProductFormModal = ({ isOpen, onClose, product = null }) => {
   const { createProduct, updateProduct, loading } = useProductsStore();
@@ -38,6 +40,7 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
   const [calculatedPrice, setCalculatedPrice] = useState(null);
   const [showScanner, setShowScanner] = useState(false);
   const [saveError, setSaveError] = useState('');
+  const [pendingImageFile, setPendingImageFile] = useState(null);
 
   const fmtNum = (v) => {
     if (v === '' || v === null || v === undefined) return '';
@@ -188,8 +191,13 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
       if (product) {
         await updateProduct(product.id, dataToSend);
       } else {
-        await createProduct(dataToSend);
+        const newProduct = await createProduct(dataToSend);
+        // Si hay una imagen pendiente, subirla ahora que tenemos el ID
+        if (pendingImageFile && newProduct?.id) {
+          try { await productsAPI.uploadImage(newProduct.id, pendingImageFile); } catch {}
+        }
       }
+      setPendingImageFile(null);
       onClose();
     } catch (err) {
       const msg = err?.response?.data?.message || err?.message || 'Error al guardar el producto';
@@ -297,6 +305,21 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
                   rows="3"
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
                   placeholder="Descripción detallada del producto..."
+                />
+              </div>
+
+              {/* Imagen del producto */}
+              <div className="md:col-span-2">
+                <ProductImageUpload
+                  productId={product?.id}
+                  imageUrl={product?.image_url}
+                  onImageChange={(val) => {
+                    if (val && typeof val === 'object' && val.file) {
+                      // Producto nuevo: guardar archivo para subir después del create
+                      setPendingImageFile(val.file);
+                    }
+                    // Para producto existente, el componente sube directamente
+                  }}
                 />
               </div>
 

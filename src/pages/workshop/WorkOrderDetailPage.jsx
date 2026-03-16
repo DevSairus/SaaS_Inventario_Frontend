@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { ClipboardDocumentListIcon, DocumentTextIcon } from '@heroicons/react/24/outline';
+import ProductImageViewer from '../../components/products/ProductImageViewer';
 
 const STATUS_FLOW = ['recibido', 'en_proceso', 'en_espera', 'listo', 'entregado'];
 
@@ -57,6 +58,7 @@ export default function WorkOrderDetailPage() {
   // Búsqueda de producto
   const [searchTerm, setSearchTerm]       = useState('');
   const [searchResults, setSearchResults] = useState([]);
+  const [viewingImage, setViewingImage] = useState(null);
   const [isSearching, setIsSearching]     = useState(false);
   const [showScanner, setShowScanner]     = useState(false);
 
@@ -601,7 +603,17 @@ export default function WorkOrderDetailPage() {
                           <button key={p.id} onClick={() => handleSelectProduct(p)}
                             className="w-full text-left px-3 py-2.5 hover:bg-blue-50 transition">
                             <div className="flex items-center justify-between gap-3">
-                              <div className="min-w-0">
+                              {p.image_url && (
+                                <div className="shrink-0 w-10 h-10 rounded-lg overflow-hidden border border-gray-200 bg-gray-50">
+                                  <img
+                                    src={`${import.meta.env.VITE_API_URL?.replace('/api','') ?? ''}${p.image_url}`}
+                                    alt={p.name}
+                                    className="w-full h-full object-cover"
+                                    onError={(e) => { e.target.parentElement.style.display='none'; }}
+                                  />
+                                </div>
+                              )}
+                              <div className="min-w-0 flex-1">
                                 <p className="text-sm font-medium text-gray-900 truncate">{p.name}</p>
                                 <p className="text-xs text-gray-400">
                                   {p.sku && <span className="mr-2">{p.sku}</span>}
@@ -613,9 +625,19 @@ export default function WorkOrderDetailPage() {
                                   }
                                 </p>
                               </div>
-                              <span className="text-sm font-semibold text-blue-600 flex-shrink-0">
-                                {COP(p.base_price)}
-                              </span>
+                              <div className="flex items-center gap-2 flex-shrink-0">
+                                {p.image_url && (
+                                  <button type="button"
+                                    onClick={(e) => { e.stopPropagation(); setViewingImage(p); }}
+                                    className="p-1 rounded-md text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition"
+                                    title="Ver imagen">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
+                                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+                                    </svg>
+                                  </button>
+                                )}
+                                <span className="text-sm font-semibold text-blue-600">{COP(p.base_price)}</span>
+                              </div>
                             </div>
                           </button>
                         ))}
@@ -1202,7 +1224,11 @@ export default function WorkOrderDetailPage() {
         })()}
 
         {/* ── Modal: selección de tipo de documento al generar desde OT ── */}
-        {showGenSaleModal && (
+        {viewingImage && (
+        <ProductImageViewer product={viewingImage} onClose={() => setViewingImage(null)} />
+      )}
+
+      {showGenSaleModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
               <div className="p-6 border-b border-gray-100">

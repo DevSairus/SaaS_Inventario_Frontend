@@ -34,6 +34,7 @@ import {
   INPUT_CONFIG 
 } from '../../utils/numberUtils';
 import toast from 'react-hot-toast';
+import ProductImageViewer from '../../components/products/ProductImageViewer';
 import {
   ClipboardDocumentListIcon,
   DocumentTextIcon,
@@ -78,6 +79,7 @@ function SaleFormPage() {
 
   const [items, setItems] = useState([]);
   const [showProductSearch, setShowProductSearch] = useState(false);
+  const [viewingImage, setViewingImage] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -1056,8 +1058,19 @@ function SaleFormPage() {
                     }}
                     className="w-full text-left p-4 border border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-300 transition-all duration-200"
                   >
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
+                    <div className="flex justify-between items-start gap-3">
+                      {/* Miniatura */}
+                      {product.image_url && (
+                        <div className="shrink-0 w-14 h-14 rounded-lg overflow-hidden border border-gray-200 bg-gray-50 mt-0.5">
+                          <img
+                            src={`${import.meta.env.VITE_API_URL?.replace('/api','') ?? ''}${product.image_url}`}
+                            alt={product.name}
+                            className="w-full h-full object-cover"
+                            onError={(e) => { e.target.parentElement.style.display='none'; }}
+                          />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
                         <p className="font-medium text-gray-900">{product.name}</p>
                         <p className="text-sm text-gray-500 mt-1">SKU: {product.sku}</p>
                         <div className="flex items-center gap-3 mt-2">
@@ -1079,24 +1092,32 @@ function SaleFormPage() {
                           )}
                         </div>
                       </div>
-                      <div className="text-right ml-4">
+                      <div className="text-right ml-2 shrink-0 flex flex-col items-end gap-1">
                         <p className="font-semibold text-lg text-blue-600">
                           ${formatCurrency(product.base_price || 0)}
                         </p>
                         {product.price_includes_tax && (
-                          <p className="text-xs text-blue-600 mt-1">
+                          <p className="text-xs text-blue-600">
                             (IVA {product.tax_percentage || 19}% incluido)
                           </p>
                         )}
                         {product.has_tax === false && (
-                          <p className="text-xs text-green-600 mt-1">
-                            (Exento de IVA)
-                          </p>
+                          <p className="text-xs text-green-600">(Exento de IVA)</p>
                         )}
                         {product.has_tax !== false && !product.price_includes_tax && (
-                          <p className="text-xs text-gray-500 mt-1">
-                            + IVA {product.tax_percentage || 19}%
-                          </p>
+                          <p className="text-xs text-gray-500">+ IVA {product.tax_percentage || 19}%</p>
+                        )}
+                        {product.image_url && (
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); setViewingImage(product); }}
+                            className="mt-1 flex items-center gap-1 text-xs text-blue-500 hover:text-blue-700 transition"
+                          >
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5">
+                              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+                            </svg>
+                            Ver foto
+                          </button>
                         )}
                       </div>
                     </div>
@@ -1106,6 +1127,11 @@ function SaleFormPage() {
             )}
           </div>
         </Modal>
+
+        {/* Visor de imagen de producto */}
+        {viewingImage && (
+          <ProductImageViewer product={viewingImage} onClose={() => setViewingImage(null)} />
+        )}
 
         {/* BarcodeScanner */}
         {showScanner && (

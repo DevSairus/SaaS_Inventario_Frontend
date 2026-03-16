@@ -47,5 +47,21 @@ export const productsAPI = {
   getByBarcode: async (barcode) => {
     const response = await api.get(`/products/barcode/${barcode}`);
     return response.data;
+  },
+
+  // Subir imagen del producto
+  uploadImage: async (id, file) => {
+    const formData = new FormData();
+    formData.append('image', file);
+    const response = await api.post(`/products/${id}/image`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    return response.data;
+  },
+
+  // Eliminar imagen del producto
+  deleteImage: async (id) => {
+    const response = await api.delete(`/products/${id}/image`);
+    return response.data;
   }
 };
