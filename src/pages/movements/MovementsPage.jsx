@@ -384,7 +384,7 @@ const MovementsPage = () => {
                         Página {kardexPage} de {kardex?.pagination?.pages ?? 1}
                       </span>
                       <button
-                        disabled={kardexPage >= kardex?.pagination?.pages ?? 1}
+                        disabled={kardexPage >= (kardex?.pagination?.pages ?? 1)}
                         onClick={() => handleViewKardex(selectedProduct.id, kardexPage + 1)}
                         className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg disabled:opacity-40 hover:bg-gray-50"
                       >Siguiente →</button>

@@ -34,8 +34,8 @@ import {
   INPUT_CONFIG 
 } from '../../utils/numberUtils';
 import toast from 'react-hot-toast';
-import {
 import ProductImageViewer from '../../components/products/ProductImageViewer';
+import {
   ClipboardDocumentListIcon,
   DocumentTextIcon,
   WrenchScrewdriverIcon,
