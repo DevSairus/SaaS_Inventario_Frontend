@@ -48,6 +48,8 @@ const NAV = [
       { label: "Productos",         path: "/products" },
       { label: "Compras",           path: "/purchases" },
       { label: "Movimientos",       path: "/movements" },
+      { label: "Ajustes",           path: "/adjustments " },
+      { label: "Categorias",        path: "/categories" },
       { label: "Transferencias",    path: "/inventory/transfers" },
       { label: "Consumos Internos", path: "/inventory/internal-consumptions" },
       { label: "Dev. Proveedores",  path: "/inventory/supplier-returns" },
