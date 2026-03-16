@@ -34,8 +34,8 @@ import {
   INPUT_CONFIG 
 } from '../../utils/numberUtils';
 import toast from 'react-hot-toast';
-import ProductImageViewer from '../../components/products/ProductImageViewer';
 import {
+import ProductImageViewer from '../../components/products/ProductImageViewer';
   ClipboardDocumentListIcon,
   DocumentTextIcon,
   WrenchScrewdriverIcon,
@@ -1063,7 +1063,7 @@ function SaleFormPage() {
                       {product.image_url && (
                         <div className="shrink-0 w-14 h-14 rounded-lg overflow-hidden border border-gray-200 bg-gray-50 mt-0.5">
                           <img
-                            src={`${import.meta.env.VITE_API_URL?.replace('/api','') ?? ''}${product.image_url}`}
+                            src={`${product.image_url.startsWith('http') ? '' : (import.meta.env.VITE_API_URL?.replace('/api','') ?? '')}${product.image_url}`}
                             alt={product.name}
                             className="w-full h-full object-cover"
                             onError={(e) => { e.target.parentElement.style.display='none'; }}

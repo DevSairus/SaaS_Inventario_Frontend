@@ -606,7 +606,7 @@ export default function WorkOrderDetailPage() {
                               {p.image_url && (
                                 <div className="shrink-0 w-10 h-10 rounded-lg overflow-hidden border border-gray-200 bg-gray-50">
                                   <img
-                                    src={`${import.meta.env.VITE_API_URL?.replace('/api','') ?? ''}${p.image_url}`}
+                                    src={p.image_url.startsWith('http') ? p.image_url : `${import.meta.env.VITE_API_URL?.replace('/api','') ?? ''}${p.image_url}`}
                                     alt={p.name}
                                     className="w-full h-full object-cover"
                                     onError={(e) => { e.target.parentElement.style.display='none'; }}
