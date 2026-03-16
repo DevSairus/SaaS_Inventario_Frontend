@@ -42,4 +42,9 @@ export const commissionApi = {
   list: (params) => axios.get('/workshop/commission-settlements', { params }),
   getById: (id) => axios.get(`/workshop/commission-settlements/${id}`),
   getProductsReport: (params) => axios.get('/workshop/commission-settlements/products-report', { params }),
+  // Liquidaciones de productos
+  productPreview: (params) => axios.get('/workshop/commission-settlements/products-preview', { params }),
+  createProductSettlement: (data) => axios.post('/workshop/commission-settlements/products', data),
+  listProductSettlements: (params) => axios.get('/workshop/commission-settlements/products', { params }),
+  getProductSettlementById: (id) => axios.get(`/workshop/commission-settlements/products/${id}`),
 };
