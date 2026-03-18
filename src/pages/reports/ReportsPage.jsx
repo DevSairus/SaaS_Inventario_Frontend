@@ -20,6 +20,7 @@ import {
   BanknotesIcon,
   CalendarDaysIcon,
   UsersIcon,
+  DocumentTextIcon,
 } from '@heroicons/react/24/outline';
 
 const COLORS = ['#6366f1', '#8b5cf6', '#a78bfa', '#c4b5fd', '#ddd6fe', '#ede9fe', '#f5f3ff', '#818cf8', '#7c3aed', '#5b21b6'];
