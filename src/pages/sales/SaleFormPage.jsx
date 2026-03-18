@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import BarcodeScanner from '../../components/common/BarcodeScanner';
 import { productsAPI } from '../../api/products';
+import { usersAPI } from '../../api/users';
 import { 
   formatCurrency, 
   toInteger, 
@@ -52,12 +53,14 @@ function SaleFormPage() {
   // true = ocultar IVA en remisiones (el store aplica este default si no está configurado)
   const hideRemisionTax = features?.hide_remision_tax === true;
   const vehiclePlateEnabled = features?.vehicle_field_enabled !== false; // default true
+  const technicianFieldEnabled = features?.technician_field_enabled === true; // default false
   const { customers, fetchCustomers } = useCustomersStore();
   const { searchProducts } = useProductsStore();
 
   const isEditMode = Boolean(id);
 
   const [warehouses, setWarehouses] = useState([]);
+  const [technicians, setTechnicians] = useState([]);
   const [formData, setFormData] = useState({
     customer_id: '',
     warehouse_id: '',
@@ -66,7 +69,8 @@ function SaleFormPage() {
     sale_date: new Date().toISOString().split('T')[0],
     notes: '',
     vehicle_plate: '',
-    mileage: ''
+    mileage: '',
+    technician_id: '',
   });
 
   const [showQuickCustomer, setShowQuickCustomer] = useState(false);
@@ -111,6 +115,25 @@ function SaleFormPage() {
     };
     loadWarehouses();
   }, []);
+
+  // Cargar técnicos si la feature está habilitada
+  useEffect(() => {
+    if (!technicianFieldEnabled) return;
+    const loadTechnicians = async () => {
+      try {
+        const data = await usersAPI.getAll({ role: 'technician', is_active: true, limit: 100 });
+        // El endpoint /users devuelve { success, data: { users: [...], totalPages, ... } }
+        const list = Array.isArray(data?.data?.users) ? data.data.users
+                   : Array.isArray(data?.data)        ? data.data
+                   : Array.isArray(data)              ? data
+                   : [];
+        setTechnicians(list);
+      } catch (e) {
+        setTechnicians([]);
+      }
+    };
+    loadTechnicians();
+  }, [technicianFieldEnabled]);
 
   useEffect(() => {
     fetchCustomers();
@@ -170,7 +193,8 @@ function SaleFormPage() {
           : new Date().toISOString().split('T')[0],
         notes: currentSale.notes || '',
         vehicle_plate: currentSale.vehicle_plate || '',
-        mileage: currentSale.mileage || ''
+        mileage: currentSale.mileage || '',
+        technician_id: currentSale.technician_id || '',
       });
 
       // Establecer el nombre del cliente en el campo de búsqueda
@@ -604,6 +628,35 @@ function SaleFormPage() {
                   </p>
                 </div>
                 </>
+                )}
+
+                {/* Técnico — controlado por configuración del tenant */}
+                {technicianFieldEnabled && (
+                <div className="mt-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <WrenchScrewdriverIcon className="w-4 h-4 inline mr-1" />
+                    Técnico Asignado
+                    <span className="text-gray-400 text-xs ml-2">(Opcional)</span>
+                  </label>
+                  <select
+                    name="technician_id"
+                    value={formData.technician_id}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                  >
+                    <option value="">Sin técnico asignado</option>
+                    {Array.isArray(technicians) && technicians.map(tech => (
+                      <option key={tech.id} value={tech.id}>
+                        {tech.first_name} {tech.last_name}
+                      </option>
+                    ))}
+                  </select>
+                  {technicianFieldEnabled && Array.isArray(technicians) && technicians.length === 0 && (
+                    <p className="text-xs text-amber-600 mt-1">
+                      No hay técnicos activos. Crea usuarios con rol &quot;Técnico&quot; en el módulo de usuarios.
+                    </p>
+                  )}
+                </div>
                 )}
 
                 {/* Cliente Rápido */}

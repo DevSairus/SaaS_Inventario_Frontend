@@ -421,6 +421,28 @@ const TenantSettingsPage = () => {
                   </button>
                 </div>
 
+                {/* Toggle: Técnico en factura de venta directa */}
+                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
+                  <div className="flex-1 mr-4">
+                    <p className="font-medium text-gray-900 text-sm">Habilitar técnico en ventas directas</p>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      Permite asignar un técnico a cada factura o remisión de venta, sin necesidad de pasar
+                      por una orden de trabajo. Solo aparecen usuarios con rol "Técnico".
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => toggleFeature('technician_field_enabled')}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0 ${
+                      config.features?.technician_field_enabled ? 'bg-blue-600' : 'bg-gray-300'
+                    }`}
+                  >
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                      config.features?.technician_field_enabled ? 'translate-x-6' : 'translate-x-1'
+                    }`} />
+                  </button>
+                </div>
+
               </div>
             </div>
           </Card>

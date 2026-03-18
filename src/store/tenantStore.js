@@ -21,6 +21,7 @@ const useTenantStore = create((set, get) => ({
         const features = {
           hide_remision_tax: true,
           vehicle_field_enabled: true,
+          technician_field_enabled: false, // default: deshabilitado (igual que placa)
           ...rawFeatures,
         };
         set({ features, loading: false });
@@ -36,6 +37,7 @@ const useTenantStore = create((set, get) => ({
     const features = {
       hide_remision_tax: true,
       vehicle_field_enabled: true,
+      technician_field_enabled: false,
       ...rawFeatures,
     };
     set({ features });

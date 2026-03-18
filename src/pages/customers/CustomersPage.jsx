@@ -55,7 +55,23 @@ export default function CustomersPage() {
   const handleOpenModal = (customer = null) => {
     if (customer) {
       setEditingCustomer(customer);
-      setFormData(customer);
+      // ⚠️ BUG FIX: mapear solo los campos del formulario, no copiar
+      // el objeto completo del cliente (que incluye first_name, last_name,
+      // tenant_id, created_at, etc. y causaba que Sequelize no detectara cambios).
+      setFormData({
+        customer_type:     customer.customer_type     || 'individual',
+        full_name:         customer.full_name          || '',
+        business_name:     customer.business_name      || '',
+        tax_id:            customer.tax_id             || '',
+        email:             customer.email              || '',
+        phone:             customer.phone              || '',
+        mobile:            customer.mobile             || '',
+        address:           customer.address            || '',
+        city:              customer.city               || '',
+        customer_category: customer.customer_category  || '',
+        notes:             customer.notes              || '',
+        is_active:         customer.is_active          ?? true,
+      });
     } else {
       setEditingCustomer(null);
       setFormData({
@@ -86,8 +102,10 @@ export default function CustomersPage() {
     try {
       if (editingCustomer) {
         await updateCustomer(editingCustomer.id, formData);
+        toast.success('Cliente actualizado exitosamente');
       } else {
         await createCustomer(formData);
+        toast.success('Cliente creado exitosamente');
       }
       
       handleCloseModal();
@@ -361,6 +379,29 @@ export default function CustomersPage() {
                 placeholder="Notas adicionales sobre el cliente..."
               />
             </div>
+
+            {/* Estado activo/inactivo — solo visible al editar */}
+            {editingCustomer && (
+              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+                <div>
+                  <p className="text-sm font-medium text-gray-900">Estado del cliente</p>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    {formData.is_active ? 'El cliente está activo y puede realizar compras.' : 'El cliente está inactivo.'}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, is_active: !formData.is_active })}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0 ${
+                    formData.is_active ? 'bg-green-500' : 'bg-gray-300'
+                  }`}
+                >
+                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                    formData.is_active ? 'translate-x-6' : 'translate-x-1'
+                  }`} />
+                </button>
+              </div>
+            )}
 
             <div className="flex justify-end space-x-2 pt-4 border-t">
               <Button type="button" variant="secondary" onClick={handleCloseModal}>
