@@ -55,23 +55,23 @@ function LoginPage() {
 
   return (
     <div className="min-h-screen relative overflow-hidden flex items-center justify-center"
-      style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 40%, #0f172a 100%)' }}>
+      style={{ background: '#0D0D0D' }}>
 
       {/* Background */}
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute inset-0 opacity-5" style={{
-          backgroundImage: 'linear-gradient(rgba(99,102,241,0.4) 1px, transparent 1px), linear-gradient(90deg, rgba(99,102,241,0.4) 1px, transparent 1px)',
+          backgroundImage: 'linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px)',
           backgroundSize: '60px 60px'
         }} />
         <div className="absolute top-0 left-1/4 w-96 h-96 rounded-full opacity-10 blur-3xl animate-pulse"
-          style={{ background: 'radial-gradient(circle, #6366f1, transparent)', animationDuration: '4s' }} />
+          style={{ background: 'radial-gradient(circle, #CF3A0B, transparent)', animationDuration: '4s' }} />
         <div className="absolute bottom-0 right-1/4 w-80 h-80 rounded-full opacity-10 blur-3xl animate-pulse"
-          style={{ background: 'radial-gradient(circle, #8b5cf6, transparent)', animationDuration: '6s', animationDelay: '2s' }} />
+          style={{ background: 'radial-gradient(circle, #E84510, transparent)', animationDuration: '6s', animationDelay: '2s' }} />
         {PARTICLES.map(p => (
           <div key={p.id} className="absolute rounded-full" style={{
             width: p.size, height: p.size,
             left: `${p.x}%`, top: `${p.y}%`,
-            background: 'rgba(99,102,241,0.5)',
+            background: 'rgba(207,58,11,0.4)',
             animation: `floatUp ${p.duration}s ${p.delay}s infinite linear`,
           }} />
         ))}
@@ -93,51 +93,39 @@ function LoginPage() {
         .glass {
           background: rgba(15,23,42,0.7);
           backdrop-filter: blur(20px);
-          border: 1px solid rgba(99,102,241,0.2);
+          border: 1px solid rgba(255,255,255,0.08);
           box-shadow: 0 25px 50px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05);
         }
         .inp {
           background: rgba(255,255,255,0.04);
-          border: 1px solid rgba(99,102,241,0.25);
+          border: 1px solid rgba(255,255,255,0.1);
           color: #e2e8f0;
           transition: all 0.2s;
         }
         .inp::placeholder { color: rgba(148,163,184,0.5); }
         .inp:focus {
           outline: none;
-          border-color: #6366f1;
-          background: rgba(99,102,241,0.08);
-          box-shadow: 0 0 0 3px rgba(99,102,241,0.15);
+          border-color: #CF3A0B;
+          background: rgba(207,58,11,0.05);
+          box-shadow: 0 0 0 3px rgba(207,58,11,0.15);
         }
         .btn-p {
-          background: linear-gradient(135deg, #6366f1, #8b5cf6);
-          box-shadow: 0 4px 20px rgba(99,102,241,0.35);
+          background: linear-gradient(135deg, #CF3A0B, #E84510);
+          box-shadow: 0 4px 20px rgba(207,58,11,0.3);
           transition: all 0.2s;
         }
         .btn-p:hover:not(:disabled) {
           transform: translateY(-1px);
-          box-shadow: 0 8px 28px rgba(99,102,241,0.45);
+          box-shadow: 0 8px 28px rgba(207,58,11,0.45);
         }
         .btn-p:disabled { opacity: 0.5; cursor: not-allowed; }
         .logo-ring {
-          background: linear-gradient(135deg, #6366f1, #8b5cf6);
-          box-shadow: 0 0 30px rgba(99,102,241,0.4), 0 0 60px rgba(99,102,241,0.2);
+          background: linear-gradient(135deg, #CF3A0B, #E84510);
+          box-shadow: 0 0 30px rgba(207,58,11,0.4), 0 0 60px rgba(207,58,11,0.2);
         }
       `}</style>
 
       <div className={`relative w-full max-w-md mx-4 ${mounted ? 'card-enter' : 'opacity-0'}`}>
-
-        {/* Logo */}
-        <div className="flex flex-col items-center mb-8">
-          <div className="logo-ring w-16 h-16 rounded-2xl flex items-center justify-center mb-4 rotate-12">
-            <svg className="w-8 h-8 text-white -rotate-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
-                d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-            </svg>
-          </div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">Control de Inventario</h1>
-          <p className="text-slate-400 text-sm mt-1">Sistema de Gestión Empresarial</p>
-        </div>
 
         {/* Card */}
         <div className="glass rounded-2xl overflow-hidden">
@@ -145,8 +133,23 @@ function LoginPage() {
           {/* ── LOGIN ── */}
           {view === 'login' && (
             <div className="p-8 fade-in">
-              <h2 className="text-xl font-semibold text-white mb-1">Bienvenido</h2>
-              <p className="text-slate-400 text-sm mb-7">Ingresa tus credenciales para continuar</p>
+              {/* Logo dentro de la card */}
+              <div className="flex flex-col items-center mb-7">
+                <div className="logo-ring w-14 h-14 rounded-2xl flex items-center justify-center mb-3">
+                  <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="9" stroke="white" strokeWidth="1.8" fill="none"/>
+                    <line x1="12" y1="9.2" x2="12" y2="3" stroke="white" strokeWidth="1.6" strokeLinecap="round"/>
+                    <line x1="14.67" y1="11.15" x2="20.82" y2="9.1" stroke="white" strokeWidth="1.6" strokeLinecap="round"/>
+                    <line x1="13.82" y1="13.85" x2="17.71" y2="19.44" stroke="white" strokeWidth="1.6" strokeLinecap="round"/>
+                    <line x1="10.18" y1="13.85" x2="6.29" y2="19.44" stroke="white" strokeWidth="1.6" strokeLinecap="round"/>
+                    <line x1="9.33" y1="11.15" x2="3.18" y2="9.1" stroke="white" strokeWidth="1.6" strokeLinecap="round"/>
+                    <circle cx="12" cy="12" r="2.2" fill="white"/>
+                  </svg>
+                </div>
+                <h1 className="text-2xl font-bold text-white tracking-tight">Pitbox</h1>
+                <p className="text-slate-400 text-sm mt-0.5">by DataCore</p>
+              </div>
+              <p className="text-slate-400 text-sm mb-6 text-center">Ingresa tus credenciales para continuar</p>
 
               {error && (
                 <div className="mb-5 flex items-center gap-2 bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-xl text-sm">
@@ -190,7 +193,7 @@ function LoginPage() {
                 <div className="flex justify-end">
                   <button type="button"
                     onClick={() => { setView('forgot'); clearError(); setForgotError(''); setForgotEmail(''); }}
-                    className="text-sm text-indigo-400 hover:text-indigo-300 transition-colors">
+                    className="text-sm text-orange-400 hover:text-orange-300 transition-colors">
                     ¿Olvidaste tu contraseña?
                   </button>
                 </div>
@@ -218,8 +221,8 @@ function LoginPage() {
                 Volver
               </button>
 
-              <div className="w-12 h-12 rounded-xl bg-indigo-500/15 border border-indigo-500/30 flex items-center justify-center mb-5">
-                <svg className="w-6 h-6 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="w-12 h-12 rounded-xl bg-[#CF3A0B]/15 border border-[#CF3A0B]/30 flex items-center justify-center mb-5">
+                <svg className="w-6 h-6 text-[#E84510]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
                     d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
                 </svg>
@@ -268,7 +271,7 @@ function LoginPage() {
               </div>
               <h2 className="text-xl font-semibold text-white mb-2">¡Correo enviado!</h2>
               <p className="text-slate-400 text-sm mb-2">
-                Si el correo <span className="text-indigo-400 font-medium">{forgotEmail}</span> está registrado,
+                Si el correo <span className="text-orange-400 font-medium">{forgotEmail}</span> está registrado,
                 recibirás un enlace para restablecer tu contraseña.
               </p>
               <p className="text-slate-500 text-xs mb-8">Revisa también tu carpeta de spam.</p>

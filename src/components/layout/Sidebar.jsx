@@ -109,7 +109,7 @@ export default function Sidebar({ isCollapsed, setIsCollapsed, isMobileOpen, set
               title={!expanded && !inMobile ? item.label : undefined}
               className={[
                 "relative flex items-center gap-2.5 h-8 px-[14px] text-[12.5px] font-medium transition-colors duration-100",
-                active ? "text-blue-400 bg-blue-500/10" : "text-gray-400 hover:text-gray-100 hover:bg-white/[0.05]",
+                active ? "text-[#E84510] bg-[#CF3A0B]/10" : "text-gray-400 hover:text-gray-100 hover:bg-white/[0.05]",
               ].join(" ")}
             >
               {active && <ActiveBar />}
@@ -126,7 +126,7 @@ export default function Sidebar({ isCollapsed, setIsCollapsed, isMobileOpen, set
               title={!expanded && !inMobile ? item.label : undefined}
               className={[
                 "w-full relative flex items-center gap-2.5 h-8 px-[14px] text-[12.5px] font-medium transition-colors duration-100",
-                active ? "text-blue-400 bg-blue-500/10" : "text-gray-400 hover:text-gray-100 hover:bg-white/[0.05]",
+                active ? "text-[#E84510] bg-[#CF3A0B]/10" : "text-gray-400 hover:text-gray-100 hover:bg-white/[0.05]",
               ].join(" ")}
             >
               {active && <ActiveBar />}
@@ -149,10 +149,10 @@ export default function Sidebar({ isCollapsed, setIsCollapsed, isMobileOpen, set
                       onClick={() => inMobile && setIsMobileOpen(false)}
                       className={[
                         "flex items-center h-7 pl-10 pr-4 text-[11.5px] whitespace-nowrap transition-colors duration-100",
-                        childActive ? "text-blue-400 bg-blue-500/10 font-medium" : "text-gray-500 hover:text-gray-200 hover:bg-white/[0.04]",
+                        childActive ? "text-[#E84510] bg-[#CF3A0B]/10 font-medium" : "text-gray-500 hover:text-gray-200 hover:bg-white/[0.04]",
                       ].join(" ")}
                     >
-                      <span className={`w-1 h-1 rounded-full mr-2 shrink-0 ${childActive ? "bg-blue-400" : "bg-gray-600"}`} />
+                      <span className={`w-1 h-1 rounded-full mr-2 shrink-0 ${childActive ? "bg-[#E84510]" : "bg-gray-600"}`} />
                       {child.label}
                     </Link>
                   );
@@ -173,14 +173,20 @@ export default function Sidebar({ isCollapsed, setIsCollapsed, isMobileOpen, set
         className="hidden lg:flex fixed inset-y-0 left-0 z-40 flex-col bg-gray-900 border-r border-white/[0.06] overflow-hidden"
       >
         <div className="flex items-center h-10 border-b border-white/[0.06] shrink-0 px-[14px]">
-          <div className="w-6 h-6 rounded-md bg-blue-600 flex items-center justify-center shrink-0">
-            <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" className="w-3 h-3">
-              <path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/>
-            </svg>
+          <div className="w-6 h-6 rounded-md bg-[#CF3A0B] flex items-center justify-center shrink-0">
+            <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" className="w-3 h-3">
+                <circle cx="12" cy="12" r="9" stroke="white" strokeWidth="2" fill="none"/>
+                <line x1="12" y1="9.5" x2="12" y2="3" stroke="white" strokeWidth="1.8" strokeLinecap="round"/>
+                <line x1="14.56" y1="11.28" x2="20.56" y2="9.33" stroke="white" strokeWidth="1.8" strokeLinecap="round"/>
+                <line x1="13.76" y1="13.72" x2="17.51" y2="19.17" stroke="white" strokeWidth="1.8" strokeLinecap="round"/>
+                <line x1="10.24" y1="13.72" x2="6.49" y2="19.17" stroke="white" strokeWidth="1.8" strokeLinecap="round"/>
+                <line x1="9.44" y1="11.28" x2="3.44" y2="9.33" stroke="white" strokeWidth="1.8" strokeLinecap="round"/>
+                <circle cx="12" cy="12" r="2" fill="white"/>
+              </svg>
           </div>
           {expanded && (
             <>
-              <span className="text-white font-semibold text-[13px] whitespace-nowrap ml-2.5 flex-1">AutoTaller</span>
+              <span className="text-white font-semibold text-[13px] whitespace-nowrap ml-2.5 flex-1">Pitbox</span>
               <button onClick={() => setIsCollapsed(true)} title="Colapsar menú" className="p-1 rounded-md text-gray-500 hover:text-gray-300 hover:bg-white/[0.06] transition-colors">
                 {I.collapse}
               </button>
@@ -202,7 +208,7 @@ export default function Sidebar({ isCollapsed, setIsCollapsed, isMobileOpen, set
               <button
                 onClick={toggleTheme}
                 title={dark ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
-                className={`relative w-8 h-4 rounded-full transition-colors duration-200 ${dark ? 'bg-blue-500' : 'bg-gray-600'}`}
+                className={`relative w-8 h-4 rounded-full transition-colors duration-200 ${dark ? 'bg-[#CF3A0B]' : 'bg-gray-600'}`}
               >
                 <span className={`absolute top-0.5 w-3 h-3 rounded-full bg-white shadow transition-transform duration-200 ${dark ? 'translate-x-4' : 'translate-x-0.5'}`} />
               </button>
@@ -217,7 +223,7 @@ export default function Sidebar({ isCollapsed, setIsCollapsed, isMobileOpen, set
           )}
           {expanded ? (
             <div className="flex items-center gap-2.5 h-10 px-[14px]">
-              <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-[10px] font-bold shrink-0">
+              <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[#CF3A0B] to-[#E84510] flex items-center justify-center text-white text-[10px] font-bold shrink-0">
                 {(user?.first_name?.[0] ?? "U").toUpperCase()}
               </div>
               <div className="flex-1 min-w-0">
@@ -245,12 +251,18 @@ export default function Sidebar({ isCollapsed, setIsCollapsed, isMobileOpen, set
           <div className="relative w-64 flex flex-col bg-gray-900 h-full shadow-2xl">
             <div className="flex items-center justify-between h-10 px-[14px] border-b border-white/[0.06] shrink-0">
               <div className="flex items-center gap-2.5">
-                <div className="w-6 h-6 rounded-md bg-blue-600 flex items-center justify-center">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" className="w-3 h-3">
-                    <path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/>
+                <div className="w-6 h-6 rounded-md bg-[#CF3A0B] flex items-center justify-center">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" className="w-3 h-3">
+                    <circle cx="12" cy="12" r="9" stroke="white" strokeWidth="2" fill="none"/>
+                    <line x1="12" y1="9.5" x2="12" y2="3" stroke="white" strokeWidth="1.8" strokeLinecap="round"/>
+                    <line x1="14.56" y1="11.28" x2="20.56" y2="9.33" stroke="white" strokeWidth="1.8" strokeLinecap="round"/>
+                    <line x1="13.76" y1="13.72" x2="17.51" y2="19.17" stroke="white" strokeWidth="1.8" strokeLinecap="round"/>
+                    <line x1="10.24" y1="13.72" x2="6.49" y2="19.17" stroke="white" strokeWidth="1.8" strokeLinecap="round"/>
+                    <line x1="9.44" y1="11.28" x2="3.44" y2="9.33" stroke="white" strokeWidth="1.8" strokeLinecap="round"/>
+                    <circle cx="12" cy="12" r="2" fill="white"/>
                   </svg>
                 </div>
-                <span className="text-white font-semibold text-[13px]">AutoTaller</span>
+                <span className="text-white font-semibold text-[13px]">Pitbox</span>
               </div>
               <button onClick={() => setIsMobileOpen(false)} className="p-1 text-gray-400 hover:text-white transition-colors">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5">
@@ -270,13 +282,13 @@ export default function Sidebar({ isCollapsed, setIsCollapsed, isMobileOpen, set
                 <button
                   onClick={toggleTheme}
                   title={dark ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
-                  className={`relative w-8 h-4 rounded-full transition-colors duration-200 ${dark ? 'bg-blue-500' : 'bg-gray-600'}`}
+                  className={`relative w-8 h-4 rounded-full transition-colors duration-200 ${dark ? 'bg-[#CF3A0B]' : 'bg-gray-600'}`}
                 >
                   <span className={`absolute top-0.5 w-3 h-3 rounded-full bg-white shadow transition-transform duration-200 ${dark ? 'translate-x-4' : 'translate-x-0.5'}`} />
                 </button>
               </div>
               <div className="flex items-center gap-2.5 h-10 px-[14px]">
-                <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-[10px] font-bold shrink-0">
+                <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[#CF3A0B] to-[#E84510] flex items-center justify-center text-white text-[10px] font-bold shrink-0">
                   {(user?.first_name?.[0] ?? "U").toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -296,5 +308,5 @@ export default function Sidebar({ isCollapsed, setIsCollapsed, isMobileOpen, set
 }
 
 function ActiveBar() {
-  return <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] bg-blue-500 rounded-r-full" />;
+  return <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] bg-[#CF3A0B] rounded-r-full" />;
 }
