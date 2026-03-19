@@ -17,6 +17,7 @@ const InvoiceImportModal = ({ isOpen, onClose, onSuccess }) => {
   const [removedItems, setRemovedItems] = useState([]);
   const [shippingCost, setShippingCost]   = useState('');
   const [discountAmount, setDiscountAmount] = useState('');
+  const [fileInputKey, setFileInputKey]   = useState(0);
 
   const handleDragOver  = (e) => { e.preventDefault(); setIsDragging(true); };
   const handleDragLeave = () => setIsDragging(false);
@@ -86,6 +87,7 @@ const InvoiceImportModal = ({ isOpen, onClose, onSuccess }) => {
     setFile(null); setPreview(null); setError(null); setResult(null);
     setIsDragging(false); setProfitMargin(30); setSupplierName('');
     setRemovedItems([]); setShippingCost(''); setDiscountAmount('');
+    setFileInputKey(k => k + 1);
     onClose();
   };
 
@@ -145,7 +147,7 @@ const InvoiceImportModal = ({ isOpen, onClose, onSuccess }) => {
                     <Upload className="w-16 h-16 mx-auto mb-4 text-gray-400" />
                     <p className="text-lg font-medium text-gray-700 mb-2">Arrastra el archivo ZIP aquí</p>
                     <p className="text-sm text-gray-500 mb-4">o haz clic para seleccionar</p>
-                    <input type="file" accept=".zip" onChange={handleFileSelect} className="hidden" id="file-upload" />
+                    <input type="file" accept=".zip" onChange={handleFileSelect} className="hidden" id="file-upload" key={fileInputKey} />
                     <label htmlFor="file-upload" className="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer transition-colors font-medium">
                       Seleccionar Archivo ZIP
                     </label>
@@ -339,7 +341,7 @@ const InvoiceImportModal = ({ isOpen, onClose, onSuccess }) => {
               {/* Botones */}
               <div className="flex gap-3 pt-1">
                 <button
-                  onClick={() => { setFile(null); setPreview(null); setRemovedItems([]); setShippingCost(''); setDiscountAmount(''); }}
+                  onClick={() => { setFile(null); setPreview(null); setRemovedItems([]); setShippingCost(''); setDiscountAmount(''); setFileInputKey(k => k + 1); }}
                   className="flex-1 px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium">
                   Cancelar
                 </button>

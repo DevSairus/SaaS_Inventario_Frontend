@@ -166,7 +166,7 @@ const CustomerSearchInput = ({
                     )}
                   </div>
                 </div>
-                {customer.customer_type === 'business' && (
+                {customer.customer_type === 'company' && (
                   <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 flex-shrink-0">
                     Empresa
                   </span>

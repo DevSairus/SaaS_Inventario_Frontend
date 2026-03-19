@@ -139,7 +139,7 @@ export default function CustomerDetailPage() {
                 </span>
               </div>
               <p className="text-sm text-gray-500">
-                {customer.customer_type === 'business' ? 'Empresa' : 'Persona natural'}
+                {customer.customer_type === 'company' ? 'Empresa' : 'Persona natural'}
                 {customer.tax_id && ` · CC/NIT: ${customer.tax_id}`}
               </p>
             </div>
@@ -372,13 +372,13 @@ export default function CustomerDetailPage() {
                 onChange={e => setEditForm(f => ({ ...f, customer_type: e.target.value }))}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2">
                 <option value="individual">Persona Natural</option>
-                <option value="business">Empresa</option>
+                <option value="company">Empresa</option>
               </select>
             </div>
             <Input label="Nombre completo *" value={editForm.full_name}
               onChange={e => setEditForm(f => ({ ...f, full_name: e.target.value }))} required />
           </div>
-          {editForm.customer_type === 'business' && (
+          {editForm.customer_type === 'company' && (
             <Input label="Razón Social" value={editForm.business_name}
               onChange={e => setEditForm(f => ({ ...f, business_name: e.target.value }))} />
           )}

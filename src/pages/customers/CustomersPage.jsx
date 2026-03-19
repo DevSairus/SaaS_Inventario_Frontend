@@ -218,8 +218,8 @@ export default function CustomersPage() {
                       <div className="text-xs text-gray-500">{customer.tax_id}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <Badge variant={customer.customer_type === 'business' ? 'info' : 'secondary'}>
-                        {customer.customer_type === 'business' ? 'Empresa' : 'Persona'}
+                      <Badge variant={customer.customer_type === 'company' ? 'info' : 'secondary'}>
+                        {customer.customer_type === 'company' ? 'Empresa' : 'Persona'}
                       </Badge>
                     </td>
                     <td className="px-6 py-4">
@@ -289,7 +289,7 @@ export default function CustomersPage() {
                   required
                 >
                   <option value="individual">Persona Natural</option>
-                  <option value="business">Empresa</option>
+                  <option value="company">Empresa</option>
                 </select>
               </div>
 
@@ -318,7 +318,7 @@ export default function CustomersPage() {
               required
             />
 
-            {formData.customer_type === 'business' && (
+            {formData.customer_type === 'company' && (
               <Input
                 label="Razón Social"
                 value={formData.business_name}
