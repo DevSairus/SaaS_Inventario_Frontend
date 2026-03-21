@@ -45,3 +45,7 @@ export const getDianEvents = (params = {}) =>
 // ── Pruebas automáticas de habilitación ─────────────────────────────
 export const sendAutoTestDocuments = (count = 1) =>
   api.post('/dian/send-auto-test', { count });
+
+// ── Diagnóstico del certificado P12 ─────────────────────────────────
+export const diagnoseCert = () =>
+  api.get('/dian/diagnose-cert');
