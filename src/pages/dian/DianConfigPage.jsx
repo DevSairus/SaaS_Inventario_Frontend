@@ -21,7 +21,6 @@ import {
   ExclamationTriangleIcon,
   InboxIcon,
 } from '@heroicons/react/24/outline';
-import toast from 'react-hot-toast';
 
 /* ── Status badge ────────────────────────────────────────────────── */
 const StepBadge = ({ done }) => (
