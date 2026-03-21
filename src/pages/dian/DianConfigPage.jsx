@@ -4,6 +4,7 @@ import {
   getDianConfig, updateDianConfig,
   getDianResolutions, createDianResolution, deactivateResolution,
   testDianConnection, getHabilitacionStatus, sendAutoTestDocuments,
+  diagnoseCert,
 } from '../../api/dian';
 import Layout from '../../components/layout/Layout';
 import {
@@ -71,6 +72,8 @@ export default function DianConfigPage() {
   const [testing, setTesting] = useState(false);
   const [sendingTest, setSendingTest] = useState(false);
   const [testResults, setTestResults] = useState(null);
+  const [diagnosing, setDiagnosing] = useState(false);
+  const [certDiag, setCertDiag] = useState(null);
   const [toast, setToast] = useState(null);
   const [showResForm, setShowResForm] = useState(false);
   const [resForm, setResForm] = useState({
@@ -190,6 +193,19 @@ export default function DianConfigPage() {
       showToast(e.response?.data?.message || 'Error al enviar documentos de prueba', 'error');
     } finally {
       setSendingTest(false);
+    }
+  }
+
+  async function handleDiagnose() {
+    setDiagnosing(true);
+    setCertDiag(null);
+    try {
+      const r = await diagnoseCert();
+      setCertDiag(r.data.data);
+    } catch (e) {
+      setCertDiag({ error: e.response?.data?.message || 'Error al diagnosticar certificado' });
+    } finally {
+      setDiagnosing(false);
     }
   }
 
@@ -551,6 +567,80 @@ export default function DianConfigPage() {
                 </div>
               </div>
             ))}
+          </div>
+
+          {/* Panel diagnóstico de certificado P12 */}
+          <div className="bg-white border border-gray-200 rounded-xl p-5 space-y-4">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h4 className="font-semibold text-gray-900 flex items-center gap-2">
+                  <MagnifyingGlassIcon className="w-4 h-4 text-gray-500" /> Diagnóstico del certificado P12
+                </h4>
+                <p className="text-sm text-gray-500 mt-1">
+                  Verifica que el certificado, la clave privada y el NIT estén correctamente configurados.
+                  Si aparece <strong>InvalidSecurity</strong> en los envíos, ejecuta este diagnóstico primero.
+                </p>
+              </div>
+              <button
+                onClick={handleDiagnose}
+                disabled={diagnosing}
+                className="flex-shrink-0 px-4 py-2 bg-gray-700 text-white rounded-lg text-sm font-medium
+                  hover:bg-gray-800 disabled:opacity-50 transition-colors flex items-center gap-2">
+                {diagnosing
+                  ? <><ArrowPathIcon className="w-4 h-4 animate-spin" /> Analizando...</>
+                  : <><MagnifyingGlassIcon className="w-4 h-4" /> Diagnosticar certificado</>}
+              </button>
+            </div>
+
+            {certDiag && !certDiag.error && (
+              <div className="space-y-3 pt-2 border-t border-gray-100">
+                {/* Issues banner */}
+                {certDiag.issues?.length > 0 && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-3 space-y-1">
+                    <p className="text-xs font-semibold text-red-800 uppercase tracking-wide">Problemas detectados</p>
+                    {certDiag.issues.map((issue, i) => (
+                      <p key={i} className="text-sm text-red-700">{issue}</p>
+                    ))}
+                  </div>
+                )}
+                {certDiag.issues?.length === 0 && (
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-3 flex items-center gap-2">
+                    <CheckCircleIcon className="w-5 h-5 text-green-500 flex-shrink-0" />
+                    <p className="text-sm text-green-800 font-medium">
+                      Certificado OK — clave, NIT y vigencia verificados correctamente.
+                    </p>
+                  </div>
+                )}
+                {/* Details grid */}
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  {[
+                    { label: 'CN (empresa)', value: certDiag.cn },
+                    { label: 'NIT certificado', value: certDiag.nit_cert, highlight: !certDiag.nit_match ? 'red' : 'green' },
+                    { label: 'NIT configurado', value: certDiag.nit_config, highlight: !certDiag.nit_match ? 'red' : 'green' },
+                    { label: 'Clave ↔ Cert', value: certDiag.key_cert_match ? '✅ Coinciden' : '❌ No coinciden', highlight: certDiag.key_cert_match ? 'green' : 'red' },
+                    { label: 'Válido desde', value: certDiag.not_before ? new Date(certDiag.not_before).toLocaleDateString('es-CO') : '?' },
+                    { label: 'Vence', value: certDiag.not_after ? new Date(certDiag.not_after).toLocaleDateString('es-CO') : '?', highlight: certDiag.is_expired ? 'red' : 'green' },
+                    { label: 'Días restantes', value: certDiag.is_expired ? 'VENCIDO' : `${certDiag.days_remaining} días`, highlight: certDiag.is_expired ? 'red' : certDiag.days_remaining < 30 ? 'yellow' : 'green' },
+                    { label: 'Software ID', value: certDiag.software_id },
+                  ].map(({ label, value, highlight }) => (
+                    <div key={label} className="bg-gray-50 rounded p-2">
+                      <p className="text-gray-400 mb-0.5">{label}</p>
+                      <p className={`font-mono font-medium text-xs break-all
+                        ${highlight === 'red' ? 'text-red-700' :
+                          highlight === 'green' ? 'text-green-700' :
+                          highlight === 'yellow' ? 'text-amber-700' : 'text-gray-800'}`}>
+                        {value || '—'}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {certDiag?.error && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                <p className="text-sm text-red-700 font-medium">Error: {certDiag.error}</p>
+              </div>
+            )}
           </div>
 
           {/* Panel de envío automático de documentos de prueba */}
