@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import {
   getDianConfig, updateDianConfig,
   getDianResolutions, createDianResolution, deactivateResolution,
-  testDianConnection, getHabilitacionStatus, sendAutoTestDocuments,
+  testDianConnection, testDianConnectionProd, getHabilitacionStatus, sendAutoTestDocuments,
   diagnoseCert,
 } from '../../api/dian';
 import Layout from '../../components/layout/Layout';
@@ -143,6 +143,20 @@ export default function DianConfigPage() {
       showToast(r.data.message || 'Conexión exitosa con DIAN');
     } catch (e) {
       showToast(e.response?.data?.message || 'Error de conexión con DIAN', 'error');
+    } finally {
+      setTesting(false);
+    }
+  }
+
+  async function handleTestConnectionProd() {
+    setTesting(true);
+    try {
+      const r = await testDianConnectionProd();
+      showToast(r.data.message || '✅ Producción OK');
+    } catch (e) {
+      const d = e.response?.data;
+      const msg = d?.diagnostico ? `${d.message} — ${d.diagnostico}` : (d?.message || 'Error');
+      showToast(msg, 'error');
     } finally {
       setTesting(false);
     }
@@ -391,6 +405,13 @@ export default function DianConfigPage() {
               {testing
                 ? <><ArrowPathIcon className="w-4 h-4 inline mr-1 animate-spin" />Probando...</>
                 : <><SignalIcon className="w-4 h-4 inline mr-1" />Probar Conexión DIAN</>}
+            </button>
+            <button type="button" onClick={handleTestConnectionProd} disabled={testing}
+              className="px-4 py-2 border border-orange-400 rounded-lg text-sm font-medium
+                text-orange-700 hover:bg-orange-50 disabled:opacity-50 transition-colors">
+              {testing
+                ? <><ArrowPathIcon className="w-4 h-4 inline mr-1 animate-spin" />Probando...</>
+                : <><SignalIcon className="w-4 h-4 inline mr-1" />Probar Producción (diagnóstico)</>}
             </button>
             <button type="submit" disabled={saving}
               className="px-6 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium

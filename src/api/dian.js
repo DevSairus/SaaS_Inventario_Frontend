@@ -32,6 +32,9 @@ export const sendToTestSet = (saleId) =>
 export const testDianConnection = () =>
   api.post('/dian/test-connection');
 
+export const testDianConnectionProd = () =>
+  api.post('/dian/test-connection-prod');
+
 export const getNumberingRange = () =>
   api.get('/dian/numbering-range');
 
