@@ -2,6 +2,20 @@ import { create } from 'zustand';
 import toast from 'react-hot-toast';
 import { productsAPI } from '../api/products';
 
+// Mensajes de error legibles según el código HTTP
+const getSearchErrorMessage = (error) => {
+  const status = error.response?.status;
+  const serverMsg = error.response?.data?.message;
+
+  if (status === 401) return 'Sesión expirada. Por favor recarga la página.';
+  if (status === 403) return 'No tienes permisos para buscar productos.';
+  if (status === 402) return 'Suscripción inactiva. Contacta a soporte.';
+  if (status === 429) return 'Demasiadas búsquedas. Espera unos segundos e intenta de nuevo.';
+  if (status >= 500) return 'Error en el servidor. Intenta de nuevo en unos momentos.';
+  if (!navigator.onLine) return 'Sin conexión a internet. Verifica tu red.';
+  return serverMsg || 'Error al buscar productos. Intenta de nuevo.';
+};
+
 const useProductsStore = create((set, get) => ({
   products: [],
   selectedProduct: null,
@@ -21,16 +35,15 @@ const useProductsStore = create((set, get) => ({
   },
   isLoading: false,
   error: null,
-  lastFetch: null, // ✅ Para tracking de última actualización
+  lastFetch: null,
 
-  // ✅ Obtener productos con cache inteligente
+  // Obtener productos con cache inteligente
   fetchProducts: async (forceRefresh = false) => {
     set({ isLoading: true, error: null });
     
     try {
       const { filters, pagination } = get();
       
-      // ✅ SOLUCIÓN: Agregar timestamp para evitar cache
       const params = {
         ...filters,
         page: pagination.page,
@@ -38,7 +51,7 @@ const useProductsStore = create((set, get) => ({
       };
       
       if (forceRefresh) {
-        params._t = Date.now(); // ← Invalida cache del navegador
+        params._t = Date.now();
       }
       
       const response = await productsAPI.getAll(params);
@@ -59,11 +72,10 @@ const useProductsStore = create((set, get) => ({
     }
   },
 
-  // ✅ Método específico para refrescar después de operaciones de compra
+  // Refrescar después de operaciones de compra
   refreshAfterPurchase: async () => {
-
-    await get().fetchProducts(true); // Forzar refresh
-    await get().fetchStats(); // Actualizar estadísticas también
+    await get().fetchProducts(true);
+    await get().fetchStats();
   },
 
   // Obtener estadísticas
@@ -74,7 +86,7 @@ const useProductsStore = create((set, get) => ({
         set({ stats: response.data });
       }
     } catch (error) {
-
+      // Estadísticas son secundarias — fallo silencioso está bien aquí
     }
   },
 
@@ -105,7 +117,7 @@ const useProductsStore = create((set, get) => ({
     try {
       const response = await productsAPI.create(productData);
       if (response && response.success) {
-        await get().fetchProducts(true); // ✅ Forzar refresh
+        await get().fetchProducts(true);
         set({ isLoading: false });
         return true;
       } else {
@@ -113,14 +125,8 @@ const useProductsStore = create((set, get) => ({
         return false;
       }
     } catch (error) {
-      
       const errorMessage = error.response?.data?.message || 'Error al crear producto';
-      set({
-        error: errorMessage,
-        isLoading: false
-      });
-      
-      // Propagar el error con el mensaje
+      set({ error: errorMessage, isLoading: false });
       throw new Error(errorMessage);
     }
   },
@@ -131,7 +137,7 @@ const useProductsStore = create((set, get) => ({
     try {
       const response = await productsAPI.update(id, productData);
       if (response && response.success) {
-        await get().fetchProducts(true); // ✅ Forzar refresh
+        await get().fetchProducts(true);
         set({ isLoading: false });
         return true;
       } else {
@@ -153,7 +159,7 @@ const useProductsStore = create((set, get) => ({
     try {
       const response = await productsAPI.deactivate(id);
       if (response && response.success) {
-        await get().fetchProducts(true); // ✅ Forzar refresh
+        await get().fetchProducts(true);
         set({ isLoading: false });
         return true;
       } else {
@@ -175,7 +181,7 @@ const useProductsStore = create((set, get) => ({
     try {
       const response = await productsAPI.delete(id);
       if (response && response.success) {
-        await get().fetchProducts(true); // ✅ Forzar refresh
+        await get().fetchProducts(true);
         set({ isLoading: false });
         return true;
       } else {
@@ -206,6 +212,9 @@ const useProductsStore = create((set, get) => ({
     }));
   },
 
+  // Buscar productos para ventas / órdenes de trabajo
+  // Retorna el array de resultados y lanza toast si hay error,
+  // para que el usuario sepa qué pasó en lugar de ver silencio.
   searchProducts: async (searchTerm) => {
     if (!searchTerm || searchTerm.trim().length < 2) {
       return [];
@@ -215,22 +224,30 @@ const useProductsStore = create((set, get) => ({
       const response = await productsAPI.getAll({
         search: searchTerm.trim(),
         is_active: 'true',
-        limit: 100, // Más resultados para búsqueda
+        limit: 100,
         page: 1,
-        _t: Date.now() // Evitar cache
+        _t: Date.now()
       });
 
       if (response && response.success) {
         return response.data || [];
       }
-      return [];
-    } catch (error) {
 
+      // Respuesta inesperada sin error HTTP
+      toast.error('La búsqueda no devolvió una respuesta válida. Intenta de nuevo.');
+      return [];
+
+    } catch (error) {
+      const msg = getSearchErrorMessage(error);
+      toast.error(msg, {
+        id: 'search-error', // evita duplicar el toast si el usuario escribe rápido
+        duration: 4000,
+      });
       return [];
     }
   },
 
-  // ✅ Limpiar cache (útil para debugging)
+  // Limpiar cache
   clearCache: () => {
     set({ lastFetch: null });
   },
