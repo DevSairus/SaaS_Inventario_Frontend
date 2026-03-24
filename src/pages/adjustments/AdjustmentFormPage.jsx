@@ -17,7 +17,7 @@ const AdjustmentFormPage = () => {
   const isEditMode = Boolean(id);
   
   const { createAdjustment, updateAdjustment, getAdjustmentById, isLoading } = useAdjustmentsStore();
-  const { products, fetchProducts } = useProductsStore();
+  const { products, fetchProducts, searchProducts } = useProductsStore();
 
   const [formData, setFormData] = useState({
     adjustment_type: 'entrada',
@@ -42,71 +42,65 @@ const AdjustmentFormPage = () => {
   const [filteredProducts, setFilteredProducts] = useState([]);
 
   useEffect(() => {
-    fetchProducts();
-  }, []);
-
-  // Cargar datos en modo edición
-  useEffect(() => {
-    const loadAdjustmentData = async () => {
-      if (isEditMode && id) {
-        try {
-          const adjustment = await getAdjustmentById(id);
-          
-          if (adjustment.status !== 'draft') {
-            toast('Solo se pueden editar ajustes en estado borrador');
-            navigate(`/adjustments/${id}`);
-            return;
-          }
-
-          setFormData({
-            adjustment_type: adjustment.adjustment_type || 'entrada',
-            reason: adjustment.reason || '',
-            warehouse_id: adjustment.warehouse_id || null,
-            adjustment_date: adjustment.adjustment_date || '',
-            notes: adjustment.notes || ''
-          });
-
-          if (adjustment.items && adjustment.items.length > 0) {
-            const loadedItems = adjustment.items.map(item => {
-              const product = products.find(p => p.id === item.product_id);
-              return {
-                product_id: item.product_id,
-                quantity: toInteger(item.quantity, 1),
-                unit_cost: toInteger(item.unit_cost, 0),
-                reason: item.reason || '',
-                notes: item.notes || '',
-                product_name: item.product?.name || product?.name || 'Producto desconocido',
-                product_sku: item.product?.sku || product?.sku || '',
-                total_cost: toInteger(item.total_cost, 0)
-              };
-            });
-            setItems(loadedItems);
-          }
-        } catch (error) {
-          toast.error('Error al cargar los datos del ajuste');
-          navigate('/adjustments');
-        }
-      }
-    };
-
-    if (products.length > 0) {
+    // En modo edición, cargar los datos del ajuste directamente
+    if (isEditMode && id) {
       loadAdjustmentData();
     }
-  }, [isEditMode, id, navigate, getAdjustmentById, products]);
+  }, [isEditMode, id]);
 
-  // Filtrar productos
+  // Cargar datos en modo edición
+  const loadAdjustmentData = async () => {
+    if (!id) return;
+    try {
+      const adjustment = await getAdjustmentById(id);
+
+      if (adjustment.status !== 'draft') {
+        toast('Solo se pueden editar ajustes en estado borrador');
+        navigate(`/adjustments/${id}`);
+        return;
+      }
+
+      setFormData({
+        adjustment_type: adjustment.adjustment_type || 'entrada',
+        reason: adjustment.reason || '',
+        warehouse_id: adjustment.warehouse_id || null,
+        adjustment_date: adjustment.adjustment_date || '',
+        notes: adjustment.notes || ''
+      });
+
+      if (adjustment.items && adjustment.items.length > 0) {
+        const loadedItems = adjustment.items.map(item => ({
+          product_id: item.product_id,
+          quantity: toInteger(item.quantity, 1),
+          unit_cost: toInteger(item.unit_cost, 0),
+          reason: item.reason || '',
+          notes: item.notes || '',
+          product_name: item.product?.name || 'Producto desconocido',
+          product_sku: item.product?.sku || '',
+          total_cost: toInteger(item.total_cost, 0)
+        }));
+        setItems(loadedItems);
+      }
+    } catch (error) {
+      toast.error('Error al cargar los datos del ajuste');
+      navigate('/adjustments');
+    }
+  };
+
+  // Buscar productos en el servidor con debounce
   useEffect(() => {
     if (productSearch.trim() === '') {
-      setFilteredProducts(products.slice(0, 50));
-    } else {
-      const search = productSearch.toLowerCase();
-      const filtered = products.filter(product => 
-        product.name.toLowerCase().includes(search) ||
-        product.sku.toLowerCase().includes(search)
-      ).slice(0, 50);
-      setFilteredProducts(filtered);
+      setFilteredProducts([]);
+      return;
     }
-  }, [productSearch, products]);
+
+    const debounce = setTimeout(async () => {
+      const results = await searchProducts(productSearch.trim());
+      setFilteredProducts(results.slice(0, 50));
+    }, 300);
+
+    return () => clearTimeout(debounce);
+  }, [productSearch]);
 
   // Cerrar dropdown al hacer click fuera
   useEffect(() => {
@@ -389,7 +383,11 @@ const AdjustmentFormPage = () => {
                 
                 {showProductDropdown && (
                   <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                    {filteredProducts.length === 0 ? (
+                    {productSearch.trim() === '' ? (
+                      <div className="px-4 py-3 text-gray-400 text-sm">
+                        Escribe al menos 2 caracteres para buscar...
+                      </div>
+                    ) : filteredProducts.length === 0 ? (
                       <div className="px-4 py-3 text-gray-500 text-sm">
                         No se encontraron productos
                       </div>

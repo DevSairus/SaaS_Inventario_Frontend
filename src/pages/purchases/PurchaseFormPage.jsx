@@ -21,7 +21,7 @@ const PurchaseFormPage = () => {
   
   const { createPurchase, updatePurchase, getPurchaseById, isLoading } = usePurchasesStore();
   const { suppliers, fetchSuppliers } = useSuppliersStore();
-  const { products, fetchProducts } = useProductsStore();
+  const { searchProducts } = useProductsStore();
 
   const [formData, setFormData] = useState({
     supplier_id: '',
@@ -52,12 +52,11 @@ const PurchaseFormPage = () => {
 
   useEffect(() => {
     fetchSuppliers();
-    fetchProducts();
   }, []);
 
   // Cargar datos prellenados desde Stock Alerts
   useEffect(() => {
-    if (!isEditMode && location.state?.prefilledData && products.length > 0) {
+    if (!isEditMode && location.state?.prefilledData) {
       const { prefilledData } = location.state;
       
       // Prellenar proveedor
@@ -68,117 +67,111 @@ const PurchaseFormPage = () => {
         }));
       }
 
-      // Prellenar producto como primer item
+      // Prellenar producto como primer item (ya viene con name/sku en prefilledData)
       if (prefilledData.product && prefilledData.product.id) {
-        const product = products.find(p => p.id === prefilledData.product.id);
-        if (product) {
-          const quantity = toInteger(prefilledData.suggested_quantity, 1);
-          const unit_cost = toNumber(prefilledData.product.last_price, 0);
-          
-          const totals = calculateItemTotals({
-            quantity,
-            unit_cost,
-            tax_rate: 19,
-            discount_percentage: 0
-          });
+        const product = prefilledData.product;
+        const quantity = toInteger(prefilledData.suggested_quantity, 1);
+        const unit_cost = toNumber(product.last_price, 0);
+        
+        const totals = calculateItemTotals({
+          quantity,
+          unit_cost,
+          tax_rate: 19,
+          discount_percentage: 0
+        });
 
-          const prefilledItem = {
-            product_id: product.id,
-            quantity,
-            unit_cost,
-            tax_rate: 19,
-            discount_percentage: 0,
-            product_name: product.name,
-            product_sku: product.sku,
-            ...totals
-          };
+        const prefilledItem = {
+          product_id: product.id,
+          quantity,
+          unit_cost,
+          tax_rate: 19,
+          discount_percentage: 0,
+          product_name: product.name,
+          product_sku: product.sku,
+          ...totals
+        };
 
-          setItems([prefilledItem]);
-        }
+        setItems([prefilledItem]);
       }
 
       // Limpiar el state para evitar que se vuelva a cargar
       window.history.replaceState({}, document.title);
     }
-  }, [location.state, isEditMode, products]);
+  }, [location.state, isEditMode]);
 
   // Cargar datos de la compra en modo edición
   useEffect(() => {
-    const loadPurchaseData = async () => {
-      if (isEditMode && id) {
-        try {
-          const purchase = await getPurchaseById(id);
-          
-          // No permitir editar compras confirmadas, recibidas o canceladas
-          if (purchase.status !== 'draft') {
-            toast('Solo se pueden editar compras en estado borrador');
-            navigate(`/purchases/${id}`);
-            return;
-          }
-
-          // Cargar datos del formulario
-          setFormData({
-            supplier_id: purchase.supplier_id || '',
-            purchase_date: purchase.purchase_date || '',
-            expected_delivery_date: purchase.expected_delivery_date || '',
-            payment_method: purchase.payment_method || '',
-            invoice_number: purchase.invoice_number || '',
-            reference: purchase.reference || '',
-            notes: purchase.notes || '',
-            internal_notes: purchase.internal_notes || '',
-            discount_amount: toNumber(purchase.discount_amount, 0),
-            shipping_cost: toNumber(purchase.shipping_cost, 0)
-          });
-
-          // Cargar items
-          if (purchase.items && purchase.items.length > 0) {
-            const loadedItems = purchase.items.map(item => {
-              const product = products.find(p => p.id === item.product_id);
-              const totals = calculateItemTotals({
-                quantity: item.quantity,
-                unit_cost: item.unit_cost,
-                tax_rate: item.tax_rate || 19,
-                discount_percentage: item.discount_percentage || 0
-              });
-
-              return {
-                product_id: item.product_id,
-                quantity: toInteger(item.quantity, 1),
-                unit_cost: toNumber(item.unit_cost, 0),
-                tax_rate: toNumber(item.tax_rate, 19),
-                discount_percentage: toNumber(item.discount_percentage, 0),
-                product_name: item.product?.name || product?.name || 'Producto desconocido',
-                product_sku: item.product?.sku || product?.sku || '',
-                ...totals
-              };
-            });
-            setItems(loadedItems);
-          }
-        } catch (error) {
-          toast.error('Error al cargar los datos de la compra');
-          navigate('/purchases');
-        }
-      }
-    };
-
-    if (products.length > 0) {
+    if (isEditMode && id) {
       loadPurchaseData();
     }
-  }, [isEditMode, id, navigate, getPurchaseById, products]);
+  }, [isEditMode, id]);
 
-  // Filtrar productos cuando cambia la búsqueda
+  const loadPurchaseData = async () => {
+    if (!id) return;
+    try {
+      const purchase = await getPurchaseById(id);
+      
+      if (purchase.status !== 'draft') {
+        toast('Solo se pueden editar compras en estado borrador');
+        navigate(`/purchases/${id}`);
+        return;
+      }
+
+      setFormData({
+        supplier_id: purchase.supplier_id || '',
+        purchase_date: purchase.purchase_date || '',
+        expected_delivery_date: purchase.expected_delivery_date || '',
+        payment_method: purchase.payment_method || '',
+        invoice_number: purchase.invoice_number || '',
+        reference: purchase.reference || '',
+        notes: purchase.notes || '',
+        internal_notes: purchase.internal_notes || '',
+        discount_amount: toNumber(purchase.discount_amount, 0),
+        shipping_cost: toNumber(purchase.shipping_cost, 0)
+      });
+
+      if (purchase.items && purchase.items.length > 0) {
+        const loadedItems = purchase.items.map(item => {
+          const totals = calculateItemTotals({
+            quantity: item.quantity,
+            unit_cost: item.unit_cost,
+            tax_rate: item.tax_rate || 19,
+            discount_percentage: item.discount_percentage || 0
+          });
+
+          return {
+            product_id: item.product_id,
+            quantity: toInteger(item.quantity, 1),
+            unit_cost: toNumber(item.unit_cost, 0),
+            tax_rate: toNumber(item.tax_rate, 19),
+            discount_percentage: toNumber(item.discount_percentage, 0),
+            product_name: item.product?.name || 'Producto desconocido',
+            product_sku: item.product?.sku || '',
+            ...totals
+          };
+        });
+        setItems(loadedItems);
+      }
+    } catch (error) {
+      toast.error('Error al cargar los datos de la compra');
+      navigate('/purchases');
+    }
+  };
+
+  // Buscar productos en el servidor con debounce
   useEffect(() => {
     if (productSearch.trim() === '') {
-      setFilteredProducts(products.slice(0, 50));
-    } else {
-      const search = productSearch.toLowerCase();
-      const filtered = products.filter(product => 
-        product.name.toLowerCase().includes(search) ||
-        product.sku.toLowerCase().includes(search)
-      ).slice(0, 50);
-      setFilteredProducts(filtered);
+      setFilteredProducts([]);
+      return;
     }
-  }, [productSearch, products]);
+
+    const debounce = setTimeout(async () => {
+      const results = await searchProducts(productSearch.trim());
+      setFilteredProducts(results.slice(0, 50));
+    }, 300);
+
+    return () => clearTimeout(debounce);
+  }, [productSearch]);
 
   // Cerrar dropdown al hacer click fuera
   useEffect(() => {
@@ -224,13 +217,18 @@ const PurchaseFormPage = () => {
   };
 
   const selectProduct = (product) => {
-    setCurrentItem(prev => ({ ...prev, product_id: product.id }));
+    setCurrentItem(prev => ({ 
+      ...prev, 
+      product_id: product.id,
+      _product_name: product.name,
+      _product_sku: product.sku
+    }));
     setProductSearch(`${product.sku} - ${product.name}`);
     setShowProductDropdown(false);
   };
 
   const clearProductSelection = () => {
-    setCurrentItem(prev => ({ ...prev, product_id: '' }));
+    setCurrentItem(prev => ({ ...prev, product_id: '', _product_name: '', _product_sku: '' }));
     setProductSearch('');
     setShowProductDropdown(false);
   };
@@ -248,13 +246,12 @@ const PurchaseFormPage = () => {
       return;
     }
 
-    const product = products.find(p => p.id === currentItem.product_id);
     const totals = calculateItemTotals(currentItem);
 
     const newItem = {
       ...currentItem,
-      product_name: product?.name || '',
-      product_sku: product?.sku || '',
+      product_name: currentItem._product_name || '',
+      product_sku: currentItem._product_sku || '',
       ...totals
     };
 
@@ -507,7 +504,11 @@ const PurchaseFormPage = () => {
               {/* Dropdown de productos */}
               {showProductDropdown && (
                 <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                  {filteredProducts.length === 0 ? (
+                  {productSearch.trim() === '' ? (
+                    <div className="px-4 py-3 text-gray-400 text-sm">
+                      Escribe al menos 2 caracteres para buscar...
+                    </div>
+                  ) : filteredProducts.length === 0 ? (
                     <div className="px-4 py-3 text-gray-500 text-sm">
                       No se encontraron productos
                     </div>
@@ -524,7 +525,7 @@ const PurchaseFormPage = () => {
                           <div className="text-sm text-gray-500">SKU: {product.sku}</div>
                         </button>
                       ))}
-                      {products.length > 50 && filteredProducts.length === 50 && (
+                      {filteredProducts.length === 50 && (
                         <div className="px-4 py-2 text-xs text-gray-500 bg-gray-50 text-center">
                           Mostrando 50 resultados. Refina tu búsqueda para ver más.
                         </div>
