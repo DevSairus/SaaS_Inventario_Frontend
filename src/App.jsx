@@ -45,6 +45,7 @@ import CustomerReturnFormPage from './pages/sales/CustomerReturnFormPage';
 import CustomerReturnDetailPage from './pages/sales/CustomerReturnDetailPage';
 import SupplierReturnsPage from './pages/inventory/SupplierReturnsPage';
 import SupplierReturnFormPage from './pages/inventory/SupplierReturnFormPage';
+import SupplierReturnDetailPage from './pages/inventory/SupplierReturnDetailPage';
 import TransfersPage from './pages/inventory/TransfersPage';
 import TransferFormPage from './pages/inventory/TransferFormPage';
 import TransferReceivePage from './pages/inventory/TransferReceivePage';
@@ -204,8 +205,9 @@ function App() {
         <Route path="customers/:id" element={<TenantRoute><CustomerDetailPage /></TenantRoute>} />
 
         {/* ── Inventario – Movimientos Avanzados ────── */}
-        <Route path="inventory/supplier-returns"       element={<TenantRoute><SupplierReturnsPage /></TenantRoute>} />
-        <Route path="inventory/supplier-returns/new"   element={<TenantRoute><SupplierReturnFormPage /></TenantRoute>} />
+        <Route path="inventory/supplier-returns"        element={<TenantRoute><SupplierReturnsPage /></TenantRoute>} />
+        <Route path="inventory/supplier-returns/new"    element={<TenantRoute><SupplierReturnFormPage /></TenantRoute>} />
+        <Route path="inventory/supplier-returns/:id"    element={<TenantRoute><SupplierReturnDetailPage /></TenantRoute>} />
         <Route path="inventory/transfers"              element={<TenantRoute><TransfersPage /></TenantRoute>} />
         <Route path="inventory/transfers/new"          element={<TenantRoute><TransferFormPage /></TenantRoute>} />
         <Route path="inventory/transfers/:id/receive"  element={<TenantRoute><TransferReceivePage /></TenantRoute>} />
