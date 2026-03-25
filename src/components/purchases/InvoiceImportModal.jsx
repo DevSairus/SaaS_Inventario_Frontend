@@ -18,6 +18,8 @@ const InvoiceImportModal = ({ isOpen, onClose, onSuccess }) => {
   const [shippingCost, setShippingCost]   = useState('');
   const [discountAmount, setDiscountAmount] = useState('');
   const [fileInputKey, setFileInputKey]   = useState(0);
+  // IVA editable por ítem: { índice: porcentaje }
+  const [itemTaxOverrides, setItemTaxOverrides] = useState({});
 
   const handleDragOver  = (e) => { e.preventDefault(); setIsDragging(true); };
   const handleDragLeave = () => setIsDragging(false);
@@ -35,7 +37,7 @@ const InvoiceImportModal = ({ isOpen, onClose, onSuccess }) => {
   };
 
   const handlePreview = async (selectedFile) => {
-    setLoading(true); setError(null); setPreview(null); setRemovedItems([]); setShippingCost('');
+    setLoading(true); setError(null); setPreview(null); setRemovedItems([]); setShippingCost(''); setItemTaxOverrides({});
     try {
       const fd = new FormData();
       fd.append('file', selectedFile);
@@ -54,11 +56,21 @@ const InvoiceImportModal = ({ isOpen, onClose, onSuccess }) => {
   const toggleRemoveItem = (idx) =>
     setRemovedItems(prev => prev.includes(idx) ? prev.filter(i => i !== idx) : [...prev, idx]);
 
+  const getItemTaxPct = (idx) =>
+    itemTaxOverrides[idx] !== undefined
+      ? parseFloat(itemTaxOverrides[idx])
+      : parseFloat(preview?.items?.[idx]?.tax_percentage ?? 19);
+
   const calcTotals = () => {
-    const subtotal  = activeItems.reduce((s, it) => s + parseFloat(it.subtotal || 0), 0);
-    const tax       = activeItems.reduce((s, it) => s + parseFloat(it.tax_amount || 0), 0);
-    const freight   = parseFloat(shippingCost) || 0;
-    const discount  = parseFloat(discountAmount) || 0;
+    const subtotal = activeItems.reduce((s, it) => s + parseFloat(it.subtotal || 0), 0);
+    // Recalcular IVA con los porcentajes editados
+    const tax = (preview?.items || []).reduce((s, it, idx) => {
+      if (removedItems.includes(idx)) return s;
+      const pct = getItemTaxPct(idx);
+      return s + parseFloat(it.subtotal || 0) * (pct / 100);
+    }, 0);
+    const freight  = parseFloat(shippingCost) || 0;
+    const discount = parseFloat(discountAmount) || 0;
     return { subtotal, tax, freight, discount, total: subtotal + tax + freight - discount };
   };
 
@@ -73,6 +85,7 @@ const InvoiceImportModal = ({ isOpen, onClose, onSuccess }) => {
       fd.append('removed_items', JSON.stringify(removedItems));
       fd.append('shipping_cost', shippingCost || 0);
       fd.append('discount_amount', discountAmount || 0);
+      fd.append('items_tax_overrides', JSON.stringify(itemTaxOverrides));
       const res = await api.post('/invoice-import/import', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
       if (res.data.success) {
         setResult(res.data.data);
@@ -86,7 +99,7 @@ const InvoiceImportModal = ({ isOpen, onClose, onSuccess }) => {
   const handleClose = () => {
     setFile(null); setPreview(null); setError(null); setResult(null);
     setIsDragging(false); setProfitMargin(30); setSupplierName('');
-    setRemovedItems([]); setShippingCost(''); setDiscountAmount('');
+    setRemovedItems([]); setShippingCost(''); setDiscountAmount(''); setItemTaxOverrides({});
     setFileInputKey(k => k + 1);
     onClose();
   };
@@ -218,13 +231,20 @@ const InvoiceImportModal = ({ isOpen, onClose, onSuccess }) => {
                         <th className="px-3 py-2 text-left font-medium text-gray-600">Producto</th>
                         <th className="px-3 py-2 text-right font-medium text-gray-600">Cant.</th>
                         <th className="px-3 py-2 text-right font-medium text-gray-600">Precio</th>
-                        <th className="px-3 py-2 text-right font-medium text-gray-600">Total</th>
+                        <th className="px-3 py-2 text-center font-medium text-gray-600">
+                          IVA %
+                          <span className="block text-[10px] text-gray-400 font-normal leading-none">editable</span>
+                        </th>
+                        <th className="px-3 py-2 text-right font-medium text-gray-600">Subtotal</th>
                         <th className="px-3 py-2 w-10"></th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
                       {preview.items.map((item, idx) => {
                         const removed = removedItems.includes(idx);
+                        const taxPct  = getItemTaxPct(idx);
+                        const taxAmt  = parseFloat(item.subtotal || 0) * (taxPct / 100);
+                        const isOverridden = itemTaxOverrides[idx] !== undefined;
                         return (
                           <tr key={idx} className={removed ? 'bg-red-50' : 'hover:bg-gray-50'}>
                             <td className={`px-3 py-2.5 ${removed ? 'line-through text-gray-400' : 'text-gray-900'}`}>
@@ -233,7 +253,53 @@ const InvoiceImportModal = ({ isOpen, onClose, onSuccess }) => {
                             </td>
                             <td className={`px-3 py-2.5 text-right ${removed ? 'text-gray-400' : ''}`}>{item.quantity}</td>
                             <td className={`px-3 py-2.5 text-right ${removed ? 'text-gray-400' : ''}`}>${fmt(item.unit_price)}</td>
-                            <td className={`px-3 py-2.5 text-right font-medium ${removed ? 'text-gray-400' : ''}`}>${fmt(item.total)}</td>
+                            <td className="px-3 py-2.5 text-center">
+                              {removed ? (
+                                <span className="text-gray-300 text-xs">—</span>
+                              ) : (
+                                <div className="flex items-center justify-center gap-1">
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    max="100"
+                                    step="1"
+                                    value={taxPct}
+                                    onChange={e => setItemTaxOverrides(prev => ({
+                                      ...prev,
+                                      [idx]: Math.min(100, Math.max(0, parseFloat(e.target.value) || 0))
+                                    }))}
+                                    className={`w-16 px-1.5 py-1 text-center border rounded text-sm font-medium focus:ring-2 focus:ring-blue-400 focus:border-transparent ${
+                                      isOverridden
+                                        ? 'border-blue-400 bg-blue-50 text-blue-800'
+                                        : 'border-gray-200 text-gray-700'
+                                    }`}
+                                  />
+                                  <span className="text-gray-400 text-xs">%</span>
+                                  {isOverridden && (
+                                    <button
+                                      type="button"
+                                      onClick={() => setItemTaxOverrides(prev => {
+                                        const next = { ...prev };
+                                        delete next[idx];
+                                        return next;
+                                      })}
+                                      title="Restaurar IVA original"
+                                      className="text-blue-400 hover:text-blue-600 text-xs leading-none"
+                                    >↩</button>
+                                  )}
+                                </div>
+                              )}
+                            </td>
+                            <td className={`px-3 py-2.5 text-right font-medium ${removed ? 'text-gray-400' : ''}`}>
+                              {removed ? `$${fmt(item.total)}` : (
+                                <div>
+                                  <div>${fmt(item.subtotal)}</div>
+                                  {taxPct > 0 && (
+                                    <div className="text-xs text-gray-400">+${fmt(taxAmt)} IVA</div>
+                                  )}
+                                </div>
+                              )}
+                            </td>
                             <td className="px-3 py-2.5 text-center">
                               <button onClick={() => toggleRemoveItem(idx)}
                                 title={removed ? 'Restaurar ítem' : 'Excluir ítem'}
@@ -341,7 +407,7 @@ const InvoiceImportModal = ({ isOpen, onClose, onSuccess }) => {
               {/* Botones */}
               <div className="flex gap-3 pt-1">
                 <button
-                  onClick={() => { setFile(null); setPreview(null); setRemovedItems([]); setShippingCost(''); setDiscountAmount(''); setFileInputKey(k => k + 1); }}
+                  onClick={() => { setFile(null); setPreview(null); setRemovedItems([]); setShippingCost(''); setDiscountAmount(''); setItemTaxOverrides({}); setFileInputKey(k => k + 1); }}
                   className="flex-1 px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium">
                   Cancelar
                 </button>

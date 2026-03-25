@@ -35,7 +35,7 @@ const SupplierReturnFormPage = () => {
     setLoadingPurchases(true);
     try {
       const response = await api.get('/inventory/purchases', {
-        params: { search: searchTerm, status: 'completed', limit: 10 }
+        params: { search: searchTerm, status: 'received', limit: 10 }
       });
       setPurchases(response.data.data || []);
     } catch (error) {
