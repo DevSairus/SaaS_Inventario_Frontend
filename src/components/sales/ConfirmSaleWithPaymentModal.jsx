@@ -1,6 +1,6 @@
 // frontend/src/components/sales/ConfirmSaleWithPaymentModal.jsx
 import { useState, useEffect } from 'react';
-import { XMarkIcon, CreditCardIcon, BanknotesIcon, DevicePhoneMobileIcon, CalendarDaysIcon, ClockIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, CreditCardIcon, BanknotesIcon, DevicePhoneMobileIcon, CalendarDaysIcon, ClockIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
 
 const CREDIT_DAYS_OPTIONS = [15, 30, 60, 90];
 
@@ -34,12 +34,22 @@ const DOC_TYPES = [
   },
 ];
 
+const PAYMENT_METHODS_LIST = [
+  { value: 'cash',        label: 'Efectivo',      icon: BanknotesIcon },
+  { value: 'credit_card', label: 'T. Crédito',    icon: CreditCardIcon },
+  { value: 'debit_card',  label: 'T. Débito',     icon: CreditCardIcon },
+  { value: 'transfer',    label: 'Transferencia', icon: DevicePhoneMobileIcon },
+  { value: 'check',       label: 'Cheque',        icon: BanknotesIcon },
+];
+
+const emptyMixedRow = () => ({ method: 'cash', amount: '' });
+
 const ConfirmSaleWithPaymentModal = ({
   isOpen,
   onClose,
   onConfirm,
   saleTotal,
-  currentDocType,   // document_type actual de la venta
+  currentDocType,
   loading = false,
 }) => {
   const [docType, setDocType]           = useState(currentDocType || 'remision');
@@ -51,6 +61,9 @@ const ConfirmSaleWithPaymentModal = ({
   const [useCustomDays, setUseCustomDays] = useState(false);
   const [cashReceived, setCashReceived]   = useState('');
 
+  // Mixed payment state
+  const [mixedRows, setMixedRows] = useState([emptyMixedRow(), emptyMixedRow()]);
+
   useEffect(() => {
     if (isOpen) {
       setDocType(currentDocType || 'remision');
@@ -61,6 +74,7 @@ const ConfirmSaleWithPaymentModal = ({
       setCustomDays('');
       setUseCustomDays(false);
       setCashReceived('');
+      setMixedRows([emptyMixedRow(), emptyMixedRow()]);
     }
   }, [isOpen, saleTotal, currentDocType]);
 
@@ -89,8 +103,34 @@ const ConfirmSaleWithPaymentModal = ({
   const cashChange        = paymentMethod === 'cash' && cashReceived !== '' ? cashReceivedNum - amountToPay : null;
   const cashChangePositive = cashChange !== null && cashChange >= 0;
 
+  // Mixed totals
+  const mixedTotal = mixedRows.reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0);
+  const mixedRemaining = saleTotal - mixedTotal;
+  const mixedValid = Math.abs(mixedRemaining) < 1 && mixedRows.every(r => parseFloat(r.amount) > 0);
+
+  const updateMixedRow = (index, field, value) => {
+    setMixedRows(prev => prev.map((r, i) => i === index ? { ...r, [field]: value } : r));
+  };
+  const addMixedRow = () => setMixedRows(prev => [...prev, emptyMixedRow()]);
+  const removeMixedRow = (index) => {
+    if (mixedRows.length <= 2) return;
+    setMixedRows(prev => prev.filter((_, i) => i !== index));
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
+
+    if (paymentType === 'mixed') {
+      if (!mixedValid) return;
+      onConfirm({
+        document_type: docType,
+        payment_method: 'mixed',
+        paid_amount: saleTotal,
+        payment_splits: mixedRows.map(r => ({ method: r.method, amount: parseFloat(r.amount) })),
+      });
+      return;
+    }
+
     if (!paymentMethod) return;
     const finalAmount = paymentType === 'credit' ? 0 : parseFloat(paidAmount);
     if (paymentType === 'partial' && (finalAmount <= 0 || finalAmount >= saleTotal)) return;
@@ -108,13 +148,7 @@ const ConfirmSaleWithPaymentModal = ({
   if (!isOpen) return null;
 
   const pendingAmount = saleTotal - parseFloat(paidAmount || 0);
-  const paymentMethods = [
-    { value: 'cash',        label: 'Efectivo',      icon: BanknotesIcon },
-    { value: 'credit_card', label: 'T. Crédito',    icon: CreditCardIcon },
-    { value: 'debit_card',  label: 'T. Débito',     icon: CreditCardIcon },
-    { value: 'transfer',    label: 'Transferencia', icon: DevicePhoneMobileIcon },
-    { value: 'check',       label: 'Cheque',        icon: BanknotesIcon },
-  ];
+  const paymentMethods = PAYMENT_METHODS_LIST;
   const needsCreditSection = paymentType === 'partial' || paymentType === 'credit';
   const dueDate = getDueDate();
   const isCash = paymentMethod === 'cash';
@@ -177,41 +211,122 @@ const ConfirmSaleWithPaymentModal = ({
               {/* Tipo de pago */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-3">Tipo de Pago</label>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                   {[
-                    { key: 'full',    label: 'Contado', color: 'green' },
-                    { key: 'partial', label: 'Parcial', color: 'yellow' },
-                    { key: 'credit',  label: 'Crédito', color: 'red' },
-                  ].map(({ key, label, color }) => (
+                    { key: 'full',    label: 'Contado',  color: 'green',  emoji: '✅' },
+                    { key: 'partial', label: 'Parcial',  color: 'yellow', emoji: '🕐' },
+                    { key: 'credit',  label: 'Crédito',  color: 'red',    emoji: '📋' },
+                    { key: 'mixed',   label: 'Mixto',    color: 'purple', emoji: '🔀' },
+                  ].map(({ key, label, color, emoji }) => (
                     <button key={key} type="button" onClick={() => setPaymentType(key)}
-                      className={`px-4 py-3 rounded-lg border-2 text-sm font-medium transition-all ${
+                      className={`px-3 py-2.5 rounded-lg border-2 text-sm font-medium transition-all flex flex-col items-center gap-0.5 ${
                         paymentType === key
                           ? `border-${color}-500 bg-${color}-50 text-${color}-700`
                           : `border-gray-300 bg-white text-gray-700 hover:border-${color}-300`
                       }`}>
+                      <span className="text-base">{emoji}</span>
                       {label}
                     </button>
                   ))}
                 </div>
               </div>
 
-              {/* Método de pago */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">Método de Pago</label>
-                <div className="grid grid-cols-2 gap-2">
-                  {paymentMethods.map(({ value, label, icon: Icon }) => (
-                    <button key={value} type="button" onClick={() => setPaymentMethod(value)}
-                      className={`flex items-center gap-2 px-3 py-2.5 rounded-lg border-2 text-sm font-medium transition-all ${
-                        paymentMethod === value
-                          ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
-                          : 'border-gray-300 bg-white text-gray-700 hover:border-indigo-300'
-                      }`}>
-                      <Icon className="w-4 h-4 flex-shrink-0" />
-                      {label}
+              {/* ── PAGO MIXTO ── */}
+              {paymentType === 'mixed' && (
+                <div className="rounded-xl border-2 border-purple-100 bg-purple-50 p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-semibold text-purple-800 flex items-center gap-1.5">
+                      🔀 Múltiples formas de pago
+                    </span>
+                    <button type="button" onClick={addMixedRow}
+                      className="flex items-center gap-1 text-xs text-purple-700 font-semibold bg-white border border-purple-300 hover:bg-purple-100 px-2.5 py-1 rounded-lg transition-all">
+                      <PlusIcon className="w-3.5 h-3.5" /> Agregar
                     </button>
-                  ))}
+                  </div>
+
+                  <div className="space-y-2">
+                    {mixedRows.map((row, index) => (
+                      <div key={index} className="flex items-center gap-2 bg-white rounded-lg border border-purple-200 px-3 py-2">
+                        <select
+                          value={row.method}
+                          onChange={(e) => updateMixedRow(index, 'method', e.target.value)}
+                          className="flex-1 text-sm border-0 focus:ring-0 bg-transparent font-medium text-gray-700 cursor-pointer"
+                        >
+                          {PAYMENT_METHODS_LIST.map(m => (
+                            <option key={m.value} value={m.value}>{m.label}</option>
+                          ))}
+                        </select>
+                        <div className="relative w-36 flex-shrink-0">
+                          <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-medium">$</span>
+                          <input
+                            type="number"
+                            value={row.amount}
+                            onChange={(e) => updateMixedRow(index, 'amount', e.target.value)}
+                            placeholder="0"
+                            min="1"
+                            step="any"
+                            className="w-full pl-6 pr-2 py-1.5 border border-gray-200 rounded-lg text-sm font-medium text-right focus:ring-2 focus:ring-purple-400 focus:border-transparent"
+                          />
+                        </div>
+                        <button type="button" onClick={() => removeMixedRow(index)}
+                          disabled={mixedRows.length <= 2}
+                          className="text-gray-400 hover:text-red-500 disabled:opacity-30 transition-colors flex-shrink-0">
+                          <TrashIcon className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Totalizador mixto */}
+                  <div className={`flex items-center justify-between rounded-lg px-4 py-2.5 border-2 text-sm font-semibold transition-all ${
+                    mixedValid
+                      ? 'bg-green-50 border-green-300 text-green-800'
+                      : mixedRemaining > 0
+                      ? 'bg-amber-50 border-amber-300 text-amber-800'
+                      : 'bg-red-50 border-red-300 text-red-800'
+                  }`}>
+                    <span>{mixedValid ? '✅ Total cubierto' : mixedRemaining > 0 ? '⚠️ Falta cubrir' : '❌ Excede el total'}</span>
+                    <span>
+                      {mixedValid
+                        ? `$${saleTotal.toLocaleString('es-CO')}`
+                        : `$${Math.abs(mixedRemaining).toLocaleString('es-CO')}`
+                      }
+                    </span>
+                  </div>
+
+                  {/* Desglose rápido */}
+                  {mixedRows.some(r => parseFloat(r.amount) > 0) && (
+                    <div className="text-xs text-purple-700 space-y-0.5 pt-1 border-t border-purple-200">
+                      {mixedRows.filter(r => parseFloat(r.amount) > 0).map((r, i) => (
+                        <div key={i} className="flex justify-between">
+                          <span>{PAYMENT_METHODS_LIST.find(m => m.value === r.method)?.label}</span>
+                          <span className="font-semibold">${parseFloat(r.amount).toLocaleString('es-CO')}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
-              </div>
+              )}
+
+              {/* Método de pago (para tipos no mixtos) */}
+              {paymentType !== 'mixed' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-3">Método de Pago</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {paymentMethods.map(({ value, label, icon: Icon }) => (
+                      <button key={value} type="button" onClick={() => setPaymentMethod(value)}
+                        className={`flex items-center gap-2 px-3 py-2.5 rounded-lg border-2 text-sm font-medium transition-all ${
+                          paymentMethod === value
+                            ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+                            : 'border-gray-300 bg-white text-gray-700 hover:border-indigo-300'
+                        }`}>
+                        <Icon className="w-4 h-4 flex-shrink-0" />
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Abono parcial */}
               {paymentType === 'partial' && (
@@ -232,7 +347,7 @@ const ConfirmSaleWithPaymentModal = ({
               )}
 
               {/* Efectivo: cambio */}
-              {isCash && paymentType !== 'credit' && (
+              {isCash && paymentType !== 'credit' && paymentType !== 'mixed' && (
                 <div className="rounded-xl border-2 border-emerald-100 bg-emerald-50 p-4 space-y-3">
                   <div className="flex items-center gap-2 text-emerald-800 font-semibold text-sm">
                     <BanknotesIcon className="w-4 h-4" />
@@ -343,38 +458,40 @@ const ConfirmSaleWithPaymentModal = ({
               )}
 
               {/* Resumen */}
-              <div className="bg-blue-50 rounded-lg p-4 border border-blue-200 space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Total Venta:</span>
-                  <span className="font-semibold text-gray-900">${saleTotal.toLocaleString('es-CO')}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Monto a cobrar hoy:</span>
-                  <span className="font-bold text-green-600 text-base">
-                    ${(paymentType === 'credit' ? 0 : parseFloat(paidAmount || 0)).toLocaleString('es-CO')}
-                  </span>
-                </div>
-                {(paymentType === 'partial' || paymentType === 'credit') && pendingAmount > 0 && (
-                  <div className="flex justify-between pt-2 border-t border-blue-300">
-                    <span className="text-gray-600">Saldo a crédito:</span>
-                    <span className="font-bold text-orange-600 text-base">
-                      ${(paymentType === 'credit' ? saleTotal : pendingAmount).toLocaleString('es-CO')}
+              {paymentType !== 'mixed' && (
+                <div className="bg-blue-50 rounded-lg p-4 border border-blue-200 space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Total Venta:</span>
+                    <span className="font-semibold text-gray-900">${saleTotal.toLocaleString('es-CO')}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Monto a cobrar hoy:</span>
+                    <span className="font-bold text-green-600 text-base">
+                      ${(paymentType === 'credit' ? 0 : parseFloat(paidAmount || 0)).toLocaleString('es-CO')}
                     </span>
                   </div>
-                )}
-                {isCash && cashChangePositive && cashChange > 0 && (
-                  <div className="flex justify-between pt-2 border-t border-blue-300">
-                    <span className="text-gray-600">Cambio:</span>
-                    <span className="font-bold text-emerald-600 text-base">${cashChange.toLocaleString('es-CO')}</span>
-                  </div>
-                )}
-                {dueDate && effectiveCreditDays > 0 && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Fecha límite:</span>
-                    <span className="font-semibold text-indigo-700">{dueDate}</span>
-                  </div>
-                )}
-              </div>
+                  {(paymentType === 'partial' || paymentType === 'credit') && pendingAmount > 0 && (
+                    <div className="flex justify-between pt-2 border-t border-blue-300">
+                      <span className="text-gray-600">Saldo a crédito:</span>
+                      <span className="font-bold text-orange-600 text-base">
+                        ${(paymentType === 'credit' ? saleTotal : pendingAmount).toLocaleString('es-CO')}
+                      </span>
+                    </div>
+                  )}
+                  {isCash && cashChangePositive && cashChange > 0 && (
+                    <div className="flex justify-between pt-2 border-t border-blue-300">
+                      <span className="text-gray-600">Cambio:</span>
+                      <span className="font-bold text-emerald-600 text-base">${cashChange.toLocaleString('es-CO')}</span>
+                    </div>
+                  )}
+                  {dueDate && effectiveCreditDays > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Fecha límite:</span>
+                      <span className="font-semibold text-indigo-700">{dueDate}</span>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {paymentType === 'credit' && (
                 <div className="bg-red-50 border-l-4 border-red-400 p-3 rounded-r-lg text-sm text-red-700">
@@ -389,7 +506,12 @@ const ConfirmSaleWithPaymentModal = ({
                 className="w-full sm:w-auto inline-flex justify-center rounded-lg border-2 border-gray-300 px-6 py-3 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-all">
                 Cancelar
               </button>
-              <button type="submit" disabled={loading || (isCash && cashReceived !== '' && !cashChangePositive)}
+              <button type="submit"
+                disabled={
+                  loading ||
+                  (paymentType === 'mixed' && !mixedValid) ||
+                  (paymentType !== 'mixed' && isCash && cashReceived !== '' && !cashChangePositive)
+                }
                 className="w-full sm:w-auto inline-flex justify-center rounded-lg px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-base font-medium text-white hover:from-indigo-700 hover:to-purple-700 disabled:opacity-50 shadow-sm transition-all">
                 {loading ? (
                   <span className="flex items-center gap-2">

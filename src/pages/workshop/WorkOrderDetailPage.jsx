@@ -386,7 +386,25 @@ export default function WorkOrderDetailPage() {
 
           <div className="flex gap-2 flex-wrap items-center">
             {!isClosed && nextStatuses.map(s => (
-              <button key={s} onClick={() => changeStatus(id, s)}
+              <button key={s} onClick={() => {
+                if (s === 'listo') {
+                  const hasRepuesto = order.items?.some(i => i.item_type === 'repuesto');
+                  const hasManoObra = order.items?.some(i => i.item_type === 'mano_de_obra' || i.item_type === 'servicio');
+                  if (!hasRepuesto && !hasManoObra) {
+                    toast.error('La OT debe tener al menos un producto o mano de obra antes de marcarla como Lista');
+                    return;
+                  }
+                  if (!hasRepuesto) {
+                    toast.error('La OT debe tener al menos un repuesto o producto antes de marcarla como Lista');
+                    return;
+                  }
+                  if (!hasManoObra) {
+                    toast.error('La OT debe tener al menos un servicio o mano de obra antes de marcarla como Lista');
+                    return;
+                  }
+                }
+                changeStatus(id, s);
+              }}
                 className="px-3 py-1.5 text-xs font-medium border border-gray-200 rounded-lg hover:bg-gray-50 transition">
                 → {STATUS_CONFIG[s].label}
               </button>

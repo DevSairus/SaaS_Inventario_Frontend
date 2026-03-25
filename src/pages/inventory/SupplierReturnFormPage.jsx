@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Search } from 'lucide-react';
 import Layout from '../../components/layout/Layout';
 import api from '../../api/axios';
@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 
 const SupplierReturnFormPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [purchases, setPurchases] = useState([]);
@@ -20,6 +21,13 @@ const SupplierReturnFormPage = () => {
     credit_note_number: '',
     items: []
   });
+
+  // Pre-seleccionar compra si viene desde el detalle de compra
+  useEffect(() => {
+    if (location.state?.purchase) {
+      handleSelectPurchase(location.state.purchase);
+    }
+  }, []);
 
   const searchPurchases = async () => {
     if (!searchTerm) return;
@@ -185,6 +193,11 @@ const SupplierReturnFormPage = () => {
                   <p className="text-sm text-gray-500">
                     Fecha: {new Date(selectedPurchase.purchase_date + 'T12:00:00').toLocaleDateString()}
                   </p>
+                  {location.state?.purchase && (
+                    <span className="inline-flex items-center gap-1 mt-1 text-xs text-orange-600 bg-orange-50 border border-orange-200 rounded-full px-2 py-0.5">
+                      Desde detalle de compra
+                    </span>
+                  )}
                 </div>
                 <button
                   type="button"
@@ -194,7 +207,7 @@ const SupplierReturnFormPage = () => {
                     setSearchTerm('');
                     setFormData({ purchase_id: '', reason: 'defective', notes: '', credit_note_number: '', items: [] });
                   }}
-                  className="text-blue-600 hover:text-blue-700"
+                  className="text-blue-600 hover:text-blue-700 text-sm"
                 >
                   Cambiar compra
                 </button>

@@ -22,6 +22,7 @@ const PurchaseDetailPage = () => {
 
   const [showReceiveModal, setShowReceiveModal] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
+  const [showReturnModal, setShowReturnModal] = useState(false);
   const [receivedItems, setReceivedItems] = useState([]);
   const [cancellationReason, setCancellationReason] = useState('');
 
@@ -194,6 +195,18 @@ const PurchaseDetailPage = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
               Recibir Compra
+            </button>
+          )}
+
+          {purchase.status === 'received' && (
+            <button
+              onClick={() => setShowReturnModal(true)}
+              className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+              </svg>
+              Crear Devolución
             </button>
           )}
 
@@ -508,6 +521,54 @@ const PurchaseDetailPage = () => {
                 className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
               >
                 Cancelar Compra
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Return Modal */}
+      {showReturnModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div className="border-b border-gray-200 px-6 py-4">
+              <h2 className="text-xl font-bold text-gray-800">Crear Devolución a Proveedor</h2>
+            </div>
+            <div className="p-6">
+              <div className="flex items-start gap-3 mb-4">
+                <div className="bg-orange-100 rounded-full p-2 flex-shrink-0">
+                  <svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-gray-800 font-medium">
+                    ¿Desea iniciar una devolución para la compra <span className="font-bold">{purchase.purchase_number}</span>?
+                  </p>
+                  <p className="text-gray-500 text-sm mt-1">
+                    Se abrirá el formulario de devolución con esta compra pre-seleccionada. Podrá elegir qué productos y cantidades devolver.
+                  </p>
+                </div>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-600">
+                <p><span className="font-medium">Proveedor:</span> {purchase.supplier?.name}</p>
+                <p><span className="font-medium">Total compra:</span> {formatCurrency(purchase.total_amount)}</p>
+                <p><span className="font-medium">Productos:</span> {purchase.items?.length} ítem(s)</p>
+              </div>
+            </div>
+            <div className="border-t border-gray-200 px-6 py-4 flex justify-end gap-3">
+              <button
+                onClick={() => setShowReturnModal(false)}
+                className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => {
+                  navigate('/inventory/supplier-returns/new', { state: { purchase } });
+                }}
+                className="px-6 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-colors"
+              >
+                Continuar
               </button>
             </div>
           </div>
