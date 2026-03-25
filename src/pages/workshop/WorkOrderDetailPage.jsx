@@ -388,18 +388,11 @@ export default function WorkOrderDetailPage() {
             {!isClosed && nextStatuses.map(s => (
               <button key={s} onClick={() => {
                 if (s === 'listo') {
-                  const hasRepuesto = order.items?.some(i => i.item_type === 'repuesto');
-                  const hasManoObra = order.items?.some(i => i.item_type === 'mano_de_obra' || i.item_type === 'servicio');
-                  if (!hasRepuesto && !hasManoObra) {
-                    toast.error('La OT debe tener al menos un producto o mano de obra antes de marcarla como Lista');
-                    return;
-                  }
-                  if (!hasRepuesto) {
-                    toast.error('La OT debe tener al menos un repuesto o producto antes de marcarla como Lista');
-                    return;
-                  }
-                  if (!hasManoObra) {
-                    toast.error('La OT debe tener al menos un servicio o mano de obra antes de marcarla como Lista');
+                  const hasAnyItem = order.items?.some(
+                    i => i.item_type === 'repuesto' || i.item_type === 'servicio' || i.item_type === 'mano_de_obra' || i.item_type === 'mano_obra'
+                  );
+                  if (!hasAnyItem) {
+                    toast.error('La OT debe tener al menos un repuesto o servicio antes de marcarla como Lista');
                     return;
                   }
                 }
@@ -1094,9 +1087,25 @@ export default function WorkOrderDetailPage() {
                     </span>
                   )}
                 </div>
-                <button onClick={() => setShowChecklist(false)} className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-500">
-                  ✕
-                </button>
+                <div className="flex items-center gap-2">
+                  {!checklistReadonly && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const allOk = {};
+                        ITEMS.forEach(({ key }) => { allOk[key] = true; });
+                        setChecklist(prev => ({ ...prev, ...allOk }));
+                      }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 hover:bg-green-100 border border-green-300 text-green-700 rounded-lg text-xs font-semibold transition"
+                      title="Marcar todos los ítems como OK"
+                    >
+                      <CheckCircle size={13} /> Todo OK
+                    </button>
+                  )}
+                  <button onClick={() => setShowChecklist(false)} className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-500">
+                    ✕
+                  </button>
+                </div>
               </div>
 
               {/* Aviso readonly */}
