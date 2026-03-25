@@ -83,7 +83,9 @@ const AccountsReceivablePage = () => {
   };
 
   const formatDate = (date) => {
-    return new Date(date).toLocaleDateString('es-CO');
+    if (!date) return '—';
+    const d = new Date(date);
+    return isNaN(d.getTime()) ? '—' : d.toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' });
   };
 
   // Filtrar por nombre o documento

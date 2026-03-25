@@ -882,7 +882,7 @@ const ReportsPage = () => {
                                 <tr key={i} className={`hover:bg-gray-50 ${isOverdue ? 'bg-red-50' : ''}`}>
                                   <td className="px-6 py-4 text-sm font-medium text-gray-900">{inv.sale_number}</td>
                                   <td className="px-6 py-4 text-sm text-gray-600">{inv.customer_name}</td>
-                                  <td className="px-6 py-4 text-sm text-gray-500">{inv.sale_date ? new Date(inv.sale_date + 'T12:00:00').toLocaleDateString('es-CO') : '-'}</td>
+                                  <td className="px-6 py-4 text-sm text-gray-500">{(() => { if (!inv.sale_date) return '-'; const d = new Date(inv.sale_date.includes('T') ? inv.sale_date : inv.sale_date + 'T12:00:00'); return isNaN(d.getTime()) ? '-' : d.toLocaleDateString('es-CO'); })()}</td>
                                   <td className="px-6 py-4 text-sm text-right text-gray-900">{formatCOP(inv.total_amount)}</td>
                                   <td className="px-6 py-4 text-sm text-right text-green-600">{formatCOP(inv.paid_amount)}</td>
                                   <td className="px-6 py-4 text-sm text-right font-semibold text-blue-600">{formatCOP(inv.balance)}</td>
