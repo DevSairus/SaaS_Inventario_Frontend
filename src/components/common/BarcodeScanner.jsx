@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import Quagga from '@ericblade/quagga2';
 
-const BarcodeScanner = ({ onDetect, onClose }) => {
+const BarcodeScanner = ({ onDetect, onClose, hint }) => {
   const scannerRef = useRef(null);
   const videoRef = useRef(null);
 
@@ -66,16 +66,27 @@ const BarcodeScanner = ({ onDetect, onClose }) => {
       videoRef.current.srcObject = stream;
       await videoRef.current.play();
 
-      const detector = new window.BarcodeDetector({
-        formats: [
-          'ean_13',
-          'ean_8',
-          'upc_a',
-          'upc_e',
-          'code_128',
-          'code_39'
-        ]
-      });
+      // Detectar formatos soportados por el navegador (varía por dispositivo)
+      // pdf_417 es el formato de la Tarjeta de Propiedad colombiana (RUNT)
+      const allFormats = [
+        'pdf_417',   // Tarjeta de Propiedad / Licencia de Tránsito
+        'aztec',     // Algunas licencias de conducción
+        'qr_code',   // QR en general
+        'code_128',  // Códigos 1D de productos
+        'code_39',
+        'ean_13',
+        'ean_8',
+        'upc_a',
+        'upc_e',
+      ];
+      let supportedFormats;
+      try {
+        supportedFormats = await window.BarcodeDetector.getSupportedFormats();
+        supportedFormats = allFormats.filter(f => supportedFormats.includes(f));
+      } catch {
+        supportedFormats = allFormats;
+      }
+      const detector = new window.BarcodeDetector({ formats: supportedFormats });
 
       setMode('native');
       setStarted(true);
@@ -239,7 +250,7 @@ const BarcodeScanner = ({ onDetect, onClose }) => {
         </div>
 
         <div className="px-5 py-4 bg-gray-50 text-center text-sm text-gray-600">
-          Cámara o pistola USB – escaneo automático
+          {hint || 'Cámara o pistola USB – escaneo automático'}
         </div>
       </div>
 

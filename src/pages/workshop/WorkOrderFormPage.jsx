@@ -5,9 +5,10 @@ import { useNavigate } from 'react-router-dom';
 import useWorkshopStore from '../../store/workshopStore';
 import { vehiclesApi } from '../../api/workshop';
 import axios from '../../api/axios';
-import { ArrowLeft, Save, Car, User, Wrench, Plus, X, Search, Loader } from 'lucide-react';
+import { ArrowLeft, Save, Car, User, Wrench, Plus, X, Search, Loader, ScanLine } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { ExclamationTriangleIcon } from '@heroicons/react/24/outline';
+import VehicleCardScanModal from '../../components/common/VehicleCardScanModal';
 
 const inputCls = "w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white";
 
@@ -42,6 +43,7 @@ export default function WorkOrderFormPage() {
   const [showNewCustomer, setShowNewCustomer] = useState(false);
   const [newCustomer, setNewCustomer] = useState({ first_name: '', last_name: '', phone: '', tax_id: '' });
   const [savingCust,  setSavingCust]  = useState(false);
+  const [showScanModal, setShowScanModal] = useState(false);
 
   const [form, setForm] = useState({
     vehicle_id: '', customer_id: '', technician_id: '',
@@ -163,6 +165,23 @@ export default function WorkOrderFormPage() {
     finally { setSavingCust(false); }
   };
 
+  // Recibe los datos del modal de escaneo y pre-llena el form de nuevo vehículo
+  const handleScanConfirm = (data) => {
+    setNewVehicle({
+      plate:         data.plate || '',
+      brand:         data.brand || '',
+      model:         data.model || '',
+      year:          data.year  || '',
+      color:         data.color || '',
+      fuel_type:     data.fuel_type || 'gasolina',
+      engine_number: data.engine_number || '',
+      vin:           data.vin || '',
+    });
+    setShowScanModal(false);
+    setShowNewVehicle(true);
+    toast.success('Datos cargados desde la tarjeta — revisa y guarda');
+  };
+
   const handleSubmit = async () => {
     if (!form.vehicle_id)        return toast.error('Debes seleccionar un vehículo');
     if (!form.mileage_in && form.mileage_in !== 0) {
@@ -249,10 +268,17 @@ export default function WorkOrderFormPage() {
                   )}
                 </Field>
               </div>
-              <div className="flex items-end">
+              <div className="flex items-end gap-2">
                 <button type="button" onClick={() => setShowNewVehicle(v => !v)}
-                  className="w-full border border-dashed border-blue-300 text-blue-600 text-sm py-2 rounded-lg hover:bg-blue-50 transition">
+                  className="flex-1 border border-dashed border-blue-300 text-blue-600 text-sm py-2 rounded-lg hover:bg-blue-50 transition">
                   + Registrar nuevo vehículo
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowScanModal(true)}
+                  title="Escanear Tarjeta de Propiedad"
+                  className="flex items-center gap-1.5 px-3 py-2 bg-orange-50 border border-orange-200 text-orange-600 text-sm rounded-lg hover:bg-orange-100 transition whitespace-nowrap">
+                  <ScanLine size={15} /> Escanear tarjeta
                 </button>
               </div>
             </div>
@@ -462,6 +488,14 @@ export default function WorkOrderFormPage() {
           </button>
         </div>
       </div>
+
+      {showScanModal && (
+        <VehicleCardScanModal
+          onConfirm={handleScanConfirm}
+          onClose={() => setShowScanModal(false)}
+          showOwner={true}
+        />
+      )}
     </Layout>
   );
 }
