@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { BrowserMultiFormatReader } from '@zxing/browser';
-import { DecodeHintType, BarcodeFormat } from '@zxing/library';
+import { BrowserMultiFormatReader, DecodeHintType, BarcodeFormat } from '@zxing/browser';
+
 /**
  * BarcodeScanner
  *
@@ -16,7 +16,7 @@ import { DecodeHintType, BarcodeFormat } from '@zxing/library';
  *  onClose()
  *  hint?: string  — texto de ayuda que aparece debajo del visor
  */
-const BarcodeScanner = ({ onDetect, onClose, hint }) => {
+const BarcodeScanner = ({ onDetect, onClose, hint, formatFilter }) => {
   const videoRef   = useRef(null);
   const lockedRef  = useRef(false);
   const readerRef  = useRef(null);   // instancia ZXing
@@ -47,7 +47,7 @@ const BarcodeScanner = ({ onDetect, onClose, hint }) => {
         if (hidBufferRef.current.length >= 4) {
           lockedRef.current = true;
           navigator.vibrate?.(100);
-          onDetect(hidBufferRef.current);
+          fireDetect(hidBufferRef.current);
         }
         hidBufferRef.current = '';
         return;
@@ -62,11 +62,11 @@ const BarcodeScanner = ({ onDetect, onClose, hint }) => {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [onDetect]);
 
-  /* =====================================================
-     📷 BARCODE DETECTOR API (NATIVA)
-     Disponible en Chrome Android y Safari iOS 17+.
-     Es el motor más rápido y preciso para PDF417.
-  ===================================================== */
+  const fireDetect = useCallback((code) => {
+    // Si hay filtro activo, rechazar códigos puramente numéricos (EAN, números impresos)
+    if (formatFilter === 'pdf417' && /^\d+$/.test(code.trim())) return;
+    onDetect(code);
+  }, [onDetect, formatFilter]);
   const startNativeScanner = useCallback(async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -80,12 +80,6 @@ const BarcodeScanner = ({ onDetect, onClose, hint }) => {
         'pdf_417',
         'aztec',
         'qr_code',
-        'code_128',
-        'code_39',
-        'ean_13',
-        'ean_8',
-        'upc_a',
-        'upc_e',
         'data_matrix',
       ];
 
@@ -107,7 +101,7 @@ const BarcodeScanner = ({ onDetect, onClose, hint }) => {
           if (barcodes.length > 0) {
             lockedRef.current = true;
             navigator.vibrate?.(200);
-            onDetect(barcodes[0].rawValue);
+            fireDetect(barcodes[0].rawValue);
             return;
           }
         } catch (_) {}
@@ -118,13 +112,7 @@ const BarcodeScanner = ({ onDetect, onClose, hint }) => {
     } catch (err) {
       startZxing();
     }
-  }, [onDetect]);
-
-  /* =====================================================
-     📦 ZXING (FALLBACK)
-     Soporta PDF417, QR, Aztec, DataMatrix y todos los 1D.
-     Reemplaza a Quagga que solo soportaba 1D.
-  ===================================================== */
+  }, [fireDetect]);
   const startZxing = useCallback(async () => {
     try {
       const hints = new Map();
@@ -157,7 +145,7 @@ const BarcodeScanner = ({ onDetect, onClose, hint }) => {
           if (result) {
             lockedRef.current = true;
             navigator.vibrate?.(200);
-            onDetect(result.getText());
+            fireDetect(result.getText());
           }
           // err en cada frame sin resultado es normal — ignorar
         }
@@ -169,11 +157,7 @@ const BarcodeScanner = ({ onDetect, onClose, hint }) => {
       console.error('ZXing error:', err);
       setError('No se pudo acceder a la cámara. Verifica los permisos e intenta de nuevo.');
     }
-  }, [onDetect]);
-
-  /* =====================================================
-     INIT & CLEANUP
-  ===================================================== */
+  }, [fireDetect]);
   useEffect(() => {
     lockedRef.current = false;
 

@@ -93,6 +93,7 @@ export default function VehicleCardScanModal({ onConfirm, onClose, showOwner = t
       <BarcodeScanner
         onDetect={handleDetect}
         onClose={onClose}
+        formatFilter="pdf417"
         hint="Apunta al código PDF417 (rectangular grande) de la Tarjeta de Propiedad"
       />
     );
