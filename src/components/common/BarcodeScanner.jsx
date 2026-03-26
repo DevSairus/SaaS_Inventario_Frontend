@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { BrowserMultiFormatReader, DecodeHintType, BarcodeFormat } from '@zxing/browser';
-
+import { BrowserMultiFormatReader } from '@zxing/browser';
+import { DecodeHintType, BarcodeFormat } from '@zxing/library';
 /**
  * BarcodeScanner
  *
