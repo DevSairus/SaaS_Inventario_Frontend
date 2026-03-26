@@ -1,38 +1,46 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import Quagga from '@ericblade/quagga2';
+import { BrowserMultiFormatReader, DecodeHintType, BarcodeFormat } from '@zxing/browser';
 
+/**
+ * BarcodeScanner
+ *
+ * Prioridad de motores:
+ *  1. BarcodeDetector API nativa  (Chrome Android, Safari iOS 17+) — soporta PDF417
+ *  2. ZXing BrowserMultiFormatReader (fallback)          — soporta PDF417, QR, 1D
+ *
+ * Quagga fue reemplazado porque solo soporta códigos 1D y no puede
+ * leer el PDF417 de la Tarjeta de Propiedad / Licencia de Tránsito.
+ *
+ * Props:
+ *  onDetect(code: string)
+ *  onClose()
+ *  hint?: string  — texto de ayuda que aparece debajo del visor
+ */
 const BarcodeScanner = ({ onDetect, onClose, hint }) => {
-  const scannerRef = useRef(null);
-  const videoRef = useRef(null);
+  const videoRef   = useRef(null);
+  const lockedRef  = useRef(false);
+  const readerRef  = useRef(null);   // instancia ZXing
 
-  // Control general
-  const lockedRef = useRef(false);
-
-  // Quagga stabilization
-  const bufferRef = useRef({});
-  const frameCountRef = useRef(0);
-
-  // HID (USB scanner)
-  const hidBufferRef = useRef('');
+  // HID (pistola USB – actúa como teclado)
+  const hidBufferRef   = useRef('');
   const hidLastTimeRef = useRef(0);
 
-  const [mode, setMode] = useState(null); // native | quagga
+  const [mode,    setMode]    = useState(null);    // 'native' | 'zxing'
   const [started, setStarted] = useState(false);
+  const [error,   setError]   = useState('');
 
   /* =====================================================
      🔫 USB HID SCANNER (KEYBOARD)
+     La pistola envía los caracteres muy rápido y termina con Enter.
   ===================================================== */
   useEffect(() => {
     const onKeyDown = (e) => {
       if (lockedRef.current) return;
 
       const now = Date.now();
-
-      // Reset si es escritura humana
       if (now - hidLastTimeRef.current > 100) {
         hidBufferRef.current = '';
       }
-
       hidLastTimeRef.current = now;
 
       if (e.key === 'Enter' || e.key === 'Tab') {
@@ -55,45 +63,45 @@ const BarcodeScanner = ({ onDetect, onClose, hint }) => {
   }, [onDetect]);
 
   /* =====================================================
-     📷 BARCODE DETECTOR API (NATIVO)
+     📷 BARCODE DETECTOR API (NATIVA)
+     Disponible en Chrome Android y Safari iOS 17+.
+     Es el motor más rápido y preciso para PDF417.
   ===================================================== */
   const startNativeScanner = useCallback(async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment' }
+        video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
       });
 
       videoRef.current.srcObject = stream;
       await videoRef.current.play();
 
-      // Detectar formatos soportados por el navegador (varía por dispositivo)
-      // pdf_417 es el formato de la Tarjeta de Propiedad colombiana (RUNT)
       const allFormats = [
-        'pdf_417',   // Tarjeta de Propiedad / Licencia de Tránsito
-        'aztec',     // Algunas licencias de conducción
-        'qr_code',   // QR en general
-        'code_128',  // Códigos 1D de productos
+        'pdf_417',
+        'aztec',
+        'qr_code',
+        'code_128',
         'code_39',
         'ean_13',
         'ean_8',
         'upc_a',
         'upc_e',
+        'data_matrix',
       ];
-      let supportedFormats;
+
+      let formats = allFormats;
       try {
-        supportedFormats = await window.BarcodeDetector.getSupportedFormats();
-        supportedFormats = allFormats.filter(f => supportedFormats.includes(f));
-      } catch {
-        supportedFormats = allFormats;
-      }
-      const detector = new window.BarcodeDetector({ formats: supportedFormats });
+        const supported = await window.BarcodeDetector.getSupportedFormats();
+        formats = allFormats.filter(f => supported.includes(f));
+      } catch (_) {}
+
+      const detector = new window.BarcodeDetector({ formats });
 
       setMode('native');
       setStarted(true);
 
       const scan = async () => {
         if (lockedRef.current) return;
-
         try {
           const barcodes = await detector.detect(videoRef.current);
           if (barcodes.length > 0) {
@@ -103,92 +111,68 @@ const BarcodeScanner = ({ onDetect, onClose, hint }) => {
             return;
           }
         } catch (_) {}
-
         requestAnimationFrame(scan);
       };
 
       scan();
     } catch (err) {
-      startQuagga();
+      startZxing();
     }
   }, [onDetect]);
 
   /* =====================================================
-     📦 QUAGGA (FALLBACK)
+     📦 ZXING (FALLBACK)
+     Soporta PDF417, QR, Aztec, DataMatrix y todos los 1D.
+     Reemplaza a Quagga que solo soportaba 1D.
   ===================================================== */
-  const startQuagga = useCallback(async () => {
+  const startZxing = useCallback(async () => {
     try {
-      Quagga.stop();
-      Quagga.offDetected();
-      Quagga.CameraAccess?.release();
-    } catch (_) {}
+      const hints = new Map();
+      hints.set(DecodeHintType.POSSIBLE_FORMATS, [
+        BarcodeFormat.PDF_417,
+        BarcodeFormat.QR_CODE,
+        BarcodeFormat.AZTEC,
+        BarcodeFormat.DATA_MATRIX,
+        BarcodeFormat.CODE_128,
+        BarcodeFormat.CODE_39,
+        BarcodeFormat.EAN_13,
+        BarcodeFormat.EAN_8,
+        BarcodeFormat.UPC_A,
+        BarcodeFormat.UPC_E,
+      ]);
+      // TRY_HARDER mejora la detección de PDF417 en ángulos no perfectos
+      hints.set(DecodeHintType.TRY_HARDER, true);
 
-    await Quagga.init({
-      inputStream: {
-        type: 'LiveStream',
-        target: scannerRef.current,
-        constraints: { facingMode: 'environment' },
-        area: {
-          top: '30%',
-          right: '10%',
-          left: '10%',
-          bottom: '30%'
-        }
-      },
-      decoder: {
-        readers: [
-          'ean_reader',
-          'ean_8_reader',
-          'upc_reader',
-          'upc_e_reader',
-          'code_128_reader'
-        ]
-      },
-      locate: false,
-      frequency: 20,
-      numOfWorkers: 2
-    });
+      const reader = new BrowserMultiFormatReader(hints, {
+        delayBetweenScanAttempts: 150,
+        delayBetweenScanSuccess:  500,
+      });
+      readerRef.current = reader;
 
-    Quagga.start();
-    setMode('quagga');
-    setStarted(true);
-
-    const onDetected = (result) => {
-      if (lockedRef.current) return;
-
-      const code = result?.codeResult?.code;
-      if (!code) return;
-
-      frameCountRef.current++;
-      bufferRef.current[code] = (bufferRef.current[code] || 0) + 1;
-
-      if (frameCountRef.current >= 20) {
-        let best = null;
-        let count = 0;
-
-        for (const [k, v] of Object.entries(bufferRef.current)) {
-          if (v > count) {
-            best = k;
-            count = v;
+      await reader.decodeFromVideoDevice(
+        undefined,          // undefined → cámara trasera por defecto
+        videoRef.current,
+        (result, err) => {
+          if (lockedRef.current) return;
+          if (result) {
+            lockedRef.current = true;
+            navigator.vibrate?.(200);
+            onDetect(result.getText());
           }
+          // err en cada frame sin resultado es normal — ignorar
         }
+      );
 
-        if (count >= 5) {
-          lockedRef.current = true;
-          navigator.vibrate?.(200);
-          onDetect(best);
-        }
-
-        bufferRef.current = {};
-        frameCountRef.current = 0;
-      }
-    };
-
-    Quagga.onDetected(onDetected);
+      setMode('zxing');
+      setStarted(true);
+    } catch (err) {
+      console.error('ZXing error:', err);
+      setError('No se pudo acceder a la cámara. Verifica los permisos e intenta de nuevo.');
+    }
   }, [onDetect]);
 
   /* =====================================================
-     INIT
+     INIT & CLEANUP
   ===================================================== */
   useEffect(() => {
     lockedRef.current = false;
@@ -196,74 +180,92 @@ const BarcodeScanner = ({ onDetect, onClose, hint }) => {
     if ('BarcodeDetector' in window) {
       startNativeScanner();
     } else {
-      startQuagga();
+      startZxing();
     }
 
     return () => {
-      try {
-        Quagga.stop();
-        Quagga.CameraAccess?.release();
-      } catch (_) {}
-
+      try { readerRef.current?.reset(); } catch (_) {}
       if (videoRef.current?.srcObject) {
         videoRef.current.srcObject.getTracks().forEach(t => t.stop());
       }
     };
-  }, [startNativeScanner, startQuagga]);
+  }, [startNativeScanner, startZxing]);
 
   /* =====================================================
      UI
   ===================================================== */
+  const modeLabel = mode === 'native'
+    ? 'Alta precisión'
+    : mode === 'zxing'
+      ? 'Compatible PDF417'
+      : 'Iniciando...';
+
   return (
     <div className="fixed inset-0 z-[9999] bg-black bg-opacity-70 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
 
+        {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 bg-gray-900 text-white">
-          <span className="font-semibold">
-            📷 Escanear Código ({mode === 'native' ? 'Alta precisión' : 'Compatibilidad'})
+          <span className="font-semibold text-sm">
+            📷 Escanear código — <span className="text-gray-400 font-normal">{modeLabel}</span>
           </span>
-          <button onClick={onClose} className="text-2xl">✕</button>
+          <button onClick={onClose} className="text-2xl leading-none">✕</button>
         </div>
 
+        {/* Visor */}
         <div className="relative bg-black h-[360px] overflow-hidden">
-
-          {/* Native */}
           <video
             ref={videoRef}
             playsInline
             muted
-            className={`w-full h-full object-cover ${mode === 'native' ? 'block' : 'hidden'}`}
+            className="w-full h-full object-cover"
           />
 
-          {/* Quagga */}
-          <div
-            id="interactive"
-            ref={scannerRef}
-            className={`w-full h-full ${mode === 'quagga' ? 'block' : 'hidden'}`}
-          />
-
-          {started && (
+          {/* Recuadro guía — proporción ancha para PDF417 */}
+          {started && !error && (
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div className="w-56 h-36 border-4 border-green-400 rounded-xl" />
+              <div className="absolute inset-0 bg-black/30" />
+              <div className="relative w-72 h-28">
+                <span className="absolute top-0 left-0 w-6 h-6 border-t-4 border-l-4 border-green-400 rounded-tl" />
+                <span className="absolute top-0 right-0 w-6 h-6 border-t-4 border-r-4 border-green-400 rounded-tr" />
+                <span className="absolute bottom-0 left-0 w-6 h-6 border-b-4 border-l-4 border-green-400 rounded-bl" />
+                <span className="absolute bottom-0 right-0 w-6 h-6 border-b-4 border-r-4 border-green-400 rounded-br" />
+                <div className="absolute inset-x-0 top-0 h-0.5 bg-green-400 opacity-80 animate-scan" />
+              </div>
+            </div>
+          )}
+
+          {/* Error de cámara */}
+          {error && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 p-6 text-center">
+              <span className="text-4xl">🚫</span>
+              <p className="text-white text-sm">{error}</p>
+            </div>
+          )}
+
+          {/* Spinner inicial */}
+          {!started && !error && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin" />
             </div>
           )}
         </div>
 
-        <div className="px-5 py-4 bg-gray-50 text-center text-sm text-gray-600">
-          {hint || 'Cámara o pistola USB – escaneo automático'}
+        {/* Footer */}
+        <div className="px-5 py-3 bg-gray-50 text-center text-sm text-gray-500">
+          {hint || 'Apunta al código de barras — pistola USB o cámara'}
         </div>
       </div>
 
-      <style>
-        {`
-          #interactive video,
-          #interactive canvas {
-            width: 100% !important;
-            height: 100% !important;
-            object-fit: cover;
-          }
-        `}
-      </style>
+      <style>{`
+        @keyframes scan {
+          0%   { top: 0%; }
+          100% { top: 100%; }
+        }
+        .animate-scan {
+          animation: scan 1.8s ease-in-out infinite alternate;
+        }
+      `}</style>
     </div>
   );
 };
