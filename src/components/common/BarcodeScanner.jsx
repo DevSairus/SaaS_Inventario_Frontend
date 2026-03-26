@@ -5,30 +5,35 @@ import { DecodeHintType, BarcodeFormat } from '@zxing/library';
 /**
  * BarcodeScanner
  *
- * Prioridad de motores:
- *  1. BarcodeDetector API nativa  (Chrome Android, Safari iOS 17+) — soporta PDF417
- *  2. ZXing BrowserMultiFormatReader (fallback)          — soporta PDF417, QR, 1D
- *
- * Quagga fue reemplazado porque solo soporta códigos 1D y no puede
- * leer el PDF417 de la Tarjeta de Propiedad / Licencia de Tránsito.
+ * Motor único: ZXing BrowserMultiFormatReader
+ *  - Soporta PDF417, QR, Aztec, DataMatrix y todos los 1D (EAN, Code128, etc.)
+ *  - Más confiable que Native BarcodeDetector para PDF417 colombiano laminado
  *
  * Props:
  *  onDetect(code: string)
  *  onClose()
- *  hint?: string  — texto de ayuda que aparece debajo del visor
+ *  hint?         — texto de ayuda debajo del visor
+ *  formatFilter? — 'pdf417' para rechazar códigos puramente numéricos (EAN, impresos)
  */
 const BarcodeScanner = ({ onDetect, onClose, hint, formatFilter }) => {
-  const videoRef   = useRef(null);
-  const lockedRef  = useRef(false);
-  const readerRef  = useRef(null);   // instancia ZXing
+  const videoRef       = useRef(null);
+  const lockedRef      = useRef(false);
+  const readerRef      = useRef(null);
 
   // HID (pistola USB – actúa como teclado)
   const hidBufferRef   = useRef('');
   const hidLastTimeRef = useRef(0);
 
-  const [mode,    setMode]    = useState(null);    // 'native' | 'zxing'
   const [started, setStarted] = useState(false);
   const [error,   setError]   = useState('');
+
+  /* =====================================================
+     FIRE DETECT — aplica filtro opcional antes de notificar
+  ===================================================== */
+  const fireDetect = useCallback((code) => {
+    if (formatFilter === 'pdf417' && /^\d+$/.test(code.trim())) return;
+    onDetect(code);
+  }, [onDetect, formatFilter]);
 
   /* =====================================================
      🔫 USB HID SCANNER (KEYBOARD)
@@ -61,59 +66,12 @@ const BarcodeScanner = ({ onDetect, onClose, hint, formatFilter }) => {
 
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [onDetect]);
-
-  const fireDetect = useCallback((code) => {
-    // Si hay filtro activo, rechazar códigos puramente numéricos (EAN, números impresos)
-    if (formatFilter === 'pdf417' && /^\d+$/.test(code.trim())) return;
-    onDetect(code);
-  }, [onDetect, formatFilter]);
-  const startNativeScanner = useCallback(async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
-      });
-
-      videoRef.current.srcObject = stream;
-      await videoRef.current.play();
-
-      const allFormats = [
-        'pdf_417',
-        'aztec',
-        'qr_code',
-        'data_matrix',
-      ];
-
-      let formats = allFormats;
-      try {
-        const supported = await window.BarcodeDetector.getSupportedFormats();
-        formats = allFormats.filter(f => supported.includes(f));
-      } catch (_) {}
-
-      const detector = new window.BarcodeDetector({ formats });
-
-      setMode('native');
-      setStarted(true);
-
-      const scan = async () => {
-        if (lockedRef.current) return;
-        try {
-          const barcodes = await detector.detect(videoRef.current);
-          if (barcodes.length > 0) {
-            lockedRef.current = true;
-            navigator.vibrate?.(200);
-            fireDetect(barcodes[0].rawValue);
-            return;
-          }
-        } catch (_) {}
-        requestAnimationFrame(scan);
-      };
-
-      scan();
-    } catch (err) {
-      startZxing();
-    }
   }, [fireDetect]);
+
+  /* =====================================================
+     📦 ZXING — motor principal
+     Soporta PDF417, QR, Aztec, DataMatrix y todos los 1D.
+  ===================================================== */
   const startZxing = useCallback(async () => {
     try {
       const hints = new Map();
@@ -139,34 +97,31 @@ const BarcodeScanner = ({ onDetect, onClose, hint, formatFilter }) => {
       readerRef.current = reader;
 
       await reader.decodeFromVideoDevice(
-        undefined,          // undefined → cámara trasera por defecto
+        undefined,
         videoRef.current,
-        (result, err) => {
+        (result) => {
           if (lockedRef.current) return;
           if (result) {
             lockedRef.current = true;
             navigator.vibrate?.(200);
             fireDetect(result.getText());
           }
-          // err en cada frame sin resultado es normal — ignorar
         }
       );
 
-      setMode('zxing');
       setStarted(true);
     } catch (err) {
       console.error('ZXing error:', err);
       setError('No se pudo acceder a la cámara. Verifica los permisos e intenta de nuevo.');
     }
   }, [fireDetect]);
+
+  /* =====================================================
+     INIT & CLEANUP
+  ===================================================== */
   useEffect(() => {
     lockedRef.current = false;
-
-    if ('BarcodeDetector' in window) {
-      startNativeScanner();
-    } else {
-      startZxing();
-    }
+    startZxing();
 
     return () => {
       try { readerRef.current?.reset(); } catch (_) {}
@@ -174,16 +129,7 @@ const BarcodeScanner = ({ onDetect, onClose, hint, formatFilter }) => {
         videoRef.current.srcObject.getTracks().forEach(t => t.stop());
       }
     };
-  }, [startNativeScanner, startZxing]);
-
-  /* =====================================================
-     UI
-  ===================================================== */
-  const modeLabel = mode === 'native'
-    ? 'Alta precisión'
-    : mode === 'zxing'
-      ? 'Compatible PDF417'
-      : 'Iniciando...';
+  }, [startZxing]);
 
   return (
     <div className="fixed inset-0 z-[9999] bg-black bg-opacity-70 flex items-center justify-center p-4">
@@ -192,7 +138,7 @@ const BarcodeScanner = ({ onDetect, onClose, hint, formatFilter }) => {
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 bg-gray-900 text-white">
           <span className="font-semibold text-sm">
-            📷 Escanear código — <span className="text-gray-400 font-normal">{modeLabel}</span>
+            📷 Escanear código
           </span>
           <button onClick={onClose} className="text-2xl leading-none">✕</button>
         </div>
