@@ -1,14 +1,13 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { BrowserMultiFormatReader } from '@zxing/browser';
-import { DecodeHintType, BarcodeFormat } from '@zxing/library';
+import { scanImageData } from '@undecaf/zbar-wasm';
 
 /**
  * BarcodeScanner
  *
- * Estrategia de motores:
- *  1. Native BarcodeDetector con pdf_417 — si el dispositivo lo soporta (más fluido)
- *  2. Native BarcodeDetector sin pdf_417 — para QR/1D rápidos cuando no hay soporte pdf_417
- *  3. ZXing BrowserMultiFormatReader     — fallback completo (más pesado, pero universal)
+ * Motor: zbar-wasm (WebAssembly)
+ *  - Lee PDF417, QR, EAN-13, Code128, Aztec, DataMatrix, etc.
+ *  - No bloquea el hilo principal (WASM)
+ *  - Compatible con móvil (Opera/Chrome Android) y PC
  *
  * Props:
  *  onDetect(code: string)
@@ -17,32 +16,29 @@ import { DecodeHintType, BarcodeFormat } from '@zxing/library';
  *  formatFilter? — 'pdf417' para rechazar códigos puramente numéricos
  */
 const BarcodeScanner = ({ onDetect, onClose, hint, formatFilter }) => {
-  const videoRef       = useRef(null);
-  const lockedRef      = useRef(false);
-  const readerRef      = useRef(null);
-  const rafRef         = useRef(null);
+  const videoRef   = useRef(null);
+  const canvasRef  = useRef(null);
+  const lockedRef  = useRef(false);
+  const rafRef     = useRef(null);
+  const streamRef  = useRef(null);
 
   const hidBufferRef   = useRef('');
   const hidLastTimeRef = useRef(0);
 
-  const [mode,    setMode]    = useState(null);
   const [started, setStarted] = useState(false);
   const [error,   setError]   = useState('');
 
-  /* ─── fireDetect ─────────────────────────────────────── */
   const fireDetect = useCallback((code) => {
     if (formatFilter === 'pdf417' && /^\d+$/.test(code.trim())) return;
     onDetect(code);
   }, [onDetect, formatFilter]);
 
-  /* ─── HID (pistola USB) ───────────────────────────────── */
   useEffect(() => {
     const onKeyDown = (e) => {
       if (lockedRef.current) return;
       const now = Date.now();
       if (now - hidLastTimeRef.current > 100) hidBufferRef.current = '';
       hidLastTimeRef.current = now;
-
       if (e.key === 'Enter' || e.key === 'Tab') {
         if (hidBufferRef.current.length >= 4) {
           lockedRef.current = true;
@@ -58,131 +54,67 @@ const BarcodeScanner = ({ onDetect, onClose, hint, formatFilter }) => {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [fireDetect]);
 
-  /* ─── Native BarcodeDetector ──────────────────────────── */
-  const startNative = useCallback(async (formats) => {
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
-    });
-    videoRef.current.srcObject = stream;
-    await videoRef.current.play();
-
-    const detector = new window.BarcodeDetector({ formats });
-    setStarted(true);
-
-    const scan = async () => {
-      if (lockedRef.current) return;
-      try {
-        const barcodes = await detector.detect(videoRef.current);
-        if (barcodes.length > 0) {
-          lockedRef.current = true;
-          navigator.vibrate?.(200);
-          fireDetect(barcodes[0].rawValue);
-          return;
-        }
-      } catch (_) {}
-      rafRef.current = requestAnimationFrame(scan);
-    };
-    rafRef.current = requestAnimationFrame(scan);
-  }, [fireDetect]);
-
-  /* ─── ZXing fallback ──────────────────────────────────── */
-  const startZxing = useCallback(async () => {
-    const hints = new Map();
-    hints.set(DecodeHintType.POSSIBLE_FORMATS, [
-      BarcodeFormat.PDF_417,
-      BarcodeFormat.QR_CODE,
-      BarcodeFormat.AZTEC,
-      BarcodeFormat.DATA_MATRIX,
-      BarcodeFormat.CODE_128,
-      BarcodeFormat.CODE_39,
-      BarcodeFormat.EAN_13,
-      BarcodeFormat.EAN_8,
-      BarcodeFormat.UPC_A,
-      BarcodeFormat.UPC_E,
-    ]);
-    hints.set(DecodeHintType.TRY_HARDER, true);
-
-    const reader = new BrowserMultiFormatReader(hints, {
-      delayBetweenScanAttempts: 300,
-      delayBetweenScanSuccess:  500,
-    });
-    readerRef.current = reader;
-
-    await reader.decodeFromVideoDevice(undefined, videoRef.current, (result) => {
-      if (lockedRef.current || !result) return;
-      lockedRef.current = true;
-      navigator.vibrate?.(200);
-      fireDetect(result.getText());
-    });
-
-    setStarted(true);
-  }, [fireDetect]);
-
-  /* ─── INIT ────────────────────────────────────────────── */
   useEffect(() => {
-    lockedRef.current = false;
+    let active = true;
 
-    (async () => {
+    const start = async () => {
       try {
-        if ('BarcodeDetector' in window) {
-          const supported = await window.BarcodeDetector.getSupportedFormats();
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
+        });
+        streamRef.current = stream;
+        const video = videoRef.current;
+        video.srcObject = stream;
+        await video.play();
+        const canvas = canvasRef.current;
+        const ctx    = canvas.getContext('2d', { willReadFrequently: true });
+        setStarted(true);
 
-          if (supported.includes('pdf_417')) {
-            // Dispositivo soporta PDF417 nativo — el más fluido
-            setMode('native-full');
-            await startNative(supported);
-          } else {
-            // Dispositivo tiene Native pero sin PDF417 — usar ZXing
-            setMode('zxing');
-            await startZxing();
+        const scan = async () => {
+          if (!active || lockedRef.current) return;
+          if (video.readyState === video.HAVE_ENOUGH_DATA) {
+            canvas.width  = video.videoWidth;
+            canvas.height = video.videoHeight;
+            ctx.drawImage(video, 0, 0);
+            try {
+              const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+              const symbols   = await scanImageData(imageData);
+              if (symbols.length > 0 && !lockedRef.current) {
+                lockedRef.current = true;
+                navigator.vibrate?.(200);
+                fireDetect(symbols[0].decode());
+                return;
+              }
+            } catch (_) {}
           }
-        } else {
-          setMode('zxing');
-          await startZxing();
-        }
+          rafRef.current = requestAnimationFrame(scan);
+        };
+        rafRef.current = requestAnimationFrame(scan);
       } catch (err) {
-        console.error('Scanner init error:', err);
+        console.error('Scanner error:', err);
         setError('No se pudo acceder a la cámara. Verifica los permisos e intenta de nuevo.');
       }
-    })();
+    };
+
+    start();
 
     return () => {
+      active = false;
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
-      try { readerRef.current?.reset(); } catch (_) {}
-      if (videoRef.current?.srcObject) {
-        videoRef.current.srcObject.getTracks().forEach(t => t.stop());
-      }
+      if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
     };
-  }, [startNative, startZxing]);
-
-  /* ─── UI ──────────────────────────────────────────────── */
-  const modeLabel = mode === 'native-full'
-    ? 'Alta precisión'
-    : mode === 'zxing'
-      ? 'Modo compatible'
-      : 'Iniciando...';
+  }, [fireDetect]);
 
   return (
     <div className="fixed inset-0 z-[9999] bg-black bg-opacity-70 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
-
-        {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 bg-gray-900 text-white">
-          <span className="font-semibold text-sm">
-            📷 Escanear código — <span className="text-gray-400 font-normal">{modeLabel}</span>
-          </span>
+          <span className="font-semibold text-sm">📷 Escanear código</span>
           <button onClick={onClose} className="text-2xl leading-none">✕</button>
         </div>
-
-        {/* Visor */}
         <div className="relative bg-black h-[360px] overflow-hidden">
-          <video
-            ref={videoRef}
-            playsInline
-            muted
-            className="w-full h-full object-cover"
-          />
-
+          <video ref={videoRef} playsInline muted className="w-full h-full object-cover" />
+          <canvas ref={canvasRef} className="hidden" />
           {started && !error && (
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
               <div className="absolute inset-0 bg-black/30" />
@@ -195,35 +127,25 @@ const BarcodeScanner = ({ onDetect, onClose, hint, formatFilter }) => {
               </div>
             </div>
           )}
-
           {error && (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 p-6 text-center">
               <span className="text-4xl">🚫</span>
               <p className="text-white text-sm">{error}</p>
             </div>
           )}
-
           {!started && !error && (
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin" />
             </div>
           )}
         </div>
-
-        {/* Footer */}
         <div className="px-5 py-3 bg-gray-50 text-center text-sm text-gray-500">
           {hint || 'Apunta al código de barras — pistola USB o cámara'}
         </div>
       </div>
-
       <style>{`
-        @keyframes scan {
-          0%   { top: 0%; }
-          100% { top: 100%; }
-        }
-        .animate-scan {
-          animation: scan 1.8s ease-in-out infinite alternate;
-        }
+        @keyframes scan { 0% { top: 0%; } 100% { top: 100%; } }
+        .animate-scan { animation: scan 1.8s ease-in-out infinite alternate; }
       `}</style>
     </div>
   );
