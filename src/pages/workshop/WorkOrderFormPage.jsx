@@ -8,7 +8,7 @@ import axios from '../../api/axios';
 import { ArrowLeft, Save, Car, User, Wrench, Plus, X, Search, Loader, ScanLine } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { ExclamationTriangleIcon } from '@heroicons/react/24/outline';
-import VehicleCardScanModal from '../../components/common/VehicleCardScanModal';
+import RuntConsultaModal from '../../components/workshop/RuntConsultaModal';
 
 const inputCls = "w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white";
 
@@ -39,7 +39,7 @@ export default function WorkOrderFormPage() {
   const [custAutoFilled, setCustAutoFilled] = useState(false); // vino de la moto, no manual
 
   const [showNewVehicle,  setShowNewVehicle]  = useState(false);
-  const [newVehicle, setNewVehicle] = useState({ plate: '', brand: '', model: '', year: '', color: '', fuel_type: 'gasolina' });
+  const [newVehicle, setNewVehicle] = useState({ plate: '', brand: '', model: '', year: '', color: '', fuel_type: 'gasolina', engine_number: '', vin: '', soat_number: '', soat_expiry: '', tecnomecanica_number: '', tecnomecanica_expiry: '' });
   const [showNewCustomer, setShowNewCustomer] = useState(false);
   const [newCustomer, setNewCustomer] = useState({ first_name: '', last_name: '', phone: '', tax_id: '' });
   const [savingCust,  setSavingCust]  = useState(false);
@@ -145,7 +145,7 @@ export default function WorkOrderFormPage() {
       setVehicles(prev => [v, ...prev]);
       selectVehicle(v);
       setShowNewVehicle(false);
-      setNewVehicle({ plate: '', brand: '', model: '', year: '', color: '', fuel_type: 'gasolina' });
+      setNewVehicle({ plate: '', brand: '', model: '', year: '', color: '', fuel_type: 'gasolina', engine_number: '', vin: '', soat_number: '', soat_expiry: '', tecnomecanica_number: '', tecnomecanica_expiry: '' });
       toast.success('Vehículo registrado');
     } catch (e) { toast.error(e.response?.data?.message || 'Error'); }
   };
@@ -165,21 +165,62 @@ export default function WorkOrderFormPage() {
     finally { setSavingCust(false); }
   };
 
-  // Recibe los datos del modal de escaneo y pre-llena el form de nuevo vehículo
-  const handleScanConfirm = (data) => {
-    setNewVehicle({
-      plate:         data.plate || '',
-      brand:         data.brand || '',
-      model:         data.model || '',
-      year:          data.year  || '',
-      color:         data.color || '',
-      fuel_type:     data.fuel_type || 'gasolina',
-      engine_number: data.engine_number || '',
-      vin:           data.vin || '',
-    });
+  // Recibe los datos del modal RUNT
+  // - Si hay vehículo ya seleccionado → actualiza ese registro vía API
+  // - Si no hay vehículo → pre-llena el formulario de nuevo vehículo
+  const handleScanConfirm = async (data) => {
     setShowScanModal(false);
-    setShowNewVehicle(true);
-    toast.success('Datos cargados desde la tarjeta — revisa y guarda');
+
+    const extras = [data.soat_number && 'SOAT', data.tecnomecanica_number && 'Tecnomecánica']
+      .filter(Boolean).join(' y ');
+
+    if (selVehicle) {
+      // ── Actualizar vehículo existente ────────────────────────────────
+      try {
+        const patch = {};
+        if (data.brand)                patch.brand                = data.brand;
+        if (data.model)                patch.model                = data.model;
+        if (data.year)                 patch.year                 = data.year;
+        if (data.color)                patch.color                = data.color;
+        if (data.fuel_type)            patch.fuel_type            = data.fuel_type;
+        if (data.engine_number)        patch.engine_number        = data.engine_number;
+        if (data.vin)                  patch.vin                  = data.vin;
+        if (data.soat_number)          patch.soat_number          = data.soat_number;
+        if (data.soat_expiry)          patch.soat_expiry          = data.soat_expiry;
+        if (data.tecnomecanica_number) patch.tecnomecanica_number = data.tecnomecanica_number;
+        if (data.tecnomecanica_expiry) patch.tecnomecanica_expiry = data.tecnomecanica_expiry;
+
+        await vehiclesApi.update(selVehicle.id, patch);
+        // Refrescar el objeto selVehicle en memoria
+        setSelVehicle(prev => ({ ...prev, ...patch }));
+
+        toast.success(extras
+          ? `Vehículo actualizado — incluye ${extras}`
+          : 'Información del vehículo actualizada desde el RUNT');
+      } catch (e) {
+        toast.error(e.response?.data?.message || 'Error al actualizar el vehículo');
+      }
+    } else {
+      // ── Pre-llenar formulario de nuevo vehículo ──────────────────────
+      setNewVehicle({
+        plate:                data.plate                || '',
+        brand:                data.brand                || '',
+        model:                data.model                || '',
+        year:                 data.year                 || '',
+        color:                data.color                || '',
+        fuel_type:            data.fuel_type            || 'gasolina',
+        engine_number:        data.engine_number        || '',
+        vin:                  data.vin                  || '',
+        soat_number:          data.soat_number          || '',
+        soat_expiry:          data.soat_expiry          || '',
+        tecnomecanica_number: data.tecnomecanica_number || '',
+        tecnomecanica_expiry: data.tecnomecanica_expiry || '',
+      });
+      setShowNewVehicle(true);
+      toast.success(extras
+        ? `Datos RUNT cargados — incluye ${extras}. Revisa y guarda`
+        : 'Datos cargados desde el RUNT — revisa y guarda');
+    }
   };
 
   const handleSubmit = async () => {
@@ -274,12 +315,12 @@ export default function WorkOrderFormPage() {
                   + Registrar nuevo vehículo
                 </button>
                 <button
-                  type="button"
-                  onClick={() => setShowScanModal(true)}
-                  title="Escanear Tarjeta de Propiedad"
-                  className="flex items-center gap-1.5 px-3 py-2 bg-orange-50 border border-orange-200 text-orange-600 text-sm rounded-lg hover:bg-orange-100 transition whitespace-nowrap">
-                  <ScanLine size={15} /> Escanear tarjeta
-                </button>
+                type="button"
+                onClick={() => setShowScanModal(true)}
+                title="Consultar datos en el RUNT"
+                className="flex items-center gap-1.5 px-3 py-2 bg-orange-50 border border-orange-200 text-orange-600 text-sm rounded-lg hover:bg-orange-100 transition whitespace-nowrap">
+                <Search size={15} /> Consultar RUNT
+              </button>
               </div>
             </div>
 
@@ -490,10 +531,10 @@ export default function WorkOrderFormPage() {
       </div>
 
       {showScanModal && (
-        <VehicleCardScanModal
+        <RuntConsultaModal
+          placa={selVehicle ? selVehicle.plate : newVehicle.plate}
           onConfirm={handleScanConfirm}
           onClose={() => setShowScanModal(false)}
-          showOwner={true}
         />
       )}
     </Layout>

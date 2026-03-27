@@ -7,6 +7,7 @@ export const vehiclesApi = {
   getHistory: (id) => axios.get(`/workshop/vehicles/${id}/history`),
   create: (data) => axios.post('/workshop/vehicles', data),
   update: (id, data) => axios.put(`/workshop/vehicles/${id}`, data),
+  remove: (id) => axios.delete(`/workshop/vehicles/${id}`),
 };
 
 // ── Work Orders ───────────────────────────────────────────

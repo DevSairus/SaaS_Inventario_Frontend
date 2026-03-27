@@ -6,10 +6,9 @@ import axios from '../../api/axios';
 import {
   ArrowLeft, Car, Wrench, User, Save, X, PencilLine,
   ChevronRight, AlertTriangle, CheckCircle, Clock,
-  FileText, Hash, Fuel, Gauge, Palette, ScanLine
+  FileText, Hash, Fuel, Gauge, Palette,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import VehicleCardScanModal from '../../components/common/VehicleCardScanModal';
 
 // ── helpers ──────────────────────────────────────────────────────────
 const COP = n => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(n || 0);
@@ -55,7 +54,6 @@ export default function VehicleDetailPage() {
   const [customers, setCustomers] = useState([]);
   const [custSearch, setCustSearch] = useState('');
   const [showCustDrop, setShowCustDrop] = useState(false);
-  const [showScanModal, setShowScanModal] = useState(false);
 
   useEffect(() => { load(); }, [id]);
   useEffect(() => {
@@ -129,24 +127,6 @@ export default function VehicleDetailPage() {
     }
   };
 
-  // Recibe datos del escaneo y los mezcla con el form de edición
-  const handleScanConfirmEdit = (data) => {
-    setForm(prev => ({
-      ...prev,
-      plate:         data.plate         || prev.plate,
-      brand:         data.brand         || prev.brand,
-      model:         data.model         || prev.model,
-      year:          data.year          || prev.year,
-      color:         data.color         || prev.color,
-      fuel_type:     data.fuel_type     || prev.fuel_type,
-      engine_number: data.engine_number || prev.engine_number,
-      vin:           data.vin           || prev.vin,
-    }));
-    setShowScanModal(false);
-    setEditing(true);
-    toast.success('Datos cargados desde la tarjeta — revisa y guarda');
-  };
-
   const setF = useCallback((k, v) => setForm(f => ({ ...f, [k]: v })), []);
 
   if (loading) return (
@@ -194,12 +174,6 @@ export default function VehicleDetailPage() {
           </div>
           {!editing ? (
             <div className="flex gap-2">
-              <button
-                onClick={() => setShowScanModal(true)}
-                title="Actualizar con Tarjeta de Propiedad"
-                className="flex items-center gap-1.5 px-3 py-2 bg-orange-50 border border-orange-200 text-orange-600 rounded-lg text-sm hover:bg-orange-100 transition">
-                <ScanLine size={15} /> Escanear
-              </button>
               <button onClick={startEdit}
                 className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition">
                 <PencilLine size={15} /> Editar
@@ -207,13 +181,6 @@ export default function VehicleDetailPage() {
             </div>
           ) : (
             <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => setShowScanModal(true)}
-                title="Cargar desde Tarjeta de Propiedad"
-                className="flex items-center gap-1.5 px-3 py-2 bg-orange-50 border border-orange-200 text-orange-600 rounded-lg text-sm hover:bg-orange-100 transition">
-                <ScanLine size={15} />
-              </button>
               <button onClick={() => setEditing(false)} disabled={saving}
                 className="flex items-center gap-1.5 px-3 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm hover:bg-gray-50">
                 <X size={15}/> Cancelar
@@ -557,13 +524,6 @@ export default function VehicleDetailPage() {
         )}
       </div>
 
-      {showScanModal && (
-        <VehicleCardScanModal
-          onConfirm={handleScanConfirmEdit}
-          onClose={() => setShowScanModal(false)}
-          showOwner={false}
-        />
-      )}
     </Layout>
   );
 }
