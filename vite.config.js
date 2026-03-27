@@ -9,6 +9,9 @@ export default defineConfig({
     host: true
   },
   resolve: {
+    // Activa la versión inlined de @undecaf/zbar-wasm (WASM embebido como base64)
+    // Esto evita que Vite intente servir el archivo .wasm por separado
+    conditions: ['zbar-inlined'],
     alias: {
       '@api': path.resolve(__dirname, './src/api'),
       '@components': path.resolve(__dirname, './src/components'),
