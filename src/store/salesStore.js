@@ -205,6 +205,12 @@ const useSalesStore = create((set, get) => ({
       const response = await salesApi.getStats(filters);
       set({ stats: response.data.data });
     } catch (error) {
+      const message = error?.response?.data?.message || 'No se pudieron cargar las estadísticas de ventas';
+      set({ error: message });
+      if (import.meta.env.DEV) {
+        console.warn('[salesStore] fetchStats error:', error);
+      }
+      toast.error(message);
     }
   },
 

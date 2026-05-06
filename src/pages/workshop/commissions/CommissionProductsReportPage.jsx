@@ -177,7 +177,7 @@ function ReportTab({ users }) {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
           {[
             { label: 'Usuarios',       value: summary.total_users,              color: 'text-indigo-600' },
-            { label: 'Órdenes',        value: summary.total_orders,             color: 'text-blue-600' },
+            { label: 'Ítems',          value: summary.total_items ?? summary.total_orders, color: 'text-blue-600' },
             { label: 'Total Repuestos',value: COP(summary.total_products),      color: 'text-emerald-600' },
             { label: 'Comisión Total', value: COP(summary.commission_on_products), color: 'text-amber-600' },
           ].map(({ label, value, color }) => (
@@ -265,38 +265,42 @@ function ReportTab({ users }) {
                   )}
                 </div>
 
-                {/* Detalle expandido */}
-                {isExpanded && u.orders.length > 0 && (
+                {/* Detalle expandido — tabla por producto */}
+                {isExpanded && (u.items?.length > 0 || u.orders?.length > 0) && (
                   <div className="border-t border-gray-100 bg-gray-50/60">
-                    <div className="px-4 py-2 grid grid-cols-12 gap-2 text-xs font-medium text-gray-400 uppercase tracking-wider border-b border-gray-100">
-                      <div className="col-span-3">Orden</div>
-                      <div className="col-span-3">Fecha</div>
-                      <div className="col-span-2">Estado</div>
-                      <div className="col-span-2 text-right">Repuestos</div>
-                      <div className="col-span-2 text-right">Mano Obra</div>
+                    {/* Cabecera tabla productos */}
+                    <div className="px-4 py-2 grid grid-cols-12 gap-1 text-xs font-medium text-gray-400 uppercase tracking-wider border-b border-gray-100">
+                      <div className="col-span-4">Producto</div>
+                      <div className="col-span-1 text-center">Cant</div>
+                      <div className="col-span-2 text-right">V.Unit</div>
+                      <div className="col-span-3">Factura / OT</div>
+                      <div className="col-span-2 text-right">Total</div>
                     </div>
-                    {u.orders.map(o => (
-                      <div key={o.order_number}
-                        className="px-4 py-2.5 grid grid-cols-12 gap-2 text-sm border-b border-gray-100 last:border-0 hover:bg-white transition">
-                        <div className="col-span-3 font-mono text-xs font-bold text-gray-800">{o.order_number}</div>
-                        <div className="col-span-3 text-xs text-gray-500">
-                          {o.received_at ? new Date(o.received_at).toLocaleDateString('es-CO') : '—'}
+                    {/* Filas por ítem */}
+                    {(u.items || []).map((item, idx) => (
+                      <div key={idx}
+                        className="px-4 py-2 grid grid-cols-12 gap-1 text-xs border-b border-gray-50 last:border-0 hover:bg-white transition">
+                        <div className="col-span-4 min-w-0">
+                          <p className="font-medium text-gray-800 truncate">{item.product_name || '—'}</p>
+                          {item.product_sku && <p className="text-gray-400">{item.product_sku}</p>}
                         </div>
-                        <div className="col-span-2">
-                          <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${STATUS_COLOR[o.status] || 'bg-gray-100 text-gray-600'}`}>
-                            {STATUS_LABEL[o.status] || o.status}
+                        <div className="col-span-1 text-center text-gray-600">{item.quantity}</div>
+                        <div className="col-span-2 text-right text-gray-600">{COP(item.unit_price)}</div>
+                        <div className="col-span-3 font-mono text-gray-700 truncate">
+                          <span className={`mr-1 px-1 py-0.5 rounded text-[10px] font-semibold ${item.source === 'ot' ? 'bg-blue-100 text-blue-600' : 'bg-purple-100 text-purple-600'}`}>
+                            {item.source === 'ot' ? 'OT' : 'VTA'}
                           </span>
+                          {item.ref_number}
                         </div>
-                        <div className="col-span-2 text-right text-xs font-semibold text-emerald-700">{COP(o.product_amount)}</div>
-                        <div className="col-span-2 text-right text-xs text-gray-500">{COP(o.labor_amount)}</div>
+                        <div className="col-span-2 text-right font-semibold text-emerald-700">{COP(item.total)}</div>
                       </div>
                     ))}
-                    <div className="px-4 py-2.5 grid grid-cols-12 gap-2 bg-indigo-50/60 border-t border-indigo-100">
-                      <div className="col-span-8 text-xs font-semibold text-indigo-700">
-                        Subtotal · {u.orders.length} {u.orders.length === 1 ? 'orden' : 'órdenes'}
+                    {/* Totales */}
+                    <div className="px-4 py-2.5 grid grid-cols-12 gap-1 bg-indigo-50/60 border-t border-indigo-100">
+                      <div className="col-span-10 text-xs font-semibold text-indigo-700">
+                        Subtotal · {(u.items || []).length} ítem(s)
                       </div>
                       <div className="col-span-2 text-right text-xs font-bold text-emerald-700">{COP(u.total_products)}</div>
-                      <div className="col-span-2 text-right text-xs text-gray-500">{COP(u.total_labor)}</div>
                     </div>
                     {percentage > 0 && (
                       <div className="px-4 py-2 bg-indigo-100/40 flex items-center justify-between">
@@ -328,7 +332,7 @@ function ReportTab({ users }) {
             <div className="p-5 space-y-4">
               <div className="grid grid-cols-3 gap-3">
                 {[
-                  { label: 'Órdenes',          value: String(previewData.total_orders),          color: 'text-blue-600' },
+                  { label: 'Ítems',             value: String(previewData.total_orders),          color: 'text-blue-600' },
                   { label: 'Base Repuestos',    value: COP(previewData.base_amount),              color: 'text-emerald-600' },
                   { label: `Comisión (${previewData.commission_percentage}%)`, value: COP(previewData.commission_amount), color: 'text-indigo-600' },
                 ].map(({ label, value, color }) => (
@@ -338,18 +342,41 @@ function ReportTab({ users }) {
                   </div>
                 ))}
               </div>
-              <div className="max-h-44 overflow-y-auto border border-gray-100 rounded-xl divide-y divide-gray-50">
-                {previewData.orders.map(o => (
-                  <div key={o.order_number} className="flex items-center justify-between px-3 py-2 text-xs">
-                    <div>
-                      <span className="font-mono font-bold text-gray-800 mr-2">{o.order_number}</span>
-                      <span className="text-gray-400">
-                        {o.received_at ? new Date(o.received_at).toLocaleDateString('es-CO') : ''}
-                      </span>
-                    </div>
-                    <span className="font-semibold text-emerald-700">{COP(o.product_amount)}</span>
-                  </div>
-                ))}
+              {/* Tabla detalle por producto */}
+              <div className="max-h-52 overflow-y-auto border border-gray-100 rounded-xl">
+                <table className="w-full text-xs">
+                  <thead className="bg-gray-50 sticky top-0">
+                    <tr>
+                      <th className="text-left px-3 py-2 font-medium text-gray-500">Producto</th>
+                      <th className="text-center px-2 py-2 font-medium text-gray-500">Cant</th>
+                      <th className="text-left px-2 py-2 font-medium text-gray-500">Ref.</th>
+                      <th className="text-right px-3 py-2 font-medium text-gray-500">Total</th>
+                      <th className="text-right px-3 py-2 font-medium text-gray-500">Comisión</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {(previewData.product_items || previewData.orders || []).map((item, idx) => (
+                      <tr key={idx} className="hover:bg-gray-50">
+                        <td className="px-3 py-2 font-medium text-gray-800 max-w-[130px] truncate">
+                          {item.product_name || item.order_number || '—'}
+                        </td>
+                        <td className="px-2 py-2 text-center text-gray-600">{item.quantity ?? '—'}</td>
+                        <td className="px-2 py-2 font-mono text-gray-600">
+                          <span className={`mr-1 px-1 py-0.5 rounded text-[9px] font-semibold ${item.source === 'ot' ? 'bg-blue-100 text-blue-600' : 'bg-purple-100 text-purple-600'}`}>
+                            {item.source === 'ot' ? 'OT' : item.source === 'sale' ? 'VTA' : ''}
+                          </span>
+                          {item.ref_number || item.order_number}
+                        </td>
+                        <td className="px-3 py-2 text-right font-semibold text-emerald-700">
+                          {COP(item.total ?? item.product_amount)}
+                        </td>
+                        <td className="px-3 py-2 text-right font-semibold text-indigo-600">
+                          {item.commission !== undefined ? COP(item.commission) : '—'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Notas (opcional)</label>
@@ -502,18 +529,23 @@ function HistoryTab({ users }) {
                   <p className="text-sm text-gray-600 bg-gray-50 rounded-lg px-3 py-2">{selected.notes}</p>
                 )}
                 <div className="border border-gray-100 rounded-xl overflow-hidden">
-                  <div className="px-4 py-2 bg-gray-50 grid grid-cols-12 gap-2 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    <div className="col-span-4">Orden</div>
-                    <div className="col-span-4">Fecha</div>
-                    <div className="col-span-4 text-right">Repuestos</div>
+                  <div className="px-3 py-2 bg-gray-50 grid grid-cols-12 gap-1 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <div className="col-span-4">Producto</div>
+                    <div className="col-span-1 text-center">Cant</div>
+                    <div className="col-span-3">Ref.</div>
+                    <div className="col-span-4 text-right">Total</div>
                   </div>
                   {selected.items?.map(item => (
-                    <div key={item.id} className="px-4 py-2.5 grid grid-cols-12 gap-2 border-t border-gray-50 hover:bg-gray-50">
-                      <div className="col-span-4 font-mono text-xs font-bold text-gray-800">{item.order_number}</div>
-                      <div className="col-span-4 text-xs text-gray-500">
-                        {item.work_order?.received_at ? new Date(item.work_order.received_at).toLocaleDateString('es-CO') : '—'}
+                    <div key={item.id} className="px-3 py-2 grid grid-cols-12 gap-1 border-t border-gray-50 hover:bg-gray-50 text-xs">
+                      <div className="col-span-4 min-w-0">
+                        <p className="font-medium text-gray-800 truncate">{item.product_name || item.order_number || '—'}</p>
+                        {item.product_sku && <p className="text-gray-400">{item.product_sku}</p>}
                       </div>
-                      <div className="col-span-4 text-right text-xs font-semibold text-emerald-700">{COP(item.product_amount)}</div>
+                      <div className="col-span-1 text-center text-gray-600">{item.quantity ?? '—'}</div>
+                      <div className="col-span-3 font-mono text-gray-600 truncate">
+                        {item.order_number || item.sale_number || '—'}
+                      </div>
+                      <div className="col-span-4 text-right font-semibold text-emerald-700">{COP(item.product_amount)}</div>
                     </div>
                   ))}
                 </div>

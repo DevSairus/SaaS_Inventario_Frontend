@@ -19,5 +19,28 @@ export default defineConfig({
       '@utils': path.resolve(__dirname, './src/utils'),
       '@pages': path.resolve(__dirname, './src/pages')
     }
+  },
+  build: {
+    sourcemap: false,
+    chunkSizeWarningLimit: 1200,
+    rollupOptions: {
+      output: {
+        manualChunks: (id) => {
+          if (!id.includes('node_modules')) return undefined;
+
+          // Librerías pesadas o muy independientes primero
+          if (id.includes('/xlsx/')) return 'vendor-xlsx';
+          if (id.includes('/recharts/') || id.includes('/d3-')) return 'vendor-charts';
+          if (id.includes('jsbarcode') || id.includes('@zxing') || id.includes('quagga') || id.includes('zbar-wasm')) return 'vendor-barcode';
+          if (id.includes('@heroicons') || id.includes('lucide-react')) return 'vendor-icons';
+          if (id.includes('/date-fns/')) return 'vendor-date';
+          if (id.includes('/axios/')) return 'vendor-http';
+          if (id.includes('react-hot-toast')) return 'vendor-toast';
+          // Dejamos que el resto (incluyendo react, react-dom, router, state, forms, headlessui, etc.)
+          // se resuelvan automáticamente para evitar dependencias circulares entre chunks manuales.
+          return undefined;
+        }
+      }
+    }
   }
 })

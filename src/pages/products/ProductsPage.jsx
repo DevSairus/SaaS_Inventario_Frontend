@@ -5,6 +5,7 @@ import useCategoriesStore from '../../store/categoriesStore';
 import ProductFormModal from '../../components/products/ProductFormModal';
 import ImportProductsModal from '../../components/products/ImportProductsModal';
 import BarcodePrintModal from '../../components/products/BarcodePrintModal';
+import QuickStockModal from '../../components/products/QuickStockModal';
 import Layout from '../../components/layout/Layout';
 import { exportProductsToExcel } from '../../utils/excelExport';
 import toast from 'react-hot-toast';
@@ -35,6 +36,7 @@ function ProductsPage() {
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [barcodePrintProduct, setBarcodePrintProduct] = useState(null);
+  const [quickStockProduct, setQuickStockProduct] = useState(null);
 
   // Refresh al entrar a la página
   useEffect(() => {
@@ -510,7 +512,11 @@ function ProductsPage() {
                           </div>
                         </td>
                         <td className="px-6 py-4">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStockBadgeColor(product.current_stock, product.min_stock)}`}>
+                          <span
+                            onDoubleClick={() => product.track_inventory && setQuickStockProduct(product)}
+                            title={product.track_inventory ? 'Doble click para ajustar stock' : undefined}
+                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStockBadgeColor(product.current_stock, product.min_stock)} ${product.track_inventory ? 'cursor-pointer hover:ring-2 hover:ring-offset-1 hover:ring-blue-400 transition-all select-none' : ''}`}
+                          >
                             {parseFloat(product.current_stock)} {product.unit}
                           </span>
                           {product.track_inventory && (
@@ -772,6 +778,18 @@ function ProductsPage() {
         }}
       />
       </div>
+
+      {quickStockProduct && (
+        <QuickStockModal
+          product={quickStockProduct}
+          user={user}
+          onClose={() => setQuickStockProduct(null)}
+          onSuccess={() => {
+            fetchProducts(true);
+            fetchStats();
+          }}
+        />
+      )}
     </Layout>
   );
 }

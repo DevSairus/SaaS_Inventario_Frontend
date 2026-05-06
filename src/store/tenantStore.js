@@ -26,8 +26,11 @@ const useTenantStore = create((set, get) => ({
         };
         set({ features, loading: false });
       }
-    } catch {
-      // En caso de error, usar defaults
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        console.warn('[tenantStore] fetchFeatures fallo, usando defaults:', error);
+      }
+      // En caso de error, usar defaults para no romper la UI
       set({ features: { hide_remision_tax: true }, loading: false });
     }
   },

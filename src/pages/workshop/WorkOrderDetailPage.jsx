@@ -65,7 +65,7 @@ export default function WorkOrderDetailPage() {
   // Formulario agregar ítem
   const [showAddItem, setShowAddItem] = useState(false);
   const [newItem, setNewItem] = useState({
-    product_id: '', product_name: '', item_type: 'repuesto', quantity: 1, unit_price: '',
+    product_id: '', product_name: '', item_type: 'repuesto', quantity: 1, unit_price: '', technician_id: '',
   });
   const [addingItem, setAddingItem] = useState(false);
 
@@ -157,7 +157,7 @@ export default function WorkOrderDetailPage() {
   };
 
   const resetAddForm = () => {
-    setNewItem({ product_id: '', product_name: '', item_type: 'repuesto', quantity: 1, unit_price: '' });
+    setNewItem({ product_id: '', product_name: '', item_type: 'repuesto', quantity: 1, unit_price: '', technician_id: '' });
     setSearchTerm('');
     setSearchResults([]);
     setShowAddItem(false);
@@ -169,10 +169,11 @@ export default function WorkOrderDetailPage() {
     setAddingItem(true);
     try {
       await addItem(id, {
-        product_id: newItem.product_id,
-        item_type:  newItem.item_type,
-        quantity:   newItem.quantity,
-        unit_price: newItem.unit_price,
+        product_id:    newItem.product_id,
+        item_type:     newItem.item_type,
+        quantity:      newItem.quantity,
+        unit_price:    newItem.unit_price,
+        technician_id: newItem.technician_id || undefined,
       });
       resetAddForm();
     } catch (e) {
@@ -719,6 +720,11 @@ export default function WorkOrderDetailPage() {
                         </div>
                         <p className="text-xs text-gray-400 mt-0.5">
                           {item.quantity} × {COP(item.unit_price)}
+                          {item.item_technician && (
+                            <span className="ml-2 text-blue-500">
+                              · {item.item_technician.first_name} {item.item_technician.last_name}
+                            </span>
+                          )}
                         </p>
                       </div>
                       <div className="flex items-center gap-2 flex-shrink-0">

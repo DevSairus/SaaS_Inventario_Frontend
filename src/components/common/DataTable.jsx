@@ -1,18 +1,77 @@
-import React from 'react';
-import { Eye, Edit, Trash2, MoreVertical } from 'lucide-react';
+import React, { memo, useMemo, useCallback } from 'react';
 
 /**
- * Tabla de datos moderna y reutilizable
- * 
- * @param {Array} columns - Columnas [{key, label, render, align, width}]
- * @param {Array} data - Datos a mostrar
- * @param {boolean} isLoading - Estado de carga
- * @param {React.Component} emptyIcon - Icono para estado vacío
- * @param {string} emptyMessage - Mensaje cuando no hay datos
- * @param {function} onRowClick - Callback al hacer click en una fila
- * @param {Array} actions - Acciones por fila [{icon, onClick, label, variant, show}]
- * @param {boolean} hover - Efecto hover en filas
+ * Tabla de datos moderna y reutilizable.
+ *
+ * NOTA DE PERFORMANCE:
+ *  - Las filas están extraídas como componente memoizado (`TableRow`).
+ *  - Las columnas también se memoizan para evitar recrear la estructura en cada render del padre.
+ *  - Para datasets muy grandes (>500 filas) considerar pasar a una lista virtualizada (p. ej. react-window)
+ *    en el componente consumidor.
  */
+const ActionButton = memo(function ActionButton({ action, item }) {
+  if (action.show && !action.show(item)) return null;
+  const ActionIcon = action.icon;
+  const variants = {
+    view: 'text-blue-600 hover:bg-blue-50',
+    edit: 'text-green-600 hover:bg-green-50',
+    delete: 'text-red-600 hover:bg-red-50',
+    default: 'text-gray-600 hover:bg-gray-50',
+  };
+  const className = variants[action.variant] || variants.default;
+
+  return (
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        action.onClick(item);
+      }}
+      className={`p-2 ${className} rounded-lg transition-colors`}
+      title={action.label}
+    >
+      {ActionIcon && <ActionIcon className="w-4 h-4" />}
+    </button>
+  );
+});
+
+const TableRow = memo(function TableRow({ item, columns, actions, onRowClick, hover }) {
+  const handleClick = useCallback(() => {
+    if (onRowClick) onRowClick(item);
+  }, [item, onRowClick]);
+
+  return (
+    <tr
+      className={`${hover ? 'hover:bg-gray-50' : ''} transition-colors duration-150 ${onRowClick ? 'cursor-pointer' : ''}`}
+      onClick={handleClick}
+    >
+      {columns.map((column) => (
+        <td
+          key={column.key}
+          className={`px-6 py-4 whitespace-nowrap text-${column.align || 'left'}`}
+        >
+          {column.render ? column.render(item) : (
+            <div className="text-sm text-gray-900">
+              {item[column.key]}
+            </div>
+          )}
+        </td>
+      ))}
+      {actions.length > 0 && (
+        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+          <div
+            className="flex items-center justify-end gap-2"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {actions.map((action) => (
+              <ActionButton key={action.label} action={action} item={item} />
+            ))}
+          </div>
+        </td>
+      )}
+    </tr>
+  );
+});
+
 const DataTable = ({
   columns = [],
   data = [],
@@ -22,38 +81,11 @@ const DataTable = ({
   emptySubtitle,
   onRowClick,
   actions = [],
-  hover = true
+  hover = true,
+  getRowKey,
 }) => {
-  const getActionButton = (action, item) => {
-    // Verificar si la acción debe mostrarse
-    if (action.show && !action.show(item)) {
-      return null;
-    }
-
-    const ActionIcon = action.icon;
-    const variants = {
-      view: 'text-blue-600 hover:bg-blue-50',
-      edit: 'text-green-600 hover:bg-green-50',
-      delete: 'text-red-600 hover:bg-red-50',
-      default: 'text-gray-600 hover:bg-gray-50'
-    };
-
-    const className = variants[action.variant] || variants.default;
-
-    return (
-      <button
-        key={action.label}
-        onClick={(e) => {
-          e.stopPropagation();
-          action.onClick(item);
-        }}
-        className={`p-2 ${className} rounded-lg transition-colors`}
-        title={action.label}
-      >
-        {ActionIcon && <ActionIcon className="w-4 h-4" />}
-      </button>
-    );
-  };
+  const memoizedColumns = useMemo(() => columns, [columns]);
+  const memoizedActions = useMemo(() => actions, [actions]);
 
   if (isLoading) {
     return (
@@ -83,7 +115,7 @@ const DataTable = ({
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
-              {columns.map((column) => (
+              {memoizedColumns.map((column) => (
                 <th
                   key={column.key}
                   className={`px-6 py-4 text-${column.align || 'left'} text-xs font-semibold text-gray-700 uppercase tracking-wider ${column.width ? `w-${column.width}` : ''}`}
@@ -91,7 +123,7 @@ const DataTable = ({
                   {column.label}
                 </th>
               ))}
-              {actions.length > 0 && (
+              {memoizedActions.length > 0 && (
                 <th className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
                   Acciones
                 </th>
@@ -100,31 +132,14 @@ const DataTable = ({
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {data.map((item, index) => (
-              <tr
-                key={item.id || index}
-                className={`${hover ? 'hover:bg-gray-50' : ''} transition-colors duration-150 ${onRowClick ? 'cursor-pointer' : ''}`}
-                onClick={() => onRowClick && onRowClick(item)}
-              >
-                {columns.map((column) => (
-                  <td
-                    key={column.key}
-                    className={`px-6 py-4 whitespace-nowrap text-${column.align || 'left'}`}
-                  >
-                    {column.render ? column.render(item) : (
-                      <div className="text-sm text-gray-900">
-                        {item[column.key]}
-                      </div>
-                    )}
-                  </td>
-                ))}
-                {actions.length > 0 && (
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
-                      {actions.map((action) => getActionButton(action, item))}
-                    </div>
-                  </td>
-                )}
-              </tr>
+              <TableRow
+                key={getRowKey ? getRowKey(item, index) : (item.id ?? index)}
+                item={item}
+                columns={memoizedColumns}
+                actions={memoizedActions}
+                onRowClick={onRowClick}
+                hover={hover}
+              />
             ))}
           </tbody>
         </table>
@@ -133,4 +148,4 @@ const DataTable = ({
   );
 };
 
-export default DataTable;
+export default memo(DataTable);

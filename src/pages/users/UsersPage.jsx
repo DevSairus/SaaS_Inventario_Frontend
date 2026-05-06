@@ -21,29 +21,16 @@ import Pagination from '../../components/common/Pagination';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
 import Dropdown from '../../components/common/Dropdown';
 
+const ALLOWED_ROLES = ['admin', 'super_admin'];
+
 const UsersPage = () => {
   const navigate = useNavigate();
   const { user: currentUser } = useAuthStore();
-  
-  // Verificar permisos: solo admin puede ver usuarios
-  useEffect(() => {
-    if (currentUser && currentUser.role !== 'admin') {
-      // Redirigir a perfil si no es admin
-      navigate('/profile', { replace: true });
-    }
-  }, [currentUser, navigate]);
 
-  // Si no es admin, no renderizar nada (mientras redirige)
-  if (currentUser && currentUser.role !== 'admin') {
-    return null;
-  }
-
+  // ── todos los hooks deben ir ANTES de cualquier return condicional ──
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
-  const [filters, setFilters] = useState({
-    role: '',
-    is_active: undefined,
-  });
+  const [filters, setFilters] = useState({ role: '', is_active: undefined });
   const [showFilters, setShowFilters] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState({
     open: false,
@@ -56,11 +43,22 @@ const UsersPage = () => {
 
   const doFetch = useCallback(() => {
     fetchUsers({ page, limit: 10, search, ...filters });
-  }, [page, search, filters]);
+  }, [page, search, filters, fetchUsers]);
 
   useEffect(() => {
     doFetch();
   }, [doFetch]);
+
+  // Redirigir si no tiene permisos (después de todos los hooks)
+  useEffect(() => {
+    if (currentUser && !ALLOWED_ROLES.includes(currentUser.role)) {
+      navigate('/profile', { replace: true });
+    }
+  }, [currentUser, navigate]);
+
+  if (currentUser && !ALLOWED_ROLES.includes(currentUser.role)) {
+    return null;
+  }
 
   const handleSearch = (e) => {
     setSearch(e.target.value);
@@ -96,11 +94,13 @@ const UsersPage = () => {
   };
 
   const confirmAction = async () => {
+    // parámetros actuales para que la lista no pierda página/filtros
+    const currentParams = { page, limit: 10, search, ...filters };
     let success = false;
     if (confirmDialog.action === 'toggle') {
-      success = await toggleUserStatus(confirmDialog.user.id);
+      success = await toggleUserStatus(confirmDialog.user.id, currentParams);
     } else if (confirmDialog.action === 'delete') {
-      success = await deleteUser(confirmDialog.user.id);
+      success = await deleteUser(confirmDialog.user.id, currentParams);
     }
     if (success) {
       setConfirmDialog({ open: false, user: null, action: null });
@@ -203,7 +203,8 @@ const UsersPage = () => {
                   }
                   className="input"
                 >
-                  <option value="">Todos</option>
+                  <option value="">Solo activos</option>
+                  <option value="all">Todos</option>
                   <option value="true">Activo</option>
                   <option value="false">Inactivo</option>
                 </select>

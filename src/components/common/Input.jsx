@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 
 const Input = ({
   label,
@@ -6,12 +6,12 @@ const Input = ({
   value,
   onChange,
   error,
-  helperText, // ← Capturar aquí
+  helperText,
   disabled = false,
   placeholder = '',
   required = false,
   className = '',
-  ...rest // El resto de props
+  ...rest
 }) => {
   return (
     <div className="w-full">
@@ -28,7 +28,7 @@ const Input = ({
         disabled={disabled}
         placeholder={placeholder}
         className={`input ${error ? 'border-red-500' : ''} ${className}`}
-        {...rest} // Spread el resto AQUÍ (sin helperText)
+        {...rest}
       />
       {helperText && !error && (
         <p className="text-sm text-gray-500 mt-1">{helperText}</p>
@@ -38,4 +38,4 @@ const Input = ({
   );
 };
 
-export default Input;
+export default memo(Input);

@@ -81,26 +81,27 @@ import { Toaster } from 'react-hot-toast';
 import PrivateRoute from './components/auth/PrivateRoute';
 import useAuthStore from './store/authStore';
 import SessionKeepAlive from './components/SessionKeepAlive';
+import { ROLES, ROUTES } from './utils/constants';
 
 // Redirigir según rol
 function RoleBasedRedirect() {
   const { user, isAuthenticated } = useAuthStore();
-  if (!isAuthenticated) return <Navigate to="/login" replace />;
-  if (user?.role === 'super_admin') return <Navigate to="/superadmin/dashboard" replace />;
-  return <Navigate to="/dashboard" replace />;
+  if (!isAuthenticated) return <Navigate to={ROUTES.LOGIN} replace />;
+  if (user?.role === ROLES.SUPER_ADMIN) return <Navigate to={ROUTES.SUPERADMIN_DASHBOARD} replace />;
+  return <Navigate to={ROUTES.DASHBOARD} replace />;
 }
 
 function SuperAdminRoute({ children }) {
   const { user, isAuthenticated } = useAuthStore();
-  if (!isAuthenticated) return <Navigate to="/login" replace />;
-  if (user?.role !== 'super_admin') return <Navigate to="/dashboard" replace />;
+  if (!isAuthenticated) return <Navigate to={ROUTES.LOGIN} replace />;
+  if (user?.role !== ROLES.SUPER_ADMIN) return <Navigate to={ROUTES.DASHBOARD} replace />;
   return children;
 }
 
 function TenantRoute({ children }) {
   const { user, isAuthenticated } = useAuthStore();
-  if (!isAuthenticated) return <Navigate to="/login" replace />;
-  if (user?.role === 'super_admin') return <Navigate to="/superadmin/dashboard" replace />;
+  if (!isAuthenticated) return <Navigate to={ROUTES.LOGIN} replace />;
+  if (user?.role === ROLES.SUPER_ADMIN) return <Navigate to={ROUTES.SUPERADMIN_DASHBOARD} replace />;
   return children;
 }
 
@@ -220,6 +221,7 @@ function App() {
         {/* ── Configuración y Reportes ───────────────── */}
         <Route path="settings" element={<TenantRoute><TenantSettingsPage /></TenantRoute>} />
         <Route path="settings/whatsapp" element={<TenantRoute><WhatsAppSettingsPage /></TenantRoute>} />
+
         <Route path="reports"  element={<TenantRoute><ReportsPage /></TenantRoute>} />
         <Route path="users"          element={<TenantRoute><UsersPage /></TenantRoute>} />
         <Route path="users/new"      element={<TenantRoute><UserForm /></TenantRoute>} />

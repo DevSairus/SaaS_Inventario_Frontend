@@ -1,5 +1,5 @@
 // frontend/src/pages/sales/SaleFormPage.jsx
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import useSalesStore from '../../store/salesStore';
 import useTenantStore from '../../store/tenantStore';
@@ -28,6 +28,7 @@ import {
 import BarcodeScanner from '../../components/common/BarcodeScanner';
 import { productsAPI } from '../../api/products';
 import { usersAPI } from '../../api/users';
+import { getServerOrigin } from '../../utils/env';
 import { 
   formatCurrency, 
   toInteger, 
@@ -93,15 +94,16 @@ function SaleFormPage() {
   const [customerSearchTerm, setCustomerSearchTerm] = useState('');
   const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
 
-  // Clientes filtrados basados en el término de búsqueda
-  const filteredCustomers = customerSearchTerm.trim() === '' 
-    ? customers 
-    : customers.filter(customer => {
-        const searchLower = customerSearchTerm.toLowerCase();
-        const fullName = `${customer.first_name} ${customer.last_name}`.toLowerCase();
-        const taxId = (customer.tax_id || '').toLowerCase();
-        return fullName.includes(searchLower) || taxId.includes(searchLower);
-      });
+  // Clientes filtrados basados en el término de búsqueda (memoizado)
+  const filteredCustomers = useMemo(() => {
+    const term = customerSearchTerm.trim().toLowerCase();
+    if (!term) return customers;
+    return customers.filter(customer => {
+      const fullName = `${customer.first_name ?? ''} ${customer.last_name ?? ''}`.toLowerCase();
+      const taxId = String(customer.tax_id || '').toLowerCase();
+      return fullName.includes(term) || taxId.includes(term);
+    });
+  }, [customers, customerSearchTerm]);
 
   // Cargar bodegas usando el servicio de API configurado
   useEffect(() => {
@@ -138,7 +140,7 @@ function SaleFormPage() {
   useEffect(() => {
     fetchCustomers();
     fetchFeatures();
-  }, [fetchCustomers]);
+  }, [fetchCustomers, fetchFeatures]);
 
   useEffect(() => {
     const searchProductsDebounced = async () => {
@@ -215,7 +217,8 @@ function SaleFormPage() {
           discount_amount: toInteger(item.discount_amount, 0),
           tax_amount: toInteger(item.tax_amount, 0),
           subtotal: toInteger(item.subtotal, 0),
-          total: toInteger(item.total, 0)
+          total: toInteger(item.total, 0),
+          technician_id: item.technician_id || '',
         }));
         setItems(loadedItems);
       }
@@ -264,11 +267,12 @@ function SaleFormPage() {
         product_name: product.name,
         product_sku: product.sku,
         quantity: 1,
-        unit_price: toInteger(product.base_price, 0), // Precio tal cual, sin extraer IVA
+        unit_price: toInteger(product.base_price, 0),
         discount_percentage: 0,
         tax_percentage: taxPct,
         price_includes_tax: product.price_includes_tax || false,
-        has_tax: product.has_tax !== false
+        has_tax: product.has_tax !== false,
+        technician_id: '',
       };
       setItems([...items, calculateItemTotals(newItem)]);
     }
@@ -376,7 +380,8 @@ function SaleFormPage() {
           quantity: toInteger(item.quantity),
           unit_price: toInteger(item.unit_price),
           discount_percentage: toInteger(item.discount_percentage),
-          tax_percentage: toInteger(item.tax_percentage)
+          tax_percentage: toInteger(item.tax_percentage),
+          technician_id: item.technician_id || undefined,
         }))
       };
 
@@ -841,6 +846,11 @@ function SaleFormPage() {
                           <th className="text-right py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wider w-32">
                             Total
                           </th>
+                          {technicians.length > 0 && (
+                            <th className="text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wider w-36">
+                              Técnico
+                            </th>
+                          )}
                           <th className="w-12"></th>
                         </tr>
                       </thead>
@@ -936,6 +946,24 @@ function SaleFormPage() {
                                 ${formatCurrency(item.total)}
                               </span>
                             </td>
+                            {technicians.length > 0 && (
+                              <td className="py-4 px-4">
+                                <select
+                                  value={item.technician_id || ''}
+                                  onChange={(e) => {
+                                    const updated = [...items];
+                                    updated[index] = { ...updated[index], technician_id: e.target.value };
+                                    setItems(updated);
+                                  }}
+                                  className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
+                                >
+                                  <option value="">— ninguno —</option>
+                                  {technicians.map(t => (
+                                    <option key={t.id} value={t.id}>{t.first_name} {t.last_name}</option>
+                                  ))}
+                                </select>
+                              </td>
+                            )}
                             <td className="py-4 px-4">
                               <button
                                 type="button"
@@ -1116,7 +1144,7 @@ function SaleFormPage() {
                       {product.image_url && (
                         <div className="shrink-0 w-14 h-14 rounded-lg overflow-hidden border border-gray-200 bg-gray-50 mt-0.5">
                           <img
-                            src={`${product.image_url.startsWith('http') ? '' : (import.meta.env.VITE_API_URL?.replace('/api','') ?? '')}${product.image_url}`}
+                            src={`${product.image_url.startsWith('http') ? '' : getServerOrigin()}${product.image_url}`}
                             alt={product.name}
                             className="w-full h-full object-cover"
                             onError={(e) => { e.target.parentElement.style.display='none'; }}

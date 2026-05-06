@@ -1,5 +1,6 @@
 // frontend/src/pages/settings/TenantSettingsPage.jsx
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from '../../api/axios';
 import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';
@@ -10,6 +11,7 @@ import toast from 'react-hot-toast';
 import useTenantStore from '../../store/tenantStore';
 
 const TenantSettingsPage = () => {
+  const navigate = useNavigate();
   const { setFeatures } = useTenantStore();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -48,9 +50,10 @@ const TenantSettingsPage = () => {
       const response = await axios.get('/tenant/config');
       if (response.data.success) {
         const data = response.data.data;
-        // Normalizar features: si hide_remision_tax no existe, default = true
+        // Normalizar features con sus defaults
         const normalizedFeatures = {
-          hide_remision_tax: true,
+          hide_remision_tax: true,   // remisiones ocultan IVA por defecto
+          hide_invoice_tax: false,   // facturas muestran IVA por defecto
           ...(data.features || {}),
         };
         setConfig({ ...data, features: normalizedFeatures });
@@ -399,6 +402,28 @@ const TenantSettingsPage = () => {
                   </button>
                 </div>
 
+                {/* Toggle: Ocultar IVA en facturas */}
+                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
+                  <div className="flex-1 mr-4">
+                    <p className="font-medium text-gray-900 text-sm">Ocultar IVA en facturas</p>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      Las facturas incluyen IVA internamente, pero no se muestra ni discrimina en pantalla ni en el PDF.
+                      Útil para negocios que emiten facturas sin desglose tributario visible.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => toggleFeature('hide_invoice_tax')}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0 ${
+                      config.features?.hide_invoice_tax ? 'bg-blue-600' : 'bg-gray-300'
+                    }`}
+                  >
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                      config.features?.hide_invoice_tax ? 'translate-x-6' : 'translate-x-1'
+                    }`} />
+                  </button>
+                </div>
+
                 {/* Toggle: Campo de vehículo y placa en ventas */}
                 <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
                   <div className="flex-1 mr-4">
@@ -444,6 +469,31 @@ const TenantSettingsPage = () => {
                 </div>
 
               </div>
+            </div>
+          </Card>
+
+          {/* Facturación Electrónica DIAN */}
+          <Card>
+            <div className="p-6 flex items-center justify-between">
+              <div className="flex items-start gap-4">
+                <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-xl">
+                  🏛️
+                </div>
+                <div>
+                  <p className="font-semibold text-gray-900">Facturación Electrónica DIAN</p>
+                  <p className="text-sm text-gray-500 mt-0.5">
+                    Configura el envío de facturas electrónicas ante la DIAN: software ID, certificado digital,
+                    resolución de numeración y set de pruebas.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => navigate('/dian/config')}
+                className="flex-shrink-0 ml-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
+              >
+                Configurar →
+              </button>
             </div>
           </Card>
 

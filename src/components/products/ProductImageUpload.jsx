@@ -2,8 +2,9 @@
 import { useState, useRef } from 'react';
 import { productsAPI } from '../../api/products';
 import toast from 'react-hot-toast';
+import { getServerOrigin } from '../../utils/env';
 
-const API_BASE = import.meta.env.VITE_API_URL?.replace('/api', '') ?? '';
+const API_BASE = getServerOrigin();
 
 export default function ProductImageUpload({ productId, imageUrl, onImageChange }) {
   const [uploading, setUploading] = useState(false);

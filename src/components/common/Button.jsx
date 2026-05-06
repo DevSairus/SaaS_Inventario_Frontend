@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { Loader2 } from 'lucide-react';
 
 const Button = ({
@@ -50,4 +50,4 @@ const Button = ({
   );
 };
 
-export default Button;
+export default memo(Button);

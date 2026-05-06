@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import useAuthStore from "../../store/authStore";
-import useThemeStore from "../../store/themeStore";
 
 const I = {
   dashboard: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="w-[17px] h-[17px] shrink-0"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>,
@@ -24,7 +23,16 @@ const NAV = [
   {
     id: "workshop", label: "Taller", icon: "wrench",
     children: [
-      { label: "Órdenes de Trabajo",    path: "/workshop/work-orders" },
+      {
+        label: "Histórico",
+        path: "/workshop/work-orders",
+        // Activo en el listado y en detalles, pero NO en /new
+        excludePaths: ["/workshop/work-orders/new"],
+      },
+      {
+        label: "Orden de Trabajo",
+        path: "/workshop/work-orders/new",
+      },
       { label: "Vehículos",             path: "/workshop/vehicles" },
       { label: "Productividad",         path: "/workshop/productivity" },
       { label: "Reporte Taller",        path: "/workshop/report" },
@@ -59,13 +67,6 @@ const NAV = [
     ],
   },
   { id: "reports",  label: "Informes", icon: "chart", path: "/reports" },
-  {
-    id: "dian", label: "DIAN", icon: "file",
-    children: [
-      { label: "Configuración DIAN", path: "/dian/config" },
-      { label: "Eventos DIAN",       path: "/dian/eventos" },
-    ],
-  },
   { id: "users",    label: "Usuarios",  icon: "users", path: "/users" },
   { id: "settings", label: "Ajustes",   icon: "gear",  path: "/settings" },
 ];
@@ -74,18 +75,24 @@ export default function Sidebar({ isCollapsed, setIsCollapsed, isMobileOpen, set
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
-  const { dark, toggle: toggleTheme } = useThemeStore();
   const currentPath = location.pathname;
 
+  const childIsActive = (child) => {
+    const base = currentPath === child.path || currentPath.startsWith(child.path + "/");
+    if (!base) return false;
+    if (child.excludePaths?.some(ep => currentPath === ep || currentPath.startsWith(ep + "/"))) return false;
+    return true;
+  };
+
   const activeGroupId = NAV.find(item =>
-    item.children?.some(c => currentPath === c.path || currentPath.startsWith(c.path + "/"))
+    item.children?.some(c => childIsActive(c))
   )?.id ?? null;
 
   const [openGroup, setOpenGroup] = useState(activeGroupId);
   const expanded = !isCollapsed;
 
   const isActive    = (path) => currentPath === path || currentPath.startsWith(path + "/");
-  const groupActive = (item) => item.path ? isActive(item.path) : item.children?.some(c => isActive(c.path));
+  const groupActive = (item) => item.path ? isActive(item.path) : item.children?.some(c => childIsActive(c));
 
   const toggleGroup = (id) => {
     if (!expanded) { setIsCollapsed(false); setOpenGroup(id); return; }
@@ -141,7 +148,7 @@ export default function Sidebar({ isCollapsed, setIsCollapsed, isMobileOpen, set
             {(expanded || inMobile) && (
               <div style={{ maxHeight: isOpen ? `${item.children.length * 28}px` : "0px", overflow: "hidden", transition: "max-height 190ms ease" }}>
                 {item.children.map((child) => {
-                  const childActive = isActive(child.path);
+                  const childActive = childIsActive(child);
                   return (
                     <Link
                       key={child.path}
@@ -203,25 +210,6 @@ export default function Sidebar({ isCollapsed, setIsCollapsed, isMobileOpen, set
 
         <div className="border-t border-white/[0.06] shrink-0">
           {expanded ? (
-            <div className="flex items-center justify-between px-[14px] py-2">
-              <span className="text-[11px] text-gray-500">Modo oscuro</span>
-              <button
-                onClick={toggleTheme}
-                title={dark ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
-                className={`relative w-8 h-4 rounded-full transition-colors duration-200 ${dark ? 'bg-[#CF3A0B]' : 'bg-gray-600'}`}
-              >
-                <span className={`absolute top-0.5 w-3 h-3 rounded-full bg-white shadow transition-transform duration-200 ${dark ? 'translate-x-4' : 'translate-x-0.5'}`} />
-              </button>
-            </div>
-          ) : (
-            <button onClick={toggleTheme} title={dark ? 'Modo claro' : 'Modo oscuro'} className="w-full flex items-center justify-center h-8 text-gray-500 hover:text-gray-300 hover:bg-white/5 transition-colors">
-              {dark
-                ? <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="w-[15px] h-[15px]"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
-                : <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="w-[15px] h-[15px]"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
-              }
-            </button>
-          )}
-          {expanded ? (
             <div className="flex items-center gap-2.5 h-10 px-[14px]">
               <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[#CF3A0B] to-[#E84510] flex items-center justify-center text-white text-[10px] font-bold shrink-0">
                 {(user?.first_name?.[0] ?? "U").toUpperCase()}
@@ -276,17 +264,6 @@ export default function Sidebar({ isCollapsed, setIsCollapsed, isMobileOpen, set
             </nav>
 
             <div className="border-t border-white/[0.06] shrink-0">
-              {/* Toggle dark mode móvil */}
-              <div className="flex items-center justify-between px-[14px] py-2">
-                <span className="text-[11px] text-gray-500">Modo oscuro</span>
-                <button
-                  onClick={toggleTheme}
-                  title={dark ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
-                  className={`relative w-8 h-4 rounded-full transition-colors duration-200 ${dark ? 'bg-[#CF3A0B]' : 'bg-gray-600'}`}
-                >
-                  <span className={`absolute top-0.5 w-3 h-3 rounded-full bg-white shadow transition-transform duration-200 ${dark ? 'translate-x-4' : 'translate-x-0.5'}`} />
-                </button>
-              </div>
               <div className="flex items-center gap-2.5 h-10 px-[14px]">
                 <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[#CF3A0B] to-[#E84510] flex items-center justify-center text-white text-[10px] font-bold shrink-0">
                   {(user?.first_name?.[0] ?? "U").toUpperCase()}

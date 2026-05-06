@@ -1,30 +1,14 @@
 import { create } from 'zustand';
 
-const getInitial = () => {
-  try {
-    const saved = localStorage.getItem('theme');
-    if (saved) return saved === 'dark';
-  } catch {}
-  return window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false;
-};
+// Dark mode desactivado — el store se mantiene como stub para no romper imports
+// que ya usan useThemeStore en otros componentes.
+const useThemeStore = create(() => ({
+  dark: false,
+  toggle: () => {},
+}));
 
-const applyTheme = (dark) => {
-  document.documentElement.classList.toggle('dark', dark);
-};
-
-const useThemeStore = create((set) => {
-  const dark = getInitial();
-  applyTheme(dark);
-  return {
-    dark,
-    toggle: () =>
-      set((s) => {
-        const next = !s.dark;
-        applyTheme(next);
-        try { localStorage.setItem('theme', next ? 'dark' : 'light'); } catch {}
-        return { dark: next };
-      }),
-  };
-});
+// Asegurar que la clase 'dark' nunca esté activa
+document.documentElement.classList.remove('dark');
+try { localStorage.removeItem('theme'); } catch {}
 
 export default useThemeStore;

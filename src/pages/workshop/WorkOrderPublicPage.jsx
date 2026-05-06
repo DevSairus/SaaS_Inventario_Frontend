@@ -3,9 +3,7 @@
 // Accesible en: /ot/:token
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import axios from 'axios';
-
-const API = import.meta.env.VITE_API_URL?.replace('/api', '') || '';
+import api from '../../api/axios';
 
 const STATUS_CONFIG = {
   recibido:   { label: 'Recibido',    step: 0, color: '#3b82f6', bg: '#eff6ff', desc: 'Tu vehículo fue recibido en el taller.' },
@@ -171,7 +169,7 @@ export default function WorkOrderPublicPage() {
   useEffect(() => {
     const fetchOrder = async () => {
       try {
-        const res = await axios.get(`${API}/api/public/work-orders/${token}`);
+        const res = await api.get(`/public/work-orders/${token}`);
         setOrder(res.data.data);
       } catch (err) {
         setError(err.response?.data?.message || 'No se encontró la orden de trabajo.');

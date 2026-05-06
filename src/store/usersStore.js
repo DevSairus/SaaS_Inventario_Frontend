@@ -51,13 +51,10 @@ const useUsersStore = create((set, get) => ({
     try {
       const response = await usersAPI.create(userData);
       set({ isSubmitting: false });
-      return { success: true, data: response };
+      return response;
     } catch (error) {
-      set({
-        error: error.response?.data?.message || 'Error al crear usuario',
-        isSubmitting: false,
-      });
-      return { success: false, error: error.response?.data?.message };
+      set({ isSubmitting: false });
+      throw error;
     }
   },
 
@@ -78,11 +75,11 @@ const useUsersStore = create((set, get) => ({
   },
 
   // Toggle estado activo/inactivo
-  toggleUserStatus: async (id) => {
+  toggleUserStatus: async (id, refetchParams = {}) => {
     set({ isSubmitting: true, error: null });
     try {
       await usersAPI.toggleStatus(id);
-      await get().fetchUsers();
+      await get().fetchUsers(refetchParams);
       set({ isSubmitting: false });
       return true;
     } catch (error) {
@@ -95,11 +92,11 @@ const useUsersStore = create((set, get) => ({
   },
 
   // Eliminar usuario
-  deleteUser: async (id) => {
+  deleteUser: async (id, refetchParams = {}) => {
     set({ isSubmitting: true, error: null });
     try {
       await usersAPI.delete(id);
-      await get().fetchUsers();
+      await get().fetchUsers(refetchParams);
       set({ isSubmitting: false });
       return true;
     } catch (error) {

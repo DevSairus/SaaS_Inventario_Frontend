@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 
 const Badge = ({ children, color = 'gray', size = 'md' }) => {
   const colors = {
@@ -26,4 +26,4 @@ const Badge = ({ children, color = 'gray', size = 'md' }) => {
   );
 };
 
-export default Badge;
+export default memo(Badge);

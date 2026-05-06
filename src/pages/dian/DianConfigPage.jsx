@@ -3,7 +3,8 @@ import { useState, useEffect } from 'react';
 import {
   getDianConfig, updateDianConfig,
   getDianResolutions, createDianResolution, deactivateResolution,
-  testDianConnection, testDianConnectionProd, getHabilitacionStatus, sendAutoTestDocuments,
+  testDianConnection, testDianConnectionProd, getHabilitacionStatus,
+  sendAutoTestDocuments, sendFullHabilitacionSet,
   diagnoseCert,
 } from '../../api/dian';
 import Layout from '../../components/layout/Layout';
@@ -195,15 +196,37 @@ export default function DianConfigPage() {
     setTestResults(null);
     try {
       const r = await sendAutoTestDocuments(count);
-      setTestResults(r.data.data || []);
-      const allOk = (r.data.data || []).every(d => d.accepted);
+      const results = r.data.data || [];
+      setTestResults(results);
+      const allOk = results.every(d => d.accepted);
       showToast(allOk
-        ? `${count} documento(s) de prueba aceptados por DIAN`
+        ? `${count} factura(s) de prueba aceptadas por DIAN`
         : `Documentos enviados. Revise los resultados.`,
         allOk ? 'success' : 'error');
       await loadAll();
     } catch (e) {
       showToast(e.response?.data?.message || 'Error al enviar documentos de prueba', 'error');
+    } finally {
+      setSendingTest(false);
+    }
+  }
+
+  async function handleFullSet() {
+    setSendingTest(true);
+    setTestResults(null);
+    try {
+      const r = await sendFullHabilitacionSet();
+      const results = r.data.data || [];
+      setTestResults(results);
+      const accepted = results.filter(d => d.accepted).length;
+      const allOk = accepted === results.length;
+      showToast(allOk
+        ? `✅ Set completo aprobado: ${accepted}/10 documentos aceptados por DIAN`
+        : `${accepted}/${results.length} documentos aceptados. Revise los resultados.`,
+        allOk ? 'success' : 'error');
+      await loadAll();
+    } catch (e) {
+      showToast(e.response?.data?.message || 'Error al enviar set completo', 'error');
     } finally {
       setSendingTest(false);
     }
@@ -668,89 +691,135 @@ export default function DianConfigPage() {
             <div className="bg-white border border-gray-200 rounded-xl p-5 space-y-4">
               <div>
                 <h4 className="font-semibold text-gray-900 flex items-center gap-2">
-                  <ArrowUpTrayIcon className="w-4 h-4 text-gray-500" /> Enviar documentos de prueba automáticamente
+                  <ArrowUpTrayIcon className="w-4 h-4 text-gray-500" /> Enviar documentos de prueba al set DIAN
                 </h4>
                 <p className="text-sm text-gray-500 mt-1">
-                  Genera y envía facturas sintéticas válidas al set de pruebas DIAN sin necesidad
-                  de crear ventas reales. Requiere tener configurados: NIT, Software ID, Llave Técnica,
-                  TestSetId y una resolución de habilitación activa.
+                  Genera y envía documentos sintéticos válidos al set de pruebas DIAN sin necesidad de ventas reales.
+                  Requiere: NIT, Software ID, PIN, Llave Técnica, TestSetId, certificado P12 y resolución de habilitación activa.
                 </p>
               </div>
 
+              {/* Set completo — recomendado */}
+              <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4 space-y-3">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="font-semibold text-indigo-900 text-sm flex items-center gap-1.5">
+                      <RocketLaunchIcon className="w-4 h-4" /> Set Completo de Habilitación (recomendado)
+                    </p>
+                    <p className="text-xs text-indigo-700 mt-1">
+                      Envía los <strong>10 documentos requeridos</strong> por la DIAN para habilitar Software Propio:
+                      6 facturas · 2 notas crédito · 2 notas débito
+                    </p>
+                  </div>
+                  <button
+                    onClick={handleFullSet}
+                    disabled={sendingTest}
+                    className="flex-shrink-0 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium
+                      hover:bg-indigo-700 disabled:opacity-50 transition-colors flex items-center gap-2">
+                    {sendingTest
+                      ? <><ClockIcon className="w-4 h-4 animate-pulse" /> Enviando...</>
+                      : <><RocketLaunchIcon className="w-4 h-4" /> Enviar 10 documentos</>}
+                  </button>
+                </div>
+              </div>
+
+              {/* Parciales — prueba rápida */}
               <div className="flex gap-3 flex-wrap">
                 <button
                   onClick={() => handleAutoTest(1)}
                   disabled={sendingTest}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium
-                    hover:bg-blue-700 disabled:opacity-50 transition-colors flex items-center gap-2">
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium
+                    text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-colors flex items-center gap-2">
                   {sendingTest
-                    ? <><ClockIcon className="w-4 h-4 animate-pulse" /> Enviando y esperando respuesta DIAN...</>
-                    : <><DocumentTextIcon className="w-4 h-4" /> Enviar 1 documento de prueba</>}
+                    ? <><ClockIcon className="w-4 h-4 animate-pulse" /> Enviando...</>
+                    : <><DocumentTextIcon className="w-4 h-4" /> Prueba rápida — 1 factura</>}
                 </button>
                 <button
                   onClick={() => handleAutoTest(2)}
                   disabled={sendingTest}
-                  className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium
-                    hover:bg-indigo-700 disabled:opacity-50 transition-colors flex items-center gap-2">
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium
+                    text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-colors flex items-center gap-2">
                   {sendingTest
-                    ? <><ClockIcon className="w-4 h-4 animate-pulse" /> Enviando y esperando respuesta DIAN...</>
-                    : <><DocumentTextIcon className="w-4 h-4" /> Enviar 2 documentos (recomendado)</>}
+                    ? <><ClockIcon className="w-4 h-4 animate-pulse" /> Enviando...</>
+                    : <><DocumentTextIcon className="w-4 h-4" /> Prueba rápida — 2 facturas</>}
                 </button>
               </div>
               {sendingTest && (
                 <p className="text-xs text-gray-500 italic">
-                  La DIAN procesa de forma asíncrona — esto puede tardar hasta 60 segundos...
+                  La DIAN procesa de forma asíncrona — el set completo puede tardar 2–3 minutos...
                 </p>
               )}
 
               {/* Resultados */}
               {testResults && testResults.length > 0 && (
                 <div className="space-y-2 pt-2 border-t border-gray-100">
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Resultados del envío</p>
-                  {testResults.map((r, idx) => (
-                    <div key={idx} className={`rounded-lg p-3 text-sm
-                      ${r.accepted ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
-                      <div className="flex items-start gap-3">
-                        {r.accepted
-                          ? <CheckCircleIcon className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
-                          : <ExclamationTriangleIcon className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />}
-                        <div className="flex-1 min-w-0">
-                          <p className={`font-medium ${r.accepted ? 'text-green-800' : 'text-red-800'}`}>
-                            Documento {r.index}: {r.invoiceNumber || 'Error al generar'}
-                          </p>
-                          {r.accepted && r.cufe && (
-                            <p className="text-xs text-green-600 font-mono mt-0.5">
-                              CUFE: {r.cufe?.substring(0, 32)}...
-                            </p>
-                          )}
-                          {!r.accepted && (
-                            <div className="mt-1 space-y-0.5">
-                              {r.error && <p className="text-xs text-red-700 font-medium">{r.error}</p>}
-                              {r.statusCode && <p className="text-xs text-red-600">Código: <strong>{r.statusCode}</strong></p>}
-                              {r.statusDescription && <p className="text-xs text-red-600">Descripción: {r.statusDescription}</p>}
-                              {r.statusMessage && r.statusMessage !== r.statusDescription && (
-                                <p className="text-xs text-red-600">Mensaje: {r.statusMessage}</p>
-                              )}
-                              {!r.error && !r.statusCode && !r.statusDescription && !r.statusMessage && (
-                                <p className="text-xs text-red-600">Rechazado por la DIAN — verifique NIT, Llave Técnica y certificado</p>
-                              )}
+                  {/* Resumen */}
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Resultados del envío</p>
+                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full
+                      ${testResults.every(r => r.accepted) ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}`}>
+                      {testResults.filter(r => r.accepted).length}/{testResults.length} aceptados
+                    </span>
+                  </div>
+
+                  {/* Agrupado por tipo */}
+                  {['factura', 'nota_credito', 'nota_debito'].map(tipo => {
+                    const grupo = testResults.filter(r => r.type === tipo || (!r.type && tipo === 'factura'));
+                    if (!grupo.length) return null;
+                    const tipoLabel = tipo === 'factura' ? 'Facturas' : tipo === 'nota_credito' ? 'Notas Crédito' : 'Notas Débito';
+                    const tipoColor = tipo === 'factura' ? 'blue' : tipo === 'nota_credito' ? 'purple' : 'orange';
+                    return (
+                      <div key={tipo}>
+                        <p className={`text-xs font-semibold text-${tipoColor}-700 mb-1 mt-3`}>{tipoLabel}</p>
+                        {grupo.map((r, idx) => (
+                          <div key={idx} className={`rounded-lg p-3 text-sm mb-1.5
+                            ${r.accepted ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
+                            <div className="flex items-start gap-3">
+                              {r.accepted
+                                ? <CheckCircleIcon className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
+                                : <ExclamationTriangleIcon className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />}
+                              <div className="flex-1 min-w-0">
+                                <p className={`font-medium ${r.accepted ? 'text-green-800' : 'text-red-800'}`}>
+                                  {r.label || `Documento ${r.index}`}: {r.invoiceNumber || 'Error al generar'}
+                                  {r.refInvoice && r.refInvoice !== '—' && (
+                                    <span className="text-xs font-normal text-gray-500 ml-2">← ref. {r.refInvoice}</span>
+                                  )}
+                                </p>
+                                {r.accepted && r.cufe && (
+                                  <p className="text-xs text-green-600 font-mono mt-0.5">
+                                    {tipo === 'factura' ? 'CUFE' : 'CUDE'}: {r.cufe?.substring(0, 32)}...
+                                  </p>
+                                )}
+                                {!r.accepted && (
+                                  <div className="mt-1 space-y-0.5">
+                                    {r.error && <p className="text-xs text-red-700 font-medium">{r.error}</p>}
+                                    {r.statusCode && <p className="text-xs text-red-600">Código: <strong>{r.statusCode}</strong></p>}
+                                    {r.statusDescription && <p className="text-xs text-red-600">Descripción: {r.statusDescription}</p>}
+                                    {r.statusMessage && r.statusMessage !== r.statusDescription && (
+                                      <p className="text-xs text-red-600">Mensaje: {r.statusMessage}</p>
+                                    )}
+                                    {!r.error && !r.statusCode && !r.statusDescription && !r.statusMessage && (
+                                      <p className="text-xs text-red-600">Rechazado — verifique NIT, Llave Técnica y certificado</p>
+                                    )}
+                                  </div>
+                                )}
+                                {!r.accepted && (
+                                  <details className="mt-2">
+                                    <summary className="text-xs text-blue-500 cursor-pointer hover:text-blue-700 font-medium">
+                                      <MagnifyingGlassIcon className="w-3 h-3 inline mr-1" />Ver respuesta DIAN (debug)
+                                    </summary>
+                                    <pre className="text-xs bg-gray-900 text-green-400 rounded p-2 mt-1 overflow-x-auto whitespace-pre-wrap break-all max-h-60">
+                                      {r.rawPreview || r.error || 'Sin respuesta del servidor DIAN'}
+                                    </pre>
+                                  </details>
+                                )}
+                              </div>
                             </div>
-                          )}
-                          {/* Raw DIAN response (debug) */}
-                          {!r.accepted && (
-                            <details className="mt-2">
-                              <summary className="text-xs text-blue-500 cursor-pointer hover:text-blue-700 font-medium">
-                                <MagnifyingGlassIcon className="w-3 h-3 inline mr-1" />Ver respuesta DIAN (debug)
-                              </summary>
-                              <pre className="text-xs text-gray-500 bg-gray-900 text-green-400 rounded p-2 mt-1 overflow-x-auto whitespace-pre-wrap break-all max-h-60">
-                                {r.rawPreview || r.error || 'Sin respuesta del servidor DIAN'}
-                              </pre>
-                            </details>
-                          )}
-                        </div>
+                          </div>
+                        ))}
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
