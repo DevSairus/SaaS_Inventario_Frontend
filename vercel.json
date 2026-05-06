@@ -1,5 +1,5 @@
 {
-  "installCommand": "pnpm install",
+  "installCommand": "npm install -g pnpm && pnpm install",
   "buildCommand": "pnpm run build",
   "outputDirectory": "dist",
   "rewrites": [
