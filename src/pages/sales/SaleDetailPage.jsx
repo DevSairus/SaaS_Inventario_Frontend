@@ -155,24 +155,30 @@ export default function SaleDetailPage() {
   };
 
   const handlePrint = async () => {
+    const printWindow = window.open('', '_blank');
     try {
       const response = await salesApi.generatePDF(id);
       const url = URL.createObjectURL(response.data);
-      const printWindow = window.open(url, '_blank');
       if (printWindow) {
+        printWindow.location.href = url;
         printWindow.onload = function() { printWindow.print(); };
       }
     } catch (error) {
+      if (printWindow) printWindow.close();
       toast.error('Error al generar el PDF');
     }
   };
 
   const handleDownloadPDF = async () => {
+    const newWindow = window.open('', '_blank');
     try {
       const response = await salesApi.generatePDF(id);
       const url = URL.createObjectURL(response.data);
-      window.open(url, '_blank');
+      if (newWindow) {
+        newWindow.location.href = url;
+      }
     } catch (error) {
+      if (newWindow) newWindow.close();
       toast.error('Error al generar el PDF');
     }
   };
