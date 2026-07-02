@@ -707,8 +707,7 @@ export default function DianConfigPage() {
                       <RocketLaunchIcon className="w-4 h-4" /> Set Completo de Habilitación (recomendado)
                     </p>
                     <p className="text-xs text-indigo-700 mt-1">
-                      Envía los <strong>10 documentos requeridos</strong> por la DIAN para habilitar Software Propio:
-                      6 facturas · 2 notas crédito · 2 notas débito
+                      Envía las <strong>2 facturas de prueba</strong> requeridas por la DIAN para habilitar Software Propio
                     </p>
                   </div>
                   <button
@@ -718,7 +717,7 @@ export default function DianConfigPage() {
                       hover:bg-indigo-700 disabled:opacity-50 transition-colors flex items-center gap-2">
                     {sendingTest
                       ? <><ClockIcon className="w-4 h-4 animate-pulse" /> Enviando...</>
-                      : <><RocketLaunchIcon className="w-4 h-4" /> Enviar 10 documentos</>}
+                      : <><RocketLaunchIcon className="w-4 h-4" /> Enviar 2 facturas</>}
                   </button>
                 </div>
               </div>
