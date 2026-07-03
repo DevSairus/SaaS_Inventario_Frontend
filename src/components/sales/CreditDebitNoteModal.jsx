@@ -26,26 +26,27 @@ export default function CreditDebitNoteModal({ isOpen, onClose, sale, onSuccess,
   const title = isCredit ? 'Nota Crédito' : 'Nota Débito';
   const reasons = isCredit ? REASONS.credit : REASONS.debit;
 
-  // ── State ──────────────────────────────────────────────────
-  const [step, setStep]         = useState(1); // 1=modo, 2=items, 3=confirmar
-  const [mode, setMode]         = useState('items'); // 'items' | 'amount' | 'total'
+  // ── Hooks (siempre se llaman, sin importar isOpen) ─────────
+  const [step, setStep]         = useState(1);
+  const [mode, setMode]         = useState('items');
   const [quantities, setQuantities] = useState(() =>
     Object.fromEntries((sale?.items || []).map(i => [i.id, 0]))
   );
   const [amount, setAmount]     = useState('');
-  const [reason, setReason]     = useState(reasons[0].value);
+  const [reason, setReason]     = useState(reasons[0]?.value || 'other');
   const [notes, setNotes]       = useState('');
   const [loading, setLoading]   = useState(false);
   const [result, setResult]     = useState(null);
 
-  if (!isOpen || !sale) return null;
-
-  // ── Computed ───────────────────────────────────────────────
   const allItems = useMemo(() =>
     (sale?.items || []).filter(i => i.item_type !== 'free_line'),
     [sale]
   );
 
+  // ── Early return después de todos los hooks ────────────────
+  if (!isOpen || !sale) return null;
+
+  // ── Computed ───────────────────────────────────────────────
   const selectedItems = allItems.filter(i => (quantities[i.id] || 0) > 0);
 
   const itemsTotal = selectedItems.reduce((sum, item) => {
