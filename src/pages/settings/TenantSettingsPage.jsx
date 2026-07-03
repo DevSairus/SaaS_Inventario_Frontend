@@ -9,6 +9,7 @@ import Loading from '../../components/common/Loading';
 import Layout from '../../components/layout/Layout';
 import toast from 'react-hot-toast';
 import useTenantStore from '../../store/tenantStore';
+import TaxConfigSection from '../../components/settings/TaxConfigSection';
 
 const TenantSettingsPage = () => {
   const navigate = useNavigate();
@@ -28,7 +29,8 @@ const TenantSettingsPage = () => {
     primary_color: '#2563eb',
     secondary_color: '#475569',
     pdf_config: { payment_notes: '', legal_note: '' },
-    features: {}
+    features: {},
+    tax_config: {}
   });
   const [logoPreview, setLogoPreview] = useState(null);
   const [logoFile, setLogoFile] = useState(null);
@@ -494,6 +496,20 @@ const TenantSettingsPage = () => {
               >
                 Configurar →
               </button>
+            </div>
+          </Card>
+
+          {/* Configuración de Impuestos */}
+          <Card>
+            <div className="p-6">
+              <h2 className="text-xl font-semibold mb-1">Configuración de Impuestos</h2>
+              <p className="text-sm text-gray-500 mb-5">
+                Define los impuestos y retenciones que aplica tu empresa. Se usan en facturas, notas crédito/débito y el XML de la DIAN.
+              </p>
+              <TaxConfigSection
+                taxConfig={config.tax_config}
+                onChange={(tax_config) => setConfig(prev => ({ ...prev, tax_config }))}
+              />
             </div>
           </Card>
 

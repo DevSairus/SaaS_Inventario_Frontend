@@ -511,10 +511,50 @@ export default function SaleDetailPage() {
                           <span className="font-medium">{formatCurrency(sale.tax_amount)}</span>
                         </div>
                       )}
+                      {/* Impuestos adicionales */}
+                      {sale.items?.some(i => i.inc_amount > 0) && (
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-600">INC:</span>
+                          <span className="font-medium">{formatCurrency(sale.items.reduce((s, i) => s + parseFloat(i.inc_amount || 0), 0))}</span>
+                        </div>
+                      )}
+                      {sale.items?.some(i => i.ica_amount > 0) && (
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-600">ICA:</span>
+                          <span className="font-medium">{formatCurrency(sale.items.reduce((s, i) => s + parseFloat(i.ica_amount || 0), 0))}</span>
+                        </div>
+                      )}
                       <div className="flex justify-between text-xl font-bold border-t pt-2">
                         <span>TOTAL:</span>
                         <span className="text-blue-600">{formatCurrency(sale.total_amount)}</span>
                       </div>
+                      {/* Retenciones */}
+                      {sale.total_retentions > 0 && (
+                        <>
+                          {sale.retefuente_amount > 0 && (
+                            <div className="flex justify-between text-sm text-orange-600">
+                              <span>ReteFuente ({sale.retefuente_rate}%):</span>
+                              <span>-{formatCurrency(sale.retefuente_amount)}</span>
+                            </div>
+                          )}
+                          {sale.reteiva_amount > 0 && (
+                            <div className="flex justify-between text-sm text-orange-600">
+                              <span>ReteIVA ({sale.reteiva_rate}%):</span>
+                              <span>-{formatCurrency(sale.reteiva_amount)}</span>
+                            </div>
+                          )}
+                          {sale.reteica_amount > 0 && (
+                            <div className="flex justify-between text-sm text-orange-600">
+                              <span>ReteICA ({sale.reteica_rate}‰):</span>
+                              <span>-{formatCurrency(sale.reteica_amount)}</span>
+                            </div>
+                          )}
+                          <div className="flex justify-between text-lg font-bold text-green-700 border-t pt-2">
+                            <span>Neto a pagar:</span>
+                            <span>{formatCurrency(sale.total_amount - sale.total_retentions)}</span>
+                          </div>
+                        </>
+                      )}
 
                       {/* Devuelto */}
                       {hasReturns && (
