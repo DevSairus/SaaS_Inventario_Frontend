@@ -11,7 +11,7 @@ import {
   PencilIcon,
   ClockIcon,
 } from '@heroicons/react/24/outline';
-import { RotateCcw, AlertTriangle } from 'lucide-react';
+import { RotateCcw, AlertTriangle, FileText } from 'lucide-react';
 import Button from '../../components/common/Button';
 import Badge from '../../components/common/Badge';
 import Loading from '../../components/common/Loading';
@@ -22,6 +22,7 @@ import salesApi from '../../api/sales';
 import { movementsAPI } from '../../api/movements';
 import ConfirmSaleWithPaymentModal from '../../components/sales/ConfirmSaleWithPaymentModal';
 import VoidSaleModal from '../../components/sales/VoidSaleModal';
+import CreditDebitNoteModal from '../../components/sales/CreditDebitNoteModal';
 import useTenantStore from '../../store/tenantStore';
 import toast from 'react-hot-toast';
 
@@ -40,6 +41,7 @@ export default function SaleDetailPage() {
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [lastPaymentIndex, setLastPaymentIndex] = useState(null);
   const [showVoidModal, setShowVoidModal] = useState(false);
+  const [showNoteModal, setShowNoteModal] = useState(null); // null | 'credit' | 'debit'
 
   const openPaymentReceipt = async (paymentIndex) => {
     try {
@@ -215,7 +217,12 @@ export default function SaleDetailPage() {
   };
 
   const getPaymentMethodLabel = (method) => {
-    const labels = { efectivo: 'Efectivo', tarjeta: 'Tarjeta', transferencia: 'Transferencia', credito: 'Crédito' };
+    const labels = {
+      efectivo: 'Efectivo', cash: 'Efectivo',
+      tarjeta: 'Tarjeta', credit_card: 'T. Crédito', debit_card: 'T. Débito',
+      transferencia: 'Transferencia', transfer: 'Transferencia',
+      credito: 'Crédito', check: 'Cheque',
+    };
     return labels[method] || method;
   };
 
@@ -293,6 +300,26 @@ export default function SaleDetailPage() {
                   <RotateCcw className="w-4 h-4" />
                   Anular venta
                 </button>
+              )}
+
+              {/* Notas crédito / débito — solo para facturas aceptadas por DIAN */}
+              {sale.document_type === 'factura' && sale.dian_status === 'accepted' && (
+                <>
+                  <button
+                    onClick={() => setShowNoteModal('credit')}
+                    className="inline-flex items-center gap-2 px-3 py-2 bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-700 text-sm font-semibold rounded-lg transition-colors"
+                  >
+                    <FileText className="w-4 h-4" />
+                    Nota crédito
+                  </button>
+                  <button
+                    onClick={() => setShowNoteModal('debit')}
+                    className="inline-flex items-center gap-2 px-3 py-2 bg-orange-50 hover:bg-orange-100 border border-orange-200 text-orange-700 text-sm font-semibold rounded-lg transition-colors"
+                  >
+                    <FileText className="w-4 h-4" />
+                    Nota débito
+                  </button>
+                </>
               )}
 
               <Button variant="secondary" icon={PrinterIcon} onClick={handlePrint}>Imprimir</Button>
@@ -721,6 +748,17 @@ export default function SaleDetailPage() {
             sale={sale}
             onSuccess={() => {
               setShowVoidModal(false);
+              fetchSaleById(id);
+            }}
+          />
+
+          <CreditDebitNoteModal
+            isOpen={showNoteModal !== null}
+            onClose={() => setShowNoteModal(null)}
+            sale={sale}
+            type={showNoteModal || 'credit'}
+            onSuccess={() => {
+              setShowNoteModal(null);
               fetchSaleById(id);
             }}
           />

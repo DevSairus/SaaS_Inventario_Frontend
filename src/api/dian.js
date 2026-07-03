@@ -35,6 +35,10 @@ export const sendInvoice          = (saleId) => api.post(`/dian/send/${saleId}`)
 export const checkDianStatus      = (saleId) => api.post(`/dian/check-status/${saleId}`);
 export const sendToTestSet        = (saleId) => api.post(`/dian/test-set/${saleId}`);
 
+// ── Notas crédito / débito ───────────────────────────────────
+export const createCreditNote = (saleId, data) => api.post(`/dian/create-credit-note/${saleId}`, data);
+export const createDebitNote  = (saleId, data) => api.post(`/dian/create-debit-note/${saleId}`, data);
+
 // ── Default export (compatibilidad con DianSettingsPage) ─────
 const dianAPI = {
   getConfig:            getDianConfig,
@@ -53,6 +57,8 @@ const dianAPI = {
   sendInvoice,
   checkStatus:          checkDianStatus,
   sendToTestSet,
+  createCreditNote,
+  createDebitNote,
 };
 
 export default dianAPI;
