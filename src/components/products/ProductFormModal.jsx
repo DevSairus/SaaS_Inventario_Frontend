@@ -34,7 +34,12 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
     is_active: true,
     has_tax: true,
     tax_percentage: 19,
-    price_includes_tax: false
+    price_includes_tax: false,
+    tax_config: {
+      iva: { enabled: true, rate: 19 },
+      inc: { enabled: false, rate: 0 },
+      ica: { enabled: false, rate: 0 },
+    }
   });
 
   const [calculatedPrice, setCalculatedPrice] = useState(null);
@@ -96,7 +101,12 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
         is_active: product.is_active !== false,
         has_tax: productHasTax,
         tax_percentage: productTaxPercentage,
-        price_includes_tax: product.price_includes_tax || false
+        price_includes_tax: product.price_includes_tax || false,
+        tax_config: product.tax_config || {
+          iva: { enabled: productHasTax, rate: productTaxPercentage },
+          inc: { enabled: false, rate: 0 },
+          ica: { enabled: false, rate: 0 },
+        }
       });
     } else {
       setFormData(prev => ({
@@ -545,6 +555,90 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
                   )}
                 </>
               )}
+
+              {/* INC - Impoconsumo */}
+              <div className="md:col-span-2 mt-4">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b">
+                  Otros Impuestos
+                </h3>
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+                  <div>
+                    <span className="text-sm font-medium text-gray-900">INC (Impoconsumo)</span>
+                    <p className="text-xs text-gray-500">Aplica para licores, bebidas azucaradas, etc.</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      value={formData.tax_config?.inc?.rate || 0}
+                      onChange={(e) => setFormData(prev => ({
+                        ...prev,
+                        tax_config: { ...prev.tax_config, inc: { ...prev.tax_config?.inc, rate: parseFloat(e.target.value) || 0 } }
+                      }))}
+                      disabled={!formData.tax_config?.inc?.enabled}
+                      min="0"
+                      step="0.01"
+                      className="w-20 px-2 py-1.5 text-sm text-right border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-gray-400"
+                    />
+                    <span className="text-xs text-gray-500">%</span>
+                    <button
+                      type="button"
+                      onClick={() => setFormData(prev => ({
+                        ...prev,
+                        tax_config: { ...prev.tax_config, inc: { ...prev.tax_config?.inc, enabled: !prev.tax_config?.inc?.enabled } }
+                      }))}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                        formData.tax_config?.inc?.enabled ? 'bg-blue-600' : 'bg-gray-300'
+                      }`}
+                    >
+                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                        formData.tax_config?.inc?.enabled ? 'translate-x-6' : 'translate-x-1'
+                      }`} />
+                    </button>
+                  </div>
+                </label>
+              </div>
+
+              {/* ICA */}
+              <div className="md:col-span-2">
+                <label className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+                  <div>
+                    <span className="text-sm font-medium text-gray-900">ICA (Industria y Comercio)</span>
+                    <p className="text-xs text-gray-500">Impuesto municipal, se expresa en milésimas (‰)</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      value={formData.tax_config?.ica?.rate || 0}
+                      onChange={(e) => setFormData(prev => ({
+                        ...prev,
+                        tax_config: { ...prev.tax_config, ica: { ...prev.tax_config?.ica, rate: parseFloat(e.target.value) || 0 } }
+                      }))}
+                      disabled={!formData.tax_config?.ica?.enabled}
+                      min="0"
+                      step="0.01"
+                      className="w-20 px-2 py-1.5 text-sm text-right border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-gray-400"
+                    />
+                    <span className="text-xs text-gray-500">‰</span>
+                    <button
+                      type="button"
+                      onClick={() => setFormData(prev => ({
+                        ...prev,
+                        tax_config: { ...prev.tax_config, ica: { ...prev.tax_config?.ica, enabled: !prev.tax_config?.ica?.enabled } }
+                      }))}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                        formData.tax_config?.ica?.enabled ? 'bg-blue-600' : 'bg-gray-300'
+                      }`}
+                    >
+                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                        formData.tax_config?.ica?.enabled ? 'translate-x-6' : 'translate-x-1'
+                      }`} />
+                    </button>
+                  </div>
+                </label>
+              </div>
 
               {/* Inventario */}
               <div className="md:col-span-2 mt-4">
