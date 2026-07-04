@@ -72,10 +72,11 @@ const useStockAlertsStore = create((set, get) => ({
         limit: pagination.limit
       };
       
-      const response = await stockAlertsApi.getStockAlerts(params);      
+      const response = await stockAlertsApi.getStockAlerts(params);
+      const res = response.data || response;
       set({
-        alerts: response.data,
-        pagination: response.pagination,
+        alerts: res.data || res,
+        pagination: res.pagination || response.pagination,
         loading: false
       });
     } catch (error) {
@@ -105,7 +106,7 @@ const useStockAlertsStore = create((set, get) => ({
   fetchStats: async () => {
     try {
       const response = await stockAlertsApi.getStockAlertsStats();
-      set({ stats: response.data });
+      set({ stats: response.data.data || response.data });
     } catch (error) {
 
     }
