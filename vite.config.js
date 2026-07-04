@@ -13,11 +13,15 @@ export default defineConfig({
     // Esto evita que Vite intente servir el archivo .wasm por separado
     conditions: ['zbar-inlined'],
     alias: {
+      '@': path.resolve(__dirname, './src'),
       '@api': path.resolve(__dirname, './src/api'),
       '@components': path.resolve(__dirname, './src/components'),
       '@store': path.resolve(__dirname, './src/store'),
       '@utils': path.resolve(__dirname, './src/utils'),
-      '@pages': path.resolve(__dirname, './src/pages')
+      '@pages': path.resolve(__dirname, './src/pages'),
+      '@hooks': path.resolve(__dirname, './src/hooks'),
+      '@assets': path.resolve(__dirname, './src/assets'),
+      '@services': path.resolve(__dirname, './src/services'),
     }
   },
   build: {
