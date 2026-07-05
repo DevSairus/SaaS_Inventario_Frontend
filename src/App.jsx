@@ -87,7 +87,7 @@ import { ROLES, ROUTES } from './utils/constants';
 // Redirigir según rol
 function RoleBasedRedirect() {
   const { user, isAuthenticated } = useAuthStore();
-  if (!isAuthenticated) return <Navigate to={ROUTES.LOGIN} replace />;
+  if (!isAuthenticated) return <LandingPage />;
   if (user?.role === ROLES.SUPER_ADMIN) return <Navigate to={ROUTES.SUPERADMIN_DASHBOARD} replace />;
   return <Navigate to={ROUTES.DASHBOARD} replace />;
 }
