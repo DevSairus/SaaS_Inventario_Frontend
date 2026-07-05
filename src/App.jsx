@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useEffect } from 'react';
 import LoginPage from './pages/auth/LoginPage';
+import LandingPage from './pages/LandingPage';
 import ResetPasswordPage from './pages/auth/ResetPasswordPage';
 import WorkOrderPublicPage from './pages/workshop/WorkOrderPublicPage';
 import DashboardPage from './pages/dashboard/DashboardPage';
@@ -127,6 +128,7 @@ function App() {
         <Route path="/" element={<RoleBasedRedirect />} />
 
         {/* Públicas */}
+        <Route path="/bienvenida"     element={<LandingPage />} />
         <Route path="/login"          element={<LoginPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/ot/:token"      element={<WorkOrderPublicPage />} />
