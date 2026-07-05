@@ -27,9 +27,11 @@ function StockAlerts() {
     }
   }, []);
 
-  // Cargar productos al montar el componente
+  // Cargar productos al montar el componente y refrescar periódicamente
   useEffect(() => {
     fetchAllLowStockProducts();
+    const interval = setInterval(fetchAllLowStockProducts, 2 * 60 * 1000);
+    return () => clearInterval(interval);
   }, [fetchAllLowStockProducts]);
 
   // Recargar productos cada vez que se abre el modal
