@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useMovementsStore } from '../../store/movementsStore';
 import useProductsStore from '../../store/productsStore';
+import useBranchStore from '../../store/branchStore';
 import Layout from '../../components/layout/Layout';
 
 const MovementsPage = () => {
@@ -18,6 +19,7 @@ const MovementsPage = () => {
   } = useMovementsStore();
 
   const { products, fetchProducts } = useProductsStore();
+  const { branches, fetchBranches } = useBranchStore();
   const [localFilters, setLocalFilters] = useState(filters);
   const [showKardex, setShowKardex] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -26,6 +28,7 @@ const MovementsPage = () => {
   useEffect(() => {
     fetchProducts();
     fetchMovements();
+    fetchBranches();
   }, [fetchMovements, filters, pagination.page]);
 
   const handleFilterChange = (e) => {
@@ -67,14 +70,29 @@ const MovementsPage = () => {
     }).format(amount);
   };
 
-  const getTypeBadge = (type) => {
+  const formatMovementDate = (value) => {
+    if (!value) return 'Sin fecha';
+    // El backend puede devolver 'YYYY-MM-DD' (DATEONLY) o un timestamp
+    // completo ('...T00:00:00.000Z' / '... 00:00:00+00'). Nos quedamos solo
+    // con la parte de fecha antes de forzar el mediodía, para evitar
+    // concatenar sobre un string que ya trae hora/zona ("Invalid Date").
+    const datePart = String(value).split('T')[0].split(' ')[0];
+    const date = new Date(`${datePart}T12:00:00`);
+    return isNaN(date.getTime()) ? 'Sin fecha' : date.toLocaleDateString('es-CO');
+  };
+
+  // "movement_type" NO es 'entrada'/'salida' — guarda la clasificación de
+  // negocio (sale, purchase, customer_return, taller_repuesto, etc.), porque
+  // el CHECK constraint de la tabla no permite esos literales. El campo
+  // confiable para in/out es "direction" ('in' | 'out').
+  const getTypeBadge = (direction) => {
     const badges = {
-      entrada: 'bg-green-100 text-green-800',
-      salida: 'bg-red-100 text-red-800'
+      in:  'bg-green-100 text-green-800',
+      out: 'bg-red-100 text-red-800'
     };
     return (
-      <span className={`px-2 py-1 text-xs font-semibold rounded-full ${badges[type]}`}>
-        {type === 'entrada' ? 'Entrada' : 'Salida'}
+      <span className={`px-2 py-1 text-xs font-semibold rounded-full ${badges[direction] || 'bg-gray-100 text-gray-700'}`}>
+        {direction === 'in' ? 'Entrada' : direction === 'out' ? 'Salida' : 'N/D'}
       </span>
     );
   };
@@ -106,7 +124,7 @@ const MovementsPage = () => {
         {/* Filtros */}
         <div className="bg-white rounded-lg shadow p-4">
           <form onSubmit={handleSearch}>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
+            <div className={`grid grid-cols-1 sm:grid-cols-2 gap-3 ${branches.length > 1 ? 'lg:grid-cols-7' : 'lg:grid-cols-6'}`}>
               <div>
                 <select
                   name="product_id"
@@ -125,14 +143,14 @@ const MovementsPage = () => {
 
               <div>
                 <select
-                  name="movement_type"
-                  value={localFilters.movement_type}
+                  name="direction"
+                  value={localFilters.direction}
                   onChange={handleFilterChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">Todos los tipos</option>
-                  <option value="entrada">Entrada</option>
-                  <option value="salida">Salida</option>
+                  <option value="in">Entrada</option>
+                  <option value="out">Salida</option>
                 </select>
               </div>
 
@@ -151,6 +169,22 @@ const MovementsPage = () => {
                   <option value="adjustment_out">Ajuste Salida</option>
                 </select>
               </div>
+
+              {branches.length > 1 && (
+                <div>
+                  <select
+                    name="branch_id"
+                    value={localFilters.branch_id}
+                    onChange={handleFilterChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Todas las sedes</option>
+                    {branches.map(b => (
+                      <option key={b.id} value={b.id}>{b.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               <div>
                 <input
@@ -212,7 +246,7 @@ const MovementsPage = () => {
                   {movements.map((movement) => (
                     <tr key={movement.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {new Date(movement.movement_date + 'T12:00:00').toLocaleDateString('es-CO')}
+                        {formatMovementDate(movement.movement_date)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                         {movement.movement_number}
@@ -222,7 +256,7 @@ const MovementsPage = () => {
                         <div className="text-sm text-gray-500">{movement.product?.sku}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        {getTypeBadge(movement.movement_type)}
+                        {getTypeBadge(movement.direction)}
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-900">{getReasonLabel(movement.movement_reason)}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium text-gray-900">
@@ -351,15 +385,15 @@ const MovementsPage = () => {
                     {kardex?.movements?.map((mov) => (
                       <tr key={mov.id}>
                         <td className="px-4 py-2 text-sm text-gray-600">
-                          {new Date(mov.movement_date + 'T12:00:00').toLocaleDateString('es-CO')}
+                          {formatMovementDate(mov.movement_date)}
                         </td>
-                        <td className="px-4 py-2">{getTypeBadge(mov.movement_type)}</td>
+                        <td className="px-4 py-2">{getTypeBadge(mov.direction)}</td>
                         <td className="px-4 py-2 text-sm text-gray-600">{mov.movement_reason}</td>
                         <td className="px-4 py-2 text-right text-sm font-medium text-green-600">
-                          {mov.movement_type === 'entrada' ? mov.quantity : '-'}
+                          {mov.direction === 'in' ? mov.quantity : '-'}
                         </td>
                         <td className="px-4 py-2 text-right text-sm font-medium text-red-600">
-                          {mov.movement_type === 'salida' ? mov.quantity : '-'}
+                          {mov.direction === 'out' ? mov.quantity : '-'}
                         </td>
                         <td className="px-4 py-2 text-right text-sm font-bold text-gray-900">
                           {mov.new_stock}

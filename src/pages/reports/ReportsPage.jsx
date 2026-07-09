@@ -6,6 +6,7 @@ import { reportsAPI } from '../../api/reports';
 import { accountsReceivableAPI } from '../../api/accountsReceivable';
 import { exportReceivablesToExcel } from '../../utils/excelExport';
 import useCustomersStore from '../../store/customersStore';
+import useBranchStore from '../../store/branchStore';
 import CustomerSearchInput from '../../components/common/CustomerSearchInput';
 import {
   ChartBarIcon,
@@ -31,7 +32,7 @@ const formatNum = (val) => new Intl.NumberFormat('es-CO').format(val || 0);
 const MONTH_NAMES = { '01': 'Ene', '02': 'Feb', '03': 'Mar', '04': 'Abr', '05': 'May', '06': 'Jun', '07': 'Jul', '08': 'Ago', '09': 'Sep', '10': 'Oct', '11': 'Nov', '12': 'Dic' };
 
 // ─── Date Filter Bar (reusable) ───────────────────────────────────────────────
-const DateFilterBar = ({ dateMode, setDateMode, periodMonths, setPeriodMonths, customDates, setCustomDates, onApply, extraActions }) => {
+const DateFilterBar = ({ dateMode, setDateMode, periodMonths, setPeriodMonths, customDates, setCustomDates, onApply, extraActions, branches, branchId, setBranchId }) => {
   const canApply = dateMode === 'period' || (customDates.from_date && customDates.to_date);
   return (
     <div className="bg-white rounded-xl shadow p-4">
@@ -103,6 +104,23 @@ const DateFilterBar = ({ dateMode, setDateMode, periodMonths, setPeriodMonths, c
           </>
         )}
 
+        {/* Selector de sede (solo si el tenant tiene más de una) */}
+        {branches && branches.length > 1 && (
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1.5">Sede</label>
+            <select
+              value={branchId}
+              onChange={(e) => setBranchId(e.target.value)}
+              className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 bg-white"
+            >
+              <option value="">Todas las sedes</option>
+              {branches.map(b => (
+                <option key={b.id} value={b.id}>{b.name}</option>
+              ))}
+            </select>
+          </div>
+        )}
+
         {/* Extra actions slot (e.g. export button) */}
         {extraActions && <div className="md:ml-auto flex items-end">{extraActions}</div>}
       </div>
@@ -123,9 +141,11 @@ const DateFilterBar = ({ dateMode, setDateMode, periodMonths, setPeriodMonths, c
 // ─── Main Component ───────────────────────────────────────────────────────────
 const ReportsPage = () => {
   const { customers, fetchCustomers } = useCustomersStore();
+  const { branches, fetchBranches } = useBranchStore();
   const [tab, setTab] = useState('movements');
   const [profitTypeFilter, setProfitTypeFilter] = useState('product'); // 'product' | 'service'
   const [loading, setLoading] = useState(true);
+  const [branchId, setBranchId] = useState('');
 
   // Data states
   const [movementsData, setMovementsData] = useState([]);
@@ -155,16 +175,21 @@ const ReportsPage = () => {
     setLoading(true);
     try {
       const dateParams = getDateParams();
+      // branch_id solo aplica a reportes basados en movimientos/ventas.
+      // La valorización de inventario es global/compartida entre sedes
+      // (decisión de diseño confirmada), así que nunca se filtra por sede.
+      const branchParams = branchId ? { branch_id: branchId } : {};
+      const dateAndBranchParams = { ...dateParams, ...branchParams };
 
       const cleanReceivablesFilters = Object.fromEntries(
         Object.entries(receivablesFilters).filter(([_, v]) => v !== '')
       );
 
       const results = await Promise.allSettled([
-        reportsAPI.getMovementsByMonth(dateParams),
+        reportsAPI.getMovementsByMonth(dateAndBranchParams),
         reportsAPI.getValuation(),
-        reportsAPI.getProfitReport(dateParams),
-        reportsAPI.getRotationReport(dateParams),
+        reportsAPI.getProfitReport(dateAndBranchParams),
+        reportsAPI.getRotationReport(dateAndBranchParams),
         accountsReceivableAPI.getSummary(cleanReceivablesFilters)
       ]);
 
@@ -225,9 +250,9 @@ const ReportsPage = () => {
   // Re-fetch when period/mode changes (except custom — user must click Apply)
   useEffect(() => {
     if (dateMode === 'period') fetchAll();
-  }, [periodMonths, dateMode]);
+  }, [periodMonths, dateMode, branchId]);
 
-  useEffect(() => { fetchCustomers(); }, []);
+  useEffect(() => { fetchCustomers(); fetchBranches(); }, []);
 
   const handleApplyCustomDates = () => {
     if (customDates.from_date && customDates.to_date) fetchAll();
@@ -306,7 +331,8 @@ const ReportsPage = () => {
     dateMode, setDateMode,
     periodMonths, setPeriodMonths,
     customDates, setCustomDates,
-    onApply: handleApplyCustomDates
+    onApply: handleApplyCustomDates,
+    branches, branchId, setBranchId
   };
 
   return (

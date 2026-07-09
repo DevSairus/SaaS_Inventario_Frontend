@@ -20,6 +20,7 @@ export const usePurchasesStore = create((set, get) => ({
     status: '',
     start_date: '',
     end_date: '',
+    branch_id: '',
     sort_by: 'purchase_date',
     sort_order: 'DESC'
   },
@@ -120,10 +121,10 @@ export const usePurchasesStore = create((set, get) => ({
   },
 
   // Confirmar compra
-  confirmPurchase: async (id) => {
+  confirmPurchase: async (id, paymentData) => {
     set({ isLoading: true, error: null });
     try {
-      await purchasesAPI.confirm(id);
+      await purchasesAPI.confirm(id, paymentData);
       await get().fetchPurchaseById(id);
       await get().fetchStats();
       set({ isLoading: false });

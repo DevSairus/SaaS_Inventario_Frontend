@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import Sidebar from './Sidebar';
 import StockAlerts from '../common/StockAlerts';
+import BranchSelector from './BranchSelector';
 import { Bars3Icon } from '@heroicons/react/24/outline';
 import useAuthStore from '../../store/authStore';
 
@@ -38,13 +39,15 @@ function Layout({ children }) {
             {user?.company_name || 'Panel'}
           </span>
 
-          <div className="flex items-center">
+          <div className="flex items-center gap-2">
+            <BranchSelector />
             <StockAlerts />
           </div>
         </header>
 
         {/* Barra desktop con alertas */}
-        <div className="hidden lg:flex sticky top-0 z-30 justify-end bg-gray-50 px-6 pt-4 pb-1 flex-shrink-0">
+        <div className="hidden lg:flex sticky top-0 z-30 items-center justify-end gap-3 bg-gray-50 px-6 pt-4 pb-1 flex-shrink-0">
+          <BranchSelector />
           <StockAlerts />
         </div>
 

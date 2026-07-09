@@ -16,6 +16,7 @@ const useSalesStore = create((set, get) => ({
     document_type: '',
     customer_name: '',
     vehicle_plate: '',
+    branch_id: '',
   },
   stats: {
     total_sales: 0,

@@ -28,6 +28,8 @@ const PurchaseFormPage = () => {
     purchase_date: new Date().toISOString().split('T')[0],
     expected_delivery_date: '',
     payment_method: '',
+    payment_terms: '',
+    due_date: '',
     invoice_number: '',
     reference: '',
     notes: '',
@@ -122,6 +124,8 @@ const PurchaseFormPage = () => {
         purchase_date: purchase.purchase_date || '',
         expected_delivery_date: purchase.expected_delivery_date || '',
         payment_method: purchase.payment_method || '',
+        payment_terms: purchase.payment_terms ?? '',
+        due_date: purchase.due_date || '',
         invoice_number: purchase.invoice_number || '',
         reference: purchase.reference || '',
         notes: purchase.notes || '',
@@ -187,11 +191,20 @@ const PurchaseFormPage = () => {
 
   const handleFormChange = (e) => {
     const { name, value } = e.target;
-    
+
     // Usar toInteger para campos numéricos
     if (name === 'discount_amount' || name === 'shipping_cost') {
       const numValue = toInteger(value, 0);
       setFormData(prev => ({ ...prev, [name]: numValue }));
+    } else if (name === 'supplier_id') {
+      // Autocompletar el plazo de pago con el que tenga configurado el proveedor
+      // por defecto (el usuario lo puede cambiar libremente después).
+      const selectedSupplier = suppliers.find(s => s.id === value);
+      setFormData(prev => ({
+        ...prev,
+        supplier_id: value,
+        payment_terms: selectedSupplier?.payment_terms ?? prev.payment_terms,
+      }));
     } else {
       setFormData(prev => ({ ...prev, [name]: value }));
     }
@@ -319,6 +332,8 @@ const PurchaseFormPage = () => {
       ...formData,
       discount_amount: toInteger(formData.discount_amount, 0),
       shipping_cost: toInteger(formData.shipping_cost, 0),
+      payment_terms: formData.payment_terms === '' ? null : parseInt(formData.payment_terms),
+      due_date: formData.due_date === '' ? null : formData.due_date,
       items: items.map(item => ({
         product_id: item.product_id,
         quantity: toInteger(item.quantity),
@@ -452,6 +467,46 @@ const PurchaseFormPage = () => {
                 placeholder="Ej: FAC-001"
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Plazo de Pago (días)
+              </label>
+              <input
+                type="number"
+                name="payment_terms"
+                min="0"
+                value={formData.payment_terms}
+                onChange={handleFormChange}
+                placeholder="0 = contado"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                {formData.payment_terms === '' || formData.payment_terms === null
+                  ? 'Sin definir: queda pendiente sin fecha de vencimiento'
+                  : parseInt(formData.payment_terms) === 0
+                    ? 'Se registrará como pagada de contado'
+                    : `Vence ${parseInt(formData.payment_terms)} días después de la compra`}
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Fecha de Vencimiento
+              </label>
+              <input
+                type="date"
+                name="due_date"
+                value={formData.due_date}
+                onChange={handleFormChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Opcional: si la escribes aquí, tiene prioridad sobre el plazo en días.
+              </p>
             </div>
           </div>
 

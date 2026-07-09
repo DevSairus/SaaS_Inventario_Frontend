@@ -13,6 +13,7 @@ const salesApi = {
     if (filters.document_type) params.append('document_type', filters.document_type);
     if (filters.customer_name) params.append('customer_name', filters.customer_name);
     if (filters.vehicle_plate) params.append('vehicle_plate', filters.vehicle_plate);
+    if (filters.branch_id) params.append('branch_id', filters.branch_id);
     
     return api.get(`/sales?${params.toString()}`);
   },

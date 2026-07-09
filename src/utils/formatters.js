@@ -13,12 +13,34 @@ export const formatCurrency = (amount) => {
   }).format(amount);
 };
 
+// Fecha LOCAL de hoy en formato YYYY-MM-DD, para inicializar inputs type="date".
+// NUNCA usar new Date().toISOString().split('T')[0] para esto: toISOString()
+// convierte a UTC primero, y en Bogotá (UTC-5) eso corre la fecha un día
+// hacia adelante después de las 7pm.
+export const toLocalDateString = (date = new Date()) => {
+  const d = date instanceof Date ? date : new Date(date);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 // Formatear fecha
+// IMPORTANTE: campos "solo fecha" (sale_date, due_date, delivery_date,
+// return_date, purchase_date, etc.) se guardan como medianoche UTC.
+// Si se leen con hora LOCAL en una zona UTC-negativa (Bogotá = UTC-5),
+// la medianoche UTC cae en las 7pm del día anterior -> se ve un día
+// menos. Por eso aquí se extraen los componentes en UTC, no locales.
 export const formatDate = (date) => {
   if (!date) return '';
   try {
     const parsedDate = typeof date === 'string' ? parseISO(date) : date;
-    return format(parsedDate, 'dd/MM/yyyy', { locale: es });
+    const utcAsLocal = new Date(
+      parsedDate.getUTCFullYear(),
+      parsedDate.getUTCMonth(),
+      parsedDate.getUTCDate()
+    );
+    return format(utcAsLocal, 'dd/MM/yyyy', { locale: es });
   } catch (error) {
     return '';
   }

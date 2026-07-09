@@ -4,6 +4,8 @@ import {
   getStoredToken,
   setStoredToken,
   clearAuthStorage,
+  getStoredBranchId,
+  setStoredBranchId,
   STORAGE_KEYS,
 } from '../utils/authStorage';
 
@@ -42,6 +44,11 @@ api.interceptors.request.use(
 
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+    }
+
+    const branchId = getStoredBranchId();
+    if (branchId) {
+      config.headers['x-branch-id'] = branchId;
     }
 
     return config;
@@ -124,6 +131,23 @@ api.interceptors.response.use(
       } finally {
         isRefreshing = false;
       }
+    }
+
+    const errorCode = error.response?.data?.code;
+
+    if (status === 403 && errorCode === 'NO_BRANCH_ASSIGNED') {
+      if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/sin-sede')) {
+        window.location.href = '/sin-sede';
+      }
+      return Promise.reject(error);
+    }
+
+    if (status === 403 && errorCode === 'BRANCH_NOT_ALLOWED') {
+      // La sede activa guardada localmente ya no es válida para este usuario:
+      // se limpia para forzar la resolución automática de una sede permitida.
+      setStoredBranchId(null);
+      toast.error('No tienes acceso a la sede seleccionada. Se reinició tu sede activa.');
+      return Promise.reject(error);
     }
 
     if (status === 403 && !originalRequest.skipGlobalForbidden) {

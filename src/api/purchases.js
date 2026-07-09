@@ -26,8 +26,8 @@ export const purchasesAPI = {
   },
 
   // Confirmar compra
-  confirm: async (id) => {
-    const response = await api.patch(`/inventory/purchases/${id}/confirm`);
+  confirm: async (id, paymentData = {}) => {
+    const response = await api.patch(`/inventory/purchases/${id}/confirm`, paymentData);
     return response.data;
   },
 

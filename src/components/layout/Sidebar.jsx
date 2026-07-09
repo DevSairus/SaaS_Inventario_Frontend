@@ -1,8 +1,20 @@
 // Sidebar.jsx — toggle manual, sin hover-expand
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import useAuthStore from "../../store/authStore";
+import useTenantStore from "../../store/tenantStore";
+
+// Mapa id de sección del NAV -> module key del catálogo de módulos.
+// Los ids que no aparecen aquí (dashboard, reports, users, settings) son
+// núcleo y nunca se filtran.
+const NAV_ID_TO_MODULE = {
+  workshop: "workshop",
+  sales: "sales",
+  cartera: "receivables",
+  treasury: "treasury",
+  inventory: "inventory",
+};
 
 const I = {
   dashboard: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="w-[17px] h-[17px] shrink-0"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>,
@@ -16,6 +28,8 @@ const I = {
   logout:    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="w-[17px] h-[17px] shrink-0"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>,
   chevron:   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className="w-2.5 h-2.5 shrink-0 transition-transform duration-200"><polyline points="9 18 15 12 9 6"/></svg>,
   collapse:  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="w-[15px] h-[15px] shrink-0"><path d="M11 19l-7-7 7-7"/><path d="M19 19l-7-7 7-7"/></svg>,
+  wallet:    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="w-[17px] h-[17px] shrink-0"><path d="M21 12V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2h14a2 2 0 002-2v-5"/><path d="M21 12h-4a2 2 0 000 4h4v-4z"/><path d="M3 7l5.5-4L14 7"/></svg>,
+  bank:      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="w-[17px] h-[17px] shrink-0"><line x1="3" y1="21" x2="21" y2="21"/><line x1="5" y1="21" x2="5" y2="10"/><line x1="9" y1="21" x2="9" y2="10"/><line x1="15" y1="21" x2="15" y2="10"/><line x1="19" y1="21" x2="19" y2="10"/><polygon points="12 3 21 8 3 8"/></svg>,
 };
 
 const NAV = [
@@ -45,9 +59,24 @@ const NAV = [
     children: [
       { label: "Nueva Venta",      path: "/sales/new" },
       { label: "Historial Ventas", path: "/sales" },
-      { label: "Cartera",          path: "/accounts-receivable" },
-      { label: "Devoluciones",     path: "/sales/customer-returns" },
       { label: "Clientes",         path: "/customers" },
+    ],
+  },
+  {
+    id: "cartera", label: "Cartera", icon: "wallet",
+    children: [
+      { label: "Cuentas por Cobrar",   path: "/accounts-receivable" },
+      { label: "Devoluciones Clientes", path: "/sales/customer-returns" },
+      { label: "Dev. Proveedores",     path: "/inventory/supplier-returns" },
+    ],
+  },
+  {
+    id: "treasury", label: "Tesorería", icon: "bank",
+    children: [
+      { label: "Cuentas por Pagar",   path: "/accounts-payable" },
+      { label: "Gastos Operativos",   path: "/expenses" },
+      { label: "Flujo de Caja",       path: "/cashflow" },
+      { label: "Cajas",               path: "/cash-sessions" },
     ],
   },
   {
@@ -60,8 +89,8 @@ const NAV = [
       { label: "Categorias",        path: "/categories" },
       { label: "Transferencias",    path: "/inventory/transfers" },
       { label: "Consumos Internos", path: "/inventory/internal-consumptions" },
-      { label: "Dev. Proveedores",  path: "/inventory/supplier-returns" },
       { label: "Bodegas",           path: "/warehouses" },
+      { label: "Sedes",             path: "/branches" },
       { label: "Proveedores",       path: "/suppliers" },
       { label: "Alertas de Stock",  path: "/stock-alerts" },
     ],
@@ -75,7 +104,23 @@ export default function Sidebar({ isCollapsed, setIsCollapsed, isMobileOpen, set
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
+  const { enabledModules, fetchFeatures } = useTenantStore();
   const currentPath = location.pathname;
+
+  useEffect(() => {
+    fetchFeatures();
+  }, [fetchFeatures]);
+
+  // enabledModules === null significa "todavía no cargó" — no ocultar nada
+  // mientras tanto para evitar un parpadeo de menú incompleto.
+  const isModuleEnabled = (id) => {
+    const moduleKey = NAV_ID_TO_MODULE[id];
+    if (!moduleKey) return true; // núcleo, sin gating
+    if (enabledModules === null) return true;
+    return enabledModules.includes(moduleKey);
+  };
+
+  const NAV_FILTERED = NAV.filter((item) => isModuleEnabled(item.id));
 
   const childIsActive = (child) => {
     const base = currentPath === child.path || currentPath.startsWith(child.path + "/");
@@ -84,7 +129,7 @@ export default function Sidebar({ isCollapsed, setIsCollapsed, isMobileOpen, set
     return true;
   };
 
-  const activeGroupId = NAV.find(item =>
+  const activeGroupId = NAV_FILTERED.find(item =>
     item.children?.some(c => childIsActive(c))
   )?.id ?? null;
 
@@ -103,7 +148,7 @@ export default function Sidebar({ isCollapsed, setIsCollapsed, isMobileOpen, set
 
   const NavContent = ({ inMobile = false }) => (
     <>
-      {NAV.map((item) => {
+      {NAV_FILTERED.map((item) => {
         const active = groupActive(item);
         const isOpen = openGroup === item.id;
 

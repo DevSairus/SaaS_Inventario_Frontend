@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { usePurchasesStore } from '../../store/purchasesStore';
 import useProductsStore from '../../store/productsStore';
 import Layout from '../../components/layout/Layout';
+import ConfirmPurchaseWithPaymentModal from '../../components/purchases/ConfirmPurchaseWithPaymentModal';
 import toast from 'react-hot-toast';
 
 const PurchaseDetailPage = () => {
@@ -23,6 +24,8 @@ const PurchaseDetailPage = () => {
   const [showReceiveModal, setShowReceiveModal] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [showReturnModal, setShowReturnModal] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [confirmingPurchase, setConfirmingPurchase] = useState(false);
   const [receivedItems, setReceivedItems] = useState([]);
   const [cancellationReason, setCancellationReason] = useState('');
 
@@ -43,12 +46,17 @@ const PurchaseDetailPage = () => {
     }
   }, [purchase]);
 
-  const handleConfirm = async () => {
-    if (window.confirm('¿Está seguro de confirmar esta compra? Ya no podrá editarla.')) {
-      const success = await confirmPurchase(id);
-      if (success) {
-        toast.success('Compra confirmada exitosamente');
-      }
+  const handleConfirm = () => {
+    setShowConfirmModal(true);
+  };
+
+  const handleConfirmWithPayment = async (paymentData) => {
+    setConfirmingPurchase(true);
+    const success = await confirmPurchase(id, paymentData);
+    setConfirmingPurchase(false);
+    if (success) {
+      setShowConfirmModal(false);
+      toast.success('Compra confirmada exitosamente');
     }
   };
 
@@ -393,6 +401,16 @@ const PurchaseDetailPage = () => {
           )}
         </div>
       </div>
+
+      {/* Confirm With Payment Modal */}
+      <ConfirmPurchaseWithPaymentModal
+        isOpen={showConfirmModal}
+        onClose={() => setShowConfirmModal(false)}
+        onConfirm={handleConfirmWithPayment}
+        purchaseTotal={parseFloat(purchase?.total_amount || 0)}
+        defaultCreditDays={purchase?.payment_terms || 0}
+        loading={confirmingPurchase}
+      />
 
       {/* Receive Modal */}
       {showReceiveModal && (

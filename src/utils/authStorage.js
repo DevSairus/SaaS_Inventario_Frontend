@@ -1,7 +1,28 @@
 export const STORAGE_KEYS = Object.freeze({
   TOKEN: 'token',
   USER: 'user',
+  ACTIVE_BRANCH: 'active_branch_id',
 });
+
+export function getStoredBranchId() {
+  try {
+    return localStorage.getItem(STORAGE_KEYS.ACTIVE_BRANCH) || null;
+  } catch {
+    return null;
+  }
+}
+
+export function setStoredBranchId(branchId) {
+  try {
+    if (branchId) {
+      localStorage.setItem(STORAGE_KEYS.ACTIVE_BRANCH, branchId);
+    } else {
+      localStorage.removeItem(STORAGE_KEYS.ACTIVE_BRANCH);
+    }
+  } catch {
+    /* noop */
+  }
+}
 
 export function getStoredToken() {
   try {
@@ -47,6 +68,7 @@ export function setStoredUser(user) {
 export function clearAuthStorage() {
   setStoredToken(null);
   setStoredUser(null);
+  setStoredBranchId(null);
 }
 
 function decodeJwtPayload(token) {

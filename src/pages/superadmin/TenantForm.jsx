@@ -15,6 +15,7 @@ const TenantForm = () => {
   const [loading, setLoading] = useState(isEdit);
   const [saving, setSaving] = useState(false);
   const [plans, setPlans] = useState([]);
+  const [modulesCatalog, setModulesCatalog] = useState([]);
   const [formData, setFormData] = useState({
     company_name: '',
     slug: '',
@@ -23,7 +24,9 @@ const TenantForm = () => {
     email: '',
     phone: '',
     address: '',
-    plan: 'free',
+    plan_id: '',
+    modules_enabled: [],
+    modules_disabled: [],
     admin_email: '',
     admin_password: '',
     admin_first_name: '',
@@ -32,6 +35,7 @@ const TenantForm = () => {
 
   useEffect(() => {
     fetchPlans();
+    fetchModulesCatalog();
     if (isEdit) {
       fetchTenant();
     }
@@ -44,6 +48,15 @@ const TenantForm = () => {
     } catch (error) {
       toast.error(error.response?.data?.message || 'No se pudieron cargar los planes disponibles.');
       toast.error('Error al cargar planes');
+    }
+  };
+
+  const fetchModulesCatalog = async () => {
+    try {
+      const { data } = await api.get('/superadmin/modules-catalog');
+      setModulesCatalog(data.modules || []);
+    } catch (error) {
+      // No bloquea el resto del formulario
     }
   };
 
@@ -62,7 +75,9 @@ const TenantForm = () => {
           email: data.tenant.email || '',
           phone: data.tenant.phone || '',
           address: data.tenant.address || '',
-          plan: data.tenant.plan || 'free',
+          plan_id: data.tenant.plan_id || '',
+          modules_enabled: data.tenant.modules_enabled || [],
+          modules_disabled: data.tenant.modules_disabled || [],
           // No cargar datos de admin en edición
           admin_email: '',
           admin_password: '',
@@ -97,6 +112,43 @@ const TenantForm = () => {
     }
   };
 
+  const toggleTenantModule = (key, listName) => {
+    const otherList = listName === 'modules_enabled' ? 'modules_disabled' : 'modules_enabled';
+    setFormData((prev) => {
+      const has = prev[listName].includes(key);
+      return {
+        ...prev,
+        [listName]: has ? prev[listName].filter((m) => m !== key) : [...prev[listName], key],
+        // un módulo no puede estar en ambas listas a la vez
+        [otherList]: prev[otherList].filter((m) => m !== key),
+      };
+    });
+  };
+
+  const selectedPlan = plans.find((p) => p.id === formData.plan_id);
+
+  const effectiveModules = (() => {
+    const base = new Set(selectedPlan?.modules || []);
+    formData.modules_enabled.forEach((m) => base.add(m));
+    formData.modules_disabled.forEach((m) => base.delete(m));
+
+    // Cierre transitivo de dependencias duras — misma fórmula que moduleAccess.js
+    let changed = true;
+    while (changed) {
+      changed = false;
+      for (const key of [...base]) {
+        const deps = modulesCatalog.find((m) => m.key === key)?.dependsOn || [];
+        for (const dep of deps) {
+          if (!base.has(dep)) {
+            base.add(dep);
+            changed = true;
+          }
+        }
+      }
+    }
+    return base;
+  })();
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -112,7 +164,9 @@ const TenantForm = () => {
           email: formData.email,
           phone: formData.phone,
           address: formData.address,
-          plan: formData.plan,
+          plan_id: formData.plan_id,
+          modules_enabled: formData.modules_enabled,
+          modules_disabled: formData.modules_disabled,
         });
 
         toast.success('Tenant actualizado correctamente');
@@ -257,20 +311,94 @@ const TenantForm = () => {
             <div>
               <label className="label">Plan *</label>
               <select
-                name="plan"
-                value={formData.plan}
+                name="plan_id"
+                value={formData.plan_id}
                 onChange={handleChange}
                 className="input"
                 required
               >
                 <option value="">Seleccionar plan...</option>
                 {plans.map((plan) => (
-                  <option key={plan.id} value={plan.slug}>
+                  <option key={plan.id} value={plan.id}>
                     {plan.name} - ${plan.monthly_price.toLocaleString('es-CO')}{' '}
                     COP/mes
                   </option>
                 ))}
               </select>
+            </div>
+          </Card>
+
+          {/* Módulos */}
+          <Card title="Módulos">
+            {selectedPlan && (
+              <div className="mb-4">
+                <p className="text-sm text-gray-600 mb-2">
+                  Módulos incluidos en el plan "{selectedPlan.name}" (no editables aquí — se administran desde Gestión de Planes):
+                </p>
+                <div className="flex flex-wrap gap-1">
+                  {(selectedPlan.modules || []).length === 0 && (
+                    <span className="text-sm text-gray-400">Este plan no trae módulos configurados</span>
+                  )}
+                  {(selectedPlan.modules || []).map((key) => (
+                    <span key={key} className="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-700">
+                      {modulesCatalog.find((m) => m.key === key)?.label || key}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="label">Agregar módulos a este tenant (add-on)</label>
+                <div className="space-y-1">
+                  {modulesCatalog.filter((m) => !m.reserved).map((mod) => (
+                    <label key={mod.key} className="flex items-center gap-2 text-sm text-gray-700">
+                      <input
+                        type="checkbox"
+                        checked={formData.modules_enabled.includes(mod.key)}
+                        onChange={() => toggleTenantModule(mod.key, 'modules_enabled')}
+                      />
+                      {mod.label}
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="label">Quitar módulos del plan a este tenant</label>
+                <div className="space-y-1">
+                  {modulesCatalog.filter((m) => !m.reserved).map((mod) => (
+                    <label key={mod.key} className="flex items-center gap-2 text-sm text-gray-700">
+                      <input
+                        type="checkbox"
+                        checked={formData.modules_disabled.includes(mod.key)}
+                        onChange={() => toggleTenantModule(mod.key, 'modules_disabled')}
+                      />
+                      {mod.label}
+                      {mod.dependsOn?.length > 0 && (
+                        <span className="text-xs text-gray-400">
+                          (depende de {mod.dependsOn.map((d) => modulesCatalog.find((m) => m.key === d)?.label || d).join(', ')})
+                        </span>
+                      )}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-4 pt-4 border-t">
+              <p className="text-sm font-medium text-gray-700 mb-1">Módulos efectivos para este tenant:</p>
+              <div className="flex flex-wrap gap-1">
+                {effectiveModules.size === 0 && (
+                  <span className="text-sm text-gray-400">Sin módulos habilitados</span>
+                )}
+                {[...effectiveModules].map((key) => (
+                  <span key={key} className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">
+                    {modulesCatalog.find((m) => m.key === key)?.label || key}
+                  </span>
+                ))}
+              </div>
             </div>
           </Card>
 

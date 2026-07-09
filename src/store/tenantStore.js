@@ -4,6 +4,7 @@ import axios from '../api/axios';
 
 const useTenantStore = create((set, get) => ({
   features: null,  // null = todavía no cargado
+  enabledModules: null, // null = todavía no cargado; array de module keys una vez cargado
   loading: false,
 
   fetchFeatures: async () => {
@@ -24,13 +25,16 @@ const useTenantStore = create((set, get) => ({
           technician_field_enabled: false, // default: deshabilitado (igual que placa)
           ...rawFeatures,
         };
-        set({ features, loading: false });
+        set({ features, enabledModules: res.data.data.effective_modules || [], loading: false });
       }
     } catch (error) {
       if (import.meta.env.DEV) {
         console.warn('[tenantStore] fetchFeatures fallo, usando defaults:', error);
       }
-      // En caso de error, usar defaults para no romper la UI
+      // En caso de error, usar defaults para no romper la UI.
+      // enabledModules queda null (no [] ) para no ocultarle todo el menú a un
+      // usuario válido por un simple error de red — TenantRoute/Sidebar tratan
+      // null como "todavía no se sabe, no bloquear todavía".
       set({ features: { hide_remision_tax: true }, loading: false });
     }
   },

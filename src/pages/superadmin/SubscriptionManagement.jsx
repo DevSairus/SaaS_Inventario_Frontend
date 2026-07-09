@@ -136,6 +136,7 @@ const SubscriptionManagement = () => {
     past_due: 'red',
     suspended: 'red',
     cancelled: 'gray',
+    expired: 'gray',
   };
 
   const statusIcons = {
@@ -144,9 +145,10 @@ const SubscriptionManagement = () => {
     past_due: AlertCircle,
     suspended: AlertCircle,
     cancelled: XCircle,
+    expired: XCircle,
   };
 
-  const StatusIcon = statusIcons[subscription.status];
+  const StatusIcon = statusIcons[subscription.status] || AlertCircle;
 
   return (
     <div className="space-y-6">

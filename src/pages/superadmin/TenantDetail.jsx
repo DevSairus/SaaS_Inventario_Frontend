@@ -28,6 +28,7 @@ const TenantDetail = () => {
   const [tenant, setTenant] = useState(null);
   const [users, setUsers] = useState([]);
   const [stats, setStats] = useState(null);
+  const [modulesCatalog, setModulesCatalog] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [toggling, setToggling] = useState(false);
@@ -36,6 +37,9 @@ const TenantDetail = () => {
     if (id) {
       fetchData();
     }
+    api.get('/superadmin/modules-catalog')
+      .then(({ data }) => setModulesCatalog(data.modules || []))
+      .catch(() => {});
   }, [id]);
 
   const fetchData = async () => {
@@ -260,23 +264,30 @@ const TenantDetail = () => {
             <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-sm font-medium text-gray-700">Plan Actual</span>
-                <Badge 
-                  color={
-                    tenant.plan === 'enterprise' ? 'green' :
-                    tenant.plan === 'premium' ? 'purple' :
-                    tenant.plan === 'basic' ? 'blue' : 'gray'
-                  }
-                  size="lg"
-                >
-                  {tenant.plan?.toUpperCase() || 'FREE'}
+                <Badge color="blue" size="lg">
+                  {tenant.subscription_plan?.name || tenant.plan?.toUpperCase() || 'FREE'}
                 </Badge>
               </div>
-              
+
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium text-gray-700">Estado Suscripción</span>
                 <Badge color={getStatusColor(tenant.subscription_status)}>
                   {tenant.subscription_status?.toUpperCase() || 'TRIAL'}
                 </Badge>
+              </div>
+
+              <div className="mt-3 pt-3 border-t border-blue-200">
+                <span className="text-sm font-medium text-gray-700 block mb-2">Módulos habilitados</span>
+                <div className="flex flex-wrap gap-1">
+                  {(tenant.effective_modules || []).length === 0 && (
+                    <span className="text-sm text-gray-400">Sin módulos habilitados</span>
+                  )}
+                  {(tenant.effective_modules || []).map((key) => (
+                    <Badge key={key} color="green">
+                      {modulesCatalog.find((m) => m.key === key)?.label || key}
+                    </Badge>
+                  ))}
+                </div>
               </div>
 
               {/* Mostrar información de la suscripción si existe */}

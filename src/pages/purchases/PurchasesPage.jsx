@@ -3,6 +3,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { usePurchasesStore } from '../../store/purchasesStore';
 import { useSuppliersStore } from '../../store/suppliersStore';
+import useBranchStore from '../../store/branchStore';
 import Layout from '../../components/layout/Layout';
 import InvoiceImportModal from '../../components/purchases/InvoiceImportModal';
 import {
@@ -45,15 +46,17 @@ const PurchasesPage = () => {
 
   const { purchases, stats, isLoading, pagination, filters, fetchPurchases, fetchStats, setFilters, setPage, deletePurchase } = usePurchasesStore();
   const { fetchSuppliers, suppliers } = useSuppliersStore();
+  const { branches, fetchBranches } = useBranchStore();
 
   const [showImportModal, setShowImportModal] = useState(false);
   const [showFilters, setShowFilters]         = useState(false);
   const [search, setSearch]                   = useState('');
-  const [serverFilters, setServerFilters]     = useState({ status: '', supplier_id: '' });
+  const [serverFilters, setServerFilters]     = useState({ status: '', supplier_id: '', branch_id: '' });
 
   useEffect(() => {
     fetchStats();
     fetchSuppliers();
+    fetchBranches();
   }, []);
 
   useEffect(() => {
@@ -81,7 +84,7 @@ const PurchasesPage = () => {
 
   const clearAll = () => {
     setSearch('');
-    setServerFilters({ status: '', supplier_id: '' });
+    setServerFilters({ status: '', supplier_id: '', branch_id: '' });
   };
 
   /* ── render ─────────────────────────────────────────────── */
@@ -214,6 +217,22 @@ const PurchasesPage = () => {
                   <option value="cancelled">Cancelada</option>
                 </select>
               </div>
+
+              {branches.length > 1 && (
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1">Sede</label>
+                  <select
+                    value={serverFilters.branch_id}
+                    onChange={(e) => setServerFilters(f => ({ ...f, branch_id: e.target.value }))}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500"
+                  >
+                    <option value="">Todas las sedes</option>
+                    {branches.map(b => (
+                      <option key={b.id} value={b.id}>{b.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
           )}
         </div>

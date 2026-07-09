@@ -60,6 +60,27 @@ function SaleFormPage() {
 
   const isEditMode = Boolean(id);
 
+  // Para "hoy": usa componentes LOCALES (evita el corrimiento de día que
+  // causa toISOString(), que primero convierte a UTC).
+  const toLocalDateString = (date) => {
+    const d = date instanceof Date ? date : new Date(date);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  // Para fechas YA guardadas en BD (sale_date se persiste como medianoche
+  // UTC de la fecha elegida): hay que leerla con getters UTC, si no se
+  // repite el corrimiento pero al revés (un día menos en zonas UTC-x).
+  const toStoredDateString = (date) => {
+    const d = date instanceof Date ? date : new Date(date);
+    const year = d.getUTCFullYear();
+    const month = String(d.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(d.getUTCDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   const [warehouses, setWarehouses] = useState([]);
   const [technicians, setTechnicians] = useState([]);
   const [formData, setFormData] = useState({
@@ -67,7 +88,7 @@ function SaleFormPage() {
     warehouse_id: '',
     payment_method: 'efectivo',
     document_type: null,
-    sale_date: new Date().toISOString().split('T')[0],
+    sale_date: toLocalDateString(new Date()),
     notes: '',
     vehicle_plate: '',
     mileage: '',
@@ -191,8 +212,8 @@ function SaleFormPage() {
         payment_method: currentSale.payment_method || 'efectivo',
         document_type: currentSale.document_type || null,
         sale_date: currentSale.sale_date 
-          ? new Date(currentSale.sale_date).toISOString().split('T')[0] 
-          : new Date().toISOString().split('T')[0],
+          ? toStoredDateString(currentSale.sale_date) 
+          : toLocalDateString(new Date()),
         notes: currentSale.notes || '',
         vehicle_plate: currentSale.vehicle_plate || '',
         mileage: currentSale.mileage || '',
@@ -364,6 +385,13 @@ function SaleFormPage() {
     e?.preventDefault();
     if (items.length === 0) {
       toast('Debe agregar al menos un producto');
+      return;
+    }
+    const hasTrackedProducts = items.some(
+      item => item.item_type !== 'service' && item.item_type !== 'free_line' && item.product_id
+    );
+    if (hasTrackedProducts && !formData.warehouse_id) {
+      toast('Esta venta tiene productos: selecciona una bodega para poder confirmarla después');
       return;
     }
     await submitSale(formData.document_type);

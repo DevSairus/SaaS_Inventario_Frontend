@@ -1,5 +1,6 @@
 // frontend/src/pages/dian/DianConfigPage.jsx
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   getDianConfig, updateDianConfig,
   getDianResolutions, createDianResolution, deactivateResolution,
@@ -7,6 +8,7 @@ import {
   sendAutoTestDocuments, sendFullHabilitacionSet,
   diagnoseCert,
 } from '../../api/dian';
+import { branchesService } from '../../api/branches';
 import Layout from '../../components/layout/Layout';
 import {
   Cog6ToothIcon,
@@ -64,9 +66,11 @@ const selectCls = inputCls;
  * DianConfigPage
  * ════════════════════════════════════════════════════════════════════ */
 export default function DianConfigPage() {
+  const navigate = useNavigate();
   const [tab, setTab] = useState('config');
   const [cfg, setCfg] = useState({});
   const [resolutions, setResolutions] = useState([]);
+  const [branches, setBranches] = useState([]);
   const [habilitacion, setHabilitacion] = useState(null);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
@@ -77,6 +81,7 @@ export default function DianConfigPage() {
   const [toast, setToast] = useState(null);
   const [showResForm, setShowResForm] = useState(false);
   const [resForm, setResForm] = useState({
+    branch_id: '',
     resolution_number: '', resolution_date: '', prefix: '',
     from_number: '', to_number: '', valid_from: '', valid_to: '',
     document_type: 'invoice', is_test: true, notes: '',
@@ -93,10 +98,11 @@ export default function DianConfigPage() {
 
   async function loadAll() {
     try {
-      const [cfgRes, resRes, habRes] = await Promise.all([
+      const [cfgRes, resRes, habRes, branchesRes] = await Promise.all([
         getDianConfig(),
         getDianResolutions(),
         getHabilitacionStatus(),
+        branchesService.getAll(),
       ]);
       const raw = cfgRes.data.data || {};
       // Guardar flags de campos ya configurados antes de limpiar
@@ -112,6 +118,12 @@ export default function DianConfigPage() {
       setCfg(clean);
       setResolutions(resRes.data.data || []);
       setHabilitacion(habRes.data.data);
+      const branchList = branchesRes.data || [];
+      setBranches(branchList);
+      const mainBranch = branchList.find(b => b.is_main) || branchList[0];
+      if (mainBranch) {
+        setResForm(p => ({ ...p, branch_id: p.branch_id || mainBranch.id }));
+      }
     } catch (e) {
       showToast('Error cargando configuración DIAN', 'error');
     }
@@ -165,11 +177,17 @@ export default function DianConfigPage() {
 
   async function handleCreateResolution(e) {
     e.preventDefault();
+    if (!resForm.branch_id) {
+      showToast('Selecciona la sede para esta resolución', 'error');
+      return;
+    }
     try {
       await createDianResolution(resForm);
       showToast('Resolución creada exitosamente');
       setShowResForm(false);
+      const mainBranch = branches.find(b => b.is_main) || branches[0];
       setResForm({
+        branch_id: mainBranch?.id || '',
         resolution_number: '', resolution_date: '', prefix: '',
         from_number: '', to_number: '', valid_from: '', valid_to: '',
         document_type: 'invoice', is_test: true, notes: '',
@@ -456,10 +474,31 @@ export default function DianConfigPage() {
               </p>
             </div>
             <button onClick={() => setShowResForm(true)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">
+              disabled={branches.length === 0}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed">
               + Nueva Resolución
             </button>
           </div>
+
+          {/* Aviso explícito: no se puede crear resolución sin sedes registradas */}
+          {branches.length === 0 && (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
+              <ExclamationTriangleIcon className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-amber-800">
+                  Aún no tienes sedes registradas
+                </p>
+                <p className="text-sm text-amber-700 mt-0.5">
+                  Cada resolución DIAN debe asociarse a una sede. Crea al menos una sede
+                  (por ejemplo, tu sede principal) antes de registrar una resolución.
+                </p>
+              </div>
+              <button onClick={() => navigate('/branches')}
+                className="px-3 py-1.5 bg-amber-600 text-white rounded-lg text-sm font-medium hover:bg-amber-700 whitespace-nowrap">
+                Crear sede
+              </button>
+            </div>
+          )}
 
           {/* Formulario nueva resolución */}
           {showResForm && (
@@ -467,6 +506,15 @@ export default function DianConfigPage() {
               className="bg-blue-50 border border-blue-200 rounded-xl p-5 space-y-4">
               <h4 className="font-semibold text-gray-900">Nueva Resolución DIAN</h4>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Field label="Sede" required hint="Cada resolución pertenece a una sola sede">
+                  <select className={selectCls} required value={resForm.branch_id}
+                    onChange={e => setResForm(p => ({ ...p, branch_id: e.target.value }))}>
+                    <option value="">Selecciona una sede...</option>
+                    {branches.map(b => (
+                      <option key={b.id} value={b.id}>{b.name}{b.is_main ? ' (Principal)' : ''}</option>
+                    ))}
+                  </select>
+                </Field>
                 <Field label="Número de Resolución" required>
                   <input className={inputCls} required value={resForm.resolution_number}
                     placeholder="18760000001"
@@ -539,6 +587,11 @@ export default function DianConfigPage() {
                   <div className="space-y-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-semibold text-gray-900">Res. {r.resolution_number}</span>
+                      {r.branch_id && (
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 font-medium">
+                          {branches.find(b => b.id === r.branch_id)?.name || 'Sede'}
+                        </span>
+                      )}
                       <span className={`text-xs px-2 py-0.5 rounded-full font-medium
                         ${r.is_test ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}`}>
                         {r.is_test ? 'Habilitación' : 'Producción'}

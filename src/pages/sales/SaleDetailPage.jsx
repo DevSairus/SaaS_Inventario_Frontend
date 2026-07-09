@@ -16,7 +16,7 @@ import Button from '../../components/common/Button';
 import Badge from '../../components/common/Badge';
 import Loading from '../../components/common/Loading';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
-import { formatCurrency, formatDate, formatDateTime } from '../../utils/formatters';
+import { formatCurrency, formatDate, formatDateTime, toLocalDateString } from '../../utils/formatters';
 import Layout from '../../components/layout/Layout';
 import salesApi from '../../api/sales';
 import { movementsAPI } from '../../api/movements';
@@ -56,7 +56,7 @@ export default function SaleDetailPage() {
   const [paymentData, setPaymentData] = useState({
     amount: '',
     payment_method: 'efectivo',
-    payment_date: new Date().toISOString().split('T')[0]
+    payment_date: toLocalDateString()
   });
   const [savingPayment, setSavingPayment] = useState(false);
   const [saleMovements, setSaleMovements] = useState([]);
@@ -91,7 +91,7 @@ export default function SaleDetailPage() {
         await salesApi.registerPayment(id, {
           amount: paymentData.paid_amount ?? currentSale?.total_amount,
           payment_method: paymentData.payment_method,
-          payment_date: new Date().toISOString().split('T')[0],
+          payment_date: toLocalDateString(),
         });
       } else {
         await confirmSale(id, paymentData);
@@ -145,7 +145,7 @@ export default function SaleDetailPage() {
         payment_date: paymentData.payment_date
       });
       setShowPaymentForm(false);
-      setPaymentData({ amount: '', payment_method: 'efectivo', payment_date: new Date().toISOString().split('T')[0] });
+      setPaymentData({ amount: '', payment_method: 'efectivo', payment_date: toLocalDateString() });
       const newHistory = result?.data?.data?.payment_history || [];
       setLastPaymentIndex(newHistory.length - 1);
       await fetchSaleById(id);
@@ -402,7 +402,7 @@ export default function SaleDetailPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm text-gray-600">Fecha de Venta</p>
-                    <p className="font-medium">{formatDateTime(sale.sale_date)}</p>
+                    <p className="font-medium">{formatDate(sale.sale_date)}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-600">Método de Pago</p>

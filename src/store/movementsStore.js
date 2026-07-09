@@ -17,8 +17,9 @@ export const useMovementsStore = create((set, get) => ({
   filters: {
     search: '',
     product_id: '',
-    movement_type: '',
+    direction: '',
     movement_reason: '',
+    branch_id: '',
     start_date: '',
     end_date: '',
     sort_by: 'movement_date',

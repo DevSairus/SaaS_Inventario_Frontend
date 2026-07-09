@@ -22,6 +22,10 @@ import SalesPage from './pages/sales/SalesPage';
 import SaleFormPage from './pages/sales/SaleFormPage';
 import SaleDetailPage from './pages/sales/SaleDetailPage';
 import AccountsReceivablePage from './pages/sales/AccountsReceivablePage';
+import AccountsPayablePage from './pages/finance/AccountsPayablePage';
+import ExpensesPage from './pages/finance/ExpensesPage';
+import CashFlowPage from './pages/finance/CashFlowPage';
+import CashSessionsPage from './pages/finance/CashSessionsPage';
 import WorkOrdersPage from './pages/workshop/WorkOrdersPage';
 import WorkOrderFormPage from './pages/workshop/WorkOrderFormPage';
 import WorkOrderDetailPage from './pages/workshop/WorkOrderDetailPage';
@@ -35,6 +39,8 @@ import WorkshopReportPage from './pages/workshop/WorkshopReportPage';
 import CustomersPage from './pages/customers/CustomersPage';
 import CustomerDetailPage from './pages/customers/CustomerDetailPage';
 import WarehousesPage from './pages/warehouses/WarehousesPage';
+import BranchesPage from './pages/branches/BranchesPage';
+import NoBranchAssignedPage from './pages/branches/NoBranchAssignedPage';
 import TenantSettingsPage from './pages/settings/TenantSettingsPage';
 import WhatsAppSettingsPage from './pages/settings/WhatsAppSettingsPage';
 import ReportsPage from './pages/reports/ReportsPage';
@@ -81,6 +87,7 @@ import SessionMonitor from './components/auth/SessionMonitor';
 import { Toaster } from 'react-hot-toast';
 import PrivateRoute from './components/auth/PrivateRoute';
 import useAuthStore from './store/authStore';
+import useTenantStore from './store/tenantStore';
 import SessionKeepAlive from './components/SessionKeepAlive';
 import { ROLES, ROUTES } from './utils/constants';
 
@@ -99,10 +106,37 @@ function SuperAdminRoute({ children }) {
   return children;
 }
 
-function TenantRoute({ children }) {
+const MODULE_LABELS = {
+  workshop: 'Taller',
+  sales: 'Ventas',
+  inventory: 'Inventario',
+  receivables: 'Cartera',
+  treasury: 'Tesorería',
+};
+
+function ModuleNotIncluded({ module }) {
+  return (
+    <div className="flex flex-col items-center justify-center h-full py-24 text-center px-4">
+      <h2 className="text-xl font-semibold text-gray-800 mb-2">
+        El módulo "{MODULE_LABELS[module] || module}" no está incluido en tu plan actual
+      </h2>
+      <p className="text-gray-500 max-w-md">
+        Contáctanos para activarlo y seguir usando esta funcionalidad.
+      </p>
+    </div>
+  );
+}
+
+function TenantRoute({ children, module }) {
   const { user, isAuthenticated } = useAuthStore();
+  const { enabledModules } = useTenantStore();
   if (!isAuthenticated) return <Navigate to={ROUTES.LOGIN} replace />;
   if (user?.role === ROLES.SUPER_ADMIN) return <Navigate to={ROUTES.SUPERADMIN_DASHBOARD} replace />;
+  // enabledModules === null: todavía no cargó — dejar pasar, el backend
+  // sigue siendo la barrera real (403) si el módulo no está incluido.
+  if (module && enabledModules !== null && !enabledModules.includes(module)) {
+    return <ModuleNotIncluded module={module} />;
+  }
   return children;
 }
 
@@ -132,6 +166,7 @@ function App() {
         <Route path="/login"          element={<LoginPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/ot/:token"      element={<WorkOrderPublicPage />} />
+        <Route path="/sin-sede"       element={<NoBranchAssignedPage />} />
 
         {/* ─── Super Admin ─────────────────────────────────── */}
         <Route
@@ -158,67 +193,74 @@ function App() {
 
         {/* ─── Tenant ──────────────────────────────────────── */}
         <Route path="dashboard"  element={<TenantRoute><DashboardPage /></TenantRoute>} />
-        <Route path="products"   element={<TenantRoute><ProductsPage /></TenantRoute>} />
-        <Route path="categories" element={<TenantRoute><CategoriesPage /></TenantRoute>} />
-        <Route path="suppliers"  element={<TenantRoute><SuppliersPage /></TenantRoute>} />
+        <Route path="products"   element={<TenantRoute module="inventory"><ProductsPage /></TenantRoute>} />
+        <Route path="categories" element={<TenantRoute module="inventory"><CategoriesPage /></TenantRoute>} />
+        <Route path="suppliers"  element={<TenantRoute module="inventory"><SuppliersPage /></TenantRoute>} />
 
         {/* Compras */}
-        <Route path="purchases"          element={<TenantRoute><PurchasesPage /></TenantRoute>} />
-        <Route path="purchases/new"      element={<TenantRoute><PurchaseFormPage /></TenantRoute>} />
-        <Route path="purchases/edit/:id" element={<TenantRoute><PurchaseFormPage /></TenantRoute>} />
-        <Route path="purchases/:id"      element={<TenantRoute><PurchaseDetailPage /></TenantRoute>} />
+        <Route path="purchases"          element={<TenantRoute module="inventory"><PurchasesPage /></TenantRoute>} />
+        <Route path="purchases/new"      element={<TenantRoute module="inventory"><PurchaseFormPage /></TenantRoute>} />
+        <Route path="purchases/edit/:id" element={<TenantRoute module="inventory"><PurchaseFormPage /></TenantRoute>} />
+        <Route path="purchases/:id"      element={<TenantRoute module="inventory"><PurchaseDetailPage /></TenantRoute>} />
 
         {/* Ajustes */}
-        <Route path="adjustments"          element={<TenantRoute><AdjustmentsPage /></TenantRoute>} />
-        <Route path="adjustments/new"      element={<TenantRoute><AdjustmentFormPage /></TenantRoute>} />
-        <Route path="adjustments/edit/:id" element={<TenantRoute><AdjustmentFormPage /></TenantRoute>} />
-        <Route path="adjustments/:id"      element={<TenantRoute><AdjustmentDetailPage /></TenantRoute>} />
+        <Route path="adjustments"          element={<TenantRoute module="inventory"><AdjustmentsPage /></TenantRoute>} />
+        <Route path="adjustments/new"      element={<TenantRoute module="inventory"><AdjustmentFormPage /></TenantRoute>} />
+        <Route path="adjustments/edit/:id" element={<TenantRoute module="inventory"><AdjustmentFormPage /></TenantRoute>} />
+        <Route path="adjustments/:id"      element={<TenantRoute module="inventory"><AdjustmentDetailPage /></TenantRoute>} />
 
-        <Route path="movements"   element={<TenantRoute><MovementsPage /></TenantRoute>} />
-        <Route path="stock-alerts" element={<TenantRoute><StockAlertsPage /></TenantRoute>} />
+        <Route path="movements"   element={<TenantRoute module="inventory"><MovementsPage /></TenantRoute>} />
+        <Route path="stock-alerts" element={<TenantRoute module="inventory"><StockAlertsPage /></TenantRoute>} />
 
         {/* ── Ventas ─────────────────────────────────── */}
-        <Route path="sales"          element={<TenantRoute><SalesPage /></TenantRoute>} />
-        <Route path="sales/new"      element={<TenantRoute><SaleFormPage /></TenantRoute>} />
-        <Route path="sales/:id/edit" element={<TenantRoute><SaleFormPage /></TenantRoute>} />
-        <Route path="accounts-receivable" element={<TenantRoute><AccountsReceivablePage /></TenantRoute>} />
+        <Route path="sales"          element={<TenantRoute module="sales"><SalesPage /></TenantRoute>} />
+        <Route path="sales/new"      element={<TenantRoute module="sales"><SaleFormPage /></TenantRoute>} />
+        <Route path="sales/:id/edit" element={<TenantRoute module="sales"><SaleFormPage /></TenantRoute>} />
+        <Route path="accounts-receivable" element={<TenantRoute module="receivables"><AccountsReceivablePage /></TenantRoute>} />
+
+        {/* ── Tesorería ──────────────────────────────── */}
+        <Route path="accounts-payable" element={<TenantRoute module="treasury"><AccountsPayablePage /></TenantRoute>} />
+        <Route path="expenses"         element={<TenantRoute module="treasury"><ExpensesPage /></TenantRoute>} />
+        <Route path="cashflow"         element={<TenantRoute module="treasury"><CashFlowPage /></TenantRoute>} />
+        <Route path="cash-sessions"    element={<TenantRoute module="treasury"><CashSessionsPage /></TenantRoute>} />
 
         {/* ── Taller ─────────────────────────────────── */}
-        <Route path="workshop/work-orders"             element={<TenantRoute><WorkOrdersPage /></TenantRoute>} />
-        <Route path="workshop/report"                  element={<TenantRoute><WorkshopReportPage /></TenantRoute>} />
-        <Route path="workshop/work-orders/new"         element={<TenantRoute><WorkOrderFormPage /></TenantRoute>} />
-        <Route path="workshop/work-orders/:id"         element={<TenantRoute><WorkOrderDetailPage /></TenantRoute>} />
-        <Route path="workshop/vehicles"                element={<TenantRoute><VehiclesPage /></TenantRoute>} />
-        <Route path="workshop/vehicles/:id"            element={<TenantRoute><VehicleDetailPage /></TenantRoute>} />
-        <Route path="workshop/productivity"            element={<TenantRoute><TechnicianProductivityPage /></TenantRoute>} />
-        <Route path="workshop/commission-settlements"  element={<TenantRoute><CommissionSettlementsPage /></TenantRoute>} />
-        <Route path="workshop/commission-settlements/:id" element={<TenantRoute><CommissionSettlementDetailPage /></TenantRoute>} />
-        <Route path="workshop/commission-products"     element={<TenantRoute><CommissionProductsReportPage /></TenantRoute>} />
+        <Route path="workshop/work-orders"             element={<TenantRoute module="workshop"><WorkOrdersPage /></TenantRoute>} />
+        <Route path="workshop/report"                  element={<TenantRoute module="workshop"><WorkshopReportPage /></TenantRoute>} />
+        <Route path="workshop/work-orders/new"         element={<TenantRoute module="workshop"><WorkOrderFormPage /></TenantRoute>} />
+        <Route path="workshop/work-orders/:id"         element={<TenantRoute module="workshop"><WorkOrderDetailPage /></TenantRoute>} />
+        <Route path="workshop/vehicles"                element={<TenantRoute module="workshop"><VehiclesPage /></TenantRoute>} />
+        <Route path="workshop/vehicles/:id"            element={<TenantRoute module="workshop"><VehicleDetailPage /></TenantRoute>} />
+        <Route path="workshop/productivity"            element={<TenantRoute module="workshop"><TechnicianProductivityPage /></TenantRoute>} />
+        <Route path="workshop/commission-settlements"  element={<TenantRoute module="workshop"><CommissionSettlementsPage /></TenantRoute>} />
+        <Route path="workshop/commission-settlements/:id" element={<TenantRoute module="workshop"><CommissionSettlementDetailPage /></TenantRoute>} />
+        <Route path="workshop/commission-products"     element={<TenantRoute module="workshop"><CommissionProductsReportPage /></TenantRoute>} />
 
         {/* Customer Returns — ANTES de la ruta dinámica :id */}
-        <Route path="sales/customer-returns"      element={<TenantRoute><CustomerReturnsPage /></TenantRoute>} />
-        <Route path="sales/customer-returns/new"  element={<TenantRoute><CustomerReturnFormPage /></TenantRoute>} />
-        <Route path="sales/customer-returns/:id"  element={<TenantRoute><CustomerReturnDetailPage /></TenantRoute>} />
+        <Route path="sales/customer-returns"      element={<TenantRoute module="sales"><CustomerReturnsPage /></TenantRoute>} />
+        <Route path="sales/customer-returns/new"  element={<TenantRoute module="sales"><CustomerReturnFormPage /></TenantRoute>} />
+        <Route path="sales/customer-returns/:id"  element={<TenantRoute module="sales"><CustomerReturnDetailPage /></TenantRoute>} />
 
         {/* Sale Detail — después de las rutas específicas */}
-        <Route path="sales/:id" element={<TenantRoute><SaleDetailPage /></TenantRoute>} />
+        <Route path="sales/:id" element={<TenantRoute module="sales"><SaleDetailPage /></TenantRoute>} />
 
         {/* Clientes */}
-        <Route path="customers"     element={<TenantRoute><CustomersPage /></TenantRoute>} />
-        <Route path="customers/:id" element={<TenantRoute><CustomerDetailPage /></TenantRoute>} />
+        <Route path="customers"     element={<TenantRoute module="sales"><CustomersPage /></TenantRoute>} />
+        <Route path="customers/:id" element={<TenantRoute module="sales"><CustomerDetailPage /></TenantRoute>} />
 
         {/* ── Inventario – Movimientos Avanzados ────── */}
-        <Route path="inventory/supplier-returns"        element={<TenantRoute><SupplierReturnsPage /></TenantRoute>} />
-        <Route path="inventory/supplier-returns/new"    element={<TenantRoute><SupplierReturnFormPage /></TenantRoute>} />
-        <Route path="inventory/supplier-returns/:id"    element={<TenantRoute><SupplierReturnDetailPage /></TenantRoute>} />
-        <Route path="inventory/transfers"              element={<TenantRoute><TransfersPage /></TenantRoute>} />
-        <Route path="inventory/transfers/new"          element={<TenantRoute><TransferFormPage /></TenantRoute>} />
-        <Route path="inventory/transfers/:id/receive"  element={<TenantRoute><TransferReceivePage /></TenantRoute>} />
-        <Route path="inventory/transfers/:id"          element={<TenantRoute><TransferDetailPage /></TenantRoute>} />
-        <Route path="inventory/internal-consumptions"      element={<TenantRoute><InternalConsumptionsPage /></TenantRoute>} />
-        <Route path="inventory/internal-consumptions/new"  element={<TenantRoute><InternalConsumptionFormPage /></TenantRoute>} />
-        <Route path="inventory/internal-consumptions/:id"  element={<TenantRoute><InternalConsumptionDetailPage /></TenantRoute>} />
-        <Route path="warehouses" element={<TenantRoute><WarehousesPage /></TenantRoute>} />
+        <Route path="inventory/supplier-returns"        element={<TenantRoute module="inventory"><SupplierReturnsPage /></TenantRoute>} />
+        <Route path="inventory/supplier-returns/new"    element={<TenantRoute module="inventory"><SupplierReturnFormPage /></TenantRoute>} />
+        <Route path="inventory/supplier-returns/:id"    element={<TenantRoute module="inventory"><SupplierReturnDetailPage /></TenantRoute>} />
+        <Route path="inventory/transfers"              element={<TenantRoute module="inventory"><TransfersPage /></TenantRoute>} />
+        <Route path="inventory/transfers/new"          element={<TenantRoute module="inventory"><TransferFormPage /></TenantRoute>} />
+        <Route path="inventory/transfers/:id/receive"  element={<TenantRoute module="inventory"><TransferReceivePage /></TenantRoute>} />
+        <Route path="inventory/transfers/:id"          element={<TenantRoute module="inventory"><TransferDetailPage /></TenantRoute>} />
+        <Route path="inventory/internal-consumptions"      element={<TenantRoute module="inventory"><InternalConsumptionsPage /></TenantRoute>} />
+        <Route path="inventory/internal-consumptions/new"  element={<TenantRoute module="inventory"><InternalConsumptionFormPage /></TenantRoute>} />
+        <Route path="inventory/internal-consumptions/:id"  element={<TenantRoute module="inventory"><InternalConsumptionDetailPage /></TenantRoute>} />
+        <Route path="warehouses" element={<TenantRoute module="inventory"><WarehousesPage /></TenantRoute>} />
+        <Route path="branches"   element={<TenantRoute><BranchesPage /></TenantRoute>} />
 
         {/* ── Configuración y Reportes ───────────────── */}
         <Route path="settings" element={<TenantRoute><TenantSettingsPage /></TenantRoute>} />
@@ -230,9 +272,9 @@ function App() {
         <Route path="users/:id/edit" element={<TenantRoute><UserForm /></TenantRoute>} />
         <Route path="profile"  element={<TenantRoute><ProfilePage /></TenantRoute>} />
 
-        {/* ✅ DIAN — Facturación Electrónica ────────── */}
-        <Route path="dian/config"  element={<TenantRoute><DianConfigPage /></TenantRoute>} />
-        <Route path="dian/eventos" element={<TenantRoute><DianEventsPage /></TenantRoute>} />
+        {/* ✅ DIAN — Facturación Electrónica: vive dentro de Ventas ── */}
+        <Route path="dian/config"  element={<TenantRoute module="sales"><DianConfigPage /></TenantRoute>} />
+        <Route path="dian/eventos" element={<TenantRoute module="sales"><DianEventsPage /></TenantRoute>} />
 
         {/* 404 */}
         <Route path="*" element={<Navigate to="/" replace />} />

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Edit, Trash2, Power, RefreshCw } from 'lucide-react';
 import { subscriptionsAPI } from '@api/subscriptions';
+import api from '@api/axios';
 import Card from '@components/common/Card';
 import Button from '@components/common/Button';
 import Badge from '@components/common/Badge';
@@ -8,6 +9,7 @@ import Loading from '@components/common/Loading';
 
 const SubscriptionPlansManagement = () => {
   const [plans, setPlans] = useState([]);
+  const [modulesCatalog, setModulesCatalog] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showModal, setShowModal] = useState(false);
@@ -22,11 +24,13 @@ const SubscriptionPlansManagement = () => {
     max_clients: 100,
     max_invoices_per_month: 100,
     features: {},
+    modules: [],
     is_active: true,
   });
 
   useEffect(() => {
     fetchPlans();
+    fetchModulesCatalog();
   }, []);
 
   const fetchPlans = async () => {
@@ -40,6 +44,25 @@ const SubscriptionPlansManagement = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchModulesCatalog = async () => {
+    try {
+      const { data } = await api.get('/superadmin/modules-catalog');
+      setModulesCatalog(data.modules || []);
+    } catch (err) {
+      // No es crítico para el resto de la página — se puede gestionar el plan sin módulos.
+    }
+  };
+
+  const toggleModule = (key) => {
+    setFormData((prev) => {
+      const has = prev.modules.includes(key);
+      return {
+        ...prev,
+        modules: has ? prev.modules.filter((m) => m !== key) : [...prev.modules, key],
+      };
+    });
   };
 
   const handleSubmit = async (e) => {
@@ -71,6 +94,7 @@ const SubscriptionPlansManagement = () => {
       max_clients: plan.max_clients,
       max_invoices_per_month: plan.max_invoices_per_month,
       features: plan.features || {},
+      modules: plan.modules || [],
       is_active: plan.is_active,
     });
     setShowModal(true);
@@ -106,6 +130,7 @@ const SubscriptionPlansManagement = () => {
       max_clients: 100,
       max_invoices_per_month: 100,
       features: {},
+      modules: [],
       is_active: true,
     });
   };
@@ -175,6 +200,16 @@ const SubscriptionPlansManagement = () => {
                 <p>👨‍👩‍👧‍👦 {plan.max_clients} clientes</p>
                 <p>{plan.max_invoices_per_month} facturas/mes</p>
               </div>
+
+              {(plan.modules || []).length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {plan.modules.map((key) => (
+                    <Badge key={key} color="blue">
+                      {modulesCatalog.find((m) => m.key === key)?.label || key}
+                    </Badge>
+                  ))}
+                </div>
+              )}
 
               <div className="flex gap-2">
                 <Button
@@ -327,6 +362,27 @@ const SubscriptionPlansManagement = () => {
                       }
                       required
                     />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="label">Módulos incluidos</label>
+                  <div className="grid grid-cols-2 gap-2 mt-1">
+                    {modulesCatalog.map((mod) => (
+                      <label
+                        key={mod.key}
+                        className={`flex items-center gap-2 text-sm ${mod.reserved ? 'text-gray-400' : 'text-gray-700'}`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={formData.modules.includes(mod.key)}
+                          onChange={() => toggleModule(mod.key)}
+                          disabled={mod.reserved}
+                        />
+                        {mod.label}
+                        {mod.reserved && ' (próximamente)'}
+                      </label>
+                    ))}
                   </div>
                 </div>
 

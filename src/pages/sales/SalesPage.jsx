@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useSalesStore from '../../store/salesStore';
+import useBranchStore from '../../store/branchStore';
 import Layout from '../../components/layout/Layout';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import { PlusIcon, MagnifyingGlassIcon, FunnelIcon } from '@heroicons/react/24/outline';
@@ -27,6 +28,7 @@ const DOC_LABELS = {
 export default function SalesPage() {
   const navigate = useNavigate();
   const { sales, loading, fetchSales, setFilters, filters, stats, fetchStats } = useSalesStore();
+  const { branches, fetchBranches } = useBranchStore();
 
   const [searchInput, setSearchInput] = useState('');
   const [showFilters, setShowFilters] = useState(false);
@@ -34,6 +36,7 @@ export default function SalesPage() {
   useEffect(() => {
     fetchSales();
     fetchStats();
+    fetchBranches();
   }, []);
 
   useEffect(() => {
@@ -55,12 +58,12 @@ export default function SalesPage() {
 
   const handleReset = () => {
     setSearchInput('');
-    const clean = { status: '', customer_name: '', from_date: '', to_date: '', document_type: '', vehicle_plate: '' };
+    const clean = { status: '', customer_name: '', from_date: '', to_date: '', document_type: '', vehicle_plate: '', branch_id: '' };
     setFilters(clean);
     fetchSales(clean);
   };
 
-  const hasActiveFilters = filters.status || filters.from_date || filters.to_date || filters.document_type || filters.vehicle_plate;
+  const hasActiveFilters = filters.status || filters.from_date || filters.to_date || filters.document_type || filters.vehicle_plate || filters.branch_id;
 
   return (
     <Layout>
@@ -167,6 +170,18 @@ export default function SalesPage() {
                 onChange={e => handleFilterChange('to_date', e.target.value)}
                 className="text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-600"
               />
+              {branches.length > 1 && (
+                <select
+                  value={filters.branch_id}
+                  onChange={e => handleFilterChange('branch_id', e.target.value)}
+                  className="text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Todas las sedes</option>
+                  {branches.map(b => (
+                    <option key={b.id} value={b.id}>{b.name}</option>
+                  ))}
+                </select>
+              )}
             </div>
           )}
         </div>
@@ -194,7 +209,7 @@ export default function SalesPage() {
               <table className="hidden lg:table min-w-full divide-y divide-gray-100">
                 <thead className="bg-gray-50">
                   <tr>
-                    {['#', 'Cliente', 'Documento', 'Fecha', 'Total', 'Pago', 'Estado'].map(h => (
+                    {(branches.length > 1 ? ['#', 'Cliente', 'Documento', 'Sede', 'Fecha', 'Total', 'Pago', 'Estado'] : ['#', 'Cliente', 'Documento', 'Fecha', 'Total', 'Pago', 'Estado']).map(h => (
                       <th key={h} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">
                         {h}
                       </th>
@@ -217,6 +232,9 @@ export default function SalesPage() {
                           {sale.vehicle_plate && <p className="text-xs text-gray-500">{sale.vehicle_plate}</p>}
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-600">{DOC_LABELS[sale.document_type] || '—'}</td>
+                        {branches.length > 1 && (
+                          <td className="px-4 py-3 text-sm text-gray-600">{sale.branch?.name || '—'}</td>
+                        )}
                         <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{formatDate(sale.sale_date)}</td>
                         <td className="px-4 py-3 text-sm font-semibold text-gray-900 whitespace-nowrap">{formatCurrency(sale.total_amount)}</td>
                         <td className="px-4 py-3">
@@ -252,6 +270,9 @@ export default function SalesPage() {
                       <div className="flex items-center gap-2 mt-2">
                         <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${st.cls}`}>{st.label}</span>
                         <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${pt.cls}`}>{pt.label}</span>
+                        {branches.length > 1 && sale.branch?.name && (
+                          <span className="text-xs text-gray-500">{sale.branch.name}</span>
+                        )}
                         <span className="text-xs text-gray-400 ml-auto">{formatDate(sale.sale_date)}</span>
                       </div>
                     </div>
