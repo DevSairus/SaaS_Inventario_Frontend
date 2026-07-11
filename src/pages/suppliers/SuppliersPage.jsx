@@ -2,6 +2,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useSuppliersStore } from '../../store/suppliersStore';
 import SupplierModal from '../../components/suppliers/SupplierModal';
+import LibroAuxiliarModal from '../../components/accounting/LibroAuxiliarModal';
 import Layout from '../../components/layout/Layout';
 import {
   PlusIcon,
@@ -16,6 +17,7 @@ import {
   NoSymbolIcon,
   PhoneIcon,
   EnvelopeIcon,
+  BookOpenIcon,
 } from '@heroicons/react/24/outline';
 
 /* ─── helpers ─────────────────────────────────────────────── */
@@ -34,6 +36,7 @@ const SuppliersPage = () => {
   const [search, setSearch]               = useState('');
   const [showFilters, setShowFilters]     = useState(false);
   const [filterActive, setFilterActive]   = useState('');
+  const [ledgerSupplier, setLedgerSupplier] = useState(null);
 
   useEffect(() => {
     fetchSuppliers();
@@ -270,6 +273,13 @@ const SuppliersPage = () => {
                             <PencilIcon className="h-4 w-4" />
                           </button>
                           <button
+                            onClick={() => setLedgerSupplier({ id: s.id, type: 'supplier', name: s.business_name || s.name, tax_id: s.tax_id })}
+                            title="Ver Libro Auxiliar (cuentas por pagar)"
+                            className="p-1.5 rounded-lg text-indigo-600 hover:bg-indigo-50 transition-colors"
+                          >
+                            <BookOpenIcon className="h-4 w-4" />
+                          </button>
+                          <button
                             onClick={() => handleToggleActive(s)}
                             title={s.is_active ? 'Desactivar' : 'Activar'}
                             className={`p-1.5 rounded-lg transition-colors ${
@@ -328,6 +338,8 @@ const SuppliersPage = () => {
       {isModalOpen && (
         <SupplierModal supplier={editingSupplier} onClose={handleClose} />
       )}
+
+      {ledgerSupplier && <LibroAuxiliarModal thirdParty={ledgerSupplier} onClose={() => setLedgerSupplier(null)} />}
     </Layout>
   );
 };

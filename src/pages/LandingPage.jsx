@@ -30,6 +30,8 @@ const C = {
   signal:   '#2FAE66',
   signalL:  '#3FCB7A',
   caution:  '#E3A63E',
+  ai:       '#8B5CF6',
+  aiL:      '#A78BFA',
   white:    '#FFFFFF',
   gray50:   '#F8FAFC',
   gray100:  '#F1F5F9',
@@ -72,6 +74,10 @@ const icons = {
   close:       <><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></>,
   mail:        <><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></>,
   search:      <><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></>,
+  sparkle:     <><path d="M12 3l1.8 5.4L19 10l-5.2 1.6L12 17l-1.8-5.4L5 10l5.2-1.6L12 3z"/><path d="M19 3.2l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7z"/><path d="M5 15.5l.5 1.5 1.5.5-1.5.5-.5 1.5-.5-1.5L3 17.5l1.5-.5z"/></>,
+  bank:        <><path d="M3 21h18"/><path d="M5 21V10M9 21V10M15 21V10M19 21V10"/><path d="M2 10l10-6 10 6z"/></>,
+  book:        <><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/><path d="M9 8h8M9 12h6"/></>,
+  bot:         <><rect x="4" y="8" width="16" height="12" rx="3"/><path d="M12 8V4M9 4h6"/><circle cx="9" cy="14" r="1.4"/><circle cx="15" cy="14" r="1.4"/><path d="M8 18h8"/></>,
 };
 
 /* ─────────────────────────────────────────
@@ -433,7 +439,7 @@ function AppCarousel() {
 /* ─────────────────────────────────────────
    NAVBAR
 ───────────────────────────────────────── */
-const NAV_SECTIONS = ['producto', 'modulos', 'sectores', 'contacto'];
+const NAV_SECTIONS = ['nexa', 'producto', 'modulos', 'sectores', 'contacto'];
 
 function Logomark({ size = 34 }) {
   return (
@@ -468,6 +474,7 @@ function Navbar({ onCta }) {
   }, []);
 
   const navLinks = [
+    { label: 'NEXA · IA', href: '#nexa' },
     { label: 'Producto', href: '#producto' },
     { label: 'Módulos', href: '#modulos' },
     { label: 'Sectores', href: '#sectores' },
@@ -600,7 +607,7 @@ function Hero({ onCta }) {
           }}>
             <div style={{ width: 6, height: 6, borderRadius: '50%', background: C.accentL, animation: 'pbPulse 2s infinite' }} />
             <span style={{ fontSize: 12, color: C.accentL, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-              Inventario · Taller · Facturación DIAN
+              Inventario · Taller · Contabilidad · IA NEXA
             </span>
           </div>
 
@@ -623,8 +630,9 @@ function Hero({ onCta }) {
             opacity: mounted ? 1 : 0, transform: mounted ? 'translateY(0)' : 'translateY(12px)',
             transition: 'opacity 0.55s 0.2s, transform 0.55s 0.2s',
           }}>
-            Pitbox controla inventario multi-bodega, ventas, compras, taller y facturación
-            electrónica desde un único panel, sin tiempos muertos ni hojas de cálculo sueltas.
+            Pitbox controla inventario multi-bodega, ventas, compras, taller, tesorería y
+            contabilidad desde un único panel — con NEXA, tu asistente de IA, proponiendo
+            registros contables listos para aprobar con un clic.
           </p>
 
           <div style={{
@@ -653,8 +661,8 @@ function Hero({ onCta }) {
           }}>
             {[
               { label: 'Multi-bodega y multi-sede', sub: 'Operación' },
-              { label: 'Validación DIAN integrada', sub: 'Facturación' },
-              { label: 'Taller y repuestos', sub: 'Especializado en' },
+              { label: 'Tesorería y contabilidad integradas', sub: 'Finanzas' },
+              { label: 'Propone asientos y gastos', sub: 'NEXA · IA' },
             ].map(({ label, sub }) => (
               <div key={label}>
                 <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: 2 }}>{sub}</div>
@@ -706,7 +714,7 @@ function Hero({ onCta }) {
 ───────────────────────────────────────── */
 function StatsBar() {
   const [ref, visible] = useInView();
-  const d1 = useCounter(9, 1200, visible);
+  const d1 = useCounter(12, 1200, visible);
   const d2 = useCounter(100, 1500, visible);
   const d3 = useCounter(24, 1000, visible);
 
@@ -721,7 +729,7 @@ function StatsBar() {
           { val: `${d1}+`, label: 'Módulos integrados' },
           { val: `${d2}%`, label: 'Facturación electrónica DIAN' },
           { val: `< ${d3}h`, label: 'Tiempo de activación' },
-          { val: 'Multi-sede', label: 'Bodegas y sucursales ilimitadas' },
+          { val: 'NEXA', label: 'Asistente de IA para contabilidad y gastos' },
         ].map(({ val, label }, i) => (
           <div key={i} style={{
             textAlign: 'center',
@@ -815,6 +823,134 @@ function MiniInventario({ accent }) {
   );
 }
 
+function MiniNexa({ accent }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+        <div style={{
+          width: 26, height: 26, borderRadius: '50%', background: accent, flexShrink: 0,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <Ico d={icons.sparkle} size={13} color="#fff" strokeWidth={1.8} />
+        </div>
+        <div style={{
+          background: C.white, border: `1px solid ${accent}30`, borderRadius: '4px 12px 12px 12px',
+          padding: '10px 12px', fontSize: 12.5, color: C.gray700, lineHeight: 1.5, maxWidth: 240,
+        }}>
+          Detecté un pago de $340.000 a Repuestos del Sur. ¿Registro el gasto y el asiento contable?
+        </div>
+      </div>
+      <div style={{
+        marginLeft: 34, background: `${accent}0C`, border: `1px solid ${accent}25`,
+        borderRadius: 12, padding: '10px 12px',
+      }}>
+        <div style={{ fontSize: 11, color: C.gray500, marginBottom: 8 }}>
+          Gasto · Proveedores &nbsp;·&nbsp; <span style={{ fontWeight: 700, color: C.gray900 }}>$340.000</span>
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <div style={{
+            flex: 1, textAlign: 'center', padding: '6px 0', borderRadius: 7,
+            background: accent, color: '#fff', fontSize: 11.5, fontWeight: 700,
+          }}>Aprobar</div>
+          <div style={{
+            flex: 1, textAlign: 'center', padding: '6px 0', borderRadius: 7,
+            border: `1px solid ${C.gray200}`, color: C.gray500, fontSize: 11.5, fontWeight: 600,
+          }}>Rechazar</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────
+   SECCIÓN: NEXA (banner de IA — destacado)
+───────────────────────────────────────── */
+function NexaBanner({ onCta }) {
+  const [ref, visible] = useInView();
+  const cards = [
+    { icon: icons.bot, title: 'Detecta y propone', desc: 'Analiza ventas, compras y gastos, y arma la propuesta contable por ti.' },
+    { icon: icons.check, title: 'Tú apruebas', desc: 'Cada propuesta espera tu visto bueno antes de contabilizarse.' },
+    { icon: icons.book, title: 'Queda en el libro', desc: 'Al aprobar, el asiento contable se registra listo para postear.' },
+  ];
+
+  return (
+    <section id="nexa" style={{
+      position: 'relative', overflow: 'hidden',
+      background: `radial-gradient(circle at 15% 20%, rgba(139,92,246,0.25), transparent 55%), radial-gradient(circle at 85% 80%, rgba(207,58,11,0.18), transparent 50%), ${C.inkD}`,
+      padding: 'clamp(4rem,8vw,7rem) clamp(1.5rem,5vw,4rem)',
+      borderTop: '1px solid rgba(255,255,255,0.06)', borderBottom: '1px solid rgba(255,255,255,0.06)',
+    }}>
+      <div ref={ref} style={{
+        maxWidth: 1100, margin: '0 auto', textAlign: 'center',
+        opacity: visible ? 1 : 0, transform: visible ? 'translateY(0)' : 'translateY(20px)',
+        transition: 'opacity 0.6s, transform 0.6s',
+      }}>
+        <div style={{
+          display: 'inline-flex', alignItems: 'center', gap: 8,
+          background: 'rgba(139,92,246,0.15)', border: '1px solid rgba(139,92,246,0.35)',
+          borderRadius: 100, padding: '6px 16px', marginBottom: 24,
+        }}>
+          <Ico d={icons.sparkle} size={13} color={C.aiL} />
+          <span style={{ fontSize: 12, color: C.aiL, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Nuevo · Inteligencia artificial</span>
+        </div>
+
+        <h2 style={{
+          fontFamily: "'Oswald', sans-serif",
+          fontSize: 'clamp(2rem,5vw,3.2rem)', fontWeight: 700, color: C.white,
+          letterSpacing: '-0.01em', lineHeight: 1.15, marginBottom: 18, textTransform: 'uppercase',
+        }}>
+          Conoce a <span style={{ color: C.aiL }}>NEXA</span>, tu copiloto contable
+        </h2>
+        <p style={{
+          color: 'rgba(255,255,255,0.6)', fontSize: 'clamp(1rem,2vw,1.15rem)',
+          lineHeight: 1.7, maxWidth: 620, margin: '0 auto 48px',
+        }}>
+          NEXA es la inteligencia artificial de Pitbox: revisa tu operación, propone gastos,
+          pagos y asientos contables, y solo ejecuta lo que tú apruebas. Tesorería y
+          contabilidad al día, sin digitar cada movimiento a mano.
+        </p>
+
+        <div style={{
+          display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px,1fr))',
+          gap: 20, marginBottom: 48, textAlign: 'left',
+        }}>
+          {cards.map(({ icon, title, desc }, i) => (
+            <div key={i} style={{
+              background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)',
+              borderRadius: 16, padding: '24px 22px',
+              opacity: visible ? 1 : 0, transform: visible ? 'translateY(0)' : 'translateY(16px)',
+              transition: `opacity 0.5s ${0.1 + i * 0.1}s, transform 0.5s ${0.1 + i * 0.1}s`,
+            }}>
+              <div style={{
+                width: 44, height: 44, borderRadius: 12, background: 'rgba(139,92,246,0.15)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16,
+              }}>
+                <Ico d={icon} size={20} color={C.aiL} strokeWidth={1.7} />
+              </div>
+              <h3 style={{ fontFamily: "'Oswald', sans-serif", fontSize: 16, fontWeight: 700, color: C.white, marginBottom: 8, textTransform: 'uppercase' }}>{title}</h3>
+              <p style={{ fontSize: 13.5, color: 'rgba(255,255,255,0.55)', lineHeight: 1.6 }}>{desc}</p>
+            </div>
+          ))}
+        </div>
+
+        <button onClick={onCta} style={{
+          background: C.ai, color: C.white, border: 'none', borderRadius: 10,
+          padding: '14px 32px', fontSize: 15, fontWeight: 700, cursor: 'pointer',
+          fontFamily: "'Oswald', sans-serif", textTransform: 'uppercase', letterSpacing: '0.03em',
+          display: 'inline-flex', alignItems: 'center', gap: 8,
+          boxShadow: '0 8px 32px rgba(139,92,246,0.4)',
+          transition: 'transform 0.2s, box-shadow 0.2s',
+        }}
+          onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 12px 40px rgba(139,92,246,0.5)'; }}
+          onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 8px 32px rgba(139,92,246,0.4)'; }}
+        >
+          Ver NEXA en acción <Ico d={icons.arrow} size={16} color="#fff" />
+        </button>
+      </div>
+    </section>
+  );
+}
+
 /* ─────────────────────────────────────────
    SECCIÓN: PRODUCTO (features split)
 ───────────────────────────────────────── */
@@ -840,6 +976,13 @@ function ProductSection() {
       desc: 'Cada bodega o sede controla su propio stock, con transferencias trazables entre ellas y alertas automáticas antes de que un producto se agote.',
       bullets: ['Multi-bodega y multi-sede', 'Transferencias con trazabilidad', 'Alertas de stock configurables', 'Escaneo de código de barras'],
       side: 'right',
+    },
+    {
+      icon: icons.sparkle, accent: C.ai,
+      title: 'NEXA: contabilidad con inteligencia artificial',
+      desc: 'NEXA observa tus ventas, compras y gastos, y propone el registro contable correspondiente. Tú solo apruebas o rechazas: nada se contabiliza sin tu decisión.',
+      bullets: ['Propone gastos y pagos automáticamente', 'Genera asientos contables listos para postear', 'Aprobación de un clic', 'Trazabilidad completa de cada propuesta'],
+      side: 'left',
     },
   ];
 
@@ -916,6 +1059,7 @@ function ProductSection() {
                     {i === 0 && <MiniTaller />}
                     {i === 1 && <MiniFacturacion accent={accent} />}
                     {i === 2 && <MiniInventario accent={accent} />}
+                    {i === 3 && <MiniNexa accent={accent} />}
                   </div>
                 </div>
               </div>
@@ -988,6 +1132,24 @@ function ModulesSection() {
       icon: icons.invoice, accent: C.signal,
       desc: 'Ventas con facturación electrónica y validación DIAN integradas en el mismo flujo, sin doble digitación.',
       bullets: ['CUFE y eventos DIAN en la venta', 'Cuentas por cobrar', 'Devoluciones de cliente', 'Envío automático al correo'],
+    },
+    {
+      name: 'Tesorería',
+      icon: icons.bank, accent: C.signal,
+      desc: 'Cuentas por pagar, gastos operativos y flujo de caja al día, con apertura y cierre de cajas por sede.',
+      bullets: ['Cuentas por pagar a proveedores', 'Gastos operativos por categoría', 'Flujo de caja en tiempo real', 'Cajas por sede con arqueo'],
+    },
+    {
+      name: 'Contabilidad',
+      icon: icons.book, accent: C.accentL,
+      desc: 'Plan de cuentas, asientos y reportes financieros generados a partir de tu operación diaria, sin doble digitación.',
+      bullets: ['Plan de cuentas configurable', 'Asientos contables automáticos', 'Mapeo de cuentas por tipo de operación', 'Balance y estado de resultados'],
+    },
+    {
+      name: 'NEXA · IA',
+      icon: icons.sparkle, accent: C.ai,
+      desc: 'Tu asistente de inteligencia artificial: analiza tu operación y propone gastos, pagos y asientos contables listos para aprobar.',
+      bullets: ['Propone gastos y pagos automáticamente', 'Regenera asientos contables por ti', 'Tú apruebas o rechazas cada acción', 'Nada se contabiliza sin tu visto bueno'],
     },
     {
       name: 'Alertas y reportes',
@@ -1173,7 +1335,7 @@ function FinalCta({ onCta }) {
           lineHeight: 1.7, marginBottom: 36,
           opacity: visible ? 1 : 0, transition: 'opacity 0.5s 0.15s',
         }}>
-          Agenda una demo y te mostramos cómo Pitbox se adapta a tu inventario, tu taller y tu facturación desde el primer día.
+          Agenda una demo y te mostramos cómo Pitbox controla tu inventario, taller, tesorería y contabilidad — con NEXA proponiendo cada registro por ti.
         </p>
         <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap', opacity: visible ? 1 : 0, transition: 'opacity 0.5s 0.25s' }}>
           <button onClick={onCta} style={{
@@ -1219,7 +1381,7 @@ function Footer() {
               <span style={{ fontFamily: "'Oswald', sans-serif", fontSize: 18, fontWeight: 700, color: C.white, textTransform: 'uppercase' }}>Pitbox</span>
             </div>
             <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)', lineHeight: 1.7, maxWidth: 280 }}>
-              Plataforma de inventario, taller y facturación electrónica para negocios colombianos. Desarrollado por DataCore.
+              Plataforma de inventario, taller, tesorería, contabilidad y facturación electrónica para negocios colombianos, con NEXA como asistente de IA. Desarrollado por DataCore.
             </p>
             <a href="mailto:contacto@datacore.com.co" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'rgba(255,255,255,0.45)', textDecoration: 'none', fontSize: 13, marginTop: 16, transition: 'color 0.2s' }}
               onMouseEnter={e => e.currentTarget.style.color = C.accentL}
@@ -1228,7 +1390,7 @@ function Footer() {
             </a>
           </div>
           {[
-            { title: 'Producto', links: ['Funciones', 'Módulos', 'Sectores'] },
+            { title: 'Producto', links: ['Funciones', 'NEXA · IA', 'Módulos', 'Sectores'] },
             { title: 'Empresa', links: ['Acerca de', 'Contacto', 'Iniciar sesión'] },
           ].map(({ title, links }) => (
             <div key={title} style={{ flex: '0 0 auto' }}>
@@ -1519,6 +1681,7 @@ export default function LandingPage() {
       <Navbar onCta={() => setShowModal(true)} />
       <Hero onCta={() => setShowModal(true)} />
       <StatsBar />
+      <NexaBanner onCta={() => setShowModal(true)} />
       <ProductSection />
       <AppShowcase />
       <ModulesSection />

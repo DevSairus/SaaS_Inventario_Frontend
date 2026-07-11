@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import useCustomersStore from '../../store/customersStore';
-import { PlusIcon, MagnifyingGlassIcon, PencilIcon, TrashIcon, EyeIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, MagnifyingGlassIcon, PencilIcon, TrashIcon, EyeIcon, BookOpenIcon } from '@heroicons/react/24/outline';
 import Button from '../../components/common/Button';
 import Badge from '../../components/common/Badge';
 import Loading from '../../components/common/Loading';
@@ -11,6 +11,7 @@ import Input from '../../components/common/Input';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
 import Layout from '../../components/layout/Layout';
 import RuesNitButton from '../../components/common/RuesNitButton';
+import LibroAuxiliarModal from '../../components/accounting/LibroAuxiliarModal';
 import toast from 'react-hot-toast';
 
 const FORM_EMPTY = {
@@ -25,6 +26,7 @@ export default function CustomersPage() {
   const [deleteDialog, setDeleteDialog] = useState({ show: false, customer: null });
   const [searchTerm, setSearchTerm] = useState('');
   const [formData, setFormData] = useState(FORM_EMPTY);
+  const [ledgerCustomer, setLedgerCustomer] = useState(null);
 
   useEffect(() => { fetchCustomers(); }, []);
 
@@ -149,6 +151,10 @@ export default function CustomersPage() {
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex justify-end space-x-2">
                         <Link to={`/customers/${customer.id}`} className="text-blue-600 hover:text-blue-900" title="Ver detalle"><EyeIcon className="h-5 w-5" /></Link>
+                        <button
+                          onClick={() => setLedgerCustomer({ id: customer.id, type: 'customer', name: customer.business_name || customer.full_name, tax_id: customer.tax_id })}
+                          className="text-indigo-600 hover:text-indigo-900" title="Ver Libro Auxiliar (cartera)"
+                        ><BookOpenIcon className="h-5 w-5" /></button>
                         <button onClick={() => handleOpenModal(customer)} className="text-yellow-600 hover:text-yellow-900" title="Editar"><PencilIcon className="h-5 w-5" /></button>
                         <button onClick={() => setDeleteDialog({ show: true, customer })} className="text-red-600 hover:text-red-900" title="Eliminar"><TrashIcon className="h-5 w-5" /></button>
                       </div>
@@ -251,6 +257,8 @@ export default function CustomersPage() {
           onConfirm={handleDelete} title="Eliminar Cliente"
           message={`¿Estás seguro de eliminar al cliente "${deleteDialog.customer?.full_name}"? Esta acción no se puede deshacer.`}
           confirmText="Eliminar" confirmVariant="danger" />
+
+        {ledgerCustomer && <LibroAuxiliarModal thirdParty={ledgerCustomer} onClose={() => setLedgerCustomer(null)} />}
       </div>
     </Layout>
   );

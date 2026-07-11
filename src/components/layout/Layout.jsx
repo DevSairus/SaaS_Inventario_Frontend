@@ -2,6 +2,7 @@ import { useState } from 'react';
 import Sidebar from './Sidebar';
 import StockAlerts from '../common/StockAlerts';
 import BranchSelector from './BranchSelector';
+import NexaChatWidget from '../common/NexaChatWidget';
 import { Bars3Icon } from '@heroicons/react/24/outline';
 import useAuthStore from '../../store/authStore';
 
@@ -56,6 +57,8 @@ function Layout({ children }) {
           {children}
         </main>
       </div>
+
+      <NexaChatWidget />
     </div>
   );
 }
