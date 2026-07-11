@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import useAuthStore from "../../store/authStore";
+import useTenantStore from "../../store/tenantStore";
 
 const I = {
   dashboard: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="w-[17px] h-[17px] shrink-0"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>,
@@ -25,7 +26,7 @@ const I = {
 const NAV = [
   { id: "dashboard", label: "Dashboard",  icon: "dashboard", path: "/dashboard" },
   {
-    id: "workshop", label: "Taller", icon: "wrench",
+    id: "workshop", label: "Taller", icon: "wrench", module: "workshop",
     children: [
       {
         label: "Histórico",
@@ -45,7 +46,7 @@ const NAV = [
     ],
   },
   {
-    id: "sales", label: "Ventas", icon: "cart",
+    id: "sales", label: "Ventas", icon: "cart", module: "sales",
     children: [
       { label: "Nueva Venta",      path: "/sales/new" },
       { label: "Historial Ventas", path: "/sales" },
@@ -53,7 +54,7 @@ const NAV = [
     ],
   },
   {
-    id: "cartera", label: "Cartera", icon: "wallet",
+    id: "cartera", label: "Cartera", icon: "wallet", module: "receivables",
     children: [
       { label: "Cuentas por Cobrar",   path: "/accounts-receivable" },
       { label: "Devoluciones Clientes", path: "/sales/customer-returns" },
@@ -61,7 +62,7 @@ const NAV = [
     ],
   },
   {
-    id: "treasury", label: "Tesorería", icon: "bank",
+    id: "treasury", label: "Tesorería", icon: "bank", module: "treasury",
     children: [
       { label: "Cuentas por Pagar",   path: "/accounts-payable" },
       { label: "Gastos Operativos",   path: "/expenses" },
@@ -70,7 +71,7 @@ const NAV = [
     ],
   },
   {
-    id: "accounting", label: "Contabilidad", icon: "book",
+    id: "accounting", label: "Contabilidad", icon: "book", module: "accounting",
     children: [
       { label: "Plan de Cuentas",     path: "/accounting/chart-of-accounts" },
       { label: "Asientos Contables",  path: "/accounting/journal-entries" },
@@ -79,7 +80,7 @@ const NAV = [
     ],
   },
   {
-    id: "inventory", label: "Inventario", icon: "box",
+    id: "inventory", label: "Inventario", icon: "box", module: "inventory",
     children: [
       { label: "Productos",         path: "/products" },
       { label: "Compras",           path: "/purchases" },
@@ -95,7 +96,7 @@ const NAV = [
     ],
   },
   { id: "reports",  label: "Informes", icon: "chart", path: "/reports" },
-  { id: "nexa", label: "Aprobaciones NEXA", icon: "sparkle", path: "/nexa/aprobaciones" },
+  { id: "nexa", label: "Aprobaciones NEXA", icon: "sparkle", path: "/nexa/aprobaciones", module: "ai_assistant" },
   { id: "users",    label: "Usuarios",  icon: "users", path: "/users" },
   { id: "settings", label: "Ajustes",   icon: "gear",  path: "/settings" },
 ];
@@ -104,7 +105,13 @@ export default function Sidebar({ isCollapsed, setIsCollapsed, isMobileOpen, set
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
+  const enabledModules = useTenantStore((s) => s.enabledModules);
   const currentPath = location.pathname;
+
+  // enabledModules === null: config del tenant aún no cargó, no ocultar nada todavía.
+  const visibleNav = NAV.filter(
+    (item) => !item.module || enabledModules === null || enabledModules.includes(item.module)
+  );
 
   const childIsActive = (child) => {
     const base = currentPath === child.path || currentPath.startsWith(child.path + "/");
@@ -113,7 +120,7 @@ export default function Sidebar({ isCollapsed, setIsCollapsed, isMobileOpen, set
     return true;
   };
 
-  const activeGroupId = NAV.find(item =>
+  const activeGroupId = visibleNav.find(item =>
     item.children?.some(c => childIsActive(c))
   )?.id ?? null;
 
@@ -132,7 +139,7 @@ export default function Sidebar({ isCollapsed, setIsCollapsed, isMobileOpen, set
 
   const NavContent = ({ inMobile = false }) => (
     <>
-      {NAV.map((item) => {
+      {visibleNav.map((item) => {
         const active = groupActive(item);
         const isOpen = openGroup === item.id;
 

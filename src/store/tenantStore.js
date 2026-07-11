@@ -49,6 +49,10 @@ const useTenantStore = create((set, get) => ({
     };
     set({ features });
   },
+
+  // Llamar al cerrar sesión para no arrastrar los módulos del tenant anterior
+  // a la siguiente sesión (por ejemplo si otro usuario inicia sesión en el mismo navegador).
+  reset: () => set({ features: null, enabledModules: null, loading: false }),
 }));
 
 export default useTenantStore;
