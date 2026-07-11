@@ -828,7 +828,7 @@ function MiniNexa({ accent }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-        <NexaIcon size={26} className="rounded-full shrink-0" />
+        <NexaIcon size={26} className="rounded-full shrink-0" animated />
         <div style={{
           background: C.white, border: `1px solid ${accent}30`, borderRadius: '4px 12px 12px 12px',
           padding: '10px 12px', fontSize: 12.5, color: C.gray700, lineHeight: 1.5, maxWidth: 240,
@@ -1023,7 +1023,7 @@ function ProductSection() {
                     overflow: 'hidden',
                   }}>
                     {isNexa
-                      ? <NexaIcon size={52} />
+                      ? <NexaIcon size={52} animated />
                       : <Ico d={icon} size={24} color={accent} strokeWidth={1.7} />}
                   </div>
                   <h3 style={{

@@ -95,7 +95,7 @@ export default function NexaChatWidget() {
           className="fixed bottom-5 right-5 z-40 w-14 h-14 rounded-2xl shadow-lg shadow-black/20 flex items-center justify-center hover:scale-105 active:scale-95 transition-transform overflow-hidden"
           aria-label="Abrir NEXA"
         >
-          <NexaIcon size={56} rounded={false} />
+          <NexaIcon size={56} rounded={false} animated />
           {pendingProposalsCount > 0 && (
             <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-white text-[10px] font-bold flex items-center justify-center border-2 border-white">
               {pendingProposalsCount}
