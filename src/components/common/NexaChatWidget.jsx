@@ -9,6 +9,7 @@ import {
 } from '@heroicons/react/24/outline';
 import useAuthStore from '../../store/authStore';
 import useNexaStore from '../../store/nexaStore';
+import useTenantStore from '../../store/tenantStore';
 
 // Mismos roles que ALLOWED_ROLES en el backend (aiAssistant.controller.js).
 // Es solo cosmético: el backend es quien realmente decide el acceso.
@@ -56,10 +57,14 @@ function ToolBadges({ toolCalls }) {
 export default function NexaChatWidget() {
   const { user } = useAuthStore();
   const { isOpen, toggleOpen, closeWidget, messages, sending, sendMessage, resetConversation, fetchPendingCount, pendingProposalsCount } = useNexaStore();
+  const enabledModules = useTenantStore((s) => s.enabledModules);
   const [input, setInput] = useState('');
   const scrollRef = useRef(null);
 
-  const allowed = user?.role && NEXA_ROLES.includes(user.role);
+  // enabledModules === null: config del tenant aún no cargó, no mostrar todavía
+  // para evitar que el botón parpadee si el módulo termina estando deshabilitado.
+  const moduleEnabled = enabledModules !== null && enabledModules.includes('ai_assistant');
+  const allowed = moduleEnabled && user?.role && NEXA_ROLES.includes(user.role);
 
   useEffect(() => {
     if (allowed) fetchPendingCount();
