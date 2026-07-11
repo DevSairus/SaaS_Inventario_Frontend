@@ -2,13 +2,13 @@
 import { useEffect, useState, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import {
-  SparklesIcon,
   CheckIcon,
   XMarkIcon,
   ClockIcon,
   ArrowPathIcon,
 } from '@heroicons/react/24/outline';
 import Layout from '../../components/layout/Layout';
+import NexaIcon from '../../components/common/NexaIcon';
 import { aiAssistantAPI, PROPOSAL_ACTION_LABELS, PROPOSAL_STATUS_LABELS } from '../../api/aiAssistant';
 import useNexaStore from '../../store/nexaStore';
 
@@ -118,9 +118,7 @@ export default function NexaApprovalsPage() {
       <div className="max-w-4xl mx-auto">
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#CF3A0B] to-[#E84510] flex items-center justify-center shrink-0">
-              <SparklesIcon className="w-5 h-5 text-white" />
-            </div>
+            <NexaIcon size={36} className="rounded-xl shrink-0" />
             <div>
               <h1 className="text-lg font-semibold text-gray-900 leading-tight">Aprobaciones NEXA</h1>
               <p className="text-[12.5px] text-gray-500 leading-tight">

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import useAuthStore from "../../store/authStore";
 import useTenantStore from "../../store/tenantStore";
+import NexaIcon from "../common/NexaIcon";
 
 const I = {
   dashboard: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="w-[17px] h-[17px] shrink-0"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>,
@@ -20,7 +21,7 @@ const I = {
   wallet:    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="w-[17px] h-[17px] shrink-0"><path d="M21 12V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2h14a2 2 0 002-2v-5"/><path d="M21 12h-4a2 2 0 000 4h4v-4z"/><path d="M3 7l5.5-4L14 7"/></svg>,
   bank:      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="w-[17px] h-[17px] shrink-0"><line x1="3" y1="21" x2="21" y2="21"/><line x1="5" y1="21" x2="5" y2="10"/><line x1="9" y1="21" x2="9" y2="10"/><line x1="15" y1="21" x2="15" y2="10"/><line x1="19" y1="21" x2="19" y2="10"/><polygon points="12 3 21 8 3 8"/></svg>,
   book:      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="w-[17px] h-[17px] shrink-0"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>,
-  sparkle:   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="w-[17px] h-[17px] shrink-0"><path d="M12 3l1.8 4.9L19 9.5l-5.2 1.6L12 16l-1.8-4.9L5 9.5l5.2-1.6L12 3z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8L19 15z"/></svg>,
+  nexa:      <NexaIcon size={17} className="rounded-[4px] shrink-0" />,
 };
 
 const NAV = [
@@ -96,7 +97,7 @@ const NAV = [
     ],
   },
   { id: "reports",  label: "Informes", icon: "chart", path: "/reports" },
-  { id: "nexa", label: "Aprobaciones NEXA", icon: "sparkle", path: "/nexa/aprobaciones", module: "ai_assistant" },
+  { id: "nexa", label: "Aprobaciones NEXA", icon: "nexa", path: "/nexa/aprobaciones", module: "ai_assistant" },
   { id: "users",    label: "Usuarios",  icon: "users", path: "/users" },
   { id: "settings", label: "Ajustes",   icon: "gear",  path: "/settings" },
 ];

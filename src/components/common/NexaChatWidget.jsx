@@ -2,7 +2,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  SparklesIcon,
   XMarkIcon,
   PaperAirplaneIcon,
   ArrowPathIcon,
@@ -10,6 +9,7 @@ import {
 import useAuthStore from '../../store/authStore';
 import useNexaStore from '../../store/nexaStore';
 import useTenantStore from '../../store/tenantStore';
+import NexaIcon from './NexaIcon';
 
 // Mismos roles que ALLOWED_ROLES en el backend (aiAssistant.controller.js).
 // Es solo cosmético: el backend es quien realmente decide el acceso.
@@ -92,10 +92,10 @@ export default function NexaChatWidget() {
       {!isOpen && (
         <button
           onClick={toggleOpen}
-          className="fixed bottom-5 right-5 z-40 w-14 h-14 rounded-full bg-gradient-to-br from-[#CF3A0B] to-[#E84510] text-white shadow-lg shadow-black/20 flex items-center justify-center hover:scale-105 active:scale-95 transition-transform"
+          className="fixed bottom-5 right-5 z-40 w-14 h-14 rounded-2xl shadow-lg shadow-black/20 flex items-center justify-center hover:scale-105 active:scale-95 transition-transform overflow-hidden"
           aria-label="Abrir NEXA"
         >
-          <SparklesIcon className="w-6 h-6" />
+          <NexaIcon size={56} rounded={false} />
           {pendingProposalsCount > 0 && (
             <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-white text-[10px] font-bold flex items-center justify-center border-2 border-white">
               {pendingProposalsCount}
@@ -108,12 +108,12 @@ export default function NexaChatWidget() {
       {isOpen && (
         <div className="fixed bottom-5 right-5 z-40 w-[360px] max-w-[calc(100vw-2.5rem)] h-[520px] max-h-[calc(100vh-2.5rem)] bg-white rounded-2xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden">
           {/* Header */}
-          <div className="flex items-center justify-between px-4 h-14 bg-gradient-to-r from-[#CF3A0B] to-[#E84510] text-white shrink-0">
-            <div className="flex items-center gap-2">
-              <SparklesIcon className="w-5 h-5" />
+          <div className="flex items-center justify-between px-4 h-14 bg-[#111116] text-white shrink-0">
+            <div className="flex items-center gap-2.5">
+              <NexaIcon size={28} className="rounded-md shrink-0" />
               <div>
                 <p className="text-sm font-semibold leading-tight">NEXA</p>
-                <p className="text-[10px] text-white/80 leading-tight">Asistente de Pitbox</p>
+                <p className="text-[10px] text-white/60 leading-tight">Asistente de Pitbox</p>
               </div>
             </div>
             <div className="flex items-center gap-1">

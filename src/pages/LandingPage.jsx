@@ -16,6 +16,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
+import NexaIcon from '../components/common/NexaIcon';
 
 /* ─────────────────────────────────────────
    PALETA — basada en el favicon de Pitbox
@@ -827,12 +828,7 @@ function MiniNexa({ accent }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-        <div style={{
-          width: 26, height: 26, borderRadius: '50%', background: accent, flexShrink: 0,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}>
-          <Ico d={icons.sparkle} size={13} color="#fff" strokeWidth={1.8} />
-        </div>
+        <NexaIcon size={26} className="rounded-full shrink-0" />
         <div style={{
           background: C.white, border: `1px solid ${accent}30`, borderRadius: '4px 12px 12px 12px',
           padding: '10px 12px', fontSize: 12.5, color: C.gray700, lineHeight: 1.5, maxWidth: 240,
@@ -978,7 +974,7 @@ function ProductSection() {
       side: 'right',
     },
     {
-      icon: icons.sparkle, accent: C.ai,
+      icon: icons.sparkle, accent: C.ai, isNexa: true,
       title: 'NEXA: contabilidad con inteligencia artificial',
       desc: 'NEXA observa tus ventas, compras y gastos, y propone el registro contable correspondiente. Tú solo apruebas o rechazas: nada se contabiliza sin tu decisión.',
       bullets: ['Propone gastos y pagos automáticamente', 'Genera asientos contables listos para postear', 'Aprobación de un clic', 'Trazabilidad completa de cada propuesta'],
@@ -1006,7 +1002,7 @@ function ProductSection() {
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'clamp(4rem,8vw,7rem)' }}>
-          {features.map(({ icon, accent, title, desc, bullets, side }, i) => {
+          {features.map(({ icon, accent, isNexa, title, desc, bullets, side }, i) => {
             const [ref, visible] = useInView();
             const isRight = side === 'right';
             return (
@@ -1021,10 +1017,14 @@ function ProductSection() {
               }}>
                 <div style={{ order: isRight ? 1 : 2 }}>
                   <div style={{
-                    width: 52, height: 52, borderRadius: 14, background: `${accent}18`,
+                    width: 52, height: 52, borderRadius: 14,
+                    background: isNexa ? 'transparent' : `${accent}18`,
                     display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 20,
+                    overflow: 'hidden',
                   }}>
-                    <Ico d={icon} size={24} color={accent} strokeWidth={1.7} />
+                    {isNexa
+                      ? <NexaIcon size={52} />
+                      : <Ico d={icon} size={24} color={accent} strokeWidth={1.7} />}
                   </div>
                   <h3 style={{
                     fontFamily: "'Oswald', sans-serif",
