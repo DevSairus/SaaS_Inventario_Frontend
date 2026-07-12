@@ -14,8 +14,12 @@ const formatCurrency = (v) => new Intl.NumberFormat('es-CO', { style: 'currency'
 
 const TABS = [
   { id: 'trial-balance', label: 'Balance de Comprobación' },
+  { id: 'comparativo', label: 'Comparativo' },
   { id: 'balance-general', label: 'Balance General' },
   { id: 'income-statement', label: 'Estado de Resultados (P&G)' },
+  { id: 'cashflow-indirecto', label: 'Flujo de Efectivo' },
+  { id: 'aging', label: 'Antigüedad de Saldos' },
+  { id: 'retenciones', label: 'Retenciones' },
   { id: 'libro-diario', label: 'Libro Diario' },
   { id: 'libro-iva', label: 'Libro de IVA' },
 ];
@@ -34,16 +38,21 @@ const FinancialReportsPage = () => {
 
   const requestIdRef = useRef(0);
   const [downloading, setDownloading] = useState(null); // 'excel' | 'pdf' | null
+  const [agingType, setAgingType] = useState('customer'); // 'customer' | 'supplier'
 
   useEffect(() => { fetchBranches(); }, []);
-  useEffect(() => { load(); }, [tab]);
+  useEffect(() => { load(); }, [tab, agingType]);
 
   // Cada tab exporta con su propio endpoint y sus propios filtros —
   // trial-balance/income-statement usan from/to, balance-general usa as_of.
   const EXPORTERS = {
     'trial-balance': { fn: financialReportsAPI.exportTrialBalance, filename: (fmt) => `Balance-Comprobacion-${range.from}_${range.to}.${fmt === 'pdf' ? 'pdf' : 'xlsx'}` },
+    'comparativo': { fn: financialReportsAPI.exportTrialBalanceComparativo, filename: (fmt) => `Balance-Comparativo-${range.from}_${range.to}.${fmt === 'pdf' ? 'pdf' : 'xlsx'}` },
     'balance-general': { fn: financialReportsAPI.exportBalanceGeneral, filename: (fmt) => `Balance-General-${range.as_of}.${fmt === 'pdf' ? 'pdf' : 'xlsx'}` },
     'income-statement': { fn: financialReportsAPI.exportIncomeStatement, filename: (fmt) => `Estado-Resultados-${range.from}_${range.to}.${fmt === 'pdf' ? 'pdf' : 'xlsx'}` },
+    'cashflow-indirecto': { fn: financialReportsAPI.exportCashflowIndirecto, filename: (fmt) => `Flujo-Efectivo-${range.from}_${range.to}.${fmt === 'pdf' ? 'pdf' : 'xlsx'}` },
+    'aging': { fn: (params, fmt) => financialReportsAPI.exportAging({ ...params, type: agingType }, fmt), filename: (fmt) => `Antiguedad-${agingType}-${range.as_of}.${fmt === 'pdf' ? 'pdf' : 'xlsx'}` },
+    'retenciones': { fn: financialReportsAPI.exportRetenciones, filename: (fmt) => `Retenciones-${range.from}_${range.to}.${fmt === 'pdf' ? 'pdf' : 'xlsx'}` },
     'libro-diario': { fn: financialReportsAPI.exportLibroDiario, filename: (fmt) => `Libro-Diario-${range.from}_${range.to}.${fmt === 'pdf' ? 'pdf' : 'xlsx'}` },
     'libro-iva': { fn: financialReportsAPI.exportLibroIva, filename: (fmt) => `Libro-IVA-${range.from}_${range.to}.${fmt === 'pdf' ? 'pdf' : 'xlsx'}` },
   };
@@ -51,7 +60,9 @@ const FinancialReportsPage = () => {
   const handleExport = async (format) => {
     const exporter = EXPORTERS[tab];
     const branch_id = branchId || undefined;
-    const params = tab === 'balance-general' ? { as_of: range.as_of, branch_id } : { from: range.from, to: range.to, branch_id };
+    const params = tab === 'balance-general' || tab === 'aging'
+      ? { as_of: range.as_of, branch_id }
+      : { from: range.from, to: range.to, branch_id };
 
     try {
       setDownloading(format);
@@ -85,7 +96,11 @@ const FinancialReportsPage = () => {
       let res;
       const branch_id = branchId || undefined;
       if (currentTab === 'trial-balance') res = await financialReportsAPI.trialBalance({ from: range.from, to: range.to, branch_id });
+      else if (currentTab === 'comparativo') res = await financialReportsAPI.trialBalanceComparativo({ from: range.from, to: range.to, branch_id });
       else if (currentTab === 'balance-general') res = await financialReportsAPI.balanceGeneral({ as_of: range.as_of, branch_id });
+      else if (currentTab === 'cashflow-indirecto') res = await financialReportsAPI.cashflowIndirecto({ from: range.from, to: range.to, branch_id });
+      else if (currentTab === 'aging') res = await financialReportsAPI.aging({ as_of: range.as_of, branch_id, type: agingType });
+      else if (currentTab === 'retenciones') res = await financialReportsAPI.retenciones({ from: range.from, to: range.to, branch_id });
       else if (currentTab === 'libro-diario') res = await financialReportsAPI.libroDiario({ from: range.from, to: range.to, branch_id });
       else if (currentTab === 'libro-iva') res = await financialReportsAPI.libroIva({ from: range.from, to: range.to, branch_id });
       else res = await financialReportsAPI.incomeStatement({ from: range.from, to: range.to, branch_id });
@@ -118,7 +133,7 @@ const FinancialReportsPage = () => {
         </div>
 
         <div className="bg-white rounded-xl border border-gray-200 p-4 flex flex-wrap items-center gap-3">
-          {tab === 'balance-general' ? (
+          {tab === 'balance-general' || tab === 'aging' ? (
             <>
               <span className="text-sm text-gray-500">Corte al:</span>
               <input type="date" value={range.as_of} onChange={(e) => setRange((r) => ({ ...r, as_of: e.target.value }))} className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm" />
@@ -130,6 +145,12 @@ const FinancialReportsPage = () => {
               <span className="text-gray-400 text-sm">a</span>
               <input type="date" value={range.to} onChange={(e) => setRange((r) => ({ ...r, to: e.target.value }))} className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm" />
             </>
+          )}
+          {tab === 'aging' && (
+            <select value={agingType} onChange={(e) => setAgingType(e.target.value)} className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm">
+              <option value="customer">Cartera (Clientes)</option>
+              <option value="supplier">Cuentas por Pagar (Proveedores)</option>
+            </select>
           )}
           <button onClick={load} className="px-3 py-1.5 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700">Generar</button>
           {branches.length > 1 && (
@@ -262,6 +283,165 @@ const FinancialReportsPage = () => {
             </div>
           </div>
         )}
+        {!loading && data && tab === 'comparativo' && (
+          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <div className="px-4 py-2.5 bg-gray-50 border-b border-gray-200 text-xs text-gray-500">
+              Comparando contra {data.compare_from} — {data.compare_to}
+            </div>
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>{['Código', 'Cuenta', 'Periodo Actual', 'Periodo Anterior', 'Variación', 'Var %'].map((h) => <th key={h} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{h}</th>)}</tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {data.accounts.length === 0 && <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-400">Sin movimientos en ninguno de los dos periodos</td></tr>}
+                {data.accounts.map((a) => (
+                  <tr key={a.id}>
+                    <td className="px-4 py-2 text-sm font-mono text-gray-500">{a.code}</td>
+                    <td className="px-4 py-2 text-sm text-gray-900">{a.name}</td>
+                    <td className="px-4 py-2 text-sm text-right">{formatCurrency(a.current_balance)}</td>
+                    <td className="px-4 py-2 text-sm text-right text-gray-500">{formatCurrency(a.prior_balance)}</td>
+                    <td className={`px-4 py-2 text-sm text-right font-medium ${a.variance < 0 ? 'text-red-600' : a.variance > 0 ? 'text-green-600' : 'text-gray-500'}`}>{formatCurrency(a.variance)}</td>
+                    <td className="px-4 py-2 text-sm text-right text-gray-500">{a.variance_pct === null ? '—' : `${a.variance_pct.toFixed(1)}%`}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {!loading && data && tab === 'cashflow-indirecto' && (
+          <div className="space-y-4 max-w-2xl">
+            {[
+              { title: 'Actividades de Operación', changes: data.operating.changes, total: data.operating.total, extra: [['Utilidad neta del período', data.net_income]] },
+              { title: 'Actividades de Inversión', changes: data.investing.changes, total: data.investing.total },
+              { title: 'Actividades de Financiación', changes: data.financing.changes, total: data.financing.total },
+            ].map((section) => (
+              <div key={section.title} className="bg-white rounded-xl border border-gray-200 p-4">
+                <h3 className="text-sm font-semibold text-gray-700 mb-2">{section.title}</h3>
+                {(section.extra || []).map(([label, value]) => (
+                  <div key={label} className="flex justify-between text-sm py-1"><span className="text-gray-600">{label}</span><span>{formatCurrency(value)}</span></div>
+                ))}
+                {section.changes.length === 0 && <div className="text-sm text-gray-400 py-1">Sin movimientos</div>}
+                {section.changes.map((c) => (
+                  <div key={c.id} className="flex justify-between text-sm py-1"><span className="text-gray-600">Δ {c.code} - {c.name}</span><span>{formatCurrency(c.cash_impact)}</span></div>
+                ))}
+                <div className="flex justify-between text-sm font-semibold border-t border-gray-200 mt-2 pt-2"><span>Efectivo neto</span><span>{formatCurrency(section.total)}</span></div>
+              </div>
+            ))}
+
+            <div className="bg-white rounded-xl border border-gray-200 p-4">
+              <div className="flex justify-between text-base font-bold text-indigo-700 pb-2"><span>Flujo de efectivo neto del período</span><span>{formatCurrency(data.net_cash_flow)}</span></div>
+              <div className="flex justify-between text-sm py-1"><span className="text-gray-600">Efectivo al inicio</span><span>{formatCurrency(data.cash.opening)}</span></div>
+              <div className="flex justify-between text-sm py-1"><span className="text-gray-600">Efectivo al final</span><span>{formatCurrency(data.cash.closing)}</span></div>
+            </div>
+
+            <div className={`rounded-xl border p-4 text-sm font-medium ${data.cash.matches ? 'bg-green-50 border-green-200 text-green-700' : 'bg-amber-50 border-amber-200 text-amber-700'}`}>
+              {data.cash.matches ? '✓ Cuadra con la variación real de caja' : `Diferencia sin explicar: ${formatCurrency(data.cash.difference)} — revisa cuentas de balance sin clasificar`}
+            </div>
+            <p className="text-xs text-gray-400">{data.methodology_note}</p>
+          </div>
+        )}
+
+        {!loading && data && tab === 'aging' && (
+          <div className="space-y-4">
+            {data.warning && (
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700">{data.warning}</div>
+            )}
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+              {data.buckets.map((b) => (
+                <div key={b.key} className="bg-white rounded-xl border border-gray-200 p-3">
+                  <div className="text-xs text-gray-500">{b.label}</div>
+                  <div className="text-sm font-semibold text-gray-900">{formatCurrency(b.total)}</div>
+                </div>
+              ))}
+            </div>
+            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>{['Tercero', 'Sin vencer', '1-30', '31-60', '61-90', '+90', 'Total'].map((h) => <th key={h} className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">{h}</th>)}</tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {data.third_parties.length === 0 && <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400">Sin saldos abiertos a la fecha de corte</td></tr>}
+                  {data.third_parties.map((tp) => (
+                    <tr key={tp.third_party_id}>
+                      <td className="px-4 py-2 text-sm text-gray-900">{tp.name}</td>
+                      <td className="px-4 py-2 text-sm text-right">{formatCurrency(tp.buckets.current)}</td>
+                      <td className="px-4 py-2 text-sm text-right">{formatCurrency(tp.buckets.d1_30)}</td>
+                      <td className="px-4 py-2 text-sm text-right">{formatCurrency(tp.buckets.d31_60)}</td>
+                      <td className="px-4 py-2 text-sm text-right">{formatCurrency(tp.buckets.d61_90)}</td>
+                      <td className="px-4 py-2 text-sm text-right text-red-600">{formatCurrency(tp.buckets.d90_plus)}</td>
+                      <td className="px-4 py-2 text-sm text-right font-semibold">{formatCurrency(tp.total)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+                {data.third_parties.length > 0 && (
+                  <tfoot>
+                    <tr className="font-semibold border-t border-gray-200 bg-gray-50">
+                      <td className="px-4 py-2 text-sm" colSpan={6}>Total General</td>
+                      <td className="px-4 py-2 text-sm text-right">{formatCurrency(data.grand_total)}</td>
+                    </tr>
+                  </tfoot>
+                )}
+              </table>
+            </div>
+          </div>
+        )}
+
+        {!loading && data && tab === 'retenciones' && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div className="bg-white rounded-xl border border-gray-200 p-3"><div className="text-xs text-gray-500">Base gravable</div><div className="text-lg font-semibold">{formatCurrency(data.totals.base)}</div></div>
+              <div className="bg-white rounded-xl border border-gray-200 p-3"><div className="text-xs text-gray-500">ReteFuente</div><div className="text-lg font-semibold">{formatCurrency(data.totals.retefuente)}</div></div>
+              <div className="bg-white rounded-xl border border-gray-200 p-3"><div className="text-xs text-gray-500">ReteICA</div><div className="text-lg font-semibold">{formatCurrency(data.totals.reteica)}</div></div>
+            </div>
+            {data.customers.length === 0 && (
+              <div className="bg-white rounded-xl border border-gray-200 p-8 text-center text-gray-400">Ningún cliente practicó retención en el periodo seleccionado</div>
+            )}
+            {data.customers.map((c) => (
+              <div key={c.customer_id} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                <div className="px-4 py-2.5 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
+                  <div>
+                    <span className="text-sm font-semibold text-gray-800">{c.customer_name}</span>
+                    {c.customer_tax_id && <span className="text-xs text-gray-400 ml-2">NIT/CC {c.customer_tax_id}</span>}
+                  </div>
+                  <button
+                    onClick={async () => {
+                      try {
+                        const response = await financialReportsAPI.exportRetenciones({ from: range.from, to: range.to, customer_id: c.customer_id }, 'pdf');
+                        window.open(URL.createObjectURL(response.data), '_blank');
+                      } catch { toast.error('Error generando el certificado'); }
+                    }}
+                    className="text-xs px-2.5 py-1 rounded-md border border-gray-300 hover:bg-gray-100"
+                  >
+                    Generar certificado PDF
+                  </button>
+                </div>
+                <table className="min-w-full divide-y divide-gray-100">
+                  <tbody className="divide-y divide-gray-50">
+                    {c.sales.map((s) => (
+                      <tr key={s.id}>
+                        <td className="px-4 py-1.5 text-xs text-gray-400 w-24">{s.sale_date}</td>
+                        <td className="px-2 py-1.5 text-sm text-gray-700 font-mono">{s.sale_number}</td>
+                        <td className="px-4 py-1.5 text-sm text-right">{formatCurrency(s.subtotal)}</td>
+                        <td className="px-4 py-1.5 text-sm text-right">{formatCurrency(s.retefuente_amount)}</td>
+                        <td className="px-4 py-1.5 text-sm text-right">{formatCurrency(s.reteica_amount)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr className="bg-gray-50/60 font-medium">
+                      <td colSpan={2} className="px-4 py-1.5 text-xs text-gray-400 text-right">Subtotal</td>
+                      <td className="px-4 py-1.5 text-sm text-right">{formatCurrency(c.total_base)}</td>
+                      <td className="px-4 py-1.5 text-sm text-right">{formatCurrency(c.total_retefuente)}</td>
+                      <td className="px-4 py-1.5 text-sm text-right">{formatCurrency(c.total_reteica)}</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            ))}
+          </div>
+        )}
+
         {!loading && data && tab === 'libro-diario' && (
           <div className="space-y-4">
             <div className="text-sm text-gray-500">

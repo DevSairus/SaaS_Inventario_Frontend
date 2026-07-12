@@ -55,9 +55,17 @@ const EVENT_GROUPS = [
 
 const AccountMappingsPage = () => {
   const [mappings, setMappings] = useState({});
+  const [customMappings, setCustomMappings] = useState([]);
   const [accounts, setAccounts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [savingKey, setSavingKey] = useState(null);
+  const [historyFor, setHistoryFor] = useState(null); // { key, label } | null
+  const [history, setHistory] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newType, setNewType] = useState({ label: '', category: '', account_id: '' });
+  const [creating, setCreating] = useState(false);
+  const [deletingKey, setDeletingKey] = useState(null);
 
   useEffect(() => { load(); }, []);
 
@@ -68,11 +76,57 @@ const AccountMappingsPage = () => {
       const map = {};
       (mapRes.data || []).forEach((m) => { map[m.event_type] = m.account_id; });
       setMappings(map);
+      setCustomMappings((mapRes.data || []).filter((m) => m.is_custom));
       setAccounts((accRes.data || []).filter((a) => a.accepts_entries));
     } catch (error) {
       toast.error('Error cargando los mapeos contables');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const slugify = (text) =>
+    text.trim().toLowerCase()
+      .normalize('NFD').replace(/[̀-ͯ]/g, '')
+      .replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+
+  const handleCreate = async (e) => {
+    e.preventDefault();
+    if (!newType.label.trim() || !newType.account_id) {
+      toast.error('El nombre y la cuenta son obligatorios');
+      return;
+    }
+    const event_type = `custom_${slugify(newType.label)}`;
+    try {
+      setCreating(true);
+      await accountMappingsAPI.create({
+        event_type,
+        label: newType.label.trim(),
+        category: newType.category.trim() || undefined,
+        account_id: newType.account_id,
+      });
+      toast.success('Tipo de asiento agregado');
+      setNewType({ label: '', category: '', account_id: '' });
+      setShowAddForm(false);
+      load();
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Error al agregar el tipo');
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const handleDelete = async (eventType) => {
+    if (!window.confirm('¿Eliminar este tipo de asiento personalizado?')) return;
+    try {
+      setDeletingKey(eventType);
+      await accountMappingsAPI.remove(eventType);
+      toast.success('Tipo de asiento eliminado');
+      load();
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Error al eliminar el tipo');
+    } finally {
+      setDeletingKey(null);
     }
   };
 
@@ -88,6 +142,19 @@ const AccountMappingsPage = () => {
       load();
     } finally {
       setSavingKey(null);
+    }
+  };
+
+  const openHistory = async (ev) => {
+    setHistoryFor(ev);
+    setHistoryLoading(true);
+    try {
+      const res = await accountMappingsAPI.auditHistory(ev.key);
+      setHistory(res.data || []);
+    } catch (error) {
+      toast.error('Error cargando el historial de este mapeo');
+    } finally {
+      setHistoryLoading(false);
     }
   };
 
@@ -114,20 +181,186 @@ const AccountMappingsPage = () => {
                   {group.events.map((ev) => (
                     <div key={ev.key} className="px-4 py-3 flex items-center justify-between gap-4">
                       <span className="text-sm text-gray-700">{ev.label}</span>
-                      <select
-                        value={mappings[ev.key] || ''}
-                        onChange={(e) => handleChange(ev.key, e.target.value)}
-                        disabled={savingKey === ev.key}
-                        className="w-72 px-2 py-1.5 border border-gray-300 rounded-lg text-sm disabled:opacity-50"
-                      >
-                        <option value="">Sin asignar</option>
-                        {accounts.map((a) => <option key={a.id} value={a.id}>{a.code} - {a.name}</option>)}
-                      </select>
+                      <div className="flex items-center gap-2">
+                        <select
+                          value={mappings[ev.key] || ''}
+                          onChange={(e) => handleChange(ev.key, e.target.value)}
+                          disabled={savingKey === ev.key}
+                          className="w-72 px-2 py-1.5 border border-gray-300 rounded-lg text-sm disabled:opacity-50"
+                        >
+                          <option value="">Sin asignar</option>
+                          {accounts.map((a) => <option key={a.id} value={a.id}>{a.code} - {a.name}</option>)}
+                        </select>
+                        <button
+                          onClick={() => openHistory(ev)}
+                          title="Ver historial de cambios"
+                          className="text-xs px-2 py-1.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50"
+                        >
+                          Historial
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
               </div>
             ))}
+
+            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+              <div className="px-4 py-3 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-gray-700">Tipos personalizados</h3>
+                <button
+                  onClick={() => setShowAddForm(true)}
+                  className="text-xs px-3 py-1.5 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700"
+                >
+                  + Agregar tipo
+                </button>
+              </div>
+              <div className="divide-y divide-gray-100">
+                {customMappings.length === 0 ? (
+                  <div className="px-4 py-6 text-sm text-gray-400 text-center">
+                    Aún no hay tipos de asiento personalizados. Agrega uno si necesitas detallar un evento contable que no está en las listas de arriba.
+                  </div>
+                ) : (
+                  customMappings.map((m) => (
+                    <div key={m.event_type} className="px-4 py-3 flex items-center justify-between gap-4">
+                      <div>
+                        <div className="text-sm text-gray-700">{m.label || m.event_type}</div>
+                        <div className="text-xs text-gray-400">{m.category || 'Personalizado'}</div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <select
+                          value={mappings[m.event_type] || ''}
+                          onChange={(e) => handleChange(m.event_type, e.target.value)}
+                          disabled={savingKey === m.event_type}
+                          className="w-72 px-2 py-1.5 border border-gray-300 rounded-lg text-sm disabled:opacity-50"
+                        >
+                          <option value="">Sin asignar</option>
+                          {accounts.map((a) => <option key={a.id} value={a.id}>{a.code} - {a.name}</option>)}
+                        </select>
+                        <button
+                          onClick={() => openHistory({ key: m.event_type, label: m.label || m.event_type })}
+                          title="Ver historial de cambios"
+                          className="text-xs px-2 py-1.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50"
+                        >
+                          Historial
+                        </button>
+                        <button
+                          onClick={() => handleDelete(m.event_type)}
+                          disabled={deletingKey === m.event_type}
+                          title="Eliminar este tipo"
+                          className="text-xs px-2 py-1.5 rounded-lg border border-red-200 text-red-500 hover:bg-red-50 disabled:opacity-50"
+                        >
+                          Eliminar
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showAddForm && (
+          <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg w-full max-w-md">
+              <form onSubmit={handleCreate}>
+                <div className="px-5 py-4 border-b border-gray-200 flex items-center justify-between">
+                  <h2 className="text-base font-semibold text-gray-900">Agregar tipo de asiento</h2>
+                  <button type="button" onClick={() => setShowAddForm(false)} className="text-gray-400 hover:text-gray-600 text-sm">Cerrar</button>
+                </div>
+                <div className="p-5 space-y-4">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Nombre *</label>
+                    <input
+                      type="text"
+                      value={newType.label}
+                      onChange={(e) => setNewType((s) => ({ ...s, label: e.target.value }))}
+                      placeholder="Ej: Comisiones por venta de repuestos"
+                      className="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm"
+                      autoFocus
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Categoría (opcional)</label>
+                    <input
+                      type="text"
+                      value={newType.category}
+                      onChange={(e) => setNewType((s) => ({ ...s, category: e.target.value }))}
+                      placeholder="Ej: Comisiones"
+                      className="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Cuenta contable *</label>
+                    <select
+                      value={newType.account_id}
+                      onChange={(e) => setNewType((s) => ({ ...s, account_id: e.target.value }))}
+                      className="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm"
+                    >
+                      <option value="">Selecciona una cuenta</option>
+                      {accounts.map((a) => <option key={a.id} value={a.id}>{a.code} - {a.name}</option>)}
+                    </select>
+                  </div>
+                </div>
+                <div className="px-5 py-4 border-t border-gray-200 flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddForm(false)}
+                    className="text-sm px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={creating}
+                    className="text-sm px-3 py-1.5 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50"
+                  >
+                    {creating ? 'Guardando...' : 'Guardar'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {historyFor && (
+          <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg w-full max-w-lg max-h-[80vh] flex flex-col">
+              <div className="px-5 py-4 border-b border-gray-200 flex items-center justify-between">
+                <h2 className="text-base font-semibold text-gray-900">Historial — {historyFor.label}</h2>
+                <button onClick={() => { setHistoryFor(null); setHistory([]); }} className="text-gray-400 hover:text-gray-600 text-sm">Cerrar</button>
+              </div>
+              <div className="overflow-y-auto p-5">
+                {historyLoading ? (
+                  <div className="text-center text-gray-400 py-8">Cargando…</div>
+                ) : history.length === 0 ? (
+                  <div className="text-center text-gray-400 py-8">Sin cambios registrados todavía para este evento.</div>
+                ) : (
+                  <ul className="space-y-3">
+                    {history.map((h) => (
+                      <li key={h.id} className="border-l-2 border-indigo-200 pl-3">
+                        <div className="text-xs text-gray-400">{new Date(h.created_at).toLocaleString('es-CO')}</div>
+                        <div className="text-sm text-gray-700">
+                          {h.previous_account ? (
+                            <>
+                              <span className="text-gray-500">{h.previous_account.code} - {h.previous_account.name}</span>
+                              <span className="mx-1.5 text-gray-300">→</span>
+                              <span className="font-medium">{h.new_account.code} - {h.new_account.name}</span>
+                            </>
+                          ) : (
+                            <>Configuración inicial: <span className="font-medium">{h.new_account.code} - {h.new_account.name}</span></>
+                          )}
+                        </div>
+                        <div className="text-xs text-gray-400">
+                          {h.changed_by_user ? `${h.changed_by_user.first_name || ''} ${h.changed_by_user.last_name || ''}`.trim() || h.changed_by_user.email : 'Usuario desconocido'}
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
           </div>
         )}
       </div>

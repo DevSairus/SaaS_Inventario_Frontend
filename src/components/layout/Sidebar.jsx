@@ -73,11 +73,17 @@ const NAV = [
   },
   {
     id: "accounting", label: "Contabilidad", icon: "book", module: "accounting",
+    // Solo roles de gestión — un vendedor o bodeguero no debería ver ni
+    // entrar a los libros contables (el backend ya lo bloquea con checkRole
+    // en server.js; esto solo evita mostrar un menú que igual daría 403).
+    roles: ["admin", "super_admin", "manager"],
     children: [
       { label: "Plan de Cuentas",     path: "/accounting/chart-of-accounts" },
       { label: "Asientos Contables",  path: "/accounting/journal-entries" },
       { label: "Mapeo de Cuentas",    path: "/accounting/account-mappings" },
       { label: "Reportes Financieros", path: "/accounting/reports" },
+      { label: "Períodos Fiscales",    path: "/accounting/fiscal-periods" },
+      { label: "Salud Contable",       path: "/accounting/health" },
     ],
   },
   {
@@ -111,7 +117,9 @@ export default function Sidebar({ isCollapsed, setIsCollapsed, isMobileOpen, set
 
   // enabledModules === null: config del tenant aún no cargó, no ocultar nada todavía.
   const visibleNav = NAV.filter(
-    (item) => !item.module || enabledModules === null || enabledModules.includes(item.module)
+    (item) =>
+      (!item.module || enabledModules === null || enabledModules.includes(item.module)) &&
+      (!item.roles || item.roles.includes(user?.role))
   );
 
   const childIsActive = (child) => {

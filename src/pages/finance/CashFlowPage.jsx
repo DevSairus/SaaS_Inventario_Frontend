@@ -8,13 +8,25 @@ import {
   ScaleIcon,
   ArrowPathIcon,
   DocumentArrowDownIcon,
-  TableCellsIcon
+  TableCellsIcon,
+  CheckCircleIcon,
+  ExclamationTriangleIcon,
+  ClockIcon
 } from '@heroicons/react/24/outline';
 
 const CashFlowPage = () => {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
   const [data, setData] = useState(null);
+
+  // Conciliación con Contabilidad (hallazgo 3.5): esta vista de Tesorería
+  // (payment_history) y la Contabilidad (asientos posteados en Caja/Bancos)
+  // son dos fuentes independientes — se cargan y muestran juntas para que
+  // cualquier diferencia sea visible acá mismo, no algo que haya que
+  // descubrir auditando manualmente.
+  const [reconciliation, setReconciliation] = useState(null);
+  const [reconLoading, setReconLoading] = useState(true);
+  const [reconError, setReconError] = useState(null);
 
   // Fecha LOCAL (no UTC): toISOString() convierte a UTC antes de cortar la
   // fecha, y en Bogotá (UTC-5) eso corre la fecha un día hacia adelante
@@ -46,6 +58,20 @@ const CashFlowPage = () => {
       setLoadError(error.response?.data?.message || 'Error cargando el flujo de caja');
     } finally {
       setLoading(false);
+    }
+    loadReconciliation();
+  };
+
+  const loadReconciliation = async () => {
+    try {
+      setReconLoading(true);
+      setReconError(null);
+      const response = await cashflowAPI.getReconciliation(filters);
+      setReconciliation(response.data);
+    } catch (error) {
+      setReconError(error.response?.data?.message || 'Error cargando la conciliación con contabilidad');
+    } finally {
+      setReconLoading(false);
     }
   };
 
@@ -158,6 +184,92 @@ const CashFlowPage = () => {
             className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm"
           />
         </div>
+
+        {/* Conciliación con Contabilidad */}
+        {reconError && (
+          <div className="bg-amber-50 border border-amber-200 text-amber-700 text-sm rounded-lg px-4 py-3">
+            {reconError}
+          </div>
+        )}
+        {!reconLoading && reconciliation && (
+          <div className={`rounded-xl border p-4 ${reconciliation.matches ? 'bg-green-50 border-green-200' : 'bg-amber-50 border-amber-200'}`}>
+            <div className="flex items-start gap-3">
+              {reconciliation.matches ? (
+                <CheckCircleIcon className="w-6 h-6 text-green-600 flex-shrink-0 mt-0.5" />
+              ) : (
+                <ExclamationTriangleIcon className="w-6 h-6 text-amber-600 flex-shrink-0 mt-0.5" />
+              )}
+              <div className="flex-1 min-w-0">
+                <h3 className={`text-sm font-semibold ${reconciliation.matches ? 'text-green-800' : 'text-amber-800'}`}>
+                  {reconciliation.matches
+                    ? 'Tesorería y Contabilidad coinciden'
+                    : 'Diferencia entre Tesorería y Contabilidad'}
+                </h3>
+                <p className={`text-xs mt-1 ${reconciliation.matches ? 'text-green-700' : 'text-amber-700'}`}>
+                  Tesorería (cobros/pagos registrados): {formatCurrency(reconciliation.treasury.net)} neto ·{' '}
+                  Contabilidad (asientos ya contabilizados en Caja/Bancos): {formatCurrency(reconciliation.accounting.net)} neto
+                  {!reconciliation.matches && (
+                    <> · diferencia neta: {formatCurrency(reconciliation.difference.net)}</>
+                  )}
+                </p>
+
+                {reconciliation.pending_draft?.entries > 0 && (
+                  <div className="flex items-start gap-1.5 mt-2 text-xs text-gray-600">
+                    <ClockIcon className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                    <span>
+                      Hay {reconciliation.pending_draft.entries} asiento(s) en borrador sin contabilizar que tocan
+                      Caja/Bancos por {formatCurrency(Math.abs(reconciliation.pending_draft.net))} netos — esto explica
+                      parte (o toda) la diferencia mientras no se posteen.
+                    </span>
+                  </div>
+                )}
+
+                {reconciliation.accounts_used === 0 && (
+                  <p className="text-xs text-gray-500 mt-2">
+                    El tenant no tiene mapeo de cuentas de Caja/Bancos configurado en Contabilidad, así que no hay nada
+                    con qué comparar todavía.
+                  </p>
+                )}
+
+                {reconciliation.days_with_difference?.length > 0 && (
+                  <details className="mt-3">
+                    <summary className="text-xs font-medium text-gray-700 cursor-pointer select-none">
+                      Ver días con diferencia ({reconciliation.days_with_difference.length})
+                    </summary>
+                    <div className="overflow-x-auto mt-2">
+                      <table className="min-w-full text-xs">
+                        <thead>
+                          <tr className="text-gray-500">
+                            <th className="text-left py-1 pr-4">Fecha</th>
+                            <th className="text-right py-1 pr-4">Tesorería +/-</th>
+                            <th className="text-right py-1 pr-4">Contabilidad +/-</th>
+                            <th className="text-right py-1">Diferencia</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {reconciliation.days_with_difference.map((d) => (
+                            <tr key={d.date} className="border-t border-gray-100">
+                              <td className="py-1 pr-4">{formatDate(d.date)}</td>
+                              <td className="py-1 pr-4 text-right">
+                                +{formatCurrency(d.treasury_in)} / -{formatCurrency(d.treasury_out)}
+                              </td>
+                              <td className="py-1 pr-4 text-right">
+                                +{formatCurrency(d.accounting_in)} / -{formatCurrency(d.accounting_out)}
+                              </td>
+                              <td className="py-1 text-right font-medium text-amber-700">
+                                {formatCurrency(d.diff_in)} / {formatCurrency(d.diff_out)}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </details>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Tarjetas resumen */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

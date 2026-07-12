@@ -30,6 +30,8 @@ import ChartOfAccountsPage from './pages/accounting/ChartOfAccountsPage';
 import JournalEntriesPage from './pages/accounting/JournalEntriesPage';
 import AccountMappingsPage from './pages/accounting/AccountMappingsPage';
 import FinancialReportsPage from './pages/accounting/FinancialReportsPage';
+import FiscalPeriodsPage from './pages/accounting/FiscalPeriodsPage';
+import AccountingHealthPage from './pages/accounting/AccountingHealthPage';
 import WorkOrdersPage from './pages/workshop/WorkOrdersPage';
 import WorkOrderFormPage from './pages/workshop/WorkOrderFormPage';
 import WorkOrderDetailPage from './pages/workshop/WorkOrderDetailPage';
@@ -114,13 +116,20 @@ function SuperAdminRoute({ children }) {
 // `module` es opcional: la key del catálogo de módulos (backend/src/config/modules.catalog.js)
 // que protege esta ruta. Si el tenant no la tiene habilitada, se bloquea el acceso directo
 // por URL en vez de dejar que la página dispare un 403 al pedir datos a la API.
-function TenantRoute({ children, module }) {
+// `roles` es opcional: lista de roles de USUARIO (no de módulo) permitidos — mismo criterio
+// que ya aplica el backend en server.js para /api/accounting. Sin esto, un vendedor podía
+// entrar a /accounting/* escribiendo la URL directamente y ver la pantalla vacía/con errores
+// 403 en vez de ser redirigido.
+function TenantRoute({ children, module, roles }) {
   const { user, isAuthenticated } = useAuthStore();
   const enabledModules = useTenantStore((s) => s.enabledModules);
   if (!isAuthenticated) return <Navigate to={ROUTES.LOGIN} replace />;
   if (user?.role === ROLES.SUPER_ADMIN) return <Navigate to={ROUTES.SUPERADMIN_DASHBOARD} replace />;
   // enabledModules === null: todavía no se cargó el config del tenant, no bloquear todavía.
   if (module && enabledModules && !enabledModules.includes(module)) {
+    return <Navigate to={ROUTES.DASHBOARD} replace />;
+  }
+  if (roles && !roles.includes(user?.role)) {
     return <Navigate to={ROUTES.DASHBOARD} replace />;
   }
   return children;
@@ -218,10 +227,12 @@ function App() {
         <Route path="accounts-payable" element={<TenantRoute module="treasury"><AccountsPayablePage /></TenantRoute>} />
         <Route path="expenses"         element={<TenantRoute module="treasury"><ExpensesPage /></TenantRoute>} />
         <Route path="cashflow"         element={<TenantRoute module="treasury"><CashFlowPage /></TenantRoute>} />
-        <Route path="accounting/chart-of-accounts" element={<TenantRoute module="accounting"><ChartOfAccountsPage /></TenantRoute>} />
-        <Route path="accounting/journal-entries"   element={<TenantRoute module="accounting"><JournalEntriesPage /></TenantRoute>} />
-        <Route path="accounting/account-mappings"  element={<TenantRoute module="accounting"><AccountMappingsPage /></TenantRoute>} />
-        <Route path="accounting/reports"           element={<TenantRoute module="accounting"><FinancialReportsPage /></TenantRoute>} />
+        <Route path="accounting/chart-of-accounts" element={<TenantRoute module="accounting" roles={['admin', 'manager']}><ChartOfAccountsPage /></TenantRoute>} />
+        <Route path="accounting/journal-entries"   element={<TenantRoute module="accounting" roles={['admin', 'manager']}><JournalEntriesPage /></TenantRoute>} />
+        <Route path="accounting/account-mappings"  element={<TenantRoute module="accounting" roles={['admin', 'manager']}><AccountMappingsPage /></TenantRoute>} />
+        <Route path="accounting/reports"           element={<TenantRoute module="accounting" roles={['admin', 'manager']}><FinancialReportsPage /></TenantRoute>} />
+        <Route path="accounting/fiscal-periods"    element={<TenantRoute module="accounting" roles={['admin', 'manager']}><FiscalPeriodsPage /></TenantRoute>} />
+        <Route path="accounting/health"            element={<TenantRoute module="accounting" roles={['admin', 'manager']}><AccountingHealthPage /></TenantRoute>} />
         <Route path="cash-sessions"    element={<TenantRoute module="treasury"><CashSessionsPage /></TenantRoute>} />
 
         {/* ── Taller ─────────────────────────────────── */}

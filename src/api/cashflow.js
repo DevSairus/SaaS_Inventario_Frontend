@@ -9,5 +9,10 @@ export const cashflowAPI = {
 
   getCashFlowPDF: (params = {}) => api.get('/cashflow/pdf', { params, responseType: 'blob' }),
 
-  getCashFlowExcel: (params = {}) => api.get('/cashflow/excel', { params, responseType: 'blob' })
+  getCashFlowExcel: (params = {}) => api.get('/cashflow/excel', { params, responseType: 'blob' }),
+
+  getReconciliation: async (params = {}) => {
+    const response = await api.get('/cashflow/reconciliation', { params });
+    return response.data;
+  }
 };
