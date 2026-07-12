@@ -50,6 +50,7 @@ export default function WorkOrderDetailPage() {
   const {
     currentOrder: order, orderLoading,
     fetchOrder, patchCurrentOrder, changeStatus, addItem, removeItem, generateSale, uploadPhotos, deletePhoto,
+    sendQuoteRequest, applyApprovedItems,
   } = useWorkshopStore();
   const { searchProducts } = useProductsStore();
   const { features, fetchFeatures } = useTenantStore();
@@ -65,7 +66,7 @@ export default function WorkOrderDetailPage() {
   // Formulario agregar ítem
   const [showAddItem, setShowAddItem] = useState(false);
   const [newItem, setNewItem] = useState({
-    product_id: '', product_name: '', item_type: 'repuesto', quantity: 1, unit_price: '', technician_id: '',
+    product_id: '', product_name: '', item_type: 'repuesto', quantity: 1, unit_price: '', technician_id: '', requires_approval: false,
   });
   const [addingItem, setAddingItem] = useState(false);
 
@@ -101,6 +102,35 @@ export default function WorkOrderDetailPage() {
   };
 
 
+
+  const [sendingQuote, setSendingQuote] = useState(false);
+  const [applyingQuoteId, setApplyingQuoteId] = useState(null);
+
+  const handleSendQuoteRequest = async () => {
+    const win = window.open('', '_blank');
+    setSendingQuote(true);
+    try {
+      const data = await sendQuoteRequest(id);
+      if (data?.whatsapp_url && win) {
+        win.location.href = data.whatsapp_url;
+      } else {
+        win?.close();
+      }
+    } catch {
+      win?.close();
+    } finally {
+      setSendingQuote(false);
+    }
+  };
+
+  const handleApplyApprovedItems = async (quoteRequestId) => {
+    setApplyingQuoteId(quoteRequestId);
+    try {
+      await applyApprovedItems(id, quoteRequestId);
+    } finally {
+      setApplyingQuoteId(null);
+    }
+  };
 
   const photoInRef  = useRef(null);
   const photoOutRef = useRef(null);
@@ -157,7 +187,7 @@ export default function WorkOrderDetailPage() {
   };
 
   const resetAddForm = () => {
-    setNewItem({ product_id: '', product_name: '', item_type: 'repuesto', quantity: 1, unit_price: '', technician_id: '' });
+    setNewItem({ product_id: '', product_name: '', item_type: 'repuesto', quantity: 1, unit_price: '', technician_id: '', requires_approval: false });
     setSearchTerm('');
     setSearchResults([]);
     setShowAddItem(false);
@@ -174,6 +204,7 @@ export default function WorkOrderDetailPage() {
         quantity:      newItem.quantity,
         unit_price:    newItem.unit_price,
         technician_id: newItem.technician_id || undefined,
+        requires_approval: newItem.requires_approval || undefined,
       });
       resetAddForm();
     } catch (e) {
@@ -681,6 +712,17 @@ export default function WorkOrderDetailPage() {
                         onChange={e => setNewItem(p => ({ ...p, unit_price: e.target.value }))}
                         className={inputCls} />
                     </div>
+                    <label className="col-span-2 flex items-center gap-2 text-xs bg-amber-50 border border-amber-100 rounded-lg px-3 py-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={newItem.requires_approval}
+                        onChange={e => setNewItem(p => ({ ...p, requires_approval: e.target.checked }))}
+                        className="rounded border-gray-300"
+                      />
+                      <span className="text-amber-700">
+                        Requiere aprobación del cliente <span className="text-amber-500">(no descuenta inventario hasta que apruebe)</span>
+                      </span>
+                    </label>
                   </div>
 
                   <div className="flex gap-2">
@@ -717,6 +759,16 @@ export default function WorkOrderDetailPage() {
                           <span className="text-sm font-medium text-gray-800 truncate">
                             {item.product_name || item.product?.name}
                           </span>
+                          {item.approval_status === 'pendiente' && (
+                            <span className="text-xs px-1.5 py-0.5 rounded font-medium bg-amber-100 text-amber-700">
+                              {item.quote_request_id ? 'Cotización enviada' : 'Pendiente de enviar'}
+                            </span>
+                          )}
+                          {item.approval_status === 'rechazado' && (
+                            <span className="text-xs px-1.5 py-0.5 rounded font-medium bg-red-100 text-red-700">
+                              Rechazado por el cliente
+                            </span>
+                          )}
                         </div>
                         <p className="text-xs text-gray-400 mt-0.5">
                           {item.quantity} × {COP(item.unit_price)}
@@ -786,6 +838,98 @@ export default function WorkOrderDetailPage() {
                   </button>
                 )}
             </div>
+
+            {/* Cotizaciones con aprobación del cliente */}
+            {(() => {
+              const pendingUnsent = (order.items || []).filter(i => i.approval_status === 'pendiente' && !i.quote_request_id);
+              const quoteRequests = order.quote_requests || [];
+              if (pendingUnsent.length === 0 && quoteRequests.length === 0) return null;
+
+              return (
+                <div className="bg-white border border-gray-100 rounded-xl p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <FileText size={15} className="text-amber-600" />
+                    <h2 className="font-semibold text-sm text-gray-800">Cotizaciones</h2>
+                  </div>
+
+                  {pendingUnsent.length > 0 && (
+                    <div className="mb-4 p-3 bg-amber-50 border border-amber-100 rounded-xl">
+                      <p className="text-xs font-medium text-amber-700 mb-2">
+                        {pendingUnsent.length} ítem(s) pendiente(s) de enviar a cotizar
+                      </p>
+                      <ul className="space-y-1 mb-3">
+                        {pendingUnsent.map(i => (
+                          <li key={i.id} className="text-xs text-gray-600 flex justify-between">
+                            <span>{i.product_name} × {i.quantity}</span>
+                            <span className="font-medium">{COP(i.total)}</span>
+                          </li>
+                        ))}
+                      </ul>
+                      <button
+                        onClick={handleSendQuoteRequest}
+                        disabled={sendingQuote || !order.customer}
+                        className="w-full flex items-center justify-center gap-1.5 text-xs font-medium text-white bg-amber-600 rounded-lg py-2 hover:bg-amber-700 disabled:opacity-60 transition"
+                        title={!order.customer ? 'La OT necesita un cliente asignado' : ''}
+                      >
+                        <Share2 size={12} /> {sendingQuote ? 'Enviando...' : 'Enviar cotización al cliente'}
+                      </button>
+                    </div>
+                  )}
+
+                  {quoteRequests.length > 0 && (
+                    <div className="space-y-2">
+                      {quoteRequests.map(q => {
+                        const approvedUnapplied = (q.items || []).filter(
+                          i => i.approval_status === 'aprobado' && i.item_type === 'repuesto' && !i.inventory_movement_id
+                        );
+                        return (
+                          <div key={q.id} className="border border-gray-100 rounded-lg p-3">
+                            <div className="flex items-center justify-between mb-1.5">
+                              <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${
+                                q.status === 'enviada' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'
+                              }`}>
+                                {q.status === 'enviada' ? 'Esperando respuesta' : 'Respondida'}
+                              </span>
+                              <span className="text-xs text-gray-400">
+                                {new Date(q.sent_at).toLocaleDateString('es-CO')}
+                              </span>
+                            </div>
+                            {q.status === 'respondida' && (
+                              <p className="text-xs text-gray-500 mb-1.5">
+                                {q.approved_by_name} · {new Date(q.responded_at).toLocaleDateString('es-CO')}
+                              </p>
+                            )}
+                            <ul className="space-y-1">
+                              {(q.items || []).map(i => (
+                                <li key={i.id} className="text-xs flex justify-between items-center">
+                                  <span className="text-gray-600">{i.product_name} × {i.quantity}</span>
+                                  <span className={
+                                    i.approval_status === 'aprobado' ? 'text-green-600 font-medium'
+                                      : i.approval_status === 'rechazado' ? 'text-red-500 font-medium'
+                                      : 'text-amber-600 font-medium'
+                                  }>
+                                    {i.approval_status === 'aprobado' ? 'Aprobado' : i.approval_status === 'rechazado' ? 'Rechazado' : 'Pendiente'}
+                                  </span>
+                                </li>
+                              ))}
+                            </ul>
+                            {approvedUnapplied.length > 0 && (
+                              <button
+                                onClick={() => handleApplyApprovedItems(q.id)}
+                                disabled={applyingQuoteId === q.id}
+                                className="mt-2 w-full text-xs font-medium text-white bg-green-600 rounded-lg py-1.5 hover:bg-green-700 disabled:opacity-60 transition"
+                              >
+                                {applyingQuoteId === q.id ? 'Aplicando...' : `Aplicar ${approvedUnapplied.length} ítem(s) aprobado(s)`}
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
 
             {/* Fotos */}
             {['in', 'out'].map(phase => {

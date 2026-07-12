@@ -181,6 +181,33 @@ const useWorkshopStore = create((set, get) => ({
       throw err;
     }
   },
+
+  // Cotización con aprobación del cliente
+  sendQuoteRequest: async (id) => {
+    try {
+      const res = await workOrdersApi.sendQuoteRequest(id);
+      toast.success('Cotización enviada');
+      await get().fetchOrder(id);
+      return res.data.data;
+    } catch (err) {
+      const msg = err?.response?.data?.message || 'No se pudo enviar la cotización.';
+      toast.error(msg);
+      throw err;
+    }
+  },
+
+  applyApprovedItems: async (id, quoteRequestId) => {
+    try {
+      const res = await workOrdersApi.applyApprovedItems(id, quoteRequestId);
+      toast.success(res.data.message || 'Ítems aplicados');
+      await get().fetchOrder(id);
+      return res.data.data;
+    } catch (err) {
+      const msg = err?.response?.data?.message || 'No se pudieron aplicar los ítems aprobados.';
+      toast.error(msg);
+      throw err;
+    }
+  },
 }));
 
 export default useWorkshopStore;

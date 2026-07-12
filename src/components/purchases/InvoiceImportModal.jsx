@@ -1,9 +1,121 @@
 // frontend/src/components/purchases/InvoiceImportModal.jsx
-import { useState } from 'react';
-import { X, Upload, FileText, CheckCircle, AlertCircle, Package, Trash2, Truck } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { X, Upload, FileText, CheckCircle, AlertCircle, Package, Trash2, Truck, Search, Link2, Sparkles } from 'lucide-react';
 import api from '../../api/axios';
+import { productsAPI } from '../../api/products';
 
 const fmt = (val) => parseFloat(val || 0).toLocaleString('es-CO');
+
+// Selector compacto para vincular un ítem de factura a un producto del
+// catálogo (búsqueda con debounce) o marcarlo para crear como producto nuevo.
+// value: product_id vinculado | 'CREATE_NEW' | undefined (sin decisión aún)
+const ProductLinkPicker = ({ value, productName, onChange }) => {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState([]);
+  const [searching, setSearching] = useState(false);
+  const [selectedLabel, setSelectedLabel] = useState(productName || '');
+  const debounceRef = useRef(null);
+  const boxRef = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handleOutside = (e) => { if (boxRef.current && !boxRef.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', handleOutside);
+    return () => document.removeEventListener('mousedown', handleOutside);
+  }, [open]);
+
+  const search = (q) => {
+    setQuery(q);
+    clearTimeout(debounceRef.current);
+    if (!q.trim()) { setResults([]); return; }
+    debounceRef.current = setTimeout(async () => {
+      setSearching(true);
+      try {
+        const res = await productsAPI.getAll({ search: q, limit: 8 });
+        setResults(res.data || []);
+      } catch { setResults([]); }
+      finally { setSearching(false); }
+    }, 300);
+  };
+
+  const pick = (product) => {
+    setSelectedLabel(product.name);
+    onChange(product.id);
+    setOpen(false);
+    setQuery('');
+  };
+
+  const pickCreateNew = () => {
+    setSelectedLabel(null);
+    onChange('CREATE_NEW');
+    setOpen(false);
+    setQuery('');
+  };
+
+  const isCreateNew = value === 'CREATE_NEW';
+
+  return (
+    <div className="relative" ref={boxRef}>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium border w-full text-left ${
+          isCreateNew
+            ? 'border-amber-300 bg-amber-50 text-amber-700'
+            : value
+              ? 'border-green-300 bg-green-50 text-green-700'
+              : 'border-gray-300 bg-white text-gray-500'
+        }`}
+      >
+        <Link2 className="w-3 h-3 flex-shrink-0" />
+        <span className="truncate">
+          {isCreateNew ? 'Crear producto nuevo' : value ? (selectedLabel || 'Producto vinculado') : 'Sin vincular — elegir'}
+        </span>
+      </button>
+
+      {open && (
+        <div className="absolute z-20 mt-1 w-64 bg-white border border-gray-200 rounded-lg shadow-lg p-2">
+          <div className="flex items-center gap-1.5 border border-gray-200 rounded px-2 py-1.5 mb-1.5">
+            <Search className="w-3.5 h-3.5 text-gray-400" />
+            <input
+              autoFocus
+              type="text"
+              value={query}
+              onChange={(e) => search(e.target.value)}
+              placeholder="Buscar producto del catálogo..."
+              className="w-full text-xs outline-none"
+            />
+          </div>
+          <div className="max-h-40 overflow-y-auto">
+            {searching && <p className="text-xs text-gray-400 px-2 py-1">Buscando...</p>}
+            {!searching && query && results.length === 0 && (
+              <p className="text-xs text-gray-400 px-2 py-1">Sin resultados</p>
+            )}
+            {results.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => pick(p)}
+                className="w-full text-left px-2 py-1.5 text-xs hover:bg-blue-50 rounded flex flex-col"
+              >
+                <span className="font-medium text-gray-800">{p.name}</span>
+                <span className="text-gray-400">{p.sku}</span>
+              </button>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={pickCreateNew}
+            className="w-full mt-1 text-left px-2 py-1.5 text-xs rounded flex items-center gap-1.5 text-amber-700 hover:bg-amber-50 border-t border-gray-100 pt-1.5"
+          >
+            <Sparkles className="w-3.5 h-3.5" /> Crear como producto nuevo
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
 
 const InvoiceImportModal = ({ isOpen, onClose, onSuccess }) => {
   const [file, setFile]                 = useState(null);
@@ -20,6 +132,11 @@ const InvoiceImportModal = ({ isOpen, onClose, onSuccess }) => {
   const [fileInputKey, setFileInputKey]   = useState(0);
   // IVA editable por ítem: { índice: porcentaje }
   const [itemTaxOverrides, setItemTaxOverrides] = useState({});
+  // Vínculo producto por ítem: { índice: product_id | 'CREATE_NEW' }.
+  // Se pre-carga con la sugerencia del backend (sku_internal / name_fuzzy),
+  // editable por el usuario — es lo único que confirma y guarda un mapeo
+  // código-proveedor → producto para la próxima importación de este proveedor.
+  const [manualLinks, setManualLinks] = useState({});
 
   const handleDragOver  = (e) => { e.preventDefault(); setIsDragging(true); };
   const handleDragLeave = () => setIsDragging(false);
@@ -37,7 +154,7 @@ const InvoiceImportModal = ({ isOpen, onClose, onSuccess }) => {
   };
 
   const handlePreview = async (selectedFile) => {
-    setLoading(true); setError(null); setPreview(null); setRemovedItems([]); setShippingCost(''); setItemTaxOverrides({});
+    setLoading(true); setError(null); setPreview(null); setRemovedItems([]); setShippingCost(''); setItemTaxOverrides({}); setManualLinks({});
     try {
       const fd = new FormData();
       fd.append('file', selectedFile);
@@ -45,6 +162,16 @@ const InvoiceImportModal = ({ isOpen, onClose, onSuccess }) => {
       if (res.data.success) {
         setPreview(res.data.data);
         setSupplierName(res.data.data.supplier?.name || '');
+        // Pre-cargar el selector de cada ítem con su sugerencia editable.
+        // 'code_exact' no entra acá: se aplica solo, sin pasar por el usuario.
+        const initialLinks = {};
+        (res.data.data.items || []).forEach((item, idx) => {
+          const matchType = item.suggestion?.match_type;
+          if (matchType === 'sku_internal' || matchType === 'name_fuzzy') {
+            initialLinks[idx] = item.suggestion.product_id;
+          }
+        });
+        setManualLinks(initialLinks);
       } else setError(res.data.message || 'Error al procesar el archivo');
     } catch (err) {
       setError(err.response?.data?.message || 'Error al procesar el archivo');
@@ -52,6 +179,15 @@ const InvoiceImportModal = ({ isOpen, onClose, onSuccess }) => {
   };
 
   const activeItems = preview?.items?.filter((_, i) => !removedItems.includes(i)) || [];
+
+  // Ítems activos que todavía no tienen una decisión de vínculo: ni coincidencia
+  // exacta por código (se aplica sola) ni una elección del usuario en manualLinks.
+  const pendingLinkCount = (preview?.items || []).reduce((count, item, idx) => {
+    if (removedItems.includes(idx)) return count;
+    if (item.suggestion?.match_type === 'code_exact') return count;
+    if (manualLinks[idx] !== undefined) return count;
+    return count + 1;
+  }, 0);
 
   const toggleRemoveItem = (idx) =>
     setRemovedItems(prev => prev.includes(idx) ? prev.filter(i => i !== idx) : [...prev, idx]);
@@ -86,6 +222,7 @@ const InvoiceImportModal = ({ isOpen, onClose, onSuccess }) => {
       fd.append('shipping_cost', shippingCost || 0);
       fd.append('discount_amount', discountAmount || 0);
       fd.append('items_tax_overrides', JSON.stringify(itemTaxOverrides));
+      fd.append('manual_links', JSON.stringify(manualLinks));
       const res = await api.post('/invoice-import/import', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
       if (res.data.success) {
         setResult(res.data.data);
@@ -99,7 +236,7 @@ const InvoiceImportModal = ({ isOpen, onClose, onSuccess }) => {
   const handleClose = () => {
     setFile(null); setPreview(null); setError(null); setResult(null);
     setIsDragging(false); setProfitMargin(30); setSupplierName('');
-    setRemovedItems([]); setShippingCost(''); setDiscountAmount(''); setItemTaxOverrides({});
+    setRemovedItems([]); setShippingCost(''); setDiscountAmount(''); setItemTaxOverrides({}); setManualLinks({});
     setFileInputKey(k => k + 1);
     onClose();
   };
@@ -250,6 +387,29 @@ const InvoiceImportModal = ({ isOpen, onClose, onSuccess }) => {
                             <td className={`px-3 py-2.5 ${removed ? 'line-through text-gray-400' : 'text-gray-900'}`}>
                               {item.name}
                               {item.sku && <span className="ml-2 text-xs text-gray-400">{item.sku}</span>}
+                              {!removed && (
+                                <div className="mt-1.5">
+                                  {item.suggestion?.match_type === 'code_exact' ? (
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-green-50 text-green-700 border border-green-200">
+                                      <CheckCircle className="w-3 h-3" /> Vinculado: {item.suggestion.product_name}
+                                    </span>
+                                  ) : (
+                                    <div className="max-w-[220px]">
+                                      {item.suggestion?.match_type === 'name_fuzzy' && manualLinks[idx] === item.suggestion.product_id && (
+                                        <p className="text-[10px] text-blue-500 mb-0.5">Sugerido por nombre — confirmar</p>
+                                      )}
+                                      {item.suggestion?.match_type === 'sku_internal' && manualLinks[idx] === item.suggestion.product_id && (
+                                        <p className="text-[10px] text-blue-500 mb-0.5">Coincide con tu SKU interno — confirmar</p>
+                                      )}
+                                      <ProductLinkPicker
+                                        value={manualLinks[idx]}
+                                        productName={item.suggestion?.product_name}
+                                        onChange={(val) => setManualLinks(prev => ({ ...prev, [idx]: val }))}
+                                      />
+                                    </div>
+                                  )}
+                                </div>
+                              )}
                             </td>
                             <td className={`px-3 py-2.5 text-right ${removed ? 'text-gray-400' : ''}`}>{item.quantity}</td>
                             <td className={`px-3 py-2.5 text-right ${removed ? 'text-gray-400' : ''}`}>${fmt(item.unit_price)}</td>
@@ -404,16 +564,22 @@ const InvoiceImportModal = ({ isOpen, onClose, onSuccess }) => {
                 </div>
               </div>
 
+              {pendingLinkCount > 0 && (
+                <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                  {pendingLinkCount} {pendingLinkCount === 1 ? 'ítem necesita' : 'ítems necesitan'} que confirmes con qué producto vincularlo (o crearlo nuevo) antes de importar.
+                </p>
+              )}
+
               {/* Botones */}
               <div className="flex gap-3 pt-1">
                 <button
-                  onClick={() => { setFile(null); setPreview(null); setRemovedItems([]); setShippingCost(''); setDiscountAmount(''); setItemTaxOverrides({}); setFileInputKey(k => k + 1); }}
+                  onClick={() => { setFile(null); setPreview(null); setRemovedItems([]); setShippingCost(''); setDiscountAmount(''); setItemTaxOverrides({}); setManualLinks({}); setFileInputKey(k => k + 1); }}
                   className="flex-1 px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium">
                   Cancelar
                 </button>
                 <button
                   onClick={handleImport}
-                  disabled={loading || !preview.isValid || activeItems.length === 0}
+                  disabled={loading || !preview.isValid || activeItems.length === 0 || pendingLinkCount > 0}
                   className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
                   {loading
                     ? <><div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div><span>Importando...</span></>

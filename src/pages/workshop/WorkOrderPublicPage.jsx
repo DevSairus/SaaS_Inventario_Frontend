@@ -29,6 +29,134 @@ const fmt = (dateStr) => {
   return new Date(dateStr).toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' });
 };
 
+// ─── Sección de cotización pendiente de aprobación ─────────────────────────
+function QuoteApprovalSection({ activeQuoteRequest, token, primaryColor, onResponded }) {
+  const [checks, setChecks] = useState(() =>
+    Object.fromEntries((activeQuoteRequest.items || []).map(i => [i.id, true]))
+  );
+  const [name, setName] = useState('');
+  const [document_, setDocument] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState(null);
+
+  const toggle = (itemId) => setChecks(prev => ({ ...prev, [itemId]: !prev[itemId] }));
+
+  const handleSubmit = async () => {
+    setError(null);
+    if (!name.trim() || !document_.trim()) {
+      setError('Nombre y documento son requeridos.');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const approvals = (activeQuoteRequest.items || []).map(i => ({ item_id: i.id, approved: !!checks[i.id] }));
+      await api.post(`/public/work-orders/${token}/quote-requests/${activeQuoteRequest.id}/respond`, {
+        approvals,
+        approved_by_name: name.trim(),
+        approved_by_document: document_.trim(),
+      });
+      onResponded();
+    } catch (err) {
+      setError(err.response?.data?.message || 'No se pudo registrar tu respuesta. Intenta de nuevo.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const total = (activeQuoteRequest.items || []).reduce((s, i) => s + (checks[i.id] ? i.total : 0), 0);
+
+  return (
+    <div className="bg-white rounded-2xl shadow-sm overflow-hidden border-2" style={{ borderColor: primaryColor }}>
+      <div style={{ backgroundColor: `${primaryColor}15` }} className="px-5 py-3">
+        <h3 className="text-sm font-bold" style={{ color: primaryColor }}>Cotización pendiente de tu aprobación</h3>
+        <p className="text-xs text-gray-500 mt-0.5">Revisa cada ítem y marca los que apruebas antes de enviar tu decisión.</p>
+      </div>
+      <div className="p-5 space-y-3">
+        {(activeQuoteRequest.items || []).map(item => (
+          <label key={item.id} className="flex items-start gap-3 p-3 rounded-xl bg-gray-50 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={!!checks[item.id]}
+              onChange={() => toggle(item.id)}
+              className="mt-0.5 w-4 h-4 rounded border-gray-300"
+            />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-gray-900">{item.product_name}</p>
+              <p className="text-xs text-gray-400">{item.quantity} × {COP(item.unit_price)}</p>
+            </div>
+            <span className="text-sm font-semibold text-gray-900 shrink-0">{COP(item.total)}</span>
+          </label>
+        ))}
+
+        <div className="flex justify-between text-sm font-bold text-gray-900 pt-2 border-t border-gray-100">
+          <span>Total aprobado</span>
+          <span>{COP(total)}</span>
+        </div>
+
+        <div className="pt-3 space-y-2">
+          <input
+            type="text"
+            placeholder="Nombre completo"
+            value={name}
+            onChange={e => setName(e.target.value)}
+            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2"
+            style={{ '--tw-ring-color': primaryColor }}
+          />
+          <input
+            type="text"
+            placeholder="Documento de identidad (cédula)"
+            value={document_}
+            onChange={e => setDocument(e.target.value)}
+            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2"
+            style={{ '--tw-ring-color': primaryColor }}
+          />
+          {error && <p className="text-xs text-red-500">{error}</p>}
+          <button
+            onClick={handleSubmit}
+            disabled={submitting}
+            style={{ backgroundColor: primaryColor }}
+            className="w-full text-white text-sm font-semibold rounded-lg py-2.5 disabled:opacity-60 transition"
+          >
+            {submitting ? 'Enviando...' : 'Enviar mi decisión'}
+          </button>
+          <p className="text-xs text-gray-400 text-center">
+            Tu respuesta queda registrada de forma definitiva y no se puede modificar después.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Historial de rondas ya respondidas (solo lectura) ─────────────────────
+function QuoteHistorySection({ quoteHistory }) {
+  if (!quoteHistory || quoteHistory.length === 0) return null;
+  return (
+    <div className="bg-white rounded-2xl shadow-sm p-5">
+      <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Cotizaciones respondidas</h3>
+      <div className="space-y-3">
+        {quoteHistory.map((q, idx) => (
+          <div key={idx} className="border border-gray-100 rounded-xl p-3">
+            <p className="text-xs text-gray-400 mb-2">
+              Respondida el {fmt(q.responded_at)} por {q.approved_by_name}
+            </p>
+            <ul className="space-y-1">
+              {(q.items || []).map((i, j) => (
+                <li key={j} className="text-xs flex justify-between">
+                  <span className="text-gray-600">{i.product_name} × {i.quantity}</span>
+                  <span className={i.approval_status === 'aprobado' ? 'text-green-600 font-medium' : 'text-red-500 font-medium'}>
+                    {i.approval_status === 'aprobado' ? `Aprobado — ${COP(i.total)}` : 'Rechazado'}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ─── Status Badge ────────────────────────────────────────────────────────────
 function StatusBadge({ status }) {
   const cfg = STATUS_CONFIG[status] || STATUS_CONFIG.recibido;
@@ -167,18 +295,19 @@ export default function WorkOrderPublicPage() {
   const [error, setError]     = useState(null);
 
   useEffect(() => {
-    const fetchOrder = async () => {
-      try {
-        const res = await api.get(`/public/work-orders/${token}`);
-        setOrder(res.data.data);
-      } catch (err) {
-        setError(err.response?.data?.message || 'No se encontró la orden de trabajo.');
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchOrder();
   }, [token]);
+
+  const fetchOrder = async () => {
+    try {
+      const res = await api.get(`/public/work-orders/${token}`);
+      setOrder(res.data.data);
+    } catch (err) {
+      setError(err.response?.data?.message || 'No se encontró la orden de trabajo.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const statusCfg = order ? (STATUS_CONFIG[order.status] || STATUS_CONFIG.recibido) : null;
 
@@ -262,6 +391,19 @@ export default function WorkOrderPublicPage() {
             </div>
           )}
         </div>
+
+        {/* ── Cotización pendiente de aprobación ────────────────────── */}
+        {order.active_quote_request && (
+          <QuoteApprovalSection
+            activeQuoteRequest={order.active_quote_request}
+            token={token}
+            primaryColor={primaryColor}
+            onResponded={fetchOrder}
+          />
+        )}
+
+        {/* ── Historial de cotizaciones ya respondidas ──────────────── */}
+        <QuoteHistorySection quoteHistory={order.quote_history} />
 
         {/* ── Datos del Vehículo ─────────────────────────────────────── */}
         {order.vehicle && (

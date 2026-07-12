@@ -32,6 +32,9 @@ export const workOrdersApi = {
   generateShareToken: (id) => axios.post(`/workshop/work-orders/${id}/share-token`),
   // Enviar enlace OT por WhatsApp (WPPConnect)
   sendWhatsApp: (id) => axios.post(`/workshop/work-orders/${id}/send-whatsapp`),
+  // Cotización con aprobación del cliente
+  sendQuoteRequest: (id) => axios.post(`/workshop/work-orders/${id}/quote-requests`),
+  applyApprovedItems: (id, quoteRequestId) => axios.post(`/workshop/work-orders/${id}/quote-requests/${quoteRequestId}/apply`),
 };
 
 // ── Commission Settlements ────────────────────────────────
