@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import Layout from '../../components/layout/Layout';
 import axios from '../../api/axios';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 
 const STATUS_LABELS = {
   recibido: 'Recibido', diagnostico: 'Diagnóstico', en_proceso: 'En proceso',
@@ -30,7 +30,7 @@ export default function WorkshopReportPage() {
     }
   };
 
-  const exportExcel = () => {
+  const exportExcel = async () => {
     if (!data?.data?.length) return;
     const rows = data.data.map(r => ({
       'N° Orden':          r.order_number,
@@ -46,10 +46,24 @@ export default function WorkshopReportPage() {
       'Total':             r.total_amount,
       'Trabajo realizado': r.work_performed,
     }));
-    const ws = XLSX.utils.json_to_sheet(rows);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Reporte Taller');
-    XLSX.writeFile(wb, `reporte-taller-${filters.date_from}-${filters.date_to}.xlsx`);
+
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet('Reporte Taller');
+    ws.columns = Object.keys(rows[0]).map(header => ({ header, key: header }));
+    rows.forEach(row => ws.addRow(row));
+
+    const buffer = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buffer], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `reporte-taller-${filters.date_from}-${filters.date_to}.xlsx`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
   };
 
   const s = data?.summary;

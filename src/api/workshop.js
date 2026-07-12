@@ -30,7 +30,7 @@ export const workOrdersApi = {
   updateChecklist: (id, data) => axios.patch(`/workshop/work-orders/${id}/checklist`, data),
   // Compartir link público
   generateShareToken: (id) => axios.post(`/workshop/work-orders/${id}/share-token`),
-  // Enviar enlace OT por WhatsApp (WPPConnect)
+  // Enviar enlace OT por WhatsApp (wa.me)
   sendWhatsApp: (id) => axios.post(`/workshop/work-orders/${id}/send-whatsapp`),
   // Cotización con aprobación del cliente
   sendQuoteRequest: (id) => axios.post(`/workshop/work-orders/${id}/quote-requests`),

@@ -3,32 +3,58 @@
  * Versión mejorada con formatos profesionales
  */
 
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 
 // ============================================================================
 // UTILIDADES DE FORMATO
 // ============================================================================
 
+const CURRENCY_FORMAT = '"$"#,##0';
+
 /**
- * Aplicar formato de moneda a una celda
+ * Descargar un workbook de ExcelJS como archivo .xlsx en el navegador
  */
-const applyCurrencyFormat = (value) => {
-  return {
-    v: value,
-    t: 'n',
-    z: '"$"#,##0'
-  };
+const downloadWorkbook = async (workbook, filename) => {
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+  });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
 };
 
 /**
- * Aplicar formato de número con separadores de miles
+ * Crear una hoja a partir de un arreglo de objetos, usando las llaves
+ * del primer objeto como encabezados de columna
  */
-const applyNumberFormat = (value) => {
-  return {
-    v: value,
-    t: 'n',
-    z: '#,##0'
-  };
+const addSheetFromObjects = (workbook, sheetName, rows) => {
+  const sheet = workbook.addWorksheet(sheetName);
+  if (rows.length === 0) return sheet;
+
+  const headers = Object.keys(rows[0]);
+  sheet.columns = headers.map((header) => ({ header, key: header }));
+  rows.forEach((row) => sheet.addRow(row));
+  return sheet;
+};
+
+/**
+ * Aplicar formato de moneda a una celda de una columna, para todas las
+ * filas de datos (sin incluir el encabezado)
+ */
+const applyCurrencyColumn = (sheet, columnKey) => {
+  const column = sheet.getColumn(columnKey);
+  column.eachCell({ includeEmpty: false }, (cell, rowNumber) => {
+    if (rowNumber === 1) return; // encabezado
+    if (typeof cell.value === 'number') {
+      cell.numFmt = CURRENCY_FORMAT;
+    }
+  });
 };
 
 // ============================================================================
@@ -38,9 +64,9 @@ const applyNumberFormat = (value) => {
 /**
  * EXPORTAR CARTERA (CUENTAS POR COBRAR) - FORMATO PROFESIONAL
  */
-export const exportReceivablesToExcel = (data, filename = 'cartera') => {
-  const wb = XLSX.utils.book_new();
-  
+export const exportReceivablesToExcel = async (data, filename = 'cartera') => {
+  const wb = new ExcelJS.Workbook();
+
   // ────────────────────────────────────────────────────────────────────────
   // HOJA 1: RESUMEN POR CLIENTE
   // ────────────────────────────────────────────────────────────────────────
@@ -54,46 +80,33 @@ export const exportReceivablesToExcel = (data, filename = 'cartera') => {
       'Vencido': parseFloat(item.overdue_amount) || 0
     }));
 
-    const ws1 = XLSX.utils.json_to_sheet(customerData);
-    
-    // Aplicar formato de moneda a las columnas de dinero
-    const range = XLSX.utils.decode_range(ws1['!ref']);
-    for (let R = range.s.r + 1; R <= range.e.r; ++R) {
-      const totalCell = XLSX.utils.encode_cell({ r: R, c: 2 }); // Total Por Cobrar
-      const overdueCell = XLSX.utils.encode_cell({ r: R, c: 5 }); // Vencido
-      
-      if (ws1[totalCell]) {
-        ws1[totalCell] = applyCurrencyFormat(ws1[totalCell].v);
-      }
-      if (ws1[overdueCell]) {
-        ws1[overdueCell] = applyCurrencyFormat(ws1[overdueCell].v);
-      }
-    }
-    
+    const ws1 = addSheetFromObjects(wb, 'Resumen por Cliente', customerData);
+    applyCurrencyColumn(ws1, 'Total Por Cobrar');
+    applyCurrencyColumn(ws1, 'Vencido');
+
     // Totales
     const totalPendiente = customerData.reduce((sum, r) => sum + (r['Total Por Cobrar'] || 0), 0);
     const totalVencido = customerData.reduce((sum, r) => sum + (r['Vencido'] || 0), 0);
     const totalFacturas = customerData.reduce((sum, r) => sum + (r['Facturas Pendientes'] || 0), 0);
-    
-    const totalRow = customerData.length + 2;
-    ws1[`A${totalRow}`] = { v: 'TOTALES', t: 's' };
-    ws1[`C${totalRow}`] = applyCurrencyFormat(totalPendiente);
-    ws1[`D${totalRow}`] = { v: totalFacturas, t: 'n' };
-    ws1[`F${totalRow}`] = applyCurrencyFormat(totalVencido);
-    
+
+    const totalRow = ws1.addRow({
+      'Cliente': 'TOTALES',
+      'Total Por Cobrar': totalPendiente,
+      'Facturas Pendientes': totalFacturas,
+      'Vencido': totalVencido
+    });
+    totalRow.getCell('Total Por Cobrar').numFmt = CURRENCY_FORMAT;
+    totalRow.getCell('Vencido').numFmt = CURRENCY_FORMAT;
+
     // Anchos de columna
-    ws1['!cols'] = [
-      { wch: 30 },  // Cliente
-      { wch: 15 },  // NIT/CC
-      { wch: 18 },  // Total Por Cobrar
-      { wch: 18 },  // Facturas Pendientes
-      { wch: 15 },  // Días Promedio
-      { wch: 18 }   // Vencido
-    ];
-    
-    XLSX.utils.book_append_sheet(wb, ws1, 'Resumen por Cliente');
+    ws1.getColumn('Cliente').width = 30;
+    ws1.getColumn('NIT/CC').width = 15;
+    ws1.getColumn('Total Por Cobrar').width = 18;
+    ws1.getColumn('Facturas Pendientes').width = 18;
+    ws1.getColumn('Días Promedio').width = 15;
+    ws1.getColumn('Vencido').width = 18;
   }
-  
+
   // ────────────────────────────────────────────────────────────────────────
   // HOJA 2: DETALLE DE FACTURAS
   // ────────────────────────────────────────────────────────────────────────
@@ -110,47 +123,38 @@ export const exportReceivablesToExcel = (data, filename = 'cartera') => {
       'Vencimiento': item.due_date || ''
     }));
 
-    const ws2 = XLSX.utils.json_to_sheet(invoiceData);
-    
-    // Aplicar formatos
-    const range = XLSX.utils.decode_range(ws2['!ref']);
-    for (let R = range.s.r + 1; R <= range.e.r; ++R) {
-      // Formatos de moneda
-      ['D', 'E', 'F'].forEach(col => {
-        const cell = `${col}${R + 1}`;
-        if (ws2[cell]) {
-          ws2[cell] = applyCurrencyFormat(ws2[cell].v);
-        }
-      });
-    }
-    
+    const ws2 = addSheetFromObjects(wb, 'Detalle Facturas', invoiceData);
+    applyCurrencyColumn(ws2, 'Total Factura');
+    applyCurrencyColumn(ws2, 'Pagado');
+    applyCurrencyColumn(ws2, 'Saldo Pendiente');
+
     // Totales
     const totalFactura = invoiceData.reduce((sum, r) => sum + (r['Total Factura'] || 0), 0);
     const totalPagado = invoiceData.reduce((sum, r) => sum + (r['Pagado'] || 0), 0);
     const totalSaldo = invoiceData.reduce((sum, r) => sum + (r['Saldo Pendiente'] || 0), 0);
-    
-    const totalRow = invoiceData.length + 2;
-    ws2[`A${totalRow}`] = { v: 'TOTALES', t: 's' };
-    ws2[`D${totalRow}`] = applyCurrencyFormat(totalFactura);
-    ws2[`E${totalRow}`] = applyCurrencyFormat(totalPagado);
-    ws2[`F${totalRow}`] = applyCurrencyFormat(totalSaldo);
-    
+
+    const totalRow = ws2.addRow({
+      'Número Factura': 'TOTALES',
+      'Total Factura': totalFactura,
+      'Pagado': totalPagado,
+      'Saldo Pendiente': totalSaldo
+    });
+    totalRow.getCell('Total Factura').numFmt = CURRENCY_FORMAT;
+    totalRow.getCell('Pagado').numFmt = CURRENCY_FORMAT;
+    totalRow.getCell('Saldo Pendiente').numFmt = CURRENCY_FORMAT;
+
     // Anchos de columna
-    ws2['!cols'] = [
-      { wch: 18 },  // Número Factura
-      { wch: 12 },  // Fecha
-      { wch: 30 },  // Cliente
-      { wch: 16 },  // Total Factura
-      { wch: 14 },  // Pagado
-      { wch: 18 },  // Saldo Pendiente
-      { wch: 16 },  // Días Vencimiento
-      { wch: 12 },  // Estado
-      { wch: 12 }   // Vencimiento
-    ];
-    
-    XLSX.utils.book_append_sheet(wb, ws2, 'Detalle Facturas');
+    ws2.getColumn('Número Factura').width = 18;
+    ws2.getColumn('Fecha').width = 12;
+    ws2.getColumn('Cliente').width = 30;
+    ws2.getColumn('Total Factura').width = 16;
+    ws2.getColumn('Pagado').width = 14;
+    ws2.getColumn('Saldo Pendiente').width = 18;
+    ws2.getColumn('Días Vencimiento').width = 16;
+    ws2.getColumn('Estado').width = 12;
+    ws2.getColumn('Vencimiento').width = 12;
   }
-  
+
   // ────────────────────────────────────────────────────────────────────────
   // HOJA 3: RESUMEN EJECUTIVO
   // ────────────────────────────────────────────────────────────────────────
@@ -163,44 +167,40 @@ export const exportReceivablesToExcel = (data, filename = 'cartera') => {
       { 'Métrica': 'Facturas Pendientes', 'Valor': parseInt(data.summary.total_invoices) || 0 },
       { 'Métrica': 'Días Promedio de Cobro', 'Valor': Math.round(parseFloat(data.summary.avg_days) || 0) },
       { 'Métrica': '', 'Valor': '' },
-      { 'Métrica': 'Fecha de Reporte', 'Valor': new Date().toLocaleDateString('es-CO', { 
-        year: 'numeric', 
-        month: 'long', 
+      { 'Métrica': 'Fecha de Reporte', 'Valor': new Date().toLocaleDateString('es-CO', {
+        year: 'numeric',
+        month: 'long',
         day: 'numeric',
         hour: '2-digit',
         minute: '2-digit'
       }) }
     ];
 
-    const ws3 = XLSX.utils.json_to_sheet(summaryData);
-    
-    // Aplicar formato de moneda a los valores monetarios
-    [1, 2, 3].forEach(row => {
-      const cell = `B${row + 1}`;
-      if (ws3[cell] && typeof ws3[cell].v === 'number') {
-        ws3[cell] = applyCurrencyFormat(ws3[cell].v);
+    const ws3 = addSheetFromObjects(wb, 'Resumen Ejecutivo', summaryData);
+
+    // Aplicar formato de moneda a los valores monetarios (primeras 3 métricas)
+    for (let i = 2; i <= 4; i++) {
+      const cell = ws3.getRow(i).getCell('Valor');
+      if (typeof cell.value === 'number') {
+        cell.numFmt = CURRENCY_FORMAT;
       }
-    });
-    
+    }
+
     // Anchos de columna
-    ws3['!cols'] = [
-      { wch: 35 },  // Métrica
-      { wch: 25 }   // Valor
-    ];
-    
-    XLSX.utils.book_append_sheet(wb, ws3, 'Resumen Ejecutivo');
+    ws3.getColumn('Métrica').width = 35;
+    ws3.getColumn('Valor').width = 25;
   }
-  
+
   const timestamp = new Date().toISOString().split('T')[0];
-  XLSX.writeFile(wb, `${filename}_${timestamp}.xlsx`);
+  await downloadWorkbook(wb, `${filename}_${timestamp}.xlsx`);
 };
 
 
 /**
  * Descargar plantilla SIMPLIFICADA de Excel para importar productos
  */
-export const downloadProductsTemplate = () => {
-  const wb = XLSX.utils.book_new();
+export const downloadProductsTemplate = async () => {
+  const wb = new ExcelJS.Workbook();
 
   // Hoja 1: Plantilla con ejemplo
   const templateData = [
@@ -242,89 +242,85 @@ export const downloadProductsTemplate = () => {
     });
   }
 
-  const ws = XLSX.utils.json_to_sheet(templateData);
-  
-  // Anchos de columnas
-  ws['!cols'] = [
-    { wch: 20 },  // Código
-    { wch: 35 },  // Nombre
-    { wch: 18 },  // Costo Promedio
-    { wch: 18 },  // Precio Venta
-    { wch: 20 },  // Margen Utilidad
-    { wch: 15 }   // Cantidad
-  ];
+  const ws = addSheetFromObjects(wb, 'Productos', templateData);
 
-  XLSX.utils.book_append_sheet(wb, ws, 'Productos');
+  // Anchos de columnas
+  ws.getColumn('Código*').width = 20;
+  ws.getColumn('Nombre*').width = 35;
+  ws.getColumn('Costo Promedio').width = 18;
+  ws.getColumn('Precio Venta').width = 18;
+  ws.getColumn('Margen Utilidad (%)').width = 20;
+  ws.getColumn('Cantidad').width = 15;
 
   // Hoja 2: Instrucciones
   const instructions = [
-    { '': '' },
-    { '': '📋 INSTRUCCIONES PARA IMPORTAR PRODUCTOS' },
-    { '': '' },
-    { '': '✅ FORMATO SIMPLIFICADO' },
-    { '': '' },
-    { '': '1️⃣ CAMPOS OBLIGATORIOS (marcados con *)' },
-    { '': '   • Código*: Código único del producto (SKU)' },
-    { '': '   • Nombre*: Nombre del producto' },
-    { '': '' },
-    { '': '2️⃣ CAMPOS OPCIONALES (valores por defecto si están vacíos)' },
-    { '': '   • Costo Promedio: Costo de compra (por defecto: 0)' },
-    { '': '   • Precio Venta: Precio al público (se calcula si está vacío)' },
-    { '': '   • Margen Utilidad (%): Porcentaje de ganancia (por defecto: 30%)' },
-    { '': '   • Cantidad: Stock inicial (por defecto: 0)' },
-    { '': '' },
-    { '': '3️⃣ REGLAS AUTOMÁTICAS' },
-    { '': '   • Si Costo Promedio está vacío → se pone 0' },
-    { '': '   • Si Precio Venta está vacío → se calcula: Costo × (1 + Margen/100)' },
-    { '': '   • Si Margen Utilidad está vacío → se pone 30%' },
-    { '': '   • Si Cantidad está vacía → se pone 0' },
-    { '': '   • Si el código ya existe → se omite y continúa con los demás' },
-    { '': '' },
-    { '': '4️⃣ EJEMPLOS' },
-    { '': '   Ejemplo 1 - Producto completo:' },
-    { '': '     Código: LAPTOP-001' },
-    { '': '     Nombre: Laptop HP' },
-    { '': '     Costo: 1000000' },
-    { '': '     Precio: 1300000' },
-    { '': '     Margen: 30' },
-    { '': '     Cantidad: 10' },
-    { '': '' },
-    { '': '   Ejemplo 2 - Solo nombre y precio (sin costo):' },
-    { '': '     Código: SERV-001' },
-    { '': '     Nombre: Servicio de Instalación' },
-    { '': '     Costo: (vacío → 0)' },
-    { '': '     Precio: 50000' },
-    { '': '     Margen: (vacío → 30%)' },
-    { '': '     Cantidad: (vacío → 0)' },
-    { '': '' },
-    { '': '5️⃣ IMPORTANTE' },
-    { '': '   • Los números NO deben llevar símbolos ($, %, comas)' },
-    { '': '   • Ejemplo CORRECTO: 15000' },
-    { '': '   • Ejemplo INCORRECTO: $15.000 o 15,000' },
-    { '': '   • El margen se escribe solo el número (ej: 30 para 30%)' },
-    { '': '' },
-    { '': '6️⃣ RESUMEN AL FINALIZAR' },
-    { '': '   Al importar verás un resumen con:' },
-    { '': '   • ✅ Productos importados exitosamente' },
-    { '': '   • ⚠️ Productos omitidos (códigos duplicados)' },
-    { '': '   • ❌ Productos con errores' },
-    { '': '' },
-    { '': '7️⃣ PASOS' },
-    { '': '   1. Ve a la hoja "Productos"' },
-    { '': '   2. Completa mínimo Código y Nombre' },
-    { '': '   3. Los demás campos son opcionales' },
-    { '': '   4. Guarda el archivo (mantén formato .xlsx)' },
-    { '': '   5. Importa el archivo en el sistema' },
-    { '': '' },
-    { '': '✅ ¡Listo para importar!' }
+    '',
+    '📋 INSTRUCCIONES PARA IMPORTAR PRODUCTOS',
+    '',
+    '✅ FORMATO SIMPLIFICADO',
+    '',
+    '1️⃣ CAMPOS OBLIGATORIOS (marcados con *)',
+    '   • Código*: Código único del producto (SKU)',
+    '   • Nombre*: Nombre del producto',
+    '',
+    '2️⃣ CAMPOS OPCIONALES (valores por defecto si están vacíos)',
+    '   • Costo Promedio: Costo de compra (por defecto: 0)',
+    '   • Precio Venta: Precio al público (se calcula si está vacío)',
+    '   • Margen Utilidad (%): Porcentaje de ganancia (por defecto: 30%)',
+    '   • Cantidad: Stock inicial (por defecto: 0)',
+    '',
+    '3️⃣ REGLAS AUTOMÁTICAS',
+    '   • Si Costo Promedio está vacío → se pone 0',
+    '   • Si Precio Venta está vacío → se calcula: Costo × (1 + Margen/100)',
+    '   • Si Margen Utilidad está vacío → se pone 30%',
+    '   • Si Cantidad está vacía → se pone 0',
+    '   • Si el código ya existe → se omite y continúa con los demás',
+    '',
+    '4️⃣ EJEMPLOS',
+    '   Ejemplo 1 - Producto completo:',
+    '     Código: LAPTOP-001',
+    '     Nombre: Laptop HP',
+    '     Costo: 1000000',
+    '     Precio: 1300000',
+    '     Margen: 30',
+    '     Cantidad: 10',
+    '',
+    '   Ejemplo 2 - Solo nombre y precio (sin costo):',
+    '     Código: SERV-001',
+    '     Nombre: Servicio de Instalación',
+    '     Costo: (vacío → 0)',
+    '     Precio: 50000',
+    '     Margen: (vacío → 30%)',
+    '     Cantidad: (vacío → 0)',
+    '',
+    '5️⃣ IMPORTANTE',
+    '   • Los números NO deben llevar símbolos ($, %, comas)',
+    '   • Ejemplo CORRECTO: 15000',
+    '   • Ejemplo INCORRECTO: $15.000 o 15,000',
+    '   • El margen se escribe solo el número (ej: 30 para 30%)',
+    '',
+    '6️⃣ RESUMEN AL FINALIZAR',
+    '   Al importar verás un resumen con:',
+    '   • ✅ Productos importados exitosamente',
+    '   • ⚠️ Productos omitidos (códigos duplicados)',
+    '   • ❌ Productos con errores',
+    '',
+    '7️⃣ PASOS',
+    '   1. Ve a la hoja "Productos"',
+    '   2. Completa mínimo Código y Nombre',
+    '   3. Los demás campos son opcionales',
+    '   4. Guarda el archivo (mantén formato .xlsx)',
+    '   5. Importa el archivo en el sistema',
+    '',
+    '✅ ¡Listo para importar!'
   ];
 
-  const wsInstructions = XLSX.utils.json_to_sheet(instructions, { skipHeader: true });
-  wsInstructions['!cols'] = [{ wch: 80 }];
-  XLSX.utils.book_append_sheet(wb, wsInstructions, 'Instrucciones');
+  const wsInstructions = wb.addWorksheet('Instrucciones');
+  instructions.forEach((line) => wsInstructions.addRow([line]));
+  wsInstructions.getColumn(1).width = 80;
 
   // Descargar
-  XLSX.writeFile(wb, 'plantilla_productos_importar.xlsx');
+  await downloadWorkbook(wb, 'plantilla_productos_importar.xlsx');
 };
 
 /**
@@ -334,15 +330,39 @@ export const parseImportedFile = (file) => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
 
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       try {
-        const data = new Uint8Array(e.target.result);
-        const workbook = XLSX.read(data, { type: 'array' });
-        
+        const wb = new ExcelJS.Workbook();
+        await wb.xlsx.load(e.target.result);
+
         // Leer la primera hoja
-        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-        const jsonData = XLSX.utils.sheet_to_json(firstSheet);
-        
+        const sheet = wb.worksheets[0];
+        const headers = [];
+        sheet.getRow(1).eachCell({ includeEmpty: true }, (cell, colNumber) => {
+          headers[colNumber] = cell.value;
+        });
+
+        const jsonData = [];
+        sheet.eachRow((row, rowNumber) => {
+          if (rowNumber === 1) return; // encabezado
+
+          const obj = {};
+          let hasValue = false;
+          row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+            const key = headers[colNumber];
+            if (!key) return;
+            const value = cell.value;
+            obj[key] = value;
+            if (value !== null && value !== undefined && value !== '') {
+              hasValue = true;
+            }
+          });
+
+          if (hasValue) {
+            jsonData.push(obj);
+          }
+        });
+
         resolve(jsonData);
       } catch (error) {
         reject(new Error('Error al leer el archivo Excel: ' + error.message));
@@ -379,7 +399,7 @@ export const validateImportedProducts = (data) => {
     const rowErrors = [];
 
     // ✅ VALIDAR CAMPOS OBLIGATORIOS
-    
+
     // Código (obligatorio)
     if (!row['Código*'] || row['Código*'].toString().trim() === '') {
       rowErrors.push('Código es requerido');
@@ -458,7 +478,7 @@ export const validateImportedProducts = (data) => {
 /**
  * Exportar productos a Excel (.xlsx) - FORMATO MEJORADO
  */
-export const exportProductsToExcel = (products, filename = 'productos') => {
+export const exportProductsToExcel = async (products, filename = 'productos') => {
   const data = products.map(product => ({
     'Código': product.sku || '',
     'Nombre': product.name || '',
@@ -473,44 +493,30 @@ export const exportProductsToExcel = (products, filename = 'productos') => {
     'Estado': product.is_active ? 'Activo' : 'Inactivo'
   }));
 
-  const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.json_to_sheet(data);
+  const wb = new ExcelJS.Workbook();
+  const ws = addSheetFromObjects(wb, 'Productos', data);
 
   // Aplicar formatos de moneda
-  const range = XLSX.utils.decode_range(ws['!ref']);
-  for (let R = range.s.r + 1; R <= range.e.r; ++R) {
-    const costoCell = `H${R + 1}`;
-    const precioCell = `I${R + 1}`;
-    
-    if (ws[costoCell]) {
-      ws[costoCell] = applyCurrencyFormat(ws[costoCell].v);
-    }
-    if (ws[precioCell]) {
-      ws[precioCell] = applyCurrencyFormat(ws[precioCell].v);
-    }
-  }
+  applyCurrencyColumn(ws, 'Costo Promedio');
+  applyCurrencyColumn(ws, 'Precio Venta');
 
-  ws['!cols'] = [
-    { wch: 20 },  // Código
-    { wch: 30 },  // Nombre
-    { wch: 40 },  // Descripción
-    { wch: 20 },  // Categoría
-    { wch: 12 },  // Stock Actual
-    { wch: 12 },  // Stock Mínimo
-    { wch: 10 },  // Unidad
-    { wch: 15 },  // Costo Promedio
-    { wch: 15 },  // Precio Venta
-    { wch: 12 },  // Margen
-    { wch: 10 }   // Estado
-  ];
-
-  XLSX.utils.book_append_sheet(wb, ws, 'Productos');
+  ws.getColumn('Código').width = 20;
+  ws.getColumn('Nombre').width = 30;
+  ws.getColumn('Descripción').width = 40;
+  ws.getColumn('Categoría').width = 20;
+  ws.getColumn('Stock Actual').width = 12;
+  ws.getColumn('Stock Mínimo').width = 12;
+  ws.getColumn('Unidad').width = 10;
+  ws.getColumn('Costo Promedio').width = 15;
+  ws.getColumn('Precio Venta').width = 15;
+  ws.getColumn('Margen (%)').width = 12;
+  ws.getColumn('Estado').width = 10;
 
   // Resumen con formato mejorado
-  const valorInventario = products.reduce((sum, p) => 
+  const valorInventario = products.reduce((sum, p) =>
     sum + (parseFloat(p.current_stock) * parseFloat(p.average_cost || 0)), 0
   );
-  
+
   const summary = [
     { 'Métrica': 'Total de Productos', 'Valor': products.length },
     { 'Métrica': 'Productos Activos', 'Valor': products.filter(p => p.is_active).length },
@@ -523,25 +529,26 @@ export const exportProductsToExcel = (products, filename = 'productos') => {
       minute: '2-digit'
     }) }
   ];
-  
-  const wsSummary = XLSX.utils.json_to_sheet(summary);
-  
-  // Formato de moneda en el valor del inventario
-  if (wsSummary['B3']) {
-    wsSummary['B3'] = applyCurrencyFormat(wsSummary['B3'].v);
+
+  const wsSummary = addSheetFromObjects(wb, 'Resumen', summary);
+
+  // Formato de moneda en el valor del inventario (fila 3: "Valor Total Inventario")
+  const inventoryCell = wsSummary.getRow(3).getCell('Valor');
+  if (typeof inventoryCell.value === 'number') {
+    inventoryCell.numFmt = CURRENCY_FORMAT;
   }
-  
-  wsSummary['!cols'] = [{ wch: 30 }, { wch: 30 }];
-  XLSX.utils.book_append_sheet(wb, wsSummary, 'Resumen');
+
+  wsSummary.getColumn('Métrica').width = 30;
+  wsSummary.getColumn('Valor').width = 30;
 
   const timestamp = new Date().toISOString().split('T')[0];
-  XLSX.writeFile(wb, `${filename}_${timestamp}.xlsx`);
+  await downloadWorkbook(wb, `${filename}_${timestamp}.xlsx`);
 };
 
 /**
  * Exportar categorías a Excel (.xlsx)
  */
-export const exportCategoriesToExcel = (categories, filename = 'categorias') => {
+export const exportCategoriesToExcel = async (categories, filename = 'categorias') => {
   const data = categories.map(category => ({
     'Nombre': category.name || '',
     'Descripción': category.description || '',
@@ -549,26 +556,22 @@ export const exportCategoriesToExcel = (categories, filename = 'categorias') => 
     'Estado': category.is_active ? 'Activa' : 'Inactiva'
   }));
 
-  const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.json_to_sheet(data);
+  const wb = new ExcelJS.Workbook();
+  const ws = addSheetFromObjects(wb, 'Categorías', data);
 
-  ws['!cols'] = [
-    { wch: 25 },  // Nombre
-    { wch: 40 },  // Descripción
-    { wch: 25 },  // Categoría Padre
-    { wch: 12 }   // Estado
-  ];
-
-  XLSX.utils.book_append_sheet(wb, ws, 'Categorías');
+  ws.getColumn('Nombre').width = 25;
+  ws.getColumn('Descripción').width = 40;
+  ws.getColumn('Categoría Padre').width = 25;
+  ws.getColumn('Estado').width = 12;
 
   const timestamp = new Date().toISOString().split('T')[0];
-  XLSX.writeFile(wb, `${filename}_${timestamp}.xlsx`);
+  await downloadWorkbook(wb, `${filename}_${timestamp}.xlsx`);
 };
 
 /**
  * Exportar movimientos a Excel - FORMATO MEJORADO
  */
-export const exportMovementsToExcel = (movements, filename = 'movimientos') => {
+export const exportMovementsToExcel = async (movements, filename = 'movimientos') => {
   const data = movements.map(mov => ({
     'Fecha': new Date(mov.created_at).toLocaleString('es-CO'),
     'Tipo': mov.movement_type,
@@ -581,45 +584,31 @@ export const exportMovementsToExcel = (movements, filename = 'movimientos') => {
     'Notas': mov.notes || ''
   }));
 
-  const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.json_to_sheet(data);
+  const wb = new ExcelJS.Workbook();
+  const ws = addSheetFromObjects(wb, 'Movimientos', data);
 
   // Aplicar formato de moneda
-  const range = XLSX.utils.decode_range(ws['!ref']);
-  for (let R = range.s.r + 1; R <= range.e.r; ++R) {
-    const costoCell = `F${R + 1}`;
-    const valorCell = `G${R + 1}`;
-    
-    if (ws[costoCell]) {
-      ws[costoCell] = applyCurrencyFormat(ws[costoCell].v);
-    }
-    if (ws[valorCell]) {
-      ws[valorCell] = applyCurrencyFormat(ws[valorCell].v);
-    }
-  }
+  applyCurrencyColumn(ws, 'Costo Unitario');
+  applyCurrencyColumn(ws, 'Valor Total');
 
-  ws['!cols'] = [
-    { wch: 20 },  // Fecha
-    { wch: 15 },  // Tipo
-    { wch: 30 },  // Producto
-    { wch: 15 },  // SKU
-    { wch: 10 },  // Cantidad
-    { wch: 15 },  // Costo Unitario
-    { wch: 15 },  // Valor Total
-    { wch: 25 },  // Usuario
-    { wch: 40 }   // Notas
-  ];
-
-  XLSX.utils.book_append_sheet(wb, ws, 'Movimientos');
+  ws.getColumn('Fecha').width = 20;
+  ws.getColumn('Tipo').width = 15;
+  ws.getColumn('Producto').width = 30;
+  ws.getColumn('SKU').width = 15;
+  ws.getColumn('Cantidad').width = 10;
+  ws.getColumn('Costo Unitario').width = 15;
+  ws.getColumn('Valor Total').width = 15;
+  ws.getColumn('Usuario').width = 25;
+  ws.getColumn('Notas').width = 40;
 
   const timestamp = new Date().toISOString().split('T')[0];
-  XLSX.writeFile(wb, `${filename}_${timestamp}.xlsx`);
+  await downloadWorkbook(wb, `${filename}_${timestamp}.xlsx`);
 };
 
 /**
  * Exportar compras a Excel - FORMATO MEJORADO
  */
-export const exportPurchasesToExcel = (purchases, filename = 'compras') => {
+export const exportPurchasesToExcel = async (purchases, filename = 'compras') => {
   const purchasesData = purchases.map(purchase => ({
     'Número': purchase.purchase_number,
     'Fecha': new Date(purchase.purchase_date).toLocaleDateString('es-CO'),
@@ -629,29 +618,19 @@ export const exportPurchasesToExcel = (purchases, filename = 'compras') => {
     'Estado': purchase.status
   }));
 
-  const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.json_to_sheet(purchasesData);
-  
+  const wb = new ExcelJS.Workbook();
+  const ws = addSheetFromObjects(wb, 'Compras', purchasesData);
+
   // Aplicar formato de moneda
-  const range = XLSX.utils.decode_range(ws['!ref']);
-  for (let R = range.s.r + 1; R <= range.e.r; ++R) {
-    const totalCell = `E${R + 1}`;
-    if (ws[totalCell]) {
-      ws[totalCell] = applyCurrencyFormat(ws[totalCell].v);
-    }
-  }
+  applyCurrencyColumn(ws, 'Total');
 
-  ws['!cols'] = [
-    { wch: 15 },  // Número
-    { wch: 12 },  // Fecha
-    { wch: 25 },  // Proveedor
-    { wch: 12 },  // Total Items
-    { wch: 15 },  // Total
-    { wch: 12 }   // Estado
-  ];
-
-  XLSX.utils.book_append_sheet(wb, ws, 'Compras');
+  ws.getColumn('Número').width = 15;
+  ws.getColumn('Fecha').width = 12;
+  ws.getColumn('Proveedor').width = 25;
+  ws.getColumn('Total Items').width = 12;
+  ws.getColumn('Total').width = 15;
+  ws.getColumn('Estado').width = 12;
 
   const timestamp = new Date().toISOString().split('T')[0];
-  XLSX.writeFile(wb, `${filename}_${timestamp}.xlsx`);
+  await downloadWorkbook(wb, `${filename}_${timestamp}.xlsx`);
 };
