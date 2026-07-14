@@ -194,12 +194,18 @@ export default function WorkOrderDetailPage() {
   };
 
   const handleAddItem = async () => {
-    if (!newItem.product_id) return toast.error('Debes seleccionar un producto antes de agregar.');
+    const isFreeLine = newItem.item_type === 'free_line';
+    if (isFreeLine) {
+      if (!newItem.product_name.trim()) return toast.error('Escribe una descripción para la línea libre.');
+    } else if (!newItem.product_id) {
+      return toast.error('Debes seleccionar un producto antes de agregar.');
+    }
     if (!newItem.unit_price)  return toast.error('El precio unitario es requerido. Verifica que el producto tenga un precio configurado.');
     setAddingItem(true);
     try {
       await addItem(id, {
-        product_id:    newItem.product_id,
+        product_id:    isFreeLine ? undefined : newItem.product_id,
+        product_name:  isFreeLine ? newItem.product_name.trim() : undefined,
         item_type:     newItem.item_type,
         quantity:      newItem.quantity,
         unit_price:    newItem.unit_price,
@@ -591,7 +597,22 @@ export default function WorkOrderDetailPage() {
               {showAddItem && (
                 <div className="mb-4 p-3 bg-blue-50 rounded-xl space-y-3 border border-blue-100">
 
-                  {/* Búsqueda */}
+                  {/* Línea libre: sin producto de catálogo, se escribe la descripción a mano */}
+                  {newItem.item_type === 'free_line' ? (
+                    <div>
+                      <label className="text-xs font-medium text-gray-600 mb-1 block">Descripción</label>
+                      <input
+                        autoFocus
+                        type="text"
+                        value={newItem.product_name}
+                        onChange={e => setNewItem(p => ({ ...p, product_name: e.target.value }))}
+                        placeholder="Descripción del ítem..."
+                        className={inputCls}
+                      />
+                      <p className="text-xs text-indigo-600 mt-1">Línea libre · No mueve inventario</p>
+                    </div>
+                  ) : (
+                  /* Búsqueda */
                   <div>
                     <label className="text-xs font-medium text-gray-600 mb-1 block">Buscar producto</label>
                     <div className="flex gap-2">
@@ -687,17 +708,28 @@ export default function WorkOrderDetailPage() {
                       </div>
                     )}
                   </div>
+                  )}
 
                   {/* Campos del ítem */}
                   <div className="grid grid-cols-2 gap-2">
                     <div>
                       <label className="text-xs text-gray-500 mb-0.5 block">Tipo</label>
                       <select value={newItem.item_type}
-                        onChange={e => setNewItem(p => ({ ...p, item_type: e.target.value }))}
+                        onChange={e => setNewItem(p => {
+                          const nextType = e.target.value;
+                          const togglingFreeLine = (nextType === 'free_line') !== (p.item_type === 'free_line');
+                          // Solo se limpia el producto/descripción al entrar o salir de
+                          // "Línea libre" — entre repuesto/servicio/mano_obra se conserva
+                          // el producto ya seleccionado (comportamiento previo).
+                          return togglingFreeLine
+                            ? { ...p, item_type: nextType, product_id: '', product_name: '', unit_price: '' }
+                            : { ...p, item_type: nextType };
+                        })}
                         className={inputCls}>
                         <option value="repuesto">Repuesto</option>
                         <option value="servicio">Servicio</option>
                         <option value="mano_obra">Mano de Obra</option>
+                        <option value="free_line">Línea libre</option>
                       </select>
                     </div>
                     <div>
@@ -726,7 +758,9 @@ export default function WorkOrderDetailPage() {
                   </div>
 
                   <div className="flex gap-2">
-                    <button onClick={handleAddItem} disabled={!newItem.product_id || addingItem}
+                    <button
+                      onClick={handleAddItem}
+                      disabled={(newItem.item_type === 'free_line' ? !newItem.product_name.trim() : !newItem.product_id) || addingItem}
                       className="bg-blue-600 text-white text-xs px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition">
                       {addingItem ? 'Agregando...' : 'Agregar ítem'}
                     </button>
@@ -752,9 +786,15 @@ export default function WorkOrderDetailPage() {
                               ? 'bg-orange-100 text-orange-700'
                               : item.item_type === 'mano_obra'
                                 ? 'bg-blue-100 text-blue-700'
-                                : 'bg-purple-100 text-purple-700'
+                                : item.item_type === 'free_line'
+                                  ? 'bg-indigo-100 text-indigo-700'
+                                  : 'bg-purple-100 text-purple-700'
                           }`}>
-                            {item.item_type === 'mano_obra' ? 'Mano de obra' : item.item_type}
+                            {item.item_type === 'mano_obra'
+                              ? 'Mano de obra'
+                              : item.item_type === 'free_line'
+                                ? 'Línea libre'
+                                : item.item_type}
                           </span>
                           <span className="text-sm font-medium text-gray-800 truncate">
                             {item.product_name || item.product?.name}
