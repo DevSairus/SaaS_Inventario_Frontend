@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Layout from '../../components/layout/Layout';
 import { vehiclesApi } from '../../api/workshop';
+import { vehiclesApiOffline } from '../../api/workshopOffline';
 import axios from '../../api/axios';
 import {
   ArrowLeft, Car, Wrench, User, Save, X, PencilLine,
@@ -108,18 +109,24 @@ export default function VehicleDetailPage() {
     if (!form.plate) return toast.error('La placa es requerida');
     setSaving(true);
     try {
-      const res = await vehiclesApi.update(id, {
+      const patch = {
         ...form,
         soat_expiry:          form.soat_expiry          || null,
         tecnomecanica_expiry: form.tecnomecanica_expiry  || null,
         customer_id:          form.customer_id           || null,
-      });
-      // Recargar para tener customer incluido
-      const reloaded = await vehiclesApi.getHistory(id);
-      setVehicle(reloaded.data.data.vehicle);
-      setHistory(reloaded.data.data.history || []);
+      };
+      const res = await vehiclesApiOffline.update(id, patch, vehicle?.updated_at);
+      if (res.data.data._pendingSync) {
+        setVehicle((prev) => (prev ? { ...prev, ...patch, _pendingSync: true } : prev));
+        toast.success('Vehículo guardado sin conexión — se sincronizará automáticamente');
+      } else {
+        // Recargar para tener customer incluido
+        const reloaded = await vehiclesApi.getHistory(id);
+        setVehicle(reloaded.data.data.vehicle);
+        setHistory(reloaded.data.data.history || []);
+        toast.success('Vehículo actualizado');
+      }
       setEditing(false);
-      toast.success('Vehículo actualizado');
     } catch (e) {
       toast.error(e.response?.data?.message || 'Error al guardar');
     } finally {

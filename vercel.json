@@ -4,5 +4,14 @@
       "source": "/(.*)",
       "destination": "/index.html"
     }
+  ],
+  "headers": [
+    {
+      "source": "/workshop-sw.js",
+      "headers": [
+        { "key": "Service-Worker-Allowed", "value": "/workshop/" },
+        { "key": "Cache-Control", "value": "no-cache" }
+      ]
+    }
   ]
 }

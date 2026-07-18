@@ -4,6 +4,7 @@ import Layout from '../../components/layout/Layout';
 import { useNavigate } from 'react-router-dom';
 import useWorkshopStore from '../../store/workshopStore';
 import { vehiclesApi } from '../../api/workshop';
+import { vehiclesApiOffline } from '../../api/workshopOffline';
 import axios from '../../api/axios';
 import { ArrowLeft, Save, Car, User, Wrench, Plus, X, Search, Loader, ScanLine } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -140,13 +141,13 @@ export default function WorkOrderFormPage() {
   const handleCreateVehicle = async () => {
     if (!newVehicle.plate) return toast.error('La placa es requerida');
     try {
-      const res = await vehiclesApi.create({ ...newVehicle, customer_id: form.customer_id || null });
+      const res = await vehiclesApiOffline.create({ ...newVehicle, customer_id: form.customer_id || null });
       const v   = { ...res.data.data, customer: selCustomer };
       setVehicles(prev => [v, ...prev]);
       selectVehicle(v);
       setShowNewVehicle(false);
       setNewVehicle({ plate: '', brand: '', model: '', year: '', color: '', fuel_type: 'gasolina', engine_number: '', vin: '', soat_number: '', soat_expiry: '', tecnomecanica_number: '', tecnomecanica_expiry: '' });
-      toast.success('Vehículo registrado');
+      toast.success(res.data.data._pendingSync ? 'Vehículo guardado sin conexión — se sincronizará automáticamente' : 'Vehículo registrado');
     } catch (e) { toast.error(e.response?.data?.message || 'Error'); }
   };
 

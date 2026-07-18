@@ -1,9 +1,10 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { useEffect } from 'react';
+import { useEffect, lazy, Suspense } from 'react';
 import LoginPage from './pages/auth/LoginPage';
 import LandingPage from './pages/LandingPage';
 import ResetPasswordPage from './pages/auth/ResetPasswordPage';
 import WorkOrderPublicPage from './pages/workshop/WorkOrderPublicPage';
+import Loading from './components/common/Loading';
 import DashboardPage from './pages/dashboard/DashboardPage';
 import ProductsPage from './pages/products/ProductsPage';
 import CategoriesPage from './pages/categories/CategoriesPage';
@@ -32,11 +33,15 @@ import AccountMappingsPage from './pages/accounting/AccountMappingsPage';
 import FinancialReportsPage from './pages/accounting/FinancialReportsPage';
 import FiscalPeriodsPage from './pages/accounting/FiscalPeriodsPage';
 import AccountingHealthPage from './pages/accounting/AccountingHealthPage';
-import WorkOrdersPage from './pages/workshop/WorkOrdersPage';
-import WorkOrderFormPage from './pages/workshop/WorkOrderFormPage';
-import WorkOrderDetailPage from './pages/workshop/WorkOrderDetailPage';
-import VehiclesPage from './pages/workshop/VehiclesPage';
-import VehicleDetailPage from './pages/workshop/VehicleDetailPage';
+// Lazy: son las únicas páginas dentro del alcance de la PWA "Taller" instalada
+// (offline + precache del Service Worker, ver frontend/src/pwa/sw.js). El resto
+// del módulo workshop (reportes, productividad, comisiones) sigue siendo eager.
+const WorkOrdersPage = lazy(() => import('./pages/workshop/WorkOrdersPage'));
+const WorkOrderFormPage = lazy(() => import('./pages/workshop/WorkOrderFormPage'));
+const WorkOrderDetailPage = lazy(() => import('./pages/workshop/WorkOrderDetailPage'));
+const VehiclesPage = lazy(() => import('./pages/workshop/VehiclesPage'));
+const VehicleDetailPage = lazy(() => import('./pages/workshop/VehicleDetailPage'));
+const ScannerPage = lazy(() => import('./pages/workshop/ScannerPage'));
 import TechnicianProductivityPage from './pages/workshop/productivity/TechnicianProductivityPage';
 import CommissionSettlementsPage from './pages/workshop/commissions/CommissionSettlementsPage';
 import CommissionSettlementDetailPage from './pages/workshop/commissions/CommissionSettlementDetailPage';
@@ -82,6 +87,7 @@ import SuperAdminSubscriptionsList from './pages/superadmin/SuperAdminSubscripti
 import SubscriptionInvoicesManagement from './pages/superadmin/SubscriptionInvoicesManagement';
 import SubscriptionManagement from './pages/superadmin/SubscriptionManagement';
 import SuperAdminMercadoPagoConfig from './pages/superadmin/SuperAdminMercadoPagoConfig';
+import SuperAdminNcfConfig from './pages/superadmin/SuperAdminNcfConfig';
 import AnnouncementsManagement from './pages/superadmin/AnnouncementsManagement';
 import AnnouncementsModal from './components/common/AnnouncementsModal';
 
@@ -96,6 +102,7 @@ import PrivateRoute from './components/auth/PrivateRoute';
 import useAuthStore from './store/authStore';
 import useTenantStore from './store/tenantStore';
 import SessionKeepAlive from './components/SessionKeepAlive';
+import PwaBootstrap from './pwa/PwaBootstrap';
 import { ROLES, ROUTES } from './utils/constants';
 
 // Redirigir según rol
@@ -151,6 +158,7 @@ function App() {
   return (
     <BrowserRouter>
       <SessionKeepAlive />
+      <PwaBootstrap />
       <Toaster
         position="top-center"
         toastOptions={{
@@ -191,6 +199,7 @@ function App() {
           <Route path="subscriptions/:id"   element={<SubscriptionManagement />} />
           <Route path="subscription-invoices" element={<SubscriptionInvoicesManagement />} />
           <Route path="mercadopago-config"  element={<SuperAdminMercadoPagoConfig />} />
+          <Route path="ncf-config"          element={<SuperAdminNcfConfig />} />
           <Route path="announcements"       element={<AnnouncementsManagement />} />
           <Route path="analytics"           element={<Analytics />} />
           <Route path="permissions"         element={<RolePermissionsPage />} />
@@ -236,12 +245,15 @@ function App() {
         <Route path="cash-sessions"    element={<TenantRoute module="treasury"><CashSessionsPage /></TenantRoute>} />
 
         {/* ── Taller ─────────────────────────────────── */}
-        <Route path="workshop/work-orders"             element={<TenantRoute module="workshop"><WorkOrdersPage /></TenantRoute>} />
+        {/* Lazy + Suspense: estas 6 rutas son el alcance completo de la PWA
+            "Taller" instalada (mobile-only, con offline). Ver frontend/src/pwa/. */}
+        <Route path="workshop/work-orders"             element={<TenantRoute module="workshop"><Suspense fallback={<Loading fullScreen />}><WorkOrdersPage /></Suspense></TenantRoute>} />
         <Route path="workshop/report"                  element={<TenantRoute module="workshop"><WorkshopReportPage /></TenantRoute>} />
-        <Route path="workshop/work-orders/new"         element={<TenantRoute module="workshop"><WorkOrderFormPage /></TenantRoute>} />
-        <Route path="workshop/work-orders/:id"         element={<TenantRoute module="workshop"><WorkOrderDetailPage /></TenantRoute>} />
-        <Route path="workshop/vehicles"                element={<TenantRoute module="workshop"><VehiclesPage /></TenantRoute>} />
-        <Route path="workshop/vehicles/:id"            element={<TenantRoute module="workshop"><VehicleDetailPage /></TenantRoute>} />
+        <Route path="workshop/work-orders/new"         element={<TenantRoute module="workshop"><Suspense fallback={<Loading fullScreen />}><WorkOrderFormPage /></Suspense></TenantRoute>} />
+        <Route path="workshop/work-orders/:id"         element={<TenantRoute module="workshop"><Suspense fallback={<Loading fullScreen />}><WorkOrderDetailPage /></Suspense></TenantRoute>} />
+        <Route path="workshop/vehicles"                element={<TenantRoute module="workshop"><Suspense fallback={<Loading fullScreen />}><VehiclesPage /></Suspense></TenantRoute>} />
+        <Route path="workshop/vehicles/:id"            element={<TenantRoute module="workshop"><Suspense fallback={<Loading fullScreen />}><VehicleDetailPage /></Suspense></TenantRoute>} />
+        <Route path="workshop/scan"                    element={<TenantRoute module="workshop"><Suspense fallback={<Loading fullScreen />}><ScannerPage /></Suspense></TenantRoute>} />
         <Route path="workshop/productivity"            element={<TenantRoute module="workshop"><TechnicianProductivityPage /></TenantRoute>} />
         <Route path="workshop/commission-settlements"  element={<TenantRoute module="workshop"><CommissionSettlementsPage /></TenantRoute>} />
         <Route path="workshop/commission-settlements/:id" element={<TenantRoute module="workshop"><CommissionSettlementDetailPage /></TenantRoute>} />

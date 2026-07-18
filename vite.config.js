@@ -1,11 +1,32 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import { VitePWA } from 'vite-plugin-pwa'
 import path from 'path'
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    // Service Worker de la PWA "Taller" (scope /workshop/). El manifest y el
+    // registro del SW los maneja frontend/src/pwa/PwaBootstrap.jsx a mano
+    // (solo mobile + módulo "workshop" habilitado), por eso manifest:false e
+    // injectRegister:null — este plugin solo compila src/pwa/sw.js con Workbox.
+    VitePWA({
+      strategies: 'injectManifest',
+      srcDir: 'src/pwa',
+      filename: 'workshop-sw.js',
+      manifest: false,
+      injectRegister: null,
+      injectManifest: {
+        globPatterns: ['**/*.{js,css,html,svg,png,webmanifest}'],
+        // El bundle principal es una sola SPA (~2.3MB sin comprimir) — ver
+        // limitación documentada en el plan PWA: precachear todo el shell
+        // requiere subir el límite por defecto de Workbox (2MiB).
+        maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
+      },
+    }),
+  ],
   server: {
-    port: 5173,
+    port: 5172,
     host: true
   },
   resolve: {

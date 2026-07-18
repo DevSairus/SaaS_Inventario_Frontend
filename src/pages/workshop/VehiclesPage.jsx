@@ -1,8 +1,9 @@
 import { useEffect, useState, useCallback } from 'react';
 import Layout from '../../components/layout/Layout';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import useWorkshopStore from '../../store/workshopStore';
 import { vehiclesApi } from '../../api/workshop';
+import { vehiclesApiOffline } from '../../api/workshopOffline';
 import RuntConsultaModal from '../../components/workshop/RuntConsultaModal';
 import axios from '../../api/axios';
 import toast from 'react-hot-toast';
@@ -79,7 +80,7 @@ function CreateVehicleModal({ onClose, onCreated }) {
     if (!form.plate.trim()) return toast.error('La placa es requerida');
     setSaving(true);
     try {
-      const res = await vehiclesApi.create({
+      const res = await vehiclesApiOffline.create({
         ...form,
         plate: form.plate.toUpperCase().trim(),
         year:  form.year ? parseInt(form.year) : null,
@@ -87,7 +88,7 @@ function CreateVehicleModal({ onClose, onCreated }) {
         tecnomecanica_expiry: form.tecnomecanica_expiry || null,
         customer_id:          form.customer_id          || null,
       });
-      toast.success('Vehículo registrado');
+      toast.success(res.data.data._pendingSync ? 'Vehículo guardado sin conexión — se sincronizará automáticamente' : 'Vehículo registrado');
       onCreated(res.data.data);
     } catch (e) {
       toast.error(e.response?.data?.message || 'Error al crear vehículo');
@@ -288,8 +289,10 @@ function DeleteConfirm({ vehicle, onConfirm, onCancel }) {
 /* ── Página principal ──────────────────────────────────────────────── */
 export default function VehiclesPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { vehicles, vehiclesTotal, vehiclesLoading, fetchVehicles } = useWorkshopStore();
-  const [search, setSearch]               = useState('');
+  // Prellenar búsqueda si se llega desde el escáner de placa/VIN (workshop/scan)
+  const [search, setSearch]               = useState(() => searchParams.get('search') || '');
   const [page, setPage]                   = useState(1);
   const [showHistory, setShowHistory]     = useState(null);
   const [history, setHistory]             = useState(null);

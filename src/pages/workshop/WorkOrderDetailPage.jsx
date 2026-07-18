@@ -6,6 +6,7 @@ import useProductsStore from '../../store/productsStore';
 import useTenantStore from '../../store/tenantStore';
 import { productsAPI } from '../../api/products';
 import { workOrdersApi } from '../../api/workshop';
+import { workOrdersApiOffline } from '../../api/workshopOffline';
 import axios from '../../api/axios';
 import Combobox from '../../components/common/Combobox';
 import BarcodeScanner from '../../components/common/BarcodeScanner';
@@ -256,10 +257,10 @@ export default function WorkOrderDetailPage() {
     if (isNaN(km) || km < 0) return toast.error('El kilometraje debe ser un número válido');
     setSavingMileageOut(true);
     try {
-      await workOrdersApi.update(id, { mileage_out: km });
+      const res = await workOrdersApiOffline.update(id, { mileage_out: km }, order?.updated_at);
       patchCurrentOrder({ mileage_out: km });
       setEditingMileageOut(false);
-      toast.success('Km de entrega guardado');
+      toast.success(res.data.data._pendingSync ? 'Km de entrega guardado sin conexión — se sincronizará automáticamente' : 'Km de entrega guardado');
     } catch {
       toast.error('No se pudo guardar el kilometraje de entrega');
     } finally {
@@ -301,11 +302,11 @@ export default function WorkOrderDetailPage() {
   const saveChecklist = async () => {
     setSavingChecklist(true);
     try {
-      await workOrdersApi.updateChecklist(id, checklist);
+      const res = await workOrdersApiOffline.updateChecklist(id, checklist, order?.updated_at);
       // Actualizar store directamente — Sequelize no devuelve checklist_in en el refetch
       patchCurrentOrder({ checklist_in: { ...checklist } });
       setShowChecklist(false);
-      toast.success('Inventario guardado');
+      toast.success(res.data.data._pendingSync ? 'Inventario guardado sin conexión — se sincronizará automáticamente' : 'Inventario guardado');
     } catch (e) {
       toast.error(e?.response?.data?.message || 'No se pudo guardar el inventario de ingreso. Intenta de nuevo.');
     } finally {
@@ -340,10 +341,15 @@ export default function WorkOrderDetailPage() {
   const saveTechnician = async () => {
     setSavingTech(true);
     try {
-      await workOrdersApi.update(id, { technician_id: selectedTechId || null });
-      await fetchOrder(id);
+      const res = await workOrdersApiOffline.update(id, { technician_id: selectedTechId || null }, order?.updated_at);
+      if (res.data.data._pendingSync) {
+        patchCurrentOrder({ technician_id: selectedTechId || null });
+        toast.success('Técnico guardado sin conexión — se sincronizará automáticamente');
+      } else {
+        await fetchOrder(id);
+        toast.success('Técnico actualizado');
+      }
       setEditingTech(false);
-      toast.success('Técnico actualizado');
     } catch {
       toast.error('No se pudo actualizar el técnico. Verifica tu conexión e intenta de nuevo.');
     } finally {
@@ -355,10 +361,15 @@ export default function WorkOrderDetailPage() {
     if (!selectedWarehouseId) return toast.error('Debes seleccionar una bodega de la lista.');
     setSavingWarehouse(true);
     try {
-      await workOrdersApi.update(id, { warehouse_id: selectedWarehouseId });
-      await fetchOrder(id);
+      const res = await workOrdersApiOffline.update(id, { warehouse_id: selectedWarehouseId }, order?.updated_at);
+      if (res.data.data._pendingSync) {
+        patchCurrentOrder({ warehouse_id: selectedWarehouseId });
+        toast.success('Bodega guardada sin conexión — se sincronizará automáticamente');
+      } else {
+        await fetchOrder(id);
+        toast.success('Bodega asignada');
+      }
       setEditingWarehouse(false);
-      toast.success('Bodega asignada');
     } catch {
       toast.error('No se pudo asignar la bodega. Verifica tu conexión e intenta de nuevo.');
     } finally {

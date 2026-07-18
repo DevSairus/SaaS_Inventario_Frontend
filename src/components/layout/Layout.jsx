@@ -1,15 +1,44 @@
 import { useState } from 'react';
 import Sidebar from './Sidebar';
+import WorkshopBottomNav from './WorkshopBottomNav';
 import StockAlerts from '../common/StockAlerts';
 import BranchSelector from './BranchSelector';
 import NexaChatWidget from '../common/NexaChatWidget';
 import { Bars3Icon } from '@heroicons/react/24/outline';
 import useAuthStore from '../../store/authStore';
+import { isRunningAsInstalledPwa } from '../../pwa/pwaEnv';
+import OfflineBanner from '../../pwa/components/OfflineBanner';
+import PendingSyncBadge from '../../pwa/components/PendingSyncBadge';
+import SyncRetryButton from '../../pwa/components/SyncRetryButton';
+import ConflictResolutionModal from '../../pwa/components/ConflictResolutionModal';
 
 function Layout({ children }) {
   const [isCollapsed, setIsCollapsed]           = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { user } = useAuthStore();
+  // La PWA "Taller" instalada reemplaza el sidebar completo de escritorio por
+  // un bottom-nav de 3 ítems (ver PwaBootstrap/manifest scope "/workshop/").
+  const isWorkshopPwa = isRunningAsInstalledPwa();
+
+  if (isWorkshopPwa) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col">
+        <OfflineBanner />
+        <header className="sticky top-0 z-30 flex items-center justify-between bg-white border-b border-gray-200 px-4 h-14 shadow-sm flex-shrink-0">
+          <span className="font-semibold text-gray-800 text-sm truncate">Taller</span>
+          <div className="flex items-center gap-2">
+            <PendingSyncBadge />
+            <SyncRetryButton />
+          </div>
+        </header>
+        <main className="flex-1 px-4 py-4 pb-24 min-w-0">
+          {children}
+        </main>
+        <WorkshopBottomNav />
+        <ConflictResolutionModal />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 flex">

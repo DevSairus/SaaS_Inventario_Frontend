@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { vehiclesApi, workOrdersApi } from '../api/workshop';
+import { vehiclesApiOffline, workOrdersApiOffline } from '../api/workshopOffline';
 import toast from 'react-hot-toast';
 
 const useWorkshopStore = create((set, get) => ({
@@ -24,8 +25,8 @@ const useWorkshopStore = create((set, get) => ({
 
   createVehicle: async (data) => {
     try {
-      const res = await vehiclesApi.create(data);
-      toast.success('Vehículo registrado');
+      const res = await vehiclesApiOffline.create(data);
+      toast.success(res.data.data._pendingSync ? 'Vehículo guardado sin conexión — se sincronizará automáticamente' : 'Vehículo registrado');
       return res.data.data;
     } catch (err) {
       const msg = err?.response?.data?.message || 'No se pudo registrar el vehículo.';
@@ -36,8 +37,8 @@ const useWorkshopStore = create((set, get) => ({
 
   updateVehicle: async (id, data) => {
     try {
-      const res = await vehiclesApi.update(id, data);
-      toast.success('Vehículo actualizado');
+      const res = await vehiclesApiOffline.update(id, data);
+      toast.success(res.data.data._pendingSync ? 'Cambios guardados sin conexión — se sincronizarán automáticamente' : 'Vehículo actualizado');
       return res.data.data;
     } catch (err) {
       const msg = err?.response?.data?.message || 'No se pudo actualizar el vehículo.';
@@ -80,8 +81,12 @@ const useWorkshopStore = create((set, get) => ({
 
   createOrder: async (data) => {
     try {
-      const res = await workOrdersApi.create(data);
-      toast.success(`OT ${res.data.data.order_number} creada exitosamente`);
+      const res = await workOrdersApiOffline.create(data);
+      if (res.data.data._pendingSync) {
+        toast.success('OT guardada sin conexión — se sincronizará automáticamente');
+      } else {
+        toast.success(`OT ${res.data.data.order_number} creada exitosamente`);
+      }
       return res.data.data;
     } catch (err) {
       const msg = err?.response?.data?.message || 'No se pudo crear la orden de trabajo.';
@@ -92,9 +97,14 @@ const useWorkshopStore = create((set, get) => ({
 
   updateOrder: async (id, data) => {
     try {
-      const res = await workOrdersApi.update(id, data);
-      set({ currentOrder: res.data.data });
-      toast.success('OT actualizada correctamente');
+      const res = await workOrdersApiOffline.update(id, data, get().currentOrder?.updated_at);
+      if (res.data.data._pendingSync) {
+        set((state) => ({ currentOrder: state.currentOrder ? { ...state.currentOrder, ...data, _pendingSync: true } : state.currentOrder }));
+        toast.success('Cambios guardados sin conexión — se sincronizarán automáticamente');
+      } else {
+        set({ currentOrder: res.data.data });
+        toast.success('OT actualizada correctamente');
+      }
       return res.data.data;
     } catch (err) {
       const msg = err?.response?.data?.message || 'No se pudo actualizar la orden de trabajo.';
@@ -106,9 +116,14 @@ const useWorkshopStore = create((set, get) => ({
   changeStatus: async (id, status, extra = {}) => {
     const labels = { en_proceso: 'En Proceso', en_espera: 'En Espera', listo: 'Listo', entregado: 'Entregado', cancelado: 'Cancelado' };
     try {
-      const res = await workOrdersApi.changeStatus(id, { status, ...extra });
-      await get().fetchOrder(id);
-      toast.success(`Estado cambiado a: ${labels[status] || status}`);
+      const res = await workOrdersApiOffline.changeStatus(id, { status, ...extra }, get().currentOrder?.updated_at);
+      if (res.data.data._pendingSync) {
+        set((state) => ({ currentOrder: state.currentOrder ? { ...state.currentOrder, status, ...extra, _pendingSync: true } : state.currentOrder }));
+        toast.success(`Cambio a "${labels[status] || status}" guardado sin conexión`);
+      } else {
+        await get().fetchOrder(id);
+        toast.success(`Estado cambiado a: ${labels[status] || status}`);
+      }
       return res.data.data;
     } catch (err) {
       const msg = err?.response?.data?.message || `No se pudo cambiar el estado a "${labels[status] || status}".`;
@@ -119,9 +134,13 @@ const useWorkshopStore = create((set, get) => ({
 
   addItem: async (id, data) => {
     try {
-      const res = await workOrdersApi.addItem(id, data);
-      toast.success('Ítem agregado a la OT');
-      await get().fetchOrder(id);
+      const res = await workOrdersApiOffline.addItem(id, data);
+      if (res.data.data._pendingSync) {
+        toast.success('Ítem guardado sin conexión — se agregará al sincronizar');
+      } else {
+        toast.success('Ítem agregado a la OT');
+        await get().fetchOrder(id);
+      }
       return res.data.data;
     } catch (err) {
       const msg = err?.response?.data?.message || 'No se pudo agregar el ítem.';
@@ -132,9 +151,13 @@ const useWorkshopStore = create((set, get) => ({
 
   removeItem: async (orderId, itemId) => {
     try {
-      await workOrdersApi.removeItem(orderId, itemId);
-      toast.success('Ítem eliminado');
-      await get().fetchOrder(orderId);
+      const res = await workOrdersApiOffline.removeItem(orderId, itemId);
+      if (res.data.data._pendingSync) {
+        toast.success('Eliminación guardada sin conexión — se aplicará al sincronizar');
+      } else {
+        toast.success('Ítem eliminado');
+        await get().fetchOrder(orderId);
+      }
     } catch (err) {
       const msg = err?.response?.data?.message || 'No se pudo eliminar el ítem.';
       toast.error(msg);
