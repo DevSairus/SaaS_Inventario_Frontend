@@ -15,6 +15,7 @@ import {
   DollarSign,
   Settings,
   Megaphone, // ✅ NUEVO: Icono para Anuncios
+  Link2,
 } from 'lucide-react';
 import useAuthStore from '@store/authStore';
 
@@ -96,6 +97,12 @@ const SuperAdminSidebar = ({ isOpen, toggleSidebar }) => {
           href: '/superadmin/mercadopago-config',
           icon: Settings,
           description: 'Credenciales de pago',
+        },
+        {
+          name: 'Facturación Núcleo (NCF)',
+          href: '/superadmin/ncf-config',
+          icon: Link2,
+          description: 'Conexión con ESC DataCore',
         },
       ],
     },

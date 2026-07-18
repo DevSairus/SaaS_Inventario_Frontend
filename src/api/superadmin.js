@@ -165,4 +165,36 @@ export const superAdminAPI = {
     const response = await api.delete(`/superadmin/tenants/${tenantId}/mercadopago-config`);
     return response.data;
   },
+
+  // NCF Config (Núcleo Central de Facturación - ESC DataCore, global)
+  getNcfConfig: async () => {
+    const response = await api.get('/superadmin/ncf-config');
+    return response.data;
+  },
+
+  updateNcfConfig: async (data) => {
+    const response = await api.post('/superadmin/ncf-config', data);
+    return response.data;
+  },
+
+  deleteNcfConfig: async () => {
+    const response = await api.delete('/superadmin/ncf-config');
+    return response.data;
+  },
+
+  probarConexionNcf: async () => {
+    const response = await api.post('/superadmin/ncf-config/probar-conexion');
+    return response.data;
+  },
+
+  // Sincronización NCF -- por sistema completo, toma todos los tenants de public.tenants
+  getNcfTenantsStatus: async () => {
+    const response = await api.get('/superadmin/ncf-config/tenants');
+    return response.data;
+  },
+
+  sincronizarTenantsNcf: async () => {
+    const response = await api.post('/superadmin/ncf-config/sincronizar-tenants');
+    return response.data;
+  },
 };

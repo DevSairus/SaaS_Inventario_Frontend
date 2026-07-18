@@ -220,7 +220,20 @@ const Analytics = () => {
         </Card>
 
         {/* Ingresos por Mes */}
-        <Card title="Ingresos por Mes">
+        <Card title={
+          <span className="flex items-center gap-2">
+            Ingresos por Mes
+            {overview.revenueIsEstimate ? (
+              <span className="text-xs font-normal px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
+                Estimado (conecta NCF para ver plata real)
+              </span>
+            ) : (
+              <span className="text-xs font-normal px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
+                Real (Núcleo NCF)
+              </span>
+            )}
+          </span>
+        }>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={revenueByMonth}>
               <CartesianGrid strokeDasharray="3 3" />
