@@ -4,6 +4,8 @@ import {
   DollarSign,
   Users,
   BarChart3,
+  AlertTriangle,
+  Clock,
 } from 'lucide-react';
 import useSuperAdminStore from '../../store/superAdminStore';
 import Card from '../../components/common/Card';
@@ -192,6 +194,39 @@ const Analytics = () => {
             </div>
             <div className="p-3 bg-orange-100 rounded-lg">
               <BarChart3 className="w-6 h-6 text-orange-600" />
+            </div>
+          </div>
+        </Card>
+      </div>
+
+      {/* Estado de cobro (facturación centralizada NCF) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600 mb-1">Tenants suspendidos por impago</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {overview.tenantsSuspendidos ?? 0}
+              </p>
+              <p className="text-xs text-gray-500 mt-1">se reactivan solos al pagar</p>
+            </div>
+            <div className="p-3 bg-red-100 rounded-lg">
+              <AlertTriangle className="w-6 h-6 text-red-600" />
+            </div>
+          </div>
+        </Card>
+
+        <Card>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600 mb-1">En margen de gracia</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {overview.tenantsPorVencer ?? 0}
+              </p>
+              <p className="text-xs text-gray-500 mt-1">vencidos, aún no suspendidos</p>
+            </div>
+            <div className="p-3 bg-amber-100 rounded-lg">
+              <Clock className="w-6 h-6 text-amber-600" />
             </div>
           </div>
         </Card>
