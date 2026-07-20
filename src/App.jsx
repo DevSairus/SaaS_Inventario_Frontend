@@ -103,6 +103,8 @@ import useAuthStore from './store/authStore';
 import useTenantStore from './store/tenantStore';
 import SessionKeepAlive from './components/SessionKeepAlive';
 import PwaBootstrap from './pwa/PwaBootstrap';
+import InstallPrompt from './pwa/components/InstallPrompt';
+import ImpersonationBanner from './components/common/ImpersonationBanner';
 import { ROLES, ROUTES } from './utils/constants';
 
 // Redirigir según rol
@@ -159,6 +161,8 @@ function App() {
     <BrowserRouter>
       <SessionKeepAlive />
       <PwaBootstrap />
+      <InstallPrompt />
+      <ImpersonationBanner />
       <Toaster
         position="top-center"
         toastOptions={{

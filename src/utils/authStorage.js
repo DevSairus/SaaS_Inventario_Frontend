@@ -4,6 +4,14 @@ export const STORAGE_KEYS = Object.freeze({
   ACTIVE_BRANCH: 'active_branch_id',
 });
 
+// Slot para la sesión del superadmin mientras impersona a un usuario de un
+// tenant (soporte/seguimiento) — en sessionStorage, no localStorage, para no
+// sobrevivir sin querer entre reinicios del navegador.
+const IMPERSONATOR_KEYS = Object.freeze({
+  TOKEN: 'impersonator_token',
+  USER: 'impersonator_user',
+});
+
 export function getStoredBranchId() {
   try {
     return localStorage.getItem(STORAGE_KEYS.ACTIVE_BRANCH) || null;
@@ -71,7 +79,36 @@ export function clearAuthStorage() {
   setStoredBranchId(null);
 }
 
-function decodeJwtPayload(token) {
+export function getImpersonatorSession() {
+  try {
+    const token = sessionStorage.getItem(IMPERSONATOR_KEYS.TOKEN);
+    const rawUser = sessionStorage.getItem(IMPERSONATOR_KEYS.USER);
+    if (!token || !rawUser) return null;
+    return { token, user: JSON.parse(rawUser) };
+  } catch {
+    return null;
+  }
+}
+
+export function setImpersonatorSession(token, user) {
+  try {
+    sessionStorage.setItem(IMPERSONATOR_KEYS.TOKEN, token);
+    sessionStorage.setItem(IMPERSONATOR_KEYS.USER, JSON.stringify(user));
+  } catch {
+    /* noop */
+  }
+}
+
+export function clearImpersonatorSession() {
+  try {
+    sessionStorage.removeItem(IMPERSONATOR_KEYS.TOKEN);
+    sessionStorage.removeItem(IMPERSONATOR_KEYS.USER);
+  } catch {
+    /* noop */
+  }
+}
+
+export function decodeJwtPayload(token) {
   if (!token || typeof token !== 'string' || !token.includes('.')) return null;
   try {
     const payload = token.split('.')[1];

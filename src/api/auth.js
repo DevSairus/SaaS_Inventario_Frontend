@@ -25,6 +25,12 @@ export const authAPI = {
     return response.data;
   },
 
+  // Finalizar sesión de soporte (impersonación)
+  endImpersonation: async () => {
+    const response = await api.post('/auth/impersonate/end');
+    return response.data;
+  },
+
   // Cambiar contraseña
   changePassword: async (data) => {
     const response = await api.post('/auth/change-password', data);

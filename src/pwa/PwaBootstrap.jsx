@@ -1,6 +1,5 @@
 import { useEffect } from 'react';
-import useTenantStore from '../store/tenantStore';
-import { isMobileDevice } from './pwaEnv';
+import { useWorkshopPwaEligible } from './useWorkshopPwaEligible';
 import { startSyncManager } from './offlineQueue/syncManager';
 
 const MANIFEST_LINK_ID = 'workshop-pwa-manifest';
@@ -25,14 +24,9 @@ function removeHeadTag(id) {
 // habilitado — mismo criterio que <TenantRoute module="workshop"> en App.jsx,
 // para no duplicar la lógica de bloqueo de módulos.
 function PwaBootstrap() {
-  const enabledModules = useTenantStore((s) => s.enabledModules);
+  const eligible = useWorkshopPwaEligible();
 
   useEffect(() => {
-    // enabledModules === null: el config del tenant todavía no cargó, esperar.
-    if (enabledModules === null) return;
-
-    const eligible = isMobileDevice() && enabledModules.includes('workshop');
-
     if (!eligible) {
       removeHeadTag(MANIFEST_LINK_ID);
       removeHeadTag(APPLE_ICON_LINK_ID);
@@ -53,7 +47,7 @@ function PwaBootstrap() {
     // Cola de sincronización offline (OT y vehículos) — solo tiene sentido
     // arrancarla para usuarios elegibles a la PWA de Taller.
     startSyncManager();
-  }, [enabledModules]);
+  }, [eligible]);
 
   return null;
 }

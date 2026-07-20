@@ -7,6 +7,10 @@ import {
   setStoredUser,
   clearAuthStorage,
   isTokenExpired,
+  getImpersonatorSession,
+  setImpersonatorSession,
+  clearImpersonatorSession,
+  decodeJwtPayload,
 } from '../utils/authStorage';
 
 function loadInitialSession() {
@@ -81,6 +85,42 @@ const useAuthStore = create((set) => ({
       user: user ?? null,
       isAuthenticated: !!token,
     });
+  },
+
+  // Guarda la sesión actual (superadmin) aparte y adopta la del usuario
+  // impersonado — ver frontend/src/pages/superadmin/TenantUsers.jsx.
+  startImpersonation: ({ token, user }) => {
+    const current = { token: getStoredToken(), user: getStoredUser() };
+    if (current.token && current.user) {
+      setImpersonatorSession(current.token, current.user);
+    }
+    set({ token, user, isAuthenticated: !!token });
+    setStoredToken(token);
+    setStoredUser(user);
+  },
+
+  // Restaura la sesión del superadmin guardada por startImpersonation.
+  // Retorna false si no había nada guardado o si ya expiró (el caller debe
+  // mandar a /login en ese caso).
+  endImpersonation: () => {
+    const impersonator = getImpersonatorSession();
+    clearImpersonatorSession();
+    if (!impersonator || isTokenExpired(impersonator.token)) {
+      clearAuthStorage();
+      set({ token: null, user: null, isAuthenticated: false });
+      return false;
+    }
+    setStoredToken(impersonator.token);
+    setStoredUser(impersonator.user);
+    set({ token: impersonator.token, user: impersonator.user, isAuthenticated: true });
+    return true;
+  },
+
+  isImpersonating: () => {
+    const token = getStoredToken();
+    if (!token) return false;
+    const payload = decodeJwtPayload(token);
+    return Boolean(payload?.impersonated_by);
   },
 
   clearError: () => set({ error: null }),

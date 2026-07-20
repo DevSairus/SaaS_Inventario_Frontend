@@ -9,8 +9,11 @@ import {
   Key,
   UserCog,
   UserPlus,
+  LogIn,
 } from 'lucide-react';
 import useSuperAdminStore from '../../store/superAdminStore';
+import useAuthStore from '../../store/authStore';
+import { superAdminAPI } from '../../api/superadmin';
 import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';
 import Loading from '../../components/common/Loading';
@@ -32,6 +35,8 @@ const TenantUsers = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [showAddUserModal, setShowAddUserModal] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState({ open: false });
+  const [impersonateDialog, setImpersonateDialog] = useState({ open: false, user: null });
+  const [impersonating, setImpersonating] = useState(false);
   const [roleDialog, setRoleDialog] = useState({ open: false, user: null });
   const [passwordDialog, setPasswordDialog] = useState({
     open: false,
@@ -90,6 +95,24 @@ const TenantUsers = () => {
     if (success) {
       setConfirmDialog({ open: false });
       doFetch();
+    }
+  };
+
+  const handleImpersonateClick = (user) => {
+    setImpersonateDialog({ open: true, user });
+  };
+
+  const confirmImpersonate = async () => {
+    setImpersonating(true);
+    try {
+      const response = await superAdminAPI.impersonateUser(id, impersonateDialog.user.id);
+      useAuthStore.getState().startImpersonation(response.data);
+      // Navegación dura: resetea TanStack Query y cualquier store con datos
+      // del tenant anterior (no hay listener de storage event que lo haga).
+      window.location.href = '/dashboard';
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'No se pudo iniciar la sesión de soporte');
+      setImpersonating(false);
     }
   };
 
@@ -325,6 +348,15 @@ const TenantUsers = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex items-center justify-end gap-2">
+                          {user.role !== 'super_admin' && user.is_active && (
+                            <button
+                              onClick={() => handleImpersonateClick(user)}
+                              className="text-emerald-600 hover:text-emerald-900"
+                              title="Iniciar sesión como este usuario (soporte)"
+                            >
+                              <LogIn className="w-5 h-5" />
+                            </button>
+                          )}
                           <button
                             onClick={() => handleRoleClick(user)}
                             className="text-blue-600 hover:text-blue-900"
@@ -373,6 +405,16 @@ const TenantUsers = () => {
         onConfirm={confirmDelete}
         onCancel={() => setConfirmDialog({ open: false })}
         loading={isSubmitting}
+      />
+
+      {/* Confirm Impersonate Dialog */}
+      <ConfirmDialog
+        open={impersonateDialog.open}
+        title="Iniciar sesión de soporte"
+        message={`Vas a iniciar sesión como ${impersonateDialog.user?.first_name} ${impersonateDialog.user?.last_name} (${impersonateDialog.user?.email}). Esta acción queda registrada.`}
+        onConfirm={confirmImpersonate}
+        onCancel={() => setImpersonateDialog({ open: false, user: null })}
+        loading={impersonating}
       />
 
       {/* Role Change Dialog */}
