@@ -20,6 +20,50 @@ const METHODS = [
 
 const emptyAmounts = { efectivo: 0, tarjeta: 0, transferencia: 0, otro: 0 };
 
+const SOURCE_LABELS = {
+  sale: 'Venta',
+  work_order: 'OT (sin facturar)',
+  purchase: 'Compra',
+  expense: 'Gasto',
+};
+
+// Lista de movimientos que componen el cuadre de una sesión — drill-down
+// reutilizado tanto en el modal de cierre como en el detalle del historial.
+const PaymentsList = ({ transactions, loading }) => {
+  if (loading) {
+    return <div className="text-center py-6 text-gray-400 text-sm">Cargando movimientos...</div>;
+  }
+  if (!transactions || transactions.length === 0) {
+    return <div className="text-center py-6 text-gray-400 text-sm">Sin movimientos registrados</div>;
+  }
+  return (
+    <div className="overflow-x-auto border border-gray-200 rounded-lg">
+      <table className="min-w-full divide-y divide-gray-200 text-sm">
+        <thead className="bg-gray-50">
+          <tr>
+            {['Origen', 'Referencia', 'Detalle', 'Método', 'Monto'].map(h => (
+              <th key={h} className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-gray-100">
+          {transactions.map((t, idx) => (
+            <tr key={idx}>
+              <td className="px-3 py-2 text-gray-600 whitespace-nowrap">{SOURCE_LABELS[t.source] || t.source}</td>
+              <td className="px-3 py-2 text-gray-600 whitespace-nowrap">{t.reference}</td>
+              <td className="px-3 py-2 text-gray-600">{t.detail}</td>
+              <td className="px-3 py-2 text-gray-600 whitespace-nowrap capitalize">{t.bucket || t.method}</td>
+              <td className={`px-3 py-2 font-medium whitespace-nowrap ${t.direction === 'in' ? 'text-green-700' : 'text-red-600'}`}>
+                {t.direction === 'in' ? '+' : '-'}{formatCurrency(t.amount)}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+};
+
 const CashSessionsPage = () => {
   const { branches, activeBranchId, fetchBranches, loaded: branchesLoaded } = useBranchStore();
 
@@ -37,9 +81,13 @@ const CashSessionsPage = () => {
   // Modal de cierre
   const [showCloseModal, setShowCloseModal] = useState(false);
   const [summary, setSummary] = useState(null);
+  const [closePayments, setClosePayments] = useState([]);
   const [counted, setCounted] = useState(emptyAmounts);
   const [closingNotes, setClosingNotes] = useState('');
   const [savingClose, setSavingClose] = useState(false);
+
+  // Modal de detalle de pagos (historial de cajas ya cerradas)
+  const [detailModal, setDetailModal] = useState({ open: false, loading: false, transactions: [] });
 
   const activeBranch = branches.find(b => b.id === activeBranchId);
 
@@ -97,12 +145,28 @@ const CashSessionsPage = () => {
     setShowCloseModal(true);
     setCounted(emptyAmounts);
     setClosingNotes('');
+    setClosePayments([]);
     try {
-      const res = await cashSessionsAPI.getSummary(currentSession.id);
-      setSummary(res.data.data);
+      const [summaryRes, paymentsRes] = await Promise.all([
+        cashSessionsAPI.getSummary(currentSession.id),
+        cashSessionsAPI.getPayments(currentSession.id),
+      ]);
+      setSummary(summaryRes.data.data);
+      setClosePayments(paymentsRes.data.data?.transactions || []);
     } catch (error) {
       toast.error('Error calculando el cuadre esperado');
       setShowCloseModal(false);
+    }
+  };
+
+  const openDetailModal = async (sessionId) => {
+    setDetailModal({ open: true, loading: true, transactions: [] });
+    try {
+      const res = await cashSessionsAPI.getPayments(sessionId);
+      setDetailModal({ open: true, loading: false, transactions: res.data.data?.transactions || [] });
+    } catch (error) {
+      toast.error('Error cargando el detalle de la caja');
+      setDetailModal({ open: false, loading: false, transactions: [] });
     }
   };
 
@@ -216,14 +280,14 @@ const CashSessionsPage = () => {
                   <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
                       <tr>
-                        {['Fecha', 'Estado', 'Apertura', 'Abierta por', 'Cerrada por', 'Diferencia total'].map(h => (
+                        {['Fecha', 'Estado', 'Apertura', 'Abierta por', 'Cerrada por', 'Diferencia total', ''].map(h => (
                           <th key={h} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">{h}</th>
                         ))}
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
                       {history.length === 0 && (
-                        <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-400">Sin cajas registradas</td></tr>
+                        <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400">Sin cajas registradas</td></tr>
                       )}
                       {history.map(s => {
                         const diffTotal = s.differences
@@ -248,6 +312,14 @@ const CashSessionsPage = () => {
                               diffTotal === null ? 'text-gray-400' : diffTotal === 0 ? 'text-gray-600' : diffTotal > 0 ? 'text-blue-600' : 'text-red-600'
                             }`}>
                               {diffTotal === null ? '—' : `${diffTotal > 0 ? '+' : ''}${formatCurrency(diffTotal)}`}
+                            </td>
+                            <td className="px-4 py-3 text-right">
+                              <button
+                                onClick={() => openDetailModal(s.id)}
+                                className="text-xs font-medium text-blue-600 hover:text-blue-800"
+                              >
+                                Ver detalle
+                              </button>
                             </td>
                           </tr>
                         );
@@ -357,6 +429,11 @@ const CashSessionsPage = () => {
                     </span>
                   </div>
 
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Movimientos de esta sesión</p>
+                  <div className="mb-4">
+                    <PaymentsList transactions={closePayments} />
+                  </div>
+
                   <label className="block text-sm font-medium text-gray-700 mb-1">Notas (opcional)</label>
                   <textarea
                     value={closingNotes}
@@ -380,6 +457,23 @@ const CashSessionsPage = () => {
                   </div>
                 </>
               )}
+            </div>
+          </div>
+        )}
+        {/* ── Modal: Detalle de pagos (historial) ───────────── */}
+        {detailModal.open && (
+          <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full p-5 max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-base font-semibold text-gray-900">Detalle de movimientos</h3>
+                <button
+                  onClick={() => setDetailModal({ open: false, loading: false, transactions: [] })}
+                  className="text-gray-400 hover:text-gray-600 text-sm font-medium"
+                >
+                  Cerrar
+                </button>
+              </div>
+              <PaymentsList transactions={detailModal.transactions} loading={detailModal.loading} />
             </div>
           </div>
         )}
