@@ -472,6 +472,254 @@ export const validateImportedProducts = (data) => {
 };
 
 // ========================================
+// SALDOS INICIALES (cartera / CxP / inventario)
+// ========================================
+
+const buildOpeningBalanceTemplate = (sheetName, filename, exampleRow, instructions) => async () => {
+  const wb = new ExcelJS.Workbook();
+  const templateData = [exampleRow];
+  for (let i = 0; i < 15; i++) {
+    const blankRow = {};
+    Object.keys(exampleRow).forEach((key) => { blankRow[key] = ''; });
+    templateData.push(blankRow);
+  }
+
+  const ws = addSheetFromObjects(wb, sheetName, templateData);
+  Object.keys(exampleRow).forEach((key) => { ws.getColumn(key).width = Math.max(18, key.length + 4); });
+
+  const wsInstructions = wb.addWorksheet('Instrucciones');
+  instructions.forEach((line) => wsInstructions.addRow([line]));
+  wsInstructions.getColumn(1).width = 80;
+
+  await downloadWorkbook(wb, filename);
+};
+
+/**
+ * Plantilla para saldo inicial de cartera (deuda de un cliente que ya existía
+ * antes de Pitbox). Se empareja por NIT/Cédula contra los clientes ya
+ * registrados — el cliente debe existir de antemano.
+ */
+export const downloadOpeningReceivableTemplate = buildOpeningBalanceTemplate(
+  'Saldos Cartera',
+  'plantilla_saldos_iniciales_cartera.xlsx',
+  {
+    'NIT/Cédula*': '900123456',
+    'Referencia': 'FAC-0001',
+    'Fecha*': '2026-01-01',
+    'Fecha Vencimiento': '2026-02-01',
+    'Monto*': 500000,
+    'Descripción': 'Saldo pendiente antes de Pitbox',
+  },
+  [
+    '',
+    '📋 INSTRUCCIONES — SALDOS INICIALES DE CARTERA',
+    '',
+    '1️⃣ El cliente debe existir ya en Pitbox — se empareja por NIT/Cédula.',
+    '2️⃣ Campos obligatorios: NIT/Cédula, Fecha (de la deuda original), Monto.',
+    '3️⃣ Referencia y Descripción son opcionales, solo para identificar la deuda.',
+    '4️⃣ Fecha y Fecha Vencimiento en formato AAAA-MM-DD.',
+    '5️⃣ Cada fila genera un asiento contable real contra la cuenta puente.',
+  ]
+);
+
+/**
+ * Plantilla para saldo inicial de cuentas por pagar (deuda con un proveedor
+ * que ya existía antes de Pitbox). Se empareja por NIT contra los
+ * proveedores ya registrados.
+ */
+export const downloadOpeningPayableTemplate = buildOpeningBalanceTemplate(
+  'Saldos CxP',
+  'plantilla_saldos_iniciales_cxp.xlsx',
+  {
+    'NIT*': '900654321',
+    'Referencia': 'FACT-PROV-0001',
+    'Fecha*': '2026-01-01',
+    'Fecha Vencimiento': '2026-02-01',
+    'Monto*': 300000,
+    'Descripción': 'Saldo pendiente con proveedor antes de Pitbox',
+  },
+  [
+    '',
+    '📋 INSTRUCCIONES — SALDOS INICIALES DE CUENTAS POR PAGAR',
+    '',
+    '1️⃣ El proveedor debe existir ya en Pitbox — se empareja por NIT.',
+    '2️⃣ Campos obligatorios: NIT, Fecha (de la deuda original), Monto.',
+    '3️⃣ Referencia y Descripción son opcionales, solo para identificar la deuda.',
+    '4️⃣ Fecha y Fecha Vencimiento en formato AAAA-MM-DD.',
+    '5️⃣ Cada fila genera un asiento contable real contra la cuenta puente.',
+  ]
+);
+
+/**
+ * Plantilla para saldo inicial de inventario (existencias físicas antes de
+ * Pitbox, con su costo). Se empareja por SKU contra los productos ya
+ * registrados; Bodega es opcional si el producto ya tiene una asignada.
+ */
+export const downloadOpeningInventoryTemplate = buildOpeningBalanceTemplate(
+  'Inventario Inicial',
+  'plantilla_saldo_inicial_inventario.xlsx',
+  {
+    'SKU*': 'PROD001',
+    'Cantidad*': 10,
+    'Costo Unitario*': 15000,
+  },
+  [
+    '',
+    '📋 INSTRUCCIONES — SALDO INICIAL DE INVENTARIO',
+    '',
+    '1️⃣ El producto debe existir ya en Pitbox — se empareja por SKU (Código).',
+    '2️⃣ Campos obligatorios: SKU, Cantidad, Costo Unitario.',
+    '3️⃣ El producto debe tener una bodega ya asignada (se usa esa).',
+    '4️⃣ Los números no deben llevar símbolos ($, %, comas).',
+    '5️⃣ Se genera un solo asiento contable con el valor total del lote.',
+  ]
+);
+
+/**
+ * Valida filas de saldo inicial de cartera contra la lista de clientes ya
+ * cargada (empareja por tax_id). Formato de error `{ row, identifier, errors }`
+ * para calzar con ImportOpeningBalanceRowsModal.jsx.
+ */
+export const validateImportedOpeningReceivableRows = (data, customers) => {
+  if (!data || data.length === 0) {
+    return { validRows: [], errors: [], summary: { total: 0, valid: 0, invalid: 0 } };
+  }
+
+  const byTaxId = new Map((customers || []).map((c) => [String(c.tax_id || '').trim(), c]));
+  const errors = [];
+  const validRows = [];
+
+  data.forEach((row, index) => {
+    const rowNumber = index + 2;
+    const rowErrors = [];
+    const taxId = row['NIT/Cédula*'] ? String(row['NIT/Cédula*']).trim() : '';
+    const customer = taxId ? byTaxId.get(taxId) : null;
+
+    if (!taxId) rowErrors.push('NIT/Cédula es requerido');
+    else if (!customer) rowErrors.push(`No existe un cliente con NIT/Cédula "${taxId}"`);
+
+    const amount = parseFloat(row['Monto*']);
+    if (!(amount > 0)) rowErrors.push('Monto debe ser mayor a 0');
+
+    const issueDate = row['Fecha*'];
+    if (!issueDate) rowErrors.push('Fecha es requerida');
+
+    if (rowErrors.length > 0) {
+      errors.push({ row: rowNumber, identifier: taxId || 'Sin NIT', errors: rowErrors });
+    } else {
+      validRows.push({
+        customer_id: customer.id,
+        total_amount: amount,
+        issue_date: toIsoDate(issueDate),
+        due_date: row['Fecha Vencimiento'] ? toIsoDate(row['Fecha Vencimiento']) : null,
+        reference: row['Referencia'] ? String(row['Referencia']).trim() : null,
+        description: row['Descripción'] ? String(row['Descripción']).trim() : null,
+      });
+    }
+  });
+
+  return { validRows, errors, summary: { total: data.length, valid: validRows.length, invalid: errors.length } };
+};
+
+/**
+ * Simétrico a validateImportedOpeningReceivableRows, para proveedores/CxP.
+ */
+export const validateImportedOpeningPayableRows = (data, suppliers) => {
+  if (!data || data.length === 0) {
+    return { validRows: [], errors: [], summary: { total: 0, valid: 0, invalid: 0 } };
+  }
+
+  const byTaxId = new Map((suppliers || []).map((s) => [String(s.tax_id || '').trim(), s]));
+  const errors = [];
+  const validRows = [];
+
+  data.forEach((row, index) => {
+    const rowNumber = index + 2;
+    const rowErrors = [];
+    const taxId = row['NIT*'] ? String(row['NIT*']).trim() : '';
+    const supplier = taxId ? byTaxId.get(taxId) : null;
+
+    if (!taxId) rowErrors.push('NIT es requerido');
+    else if (!supplier) rowErrors.push(`No existe un proveedor con NIT "${taxId}"`);
+
+    const amount = parseFloat(row['Monto*']);
+    if (!(amount > 0)) rowErrors.push('Monto debe ser mayor a 0');
+
+    const issueDate = row['Fecha*'];
+    if (!issueDate) rowErrors.push('Fecha es requerida');
+
+    if (rowErrors.length > 0) {
+      errors.push({ row: rowNumber, identifier: taxId || 'Sin NIT', errors: rowErrors });
+    } else {
+      validRows.push({
+        supplier_id: supplier.id,
+        total_amount: amount,
+        issue_date: toIsoDate(issueDate),
+        due_date: row['Fecha Vencimiento'] ? toIsoDate(row['Fecha Vencimiento']) : null,
+        reference: row['Referencia'] ? String(row['Referencia']).trim() : null,
+        description: row['Descripción'] ? String(row['Descripción']).trim() : null,
+      });
+    }
+  });
+
+  return { validRows, errors, summary: { total: data.length, valid: validRows.length, invalid: errors.length } };
+};
+
+/**
+ * Valida filas de saldo inicial de inventario contra la lista de productos ya
+ * cargada (empareja por SKU). Si la fila no trae bodega, usa la ya asignada
+ * al producto (product.warehouse_id).
+ */
+export const validateImportedOpeningInventory = (data, products) => {
+  if (!data || data.length === 0) {
+    return { validRows: [], errors: [], summary: { total: 0, valid: 0, invalid: 0 } };
+  }
+
+  const bySku = new Map((products || []).map((p) => [String(p.sku || '').trim(), p]));
+  const errors = [];
+  const validRows = [];
+
+  data.forEach((row, index) => {
+    const rowNumber = index + 2;
+    const rowErrors = [];
+    const sku = row['SKU*'] ? String(row['SKU*']).trim() : '';
+    const product = sku ? bySku.get(sku) : null;
+
+    if (!sku) rowErrors.push('SKU es requerido');
+    else if (!product) rowErrors.push(`No existe un producto con SKU "${sku}"`);
+
+    const quantity = parseFloat(row['Cantidad*']);
+    if (!(quantity > 0)) rowErrors.push('Cantidad debe ser mayor a 0');
+
+    const unitCost = parseFloat(row['Costo Unitario*']);
+    if (!(unitCost >= 0)) rowErrors.push('Costo Unitario debe ser mayor o igual a 0');
+
+    const warehouseId = product?.warehouse_id || null;
+    if (product && !warehouseId) rowErrors.push(`El producto "${product.name || sku}" no tiene bodega asignada en Pitbox`);
+
+    if (rowErrors.length > 0) {
+      errors.push({ row: rowNumber, identifier: sku || 'Sin SKU', errors: rowErrors });
+    } else {
+      validRows.push({
+        product_id: product.id,
+        warehouse_id: warehouseId,
+        quantity,
+        unit_cost: unitCost,
+      });
+    }
+  });
+
+  return { validRows, errors, summary: { total: data.length, valid: validRows.length, invalid: errors.length } };
+};
+
+// Convierte una fecha proveniente de ExcelJS (puede venir como Date o string)
+// a 'YYYY-MM-DD' — ExcelJS parsea columnas de fecha como objetos Date.
+function toIsoDate(value) {
+  if (value instanceof Date) return value.toISOString().slice(0, 10);
+  return String(value).trim().slice(0, 10);
+}
+
+// ========================================
 // FUNCIONES DE EXPORTACIÓN
 // ========================================
 

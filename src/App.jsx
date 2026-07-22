@@ -34,6 +34,7 @@ import AccountMappingsPage from './pages/accounting/AccountMappingsPage';
 import FinancialReportsPage from './pages/accounting/FinancialReportsPage';
 import FiscalPeriodsPage from './pages/accounting/FiscalPeriodsPage';
 import AccountingHealthPage from './pages/accounting/AccountingHealthPage';
+import OpeningBalancesPage from './pages/accounting/OpeningBalancesPage';
 // Lazy: son las únicas páginas dentro del alcance de la PWA "Taller" instalada
 // (offline + precache del Service Worker, ver frontend/src/pwa/sw.js). El resto
 // del módulo workshop (reportes, productividad, comisiones) sigue siendo eager.
@@ -247,6 +248,7 @@ function App() {
         <Route path="accounting/reports"           element={<TenantRoute module="accounting" roles={['admin', 'manager']}><FinancialReportsPage /></TenantRoute>} />
         <Route path="accounting/fiscal-periods"    element={<TenantRoute module="accounting" roles={['admin', 'manager']}><FiscalPeriodsPage /></TenantRoute>} />
         <Route path="accounting/health"            element={<TenantRoute module="accounting" roles={['admin', 'manager']}><AccountingHealthPage /></TenantRoute>} />
+        <Route path="accounting/opening-balances"  element={<TenantRoute module="accounting" roles={['admin', 'manager']}><OpeningBalancesPage /></TenantRoute>} />
         <Route path="cash-sessions"    element={<TenantRoute module="treasury"><CashSessionsPage /></TenantRoute>} />
         <Route path="receipts"         element={<TenantRoute module="treasury"><ReceiptsPage /></TenantRoute>} />
 

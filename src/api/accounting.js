@@ -78,6 +78,18 @@ export const financialReportsAPI = {
     api.get('/accounting/reports/cashflow-indirecto/export', { params: { ...params, format }, responseType: 'blob' }),
 };
 
+export const openingBalancesAPI = {
+  list: async (params = {}) => (await api.get('/accounting/opening-balances', { params })).data,
+  createReceivable: async (payload) => (await api.post('/accounting/opening-balances/receivable', payload)).data,
+  createPayable: async (payload) => (await api.post('/accounting/opening-balances/payable', payload)).data,
+  createAccount: async (payload) => (await api.post('/accounting/opening-balances/account', payload)).data,
+  createInventory: async (payload) => (await api.post('/accounting/opening-balances/inventory', payload)).data,
+  getBridgeStatus: async () => (await api.get('/accounting/opening-balances/bridge-status')).data,
+  closeBridge: async (payload) => (await api.post('/accounting/opening-balances/bridge-status/close', payload)).data,
+  voidOpeningBalance: async (id, reason) => (await api.post(`/accounting/opening-balances/${id}/void`, { reason })).data,
+  registerPayment: async (id, payload) => (await api.post(`/accounting/opening-balances/${id}/payments`, payload)).data,
+};
+
 export const ACCOUNT_TYPE_LABELS = {
   activo: 'Activo',
   pasivo: 'Pasivo',

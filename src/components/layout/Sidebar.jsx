@@ -85,6 +85,7 @@ const NAV = [
       { label: "Reportes Financieros", path: "/accounting/reports" },
       { label: "Períodos Fiscales",    path: "/accounting/fiscal-periods" },
       { label: "Salud Contable",       path: "/accounting/health" },
+      { label: "Saldos Iniciales",     path: "/accounting/opening-balances" },
     ],
   },
   {
