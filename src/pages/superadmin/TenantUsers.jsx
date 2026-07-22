@@ -171,6 +171,7 @@ const TenantUsers = () => {
     manager: 'indigo',
     seller: 'blue',
     warehouse_keeper: 'cyan',
+    technician: 'yellow',
     user: 'green',
     viewer: 'gray',
   };
@@ -181,6 +182,7 @@ const TenantUsers = () => {
     manager: 'Gerente',
     seller: 'Vendedor',
     warehouse_keeper: 'Bodeguero',
+    technician: 'Técnico',
     user: 'Usuario',
     viewer: 'Visualizador',
   };
@@ -258,6 +260,7 @@ const TenantUsers = () => {
                   <option value="manager">Gerente</option>
                   <option value="seller">Vendedor</option>
                   <option value="warehouse_keeper">Bodeguero</option>
+                  <option value="technician">Técnico</option>
                   <option value="user">Usuario</option>
                   <option value="viewer">Visualizador</option>
                 </select>
@@ -443,6 +446,7 @@ const TenantUsers = () => {
                 <option value="manager">Gerente</option>
                 <option value="seller">Vendedor</option>
                 <option value="warehouse_keeper">Bodeguero</option>
+                <option value="technician">Técnico</option>
                 <option value="user">Usuario</option>
                 <option value="viewer">Visualizador</option>
               </select>
