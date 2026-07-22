@@ -351,7 +351,7 @@ const TenantUsers = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex items-center justify-end gap-2">
-                          {user.role !== 'super_admin' && user.is_active && (
+                          {['admin', 'manager'].includes(user.role) && user.is_active && (
                             <button
                               onClick={() => handleImpersonateClick(user)}
                               className="text-emerald-600 hover:text-emerald-900"
