@@ -2,16 +2,19 @@
  * PITBOX — Landing Page (SPA)
  * Ruta: /bienvenida (pública)
  *
- * Misma estructura y patrones que el landing de DOCUCORE:
- *   - SPA con navegación scroll-spy por secciones
- *   - Layout split 50/50 en Hero y secciones alternas
- *   - Carrusel de capturas del aplicativo (AppCarousel)
- *   - Sección de módulos con tabs
- *   - Stats inline con contadores animados
- *   - Modal de registro con validación de NIT → navega a /registro
- *
- * Font: Oswald (display, condensado tipo tablero de boxes) + IBM Plex Sans (cuerpo)
- * Paleta basada en el favicon existente de Pitbox (cronómetro negro/naranja).
+ * Rediseño 2026 — dirección visual premium:
+ *   - Paleta neutra grafito con acento "latón" (bronce/dorado) + violeta NEXA
+ *   - Tipografía: Space Grotesk (títulos) + Inter (cuerpo) — reemplaza el
+ *     estilo "tablero de carreras" anterior por un lenguaje SaaS premium
+ *   - Taller sigue siendo el corazón del producto (sección propia, primero
+ *     después del hero), pero se elevan Ventas/Facturación, Contabilidad
+ *     y NEXA como motor de valor y de expansión de ingresos
+ *   - Se incorporan funciones que no estaban en el landing anterior:
+ *     seguimiento público de OT sin login, consulta RUNT, liquidación de
+ *     comisiones e importación de facturas XML de proveedores
+ *   - SPA con navegación scroll-spy, carrusel de capturas, tabs de módulos,
+ *     contadores animados y modal de registro con validación de NIT
+ *     (misma lógica de negocio y rutas que la versión anterior)
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
@@ -19,28 +22,28 @@ import { Link } from 'react-router-dom';
 import NexaIcon from '../components/common/NexaIcon';
 
 /* ─────────────────────────────────────────
-   PALETA — basada en el favicon de Pitbox
+   PALETA — dirección premium (grafito + latón + violeta NEXA)
 ───────────────────────────────────────── */
 const C = {
-  ink:      '#0D0D0D',
+  ink:      '#0B0C10',
   inkD:     '#000000',
-  graphite: '#17181C',
-  graphite2:'#1F2024',
-  accent:   '#CF3A0B',
-  accentL:  '#F0572B',
-  signal:   '#2FAE66',
-  signalL:  '#3FCB7A',
-  caution:  '#E3A63E',
+  graphite: '#15171D',
+  graphite2:'#1B1D24',
+  accent:   '#C4903D',
+  accentL:  '#E0AC5F',
+  signal:   '#22C55E',
+  signalL:  '#4ADE80',
+  caution:  '#E2665B',
   ai:       '#8B5CF6',
   aiL:      '#A78BFA',
   white:    '#FFFFFF',
-  gray50:   '#F8FAFC',
-  gray100:  '#F1F5F9',
-  gray200:  '#E2E8F0',
-  gray400:  '#94A3B8',
-  gray500:  '#64748B',
-  gray700:  '#334155',
-  gray900:  '#0F172A',
+  gray50:   '#FAFAF9',
+  gray100:  '#F1F0ED',
+  gray200:  '#E3E1DB',
+  gray400:  '#9C978E',
+  gray500:  '#6E6A62',
+  gray700:  '#3D3A34',
+  gray900:  '#151310',
 };
 
 /* ─────────────────────────────────────────
@@ -79,6 +82,11 @@ const icons = {
   bank:        <><path d="M3 21h18"/><path d="M5 21V10M9 21V10M15 21V10M19 21V10"/><path d="M2 10l10-6 10 6z"/></>,
   book:        <><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/><path d="M9 8h8M9 12h6"/></>,
   bot:         <><rect x="4" y="8" width="16" height="12" rx="3"/><path d="M12 8V4M9 4h6"/><circle cx="9" cy="14" r="1.4"/><circle cx="15" cy="14" r="1.4"/><path d="M8 18h8"/></>,
+  percent:     <><circle cx="7" cy="7" r="2.4"/><circle cx="17" cy="17" r="2.4"/><line x1="5" y1="19" x2="19" y2="5"/></>,
+  globe:       <><circle cx="12" cy="12" r="9"/><line x1="3" y1="12" x2="21" y2="12"/><path d="M12 3c2.6 2.6 4 5.7 4 9s-1.4 6.4-4 9c-2.6-2.6-4-5.7-4-9s1.4-6.4 4-9z"/></>,
+  fileDown:    <><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><path d="M9 14l3 3 3-3"/><path d="M12 11v6"/></>,
+  clipboard:   <><rect x="6" y="4" width="12" height="17" rx="2"/><path d="M9 4V3a1 1 0 011-1h4a1 1 0 011 1v1"/><path d="M9 11h6M9 15h6"/></>,
+  smartphone:  <><rect x="6" y="2" width="12" height="20" rx="2"/><line x1="11" y1="18" x2="13" y2="18"/></>,
 };
 
 /* ─────────────────────────────────────────
@@ -120,9 +128,9 @@ function ScreenDashboard() {
     <svg viewBox="0 0 560 340" style={{ width: '100%', height: 'auto', borderRadius: 12 }}>
       <rect width="560" height="340" fill="#101114" />
       <rect width="160" height="340" fill="#0A0A0C" />
-      <rect x="16" y="20" width="128" height="32" rx="6" fill="#26170F" />
+      <rect x="16" y="20" width="128" height="32" rx="6" fill="#241C10" />
       <text x="80" y="41" fill={C.accentL} fontSize="12" fontWeight="700" textAnchor="middle" fontFamily="system-ui">PITBOX</text>
-      {[['Dashboard',52,true],['Inventario',84,false],['Taller',116,false],['Ventas',148,false],['Compras',180,false],['Alertas',212,false],['Reportes',244,false]].map(([lbl,y,act]) => (
+      {[['Dashboard',52,true],['Taller',84,false],['Ventas',116,false],['Contabilidad',148,false],['Inventario',180,false],['Alertas',212,false],['Reportes',244,false]].map(([lbl,y,act]) => (
         <g key={lbl}>
           <rect x="12" y={y} width="136" height="26" rx="6" fill={act ? C.accent : 'transparent'} />
           <text x="28" y={y+17} fill={act ? '#fff' : '#7A7C82'} fontSize="11" fontFamily="system-ui">{lbl}</text>
@@ -158,7 +166,7 @@ function ScreenDashboard() {
       ))}
       <rect x="432" y="130" width="108" height="120" rx="8" fill="#1B1C20" stroke="#2A2B30" strokeWidth="1"/>
       <text x="444" y="148" fill="#8B8D94" fontSize="9" fontWeight="600" fontFamily="system-ui">ACTIVIDAD RECIENTE</text>
-      {[['OT-0452 en proceso','2m'],['Factura DIAN emitida','8m'],['Transferencia recibida','1h'],['Alerta de stock','2h']].map(([msg,t],i)=>(
+      {[['OT-0452 en proceso','2m'],['Factura DIAN emitida','8m'],['Transferencia recibida','1h'],['Asiento propuesto por NEXA','2h']].map(([msg,t],i)=>(
         <g key={i}>
           <circle cx="448" cy={163+i*24} r="3" fill={C.accentL}/>
           <text x="458" y={166+i*24} fill="#8B8D94" fontSize="8" fontFamily="system-ui">{msg}</text>
@@ -209,6 +217,10 @@ function ScreenTaller() {
           <text x="493" y={140+i*27} fill={c} fontSize="8" fontWeight="600" textAnchor="middle" fontFamily="system-ui">{e}</text>
         </g>
       ))}
+      <rect x="180" y="280" width="360" height="46" rx="8" fill="#1B1C20" stroke="#2A2B30" strokeWidth="1"/>
+      <Ico d={icons.globe} size={14} color={C.signalL} />
+      <text x="204" y="298" fill="#CBD5E1" fontSize="9" fontWeight="600" fontFamily="system-ui">Seguimiento público OT-0452</text>
+      <text x="204" y="312" fill="#5C5E64" fontSize="8" fontFamily="system-ui">El cliente ve el estado sin iniciar sesión · pitbox.app/ot/0452</text>
     </svg>
   );
 }
@@ -294,48 +306,100 @@ function ScreenFacturacion() {
   );
 }
 
-function ScreenAlertas() {
+function ScreenContabilidad() {
   return (
     <svg viewBox="0 0 560 340" style={{ width: '100%', height: 'auto', borderRadius: 12 }}>
       <rect width="560" height="340" fill="#101114"/>
       <rect width="160" height="340" fill="#0A0A0C"/>
-      {[['Dashboard',52,false],['Alertas de stock',84,true],['Reportes',116,false]].map(([lbl,y,act]) => (
+      {[['Plan de cuentas',52,false],['Contabilidad',84,true],['Reportes',116,false]].map(([lbl,y,act]) => (
         <g key={lbl}>
           <rect x="12" y={y} width="136" height="26" rx="6" fill={act?C.accent:'transparent'}/>
           <text x="28" y={y+17} fill={act?'#fff':'#7A7C82'} fontSize="10.5" fontFamily="system-ui">{lbl}</text>
         </g>
       ))}
-      <text x="180" y="28" fill="#F3F1EA" fontSize="16" fontWeight="700" fontFamily="system-ui">Alertas de stock activas</text>
-      <rect x="180" y="46" width="360" height="220" rx="8" fill="#1B1C20" stroke="#2A2B30" strokeWidth="1"/>
+      <text x="180" y="28" fill="#F3F1EA" fontSize="16" fontWeight="700" fontFamily="system-ui">Estados financieros</text>
+      {[[180,40,'Activos','$182.4M',C.signalL],[302,40,'Pasivos','$64.1M',C.caution],[424,40,'Patrimonio','$118.3M',C.accentL]].map(([x,y,l,v,c])=>(
+        <g key={l}>
+          <rect x={x} y={y} width="116" height="50" rx="8" fill="#1B1C20" stroke="#2A2B30" strokeWidth="1"/>
+          <text x={x+10} y={y+16} fill="#7A7C82" fontSize="8" fontFamily="system-ui">{l}</text>
+          <text x={x+10} y={y+38} fill={c} fontSize="16" fontWeight="700" fontFamily="system-ui">{v}</text>
+        </g>
+      ))}
+      <rect x="180" y="100" width="360" height="22" fill="#0A0A0C"/>
+      {['ASIENTO','CUENTA','DÉBITO','ESTADO'].map((h,i)=>(
+        <text key={h} x={[188,258,398,478][i]} y="115" fill="#5C5E64" fontSize="8" fontWeight="700" fontFamily="system-ui">{h}</text>
+      ))}
       {[
-        ['Correa de distribución CR-77','Principal','0 und','Agotado',C.accent],
-        ['Pastillas de freno PF-88','Sucursal Sur','2 und','Crítico',C.caution],
-        ['Batería 12V 45A','Principal','5 und','Bajo',C.caution],
-        ['Filtro de aire FI-33','Sucursal Sur','4 und','Bajo',C.caution],
-        ['Aceite 20W50 x1L','Principal','6 und','Bajo',C.caution],
-      ].map(([n,bod,stk,e,c],i)=>(
+        ['AS-3391','Gastos · Repuestos','$340.000','Propuesto NEXA',C.ai],
+        ['AS-3390','Ventas · Ingresos','$1.240.000','Contabilizado',C.signal],
+        ['AS-3389','Bancos','$96.000','Contabilizado',C.signal],
+        ['AS-3388','IVA por pagar','$58.900','Propuesto NEXA',C.ai],
+      ].map(([n,cta,total,e,c],i)=>(
         <g key={i}>
-          <rect x="192" y={58+i*40} width="336" height="34" rx="6" fill="#101114"/>
-          <circle cx="208" cy={75+i*40} r="4" fill={c}/>
-          <text x="222" y={72+i*40} fill="#E5E3DC" fontSize="10" fontFamily="system-ui">{n}</text>
-          <text x="222" y={85+i*40} fill="#5C5E64" fontSize="8" fontFamily="system-ui">{bod} · {stk}</text>
-          <rect x="452" y={65+i*40} width="62" height="16" rx="8" fill={c+'22'}/>
-          <text x="483" y={76+i*40} fill={c} fontSize="8" fontWeight="600" textAnchor="middle" fontFamily="system-ui">{e}</text>
+          <rect x="180" y={122+i*27} width="360" height="26" rx="3" fill={i%2?'#161719':'#101114'}/>
+          <text x="188" y={139+i*27} fill={C.accentL} fontSize="9" fontFamily="system-ui">{n}</text>
+          <text x="258" y={139+i*27} fill="#8B8D94" fontSize="9" fontFamily="system-ui">{cta}</text>
+          <text x="398" y={139+i*27} fill="#CBD5E1" fontSize="9" fontFamily="system-ui">{total}</text>
+          <rect x="470" y={130+i*27} width="78" height="13" rx="6" fill={c+'22'}/>
+          <text x="509" y={140+i*27} fill={c} fontSize="7.5" fontWeight="600" textAnchor="middle" fontFamily="system-ui">{e}</text>
+        </g>
+      ))}
+      <rect x="180" y="240" width="360" height="86" rx="8" fill="#1B1C20" stroke="#2A2B30" strokeWidth="1"/>
+      <text x="194" y="258" fill="#8B8D94" fontSize="9" fontWeight="600" fontFamily="system-ui">RESULTADO DEL MES</text>
+      {[0,1,2,3,4,5,6,7,8,9,10,11].map(i => {
+        const h = [22,30,18,34,26,40,24,44,32,38,42,36][i];
+        return <rect key={i} x={194+i*13.6} y={310-h} width="9" height={h} rx="2" fill={i===11?C.signalL:`${C.signalL}55`} />;
+      })}
+    </svg>
+  );
+}
+
+function ScreenNexa() {
+  return (
+    <svg viewBox="0 0 560 340" style={{ width: '100%', height: 'auto', borderRadius: 12 }}>
+      <rect width="560" height="340" fill="#101114"/>
+      <rect width="160" height="340" fill="#0A0A0C"/>
+      {[['Dashboard',52,false],['NEXA · IA',84,true],['Propuestas',116,false]].map(([lbl,y,act]) => (
+        <g key={lbl}>
+          <rect x="12" y={y} width="136" height="26" rx="6" fill={act?C.ai:'transparent'}/>
+          <text x="28" y={y+17} fill={act?'#fff':'#7A7C82'} fontSize="10.5" fontFamily="system-ui">{lbl}</text>
+        </g>
+      ))}
+      <text x="180" y="28" fill="#F3F1EA" fontSize="16" fontWeight="700" fontFamily="system-ui">Propuestas de NEXA</text>
+      <rect x="180" y="44" width="360" height="60" rx="10" fill="#1B1C20" stroke={C.ai+'40'} strokeWidth="1"/>
+      <text x="196" y="64" fill="#E5E3DC" fontSize="10" fontFamily="system-ui">Detecté un pago de $340.000 a Repuestos del Sur.</text>
+      <text x="196" y="80" fill="#8B8D94" fontSize="9" fontFamily="system-ui">Propongo registrar el gasto y su asiento contable.</text>
+      <rect x="196" y="88" width="70" height="12" rx="6" fill={C.ai}/>
+      <text x="231" y="97" fill="#fff" fontSize="7" fontWeight="700" textAnchor="middle" fontFamily="system-ui">APROBAR</text>
+      <rect x="274" y="88" width="70" height="12" rx="6" fill="none" stroke="#3A3B42"/>
+      <text x="309" y="97" fill="#8B8D94" fontSize="7" fontWeight="700" textAnchor="middle" fontFamily="system-ui">RECHAZAR</text>
+
+      <rect x="180" y="114" width="360" height="46" rx="10" fill="#1B1C20" stroke="#2A2B30" strokeWidth="1"/>
+      <text x="196" y="132" fill="#CBD5E1" fontSize="9.5" fontFamily="system-ui">Venta FES-1128 → asiento de ingreso generado</text>
+      <text x="196" y="146" fill="#8B8D94" fontSize="8" fontFamily="system-ui">Contabilizado automáticamente al aprobar la venta</text>
+
+      <rect x="180" y="170" width="360" height="46" rx="10" fill="#1B1C20" stroke="#2A2B30" strokeWidth="1"/>
+      <text x="196" y="188" fill="#CBD5E1" fontSize="9.5" fontFamily="system-ui">IVA por pagar del período recalculado</text>
+      <text x="196" y="202" fill="#8B8D94" fontSize="8" fontFamily="system-ui">Con base en ventas, compras y gastos del mes</text>
+
+      <rect x="180" y="228" width="360" height="98" rx="10" fill="#1B1C20" stroke="#2A2B30" strokeWidth="1"/>
+      <text x="196" y="248" fill="#8B8D94" fontSize="9" fontWeight="600" fontFamily="system-ui">NEXA VE MÁS MIENTRAS MÁS ACTIVES</text>
+      {['Inventario','Ventas','Tesorería','Contabilidad'].map((m,i)=>(
+        <g key={m}>
+          <circle cx="204" cy={264+i*17} r="3" fill={C.signalL}/>
+          <text x="216" y={268+i*17} fill="#CBD5E1" fontSize="9" fontFamily="system-ui">{m} conectado</text>
         </g>
       ))}
     </svg>
   );
 }
 
-/* ─────────────────────────────────────────
-   CARRUSEL
-───────────────────────────────────────── */
 const SLIDES = [
-  { id: 0, label: 'Panel de control', desc: 'Vista general de ventas, inventario, taller y facturación en tiempo real.', Screen: ScreenDashboard },
-  { id: 1, label: 'Taller y OT', desc: 'Cada vehículo con su orden de trabajo, técnico asignado y estado actualizado al instante.', Screen: ScreenTaller },
-  { id: 2, label: 'Inventario multi-bodega', desc: 'Existencias por bodega o sede, con búsqueda por SKU y alertas visuales de stock bajo.', Screen: ScreenInventario },
-  { id: 3, label: 'Facturación DIAN', desc: 'Ventas facturadas electrónicamente con validación DIAN integrada, sin doble digitación.', Screen: ScreenFacturacion },
-  { id: 4, label: 'Alertas de stock', desc: 'Notificaciones automáticas antes de que un producto se agote en cualquier bodega.', Screen: ScreenAlertas },
+  { id: 0, label: 'Taller', desc: 'Órdenes de trabajo, comisiones y seguimiento del vehículo, con un enlace público para que el cliente vea su estado sin iniciar sesión.', Screen: ScreenTaller },
+  { id: 1, label: 'Ventas y facturación DIAN', desc: 'Cada venta se factura electrónicamente con validación DIAN integrada, sin exportar a otro sistema.', Screen: ScreenFacturacion },
+  { id: 2, label: 'Contabilidad', desc: 'Plan de cuentas, asientos y estados financieros que se generan solos a partir de tu operación diaria.', Screen: ScreenContabilidad },
+  { id: 3, label: 'NEXA · IA', desc: 'Tu asistente de inteligencia artificial: propone gastos, pagos y asientos contables listos para aprobar.', Screen: ScreenNexa },
+  { id: 4, label: 'Inventario', desc: 'Control multi-bodega con transferencias trazables y alertas automáticas de stock bajo.', Screen: ScreenInventario },
 ];
 
 function AppCarousel() {
@@ -376,7 +440,7 @@ function AppCarousel() {
             style={{
               padding: '8px 18px', borderRadius: 100, fontSize: 13, fontWeight: 600, cursor: 'pointer',
               border: `1.5px solid ${i === current ? C.accentL : 'rgba(255,255,255,0.15)'}`,
-              background: i === current ? 'rgba(240,87,43,0.15)' : 'transparent',
+              background: i === current ? 'rgba(196,144,61,0.15)' : 'transparent',
               color: i === current ? C.accentL : 'rgba(255,255,255,0.5)',
               transition: 'all 0.2s',
             }}>
@@ -440,16 +504,17 @@ function AppCarousel() {
 /* ─────────────────────────────────────────
    NAVBAR
 ───────────────────────────────────────── */
-const NAV_SECTIONS = ['nexa', 'producto', 'modulos', 'sectores', 'contacto'];
+const NAV_SECTIONS = ['taller', 'producto', 'nexa', 'modulos', 'sectores', 'contacto'];
 
 function Logomark({ size = 34 }) {
   return (
     <div style={{
-      width: size, height: size, borderRadius: 8,
-      background: C.ink, border: `2px solid ${C.accent}`,
+      width: size, height: size, borderRadius: 9,
+      background: `linear-gradient(155deg, ${C.graphite2}, ${C.ink})`,
+      border: `1px solid rgba(196,144,61,0.4)`,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
     }}>
-      <Ico d={icons.stopwatch} size={size * 0.5} color={C.accent} strokeWidth={2} />
+      <Ico d={icons.stopwatch} size={size * 0.48} color={C.accentL} strokeWidth={1.8} />
     </div>
   );
 }
@@ -475,8 +540,9 @@ function Navbar({ onCta }) {
   }, []);
 
   const navLinks = [
-    { label: 'NEXA · IA', href: '#nexa' },
+    { label: 'Taller', href: '#taller' },
     { label: 'Producto', href: '#producto' },
+    { label: 'NEXA · IA', href: '#nexa' },
     { label: 'Módulos', href: '#modulos' },
     { label: 'Sectores', href: '#sectores' },
     { label: 'Contacto', href: '#contacto' },
@@ -485,26 +551,26 @@ function Navbar({ onCta }) {
   return (
     <nav style={{
       position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100,
-      background: scrolled ? 'rgba(13,13,13,0.97)' : 'transparent',
-      backdropFilter: scrolled ? 'blur(12px)' : 'none',
-      borderBottom: scrolled ? '1px solid rgba(255,255,255,0.08)' : 'none',
+      background: scrolled ? 'rgba(11,12,16,0.94)' : 'transparent',
+      backdropFilter: scrolled ? 'blur(14px)' : 'none',
+      borderBottom: scrolled ? '1px solid rgba(255,255,255,0.07)' : 'none',
       transition: 'background 0.3s, border 0.3s',
       padding: '0 clamp(1.5rem, 5vw, 4rem)',
     }}>
-      <div style={{ maxWidth: 1200, margin: '0 auto', height: 68, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div style={{ maxWidth: 1240, margin: '0 auto', height: 68, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <a href="#inicio" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
           <Logomark />
-          <span style={{ fontFamily: "'Oswald', sans-serif", fontSize: 20, fontWeight: 700, color: C.white, letterSpacing: '0.02em', textTransform: 'uppercase' }}>
+          <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 19, fontWeight: 700, color: C.white, letterSpacing: '-0.01em' }}>
             Pitbox
           </span>
         </a>
 
-        <div style={{ display: 'flex', gap: 32, alignItems: 'center' }} className="pb-nav-links">
+        <div style={{ display: 'flex', gap: 30, alignItems: 'center' }} className="pb-nav-links">
           {navLinks.map(({ label, href }) => {
             const id = href.slice(1);
             return (
               <a key={label} href={href} style={{
-                color: active === id ? C.accentL : 'rgba(255,255,255,0.72)',
+                color: active === id ? C.accentL : 'rgba(255,255,255,0.68)',
                 fontSize: 14, fontWeight: 500, textDecoration: 'none',
                 transition: 'color 0.2s', letterSpacing: '0.01em',
                 borderBottom: active === id ? `2px solid ${C.accentL}` : '2px solid transparent',
@@ -519,10 +585,10 @@ function Navbar({ onCta }) {
             Iniciar sesión
           </Link>
           <button onClick={onCta} style={{
-            background: C.accent, color: C.white, border: 'none', borderRadius: 8,
-            padding: '9px 22px', fontSize: 14, fontWeight: 700, cursor: 'pointer',
+            background: C.accent, color: C.white, border: 'none', borderRadius: 9,
+            padding: '9px 22px', fontSize: 14, fontWeight: 600, cursor: 'pointer',
             transition: 'background 0.2s, transform 0.15s',
-            boxShadow: '0 4px 14px rgba(207,58,11,0.35)',
+            boxShadow: '0 4px 16px rgba(196,144,61,0.3)',
           }}
             onMouseEnter={e => { e.currentTarget.style.background = C.accentL; e.currentTarget.style.transform = 'translateY(-1px)'; }}
             onMouseLeave={e => { e.currentTarget.style.background = C.accent; e.currentTarget.style.transform = 'translateY(0)'; }}
@@ -548,11 +614,11 @@ function Navbar({ onCta }) {
           ))}
           <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
             <button onClick={() => { setOpen(false); onCta(); }} style={{
-              textAlign: 'center', padding: 12, borderRadius: 8,
+              textAlign: 'center', padding: 12, borderRadius: 9,
               background: C.accent, color: C.white, border: 'none', fontSize: 15, fontWeight: 700, cursor: 'pointer',
             }}>Solicitar demo →</button>
             <Link to="/login" onClick={() => setOpen(false)} style={{
-              textAlign: 'center', padding: 10, borderRadius: 8,
+              textAlign: 'center', padding: 10, borderRadius: 9,
               border: '1px solid rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.6)', textDecoration: 'none', fontSize: 14,
             }}>Iniciar sesión</Link>
           </div>
@@ -560,7 +626,7 @@ function Navbar({ onCta }) {
       )}
 
       <style>{`
-        @media (max-width: 700px) {
+        @media (max-width: 760px) {
           .pb-nav-links, .pb-nav-ctas { display: none !important; }
           .pb-hamburger { display: flex !important; }
         }
@@ -579,61 +645,56 @@ function Hero({ onCta }) {
   return (
     <section id="inicio" style={{
       minHeight: '100vh',
-      background: `radial-gradient(ellipse 70% 60% at 65% 45%, rgba(207,58,11,0.14) 0%, transparent 70%), linear-gradient(160deg, ${C.inkD} 0%, #141416 55%, #17181C 100%)`,
+      background: `radial-gradient(ellipse 70% 60% at 65% 40%, rgba(196,144,61,0.12) 0%, transparent 70%), radial-gradient(ellipse 50% 50% at 15% 85%, rgba(139,92,246,0.10) 0%, transparent 60%), linear-gradient(165deg, ${C.inkD} 0%, #121317 55%, #15171D 100%)`,
       display: 'flex', alignItems: 'center',
       padding: '0 clamp(1.5rem, 5vw, 4rem)',
       paddingTop: 68,
       overflow: 'hidden', position: 'relative',
     }}>
       <div style={{
-        position: 'absolute', inset: 0, opacity: 0.03,
+        position: 'absolute', inset: 0, opacity: 0.025,
         backgroundImage: `linear-gradient(${C.white} 1px, transparent 1px), linear-gradient(90deg, ${C.white} 1px, transparent 1px)`,
-        backgroundSize: '48px 48px', pointerEvents: 'none',
-      }} />
-      {/* franja diagonal de "línea de boxes" */}
-      <div style={{
-        position: 'absolute', bottom: 0, left: 0, right: 0, height: 10, opacity: 0.9,
-        backgroundImage: `repeating-linear-gradient(-45deg, ${C.accent} 0px, ${C.accent} 22px, ${C.inkD} 22px, ${C.inkD} 44px)`,
+        backgroundSize: '52px 52px', pointerEvents: 'none',
       }} />
 
-      <div style={{ maxWidth: 1200, margin: '0 auto', width: '100%', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px,1fr))', alignItems: 'center', gap: 'clamp(2rem,6vw,6rem)', paddingTop: 'clamp(2rem,5vh,4rem)', paddingBottom: 'clamp(2rem,5vh,4rem)' }}>
+      <div style={{ maxWidth: 1240, margin: '0 auto', width: '100%', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px,1fr))', alignItems: 'center', gap: 'clamp(2rem,6vw,6rem)', paddingTop: 'clamp(2rem,5vh,4rem)', paddingBottom: 'clamp(2rem,5vh,4rem)' }}>
 
         <div>
           <div style={{
             display: 'inline-flex', alignItems: 'center', gap: 8,
-            background: 'rgba(207,58,11,0.15)', border: '1px solid rgba(207,58,11,0.3)',
+            background: 'rgba(196,144,61,0.12)', border: '1px solid rgba(196,144,61,0.3)',
             borderRadius: 100, padding: '6px 14px', marginBottom: 28,
             opacity: mounted ? 1 : 0, transform: mounted ? 'translateY(0)' : 'translateY(8px)',
             transition: 'opacity 0.5s, transform 0.5s',
           }}>
             <div style={{ width: 6, height: 6, borderRadius: '50%', background: C.accentL, animation: 'pbPulse 2s infinite' }} />
-            <span style={{ fontSize: 12, color: C.accentL, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-              Inventario · Taller · Contabilidad · IA NEXA
+            <span style={{ fontSize: 12, color: C.accentL, fontWeight: 600, letterSpacing: '0.04em' }}>
+              Taller · Ventas · Contabilidad · NEXA IA
             </span>
           </div>
 
           <h1 style={{
-            fontFamily: "'Oswald', sans-serif",
-            fontSize: 'clamp(2.6rem, 5vw, 3.8rem)',
+            fontFamily: "'Space Grotesk', sans-serif",
+            fontSize: 'clamp(2.5rem, 4.8vw, 3.6rem)',
             fontWeight: 700, color: C.white, lineHeight: 1.08,
-            letterSpacing: '-0.01em', marginBottom: 24, textTransform: 'uppercase',
+            letterSpacing: '-0.02em', marginBottom: 24,
             opacity: mounted ? 1 : 0, transform: mounted ? 'translateY(0)' : 'translateY(16px)',
             transition: 'opacity 0.55s 0.1s, transform 0.55s 0.1s',
           }}>
-            Tu operación,<br />
-            <span style={{ color: C.accentL }}>a ritmo de pit stop</span>
+            El sistema operativo<br />
+            de tu taller <span style={{ color: C.accentL }}>— y de tu negocio.</span>
           </h1>
 
           <p style={{
-            fontSize: 'clamp(1rem, 2vw, 1.12rem)', color: 'rgba(255,255,255,0.65)',
-            lineHeight: 1.7, maxWidth: 460, marginBottom: 36,
-            fontFamily: "'IBM Plex Sans', sans-serif",
+            fontSize: 'clamp(1rem, 2vw, 1.12rem)', color: 'rgba(255,255,255,0.62)',
+            lineHeight: 1.7, maxWidth: 480, marginBottom: 36,
+            fontFamily: "'Inter', sans-serif",
             opacity: mounted ? 1 : 0, transform: mounted ? 'translateY(0)' : 'translateY(12px)',
             transition: 'opacity 0.55s 0.2s, transform 0.55s 0.2s',
           }}>
-            Pitbox controla inventario multi-bodega, ventas, compras, taller, tesorería y
-            contabilidad desde un único panel — con NEXA, tu asistente de IA, proponiendo
-            registros contables listos para aprobar con un clic.
+            Pitbox controla el taller de principio a fin, y conecta ventas, facturación
+            DIAN, tesorería y contabilidad en un mismo lugar — con <b style={{ color: 'rgba(255,255,255,0.85)' }}>NEXA</b>, tu
+            asistente de IA, proponiendo cada registro contable listo para aprobar.
           </p>
 
           <div style={{
@@ -642,18 +703,25 @@ function Hero({ onCta }) {
             transition: 'opacity 0.55s 0.3s, transform 0.55s 0.3s',
           }}>
             <button onClick={onCta} style={{
-              background: C.accent, color: C.white, border: 'none', borderRadius: 10,
-              padding: '14px 32px', fontSize: 15, fontWeight: 700, cursor: 'pointer',
-              fontFamily: "'Oswald', sans-serif", textTransform: 'uppercase', letterSpacing: '0.03em',
+              background: C.accent, color: C.white, border: 'none', borderRadius: 11,
+              padding: '14px 30px', fontSize: 15, fontWeight: 600, cursor: 'pointer',
+              fontFamily: "'Space Grotesk', sans-serif", letterSpacing: '0.01em',
               display: 'flex', alignItems: 'center', gap: 8,
-              boxShadow: '0 8px 32px rgba(207,58,11,0.38)',
+              boxShadow: '0 8px 30px rgba(196,144,61,0.32)',
               transition: 'transform 0.2s, box-shadow 0.2s',
             }}
-              onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 12px 40px rgba(207,58,11,0.5)'; }}
-              onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 8px 32px rgba(207,58,11,0.38)'; }}
+              onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 12px 38px rgba(196,144,61,0.42)'; }}
+              onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 8px 30px rgba(196,144,61,0.32)'; }}
             >
               Solicitar demo <Ico d={icons.arrow} size={16} color="#fff" />
             </button>
+            <a href="#producto" style={{
+              display: 'flex', alignItems: 'center', gap: 8,
+              color: 'rgba(255,255,255,0.72)', textDecoration: 'none',
+              fontSize: 15, fontWeight: 500, padding: '14px 8px',
+            }}>
+              Ver el producto <Ico d={icons.arrowRight} size={15} color="rgba(255,255,255,0.55)" />
+            </a>
           </div>
 
           <div style={{
@@ -661,39 +729,31 @@ function Hero({ onCta }) {
             opacity: mounted ? 1 : 0, transition: 'opacity 0.55s 0.45s',
           }}>
             {[
-              { label: 'Multi-bodega y multi-sede', sub: 'Operación' },
-              { label: 'Tesorería y contabilidad integradas', sub: 'Finanzas' },
-              { label: 'Propone asientos y gastos', sub: 'NEXA · IA' },
+              { label: 'Del ingreso del vehículo a la entrega', sub: 'Taller' },
+              { label: 'Ventas, tesorería y contabilidad integradas', sub: 'Finanzas' },
+              { label: 'Propone asientos y gastos por ti', sub: 'NEXA · IA' },
             ].map(({ label, sub }) => (
-              <div key={label}>
-                <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: 2 }}>{sub}</div>
-                <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', fontWeight: 600 }}>{label}</div>
+              <div key={sub} style={{ maxWidth: 160 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: C.accentL, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 4 }}>{sub}</div>
+                <div style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.55)', lineHeight: 1.5 }}>{label}</div>
               </div>
             ))}
           </div>
         </div>
 
         <div style={{
-          opacity: mounted ? 1 : 0,
-          transform: mounted ? 'translateY(0)' : 'translateY(24px)',
-          transition: 'opacity 0.7s 0.25s, transform 0.7s 0.25s',
+          opacity: mounted ? 1 : 0, transform: mounted ? 'translateY(0) scale(1)' : 'translateY(20px) scale(0.98)',
+          transition: 'opacity 0.7s 0.2s, transform 0.7s 0.2s',
         }}>
           <div style={{
-            background: 'rgba(255,255,255,0.04)', backdropFilter: 'blur(8px)',
-            border: '1px solid rgba(255,255,255,0.1)', borderRadius: 16,
-            overflow: 'hidden', boxShadow: '0 32px 64px rgba(0,0,0,0.4)',
+            border: '1px solid rgba(255,255,255,0.1)', borderRadius: 18,
+            boxShadow: '0 40px 90px rgba(0,0,0,0.55), 0 0 0 1px rgba(196,144,61,0.08)',
+            overflow: 'hidden', background: '#101114',
           }}>
-            <div style={{
-              background: 'rgba(255,255,255,0.05)', padding: '10px 16px',
-              borderBottom: '1px solid rgba(255,255,255,0.07)',
-              display: 'flex', alignItems: 'center', gap: 8,
-            }}>
-              <div style={{ display: 'flex', gap: 5 }}>
-                {['#FF5F57','#FEBC2E','#28C840'].map(c => <div key={c} style={{ width: 9, height: 9, borderRadius: '50%', background: c }} />)}
-              </div>
-              <div style={{ flex: 1, background: 'rgba(255,255,255,0.06)', borderRadius: 5, padding: '4px 10px', fontSize: 10, color: 'rgba(255,255,255,0.35)', display: 'flex', alignItems: 'center', gap: 5 }}>
-                <Ico d={icons.search} size={10} color="rgba(255,255,255,0.35)" /> pitbox.app/dashboard
-              </div>
+            <div style={{ display: 'flex', gap: 6, padding: '12px 14px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+              <div style={{ width: 9, height: 9, borderRadius: '50%', background: '#3A3B42' }} />
+              <div style={{ width: 9, height: 9, borderRadius: '50%', background: '#3A3B42' }} />
+              <div style={{ width: 9, height: 9, borderRadius: '50%', background: '#3A3B42' }} />
             </div>
             <ScreenDashboard />
             <div style={{ padding: '8px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.02)' }}>
@@ -725,12 +785,12 @@ function StatsBar() {
       borderTop: '1px solid rgba(255,255,255,0.06)', borderBottom: '1px solid rgba(255,255,255,0.06)',
       padding: 'clamp(1.5rem,3vw,2.5rem) clamp(1.5rem,5vw,4rem)',
     }}>
-      <div style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', flexWrap: 'wrap', gap: '2rem', justifyContent: 'space-around', alignItems: 'center' }}>
+      <div style={{ maxWidth: 1240, margin: '0 auto', display: 'flex', flexWrap: 'wrap', gap: '2rem', justifyContent: 'space-around', alignItems: 'center' }}>
         {[
           { val: `${d1}+`, label: 'Módulos integrados' },
           { val: `${d2}%`, label: 'Facturación electrónica DIAN' },
           { val: `< ${d3}h`, label: 'Tiempo de activación' },
-          { val: 'NEXA', label: 'Asistente de IA para contabilidad y gastos' },
+          { val: 'NEXA', label: 'Más módulos activos, más automatiza' },
         ].map(({ val, label }, i) => (
           <div key={i} style={{
             textAlign: 'center',
@@ -738,41 +798,105 @@ function StatsBar() {
             transform: visible ? 'translateY(0)' : 'translateY(12px)',
             transition: `opacity 0.5s ${i*0.1}s, transform 0.5s ${i*0.1}s`,
           }}>
-            <div style={{ fontFamily: "'Oswald', sans-serif", fontSize: 'clamp(1.6rem,3.4vw,2.4rem)', fontWeight: 700, color: C.accentL, letterSpacing: '-0.01em', textTransform: 'uppercase' }}>{val}</div>
-            <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', marginTop: 4, fontFamily: "'IBM Plex Sans', sans-serif" }}>{label}</div>
+            <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 'clamp(1.5rem,3.2vw,2.2rem)', fontWeight: 700, color: C.accentL, letterSpacing: '-0.01em' }}>{val}</div>
+            <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', marginTop: 4, fontFamily: "'Inter', sans-serif" }}>{label}</div>
           </div>
         ))}
       </div>
     </div>
+  );
+}
+
+/* ─────────────────────────────────────────
+   SECCIÓN: TALLER (núcleo del producto)
+───────────────────────────────────────── */
+function TallerSpotlight({ onCta }) {
+  const [ref, visible] = useInView();
+  const items = [
+    { icon: icons.wrench, title: 'Órdenes de trabajo completas', desc: 'Vehículo, técnico asignado, repuestos usados y estado en tiempo real, del ingreso a la entrega.' },
+    { icon: icons.percent, title: 'Comisiones por técnico', desc: 'Liquidación de comisiones calculada automáticamente sobre cada orden de trabajo cerrada.' },
+    { icon: icons.globe, title: 'Seguimiento público sin login', desc: 'Tu cliente ve el estado de su vehículo con un enlace, sin crear cuenta ni contraseña.' },
+    { icon: icons.car, title: 'Consulta RUNT integrada', desc: 'Verifica los datos del vehículo directamente desde la orden de trabajo, sin salir de Pitbox.' },
+    { icon: icons.smartphone, title: 'App instalable en el taller', desc: 'Tu equipo instala Taller como app desde el celular, sin tienda de aplicaciones, y sigue trabajando aunque se caiga el internet.' },
+  ];
+
+  return (
+    <section id="taller" style={{
+      background: `linear-gradient(175deg, ${C.ink} 0%, #101116 100%)`,
+      padding: 'clamp(4rem,8vw,7rem) clamp(1.5rem,5vw,4rem)',
+      borderBottom: '1px solid rgba(255,255,255,0.06)',
+    }}>
+      <div ref={ref} style={{ maxWidth: 1240, margin: '0 auto' }}>
+        <div style={{
+          display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(320px,1fr))',
+          gap: 'clamp(2.5rem,6vw,5rem)', alignItems: 'center', marginBottom: 56,
+        }}>
+          <div style={{ opacity: visible ? 1 : 0, transform: visible ? 'translateY(0)' : 'translateY(16px)', transition: 'opacity 0.6s, transform 0.6s' }}>
+            <div style={{ display: 'inline-block', background: 'rgba(196,144,61,0.12)', border: '1px solid rgba(196,144,61,0.28)', borderRadius: 100, padding: '6px 16px', marginBottom: 18 }}>
+              <span style={{ fontSize: 12, color: C.accentL, fontWeight: 700, letterSpacing: '0.05em' }}>El núcleo de Pitbox</span>
+            </div>
+            <h2 style={{
+              fontFamily: "'Space Grotesk', sans-serif",
+              fontSize: 'clamp(1.8rem,4vw,2.6rem)', fontWeight: 700, color: C.white,
+              letterSpacing: '-0.02em', lineHeight: 1.15, marginBottom: 18,
+            }}>
+              Taller que no pierde el hilo de nada
+            </h2>
+            <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 15.5, lineHeight: 1.75, maxWidth: 480 }}>
+              Antes de ser una plataforma de finanzas, Pitbox nació para ordenar el taller.
+              Sigue siendo lo que mejor hace: vehículos, técnicos y órdenes de trabajo bajo
+              control, con visibilidad total para tu equipo y para el cliente.
+            </p>
+            <button onClick={onCta} style={{
+              marginTop: 28, background: 'transparent', color: C.white,
+              border: '1.5px solid rgba(255,255,255,0.22)', borderRadius: 10,
+              padding: '12px 26px', fontSize: 14, fontWeight: 600, cursor: 'pointer',
+              fontFamily: "'Space Grotesk', sans-serif",
+              display: 'inline-flex', alignItems: 'center', gap: 8,
+              transition: 'border-color 0.2s, background 0.2s',
+            }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = C.accentL; e.currentTarget.style.background = 'rgba(196,144,61,0.08)'; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.22)'; e.currentTarget.style.background = 'transparent'; }}
+            >
+              Solicitar demo <Ico d={icons.arrow} size={15} color={C.white} />
+            </button>
+          </div>
+
+          <div style={{
+            border: '1px solid rgba(255,255,255,0.1)', borderRadius: 16,
+            boxShadow: '0 30px 70px rgba(0,0,0,0.5)', overflow: 'hidden',
+            opacity: visible ? 1 : 0, transform: visible ? 'translateY(0)' : 'translateY(20px)',
+            transition: 'opacity 0.7s 0.15s, transform 0.7s 0.15s',
+          }}>
+            <ScreenTaller />
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(240px,1fr))', gap: 20 }}>
+          {items.map(({ icon, title, desc }, i) => (
+            <div key={i} style={{
+              background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)',
+              borderRadius: 16, padding: '22px 20px',
+              opacity: visible ? 1 : 0, transform: visible ? 'translateY(0)' : 'translateY(16px)',
+              transition: `opacity 0.5s ${0.1 + i * 0.08}s, transform 0.5s ${0.1 + i * 0.08}s`,
+            }}>
+              <div style={{
+                width: 40, height: 40, borderRadius: 11, background: 'rgba(196,144,61,0.14)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 14,
+              }}>
+                <Ico d={icon} size={18} color={C.accentL} strokeWidth={1.7} />
+              </div>
+              <h4 style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 15, fontWeight: 700, color: C.white, marginBottom: 8 }}>{title}</h4>
+              <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.55)', lineHeight: 1.6 }}>{desc}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
   );
 }
 
 /* Mini visualizations */
-function MiniTaller() {
-  const steps = ['En espera', 'En proceso', 'Listo', 'Entregado'];
-  return (
-    <div>
-      <div style={{ display: 'flex', gap: 6, marginBottom: 14 }}>
-        {steps.map((s, i) => (
-          <div key={s} style={{ flex: 1, height: 6, borderRadius: 3, background: i <= 2 ? C.accent : '#E2E8F0' }} />
-        ))}
-      </div>
-      {steps.map((s, i) => (
-        <div key={s} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-          <div style={{
-            width: 20, height: 20, borderRadius: '50%',
-            background: i <= 2 ? C.accent : '#E2E8F0',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-          }}>
-            {i <= 2 && <Ico d={icons.check} size={11} color="#fff" strokeWidth={2.5} />}
-          </div>
-          <span style={{ fontSize: 13, color: i <= 2 ? C.gray900 : C.gray400, fontWeight: i === 2 ? 700 : 500 }}>OT-0452 · {s}</span>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 function MiniFacturacion({ accent }) {
   return (
     <div style={{ textAlign: 'center' }}>
@@ -798,6 +922,33 @@ function MiniFacturacion({ accent }) {
   );
 }
 
+function MiniContabilidad({ accent }) {
+  const items = [
+    { label: 'Activos', val: 72, col: C.signal },
+    { label: 'Pasivos', val: 38, col: C.caution },
+    { label: 'Patrimonio', val: 58, col: accent },
+  ];
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      {items.map(({ label, val, col }, i) => (
+        <div key={i}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+            <span style={{ fontSize: 12, color: C.gray700 }}>{label}</span>
+            <span style={{ fontSize: 12, fontWeight: 700, color: col }}>{val}%</span>
+          </div>
+          <div style={{ height: 6, background: '#E3E1DB', borderRadius: 3 }}>
+            <div style={{ height: '100%', width: `${val}%`, background: col, borderRadius: 3, transition: 'width 1.2s ease' }} />
+          </div>
+        </div>
+      ))}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
+        <Ico d={icons.sparkle} size={13} color={C.ai} />
+        <span style={{ fontSize: 11.5, color: C.gray500 }}>2 asientos propuestos por NEXA, listos para aprobar</span>
+      </div>
+    </div>
+  );
+}
+
 function MiniInventario({ accent }) {
   const items = [
     { label: 'Bodega Principal', val: 88, col: C.signal },
@@ -814,7 +965,7 @@ function MiniInventario({ accent }) {
             <span style={{ fontSize: 12, fontWeight: 700, color: col }}>{isCount ? val : `${val}%`}</span>
           </div>
           {!isCount && (
-            <div style={{ height: 6, background: '#E2E8F0', borderRadius: 3 }}>
+            <div style={{ height: 6, background: '#E3E1DB', borderRadius: 3 }}>
               <div style={{ height: '100%', width: `${val}%`, background: col, borderRadius: 3, transition: 'width 1.2s ease' }} />
             </div>
           )}
@@ -824,146 +975,23 @@ function MiniInventario({ accent }) {
   );
 }
 
-function MiniNexa({ accent }) {
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-        <NexaIcon size={26} className="rounded-full shrink-0" animated />
-        <div style={{
-          background: C.white, border: `1px solid ${accent}30`, borderRadius: '4px 12px 12px 12px',
-          padding: '10px 12px', fontSize: 12.5, color: C.gray700, lineHeight: 1.5, maxWidth: 240,
-        }}>
-          Detecté un pago de $340.000 a Repuestos del Sur. ¿Registro el gasto y el asiento contable?
-        </div>
-      </div>
-      <div style={{
-        marginLeft: 34, background: `${accent}0C`, border: `1px solid ${accent}25`,
-        borderRadius: 12, padding: '10px 12px',
-      }}>
-        <div style={{ fontSize: 11, color: C.gray500, marginBottom: 8 }}>
-          Gasto · Proveedores &nbsp;·&nbsp; <span style={{ fontWeight: 700, color: C.gray900 }}>$340.000</span>
-        </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <div style={{
-            flex: 1, textAlign: 'center', padding: '6px 0', borderRadius: 7,
-            background: accent, color: '#fff', fontSize: 11.5, fontWeight: 700,
-          }}>Aprobar</div>
-          <div style={{
-            flex: 1, textAlign: 'center', padding: '6px 0', borderRadius: 7,
-            border: `1px solid ${C.gray200}`, color: C.gray500, fontSize: 11.5, fontWeight: 600,
-          }}>Rechazar</div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 /* ─────────────────────────────────────────
-   SECCIÓN: NEXA (banner de IA — destacado)
-───────────────────────────────────────── */
-function NexaBanner({ onCta }) {
-  const [ref, visible] = useInView();
-  const cards = [
-    { icon: icons.bot, title: 'Detecta y propone', desc: 'Analiza ventas, compras y gastos, y arma la propuesta contable por ti.' },
-    { icon: icons.check, title: 'Tú apruebas', desc: 'Cada propuesta espera tu visto bueno antes de contabilizarse.' },
-    { icon: icons.book, title: 'Queda en el libro', desc: 'Al aprobar, el asiento contable se registra listo para postear.' },
-  ];
-
-  return (
-    <section id="nexa" style={{
-      position: 'relative', overflow: 'hidden',
-      background: `radial-gradient(circle at 15% 20%, rgba(139,92,246,0.25), transparent 55%), radial-gradient(circle at 85% 80%, rgba(207,58,11,0.18), transparent 50%), ${C.inkD}`,
-      padding: 'clamp(4rem,8vw,7rem) clamp(1.5rem,5vw,4rem)',
-      borderTop: '1px solid rgba(255,255,255,0.06)', borderBottom: '1px solid rgba(255,255,255,0.06)',
-    }}>
-      <div ref={ref} style={{
-        maxWidth: 1100, margin: '0 auto', textAlign: 'center',
-        opacity: visible ? 1 : 0, transform: visible ? 'translateY(0)' : 'translateY(20px)',
-        transition: 'opacity 0.6s, transform 0.6s',
-      }}>
-        <div style={{
-          display: 'inline-flex', alignItems: 'center', gap: 8,
-          background: 'rgba(139,92,246,0.15)', border: '1px solid rgba(139,92,246,0.35)',
-          borderRadius: 100, padding: '6px 16px', marginBottom: 24,
-        }}>
-          <Ico d={icons.sparkle} size={13} color={C.aiL} />
-          <span style={{ fontSize: 12, color: C.aiL, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Nuevo · Inteligencia artificial</span>
-        </div>
-
-        <h2 style={{
-          fontFamily: "'Oswald', sans-serif",
-          fontSize: 'clamp(2rem,5vw,3.2rem)', fontWeight: 700, color: C.white,
-          letterSpacing: '-0.01em', lineHeight: 1.15, marginBottom: 18, textTransform: 'uppercase',
-        }}>
-          Conoce a <span style={{ color: C.aiL }}>NEXA</span>, tu copiloto contable
-        </h2>
-        <p style={{
-          color: 'rgba(255,255,255,0.6)', fontSize: 'clamp(1rem,2vw,1.15rem)',
-          lineHeight: 1.7, maxWidth: 620, margin: '0 auto 48px',
-        }}>
-          NEXA es la inteligencia artificial de Pitbox: revisa tu operación, propone gastos,
-          pagos y asientos contables, y solo ejecuta lo que tú apruebas. Tesorería y
-          contabilidad al día, sin digitar cada movimiento a mano.
-        </p>
-
-        <div style={{
-          display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px,1fr))',
-          gap: 20, marginBottom: 48, textAlign: 'left',
-        }}>
-          {cards.map(({ icon, title, desc }, i) => (
-            <div key={i} style={{
-              background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)',
-              borderRadius: 16, padding: '24px 22px',
-              opacity: visible ? 1 : 0, transform: visible ? 'translateY(0)' : 'translateY(16px)',
-              transition: `opacity 0.5s ${0.1 + i * 0.1}s, transform 0.5s ${0.1 + i * 0.1}s`,
-            }}>
-              <div style={{
-                width: 44, height: 44, borderRadius: 12, background: 'rgba(139,92,246,0.15)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16,
-              }}>
-                <Ico d={icon} size={20} color={C.aiL} strokeWidth={1.7} />
-              </div>
-              <h3 style={{ fontFamily: "'Oswald', sans-serif", fontSize: 16, fontWeight: 700, color: C.white, marginBottom: 8, textTransform: 'uppercase' }}>{title}</h3>
-              <p style={{ fontSize: 13.5, color: 'rgba(255,255,255,0.55)', lineHeight: 1.6 }}>{desc}</p>
-            </div>
-          ))}
-        </div>
-
-        <button onClick={onCta} style={{
-          background: C.ai, color: C.white, border: 'none', borderRadius: 10,
-          padding: '14px 32px', fontSize: 15, fontWeight: 700, cursor: 'pointer',
-          fontFamily: "'Oswald', sans-serif", textTransform: 'uppercase', letterSpacing: '0.03em',
-          display: 'inline-flex', alignItems: 'center', gap: 8,
-          boxShadow: '0 8px 32px rgba(139,92,246,0.4)',
-          transition: 'transform 0.2s, box-shadow 0.2s',
-        }}
-          onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 12px 40px rgba(139,92,246,0.5)'; }}
-          onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 8px 32px rgba(139,92,246,0.4)'; }}
-        >
-          Ver NEXA en acción <Ico d={icons.arrow} size={16} color="#fff" />
-        </button>
-      </div>
-    </section>
-  );
-}
-
-/* ─────────────────────────────────────────
-   SECCIÓN: PRODUCTO (features split)
+   SECCIÓN: PRODUCTO (ventas, contabilidad, inventario)
 ───────────────────────────────────────── */
 function ProductSection() {
   const features = [
     {
-      icon: icons.wrench, accent: C.accentL,
-      title: 'Taller que no pierde el hilo',
-      desc: 'Cada vehículo entra con su orden de trabajo, técnico asignado y repuestos usados. El estado avanza de En espera a Entregado, visible para tu equipo y para el cliente en cada momento.',
-      bullets: ['Vehículos y clientes vinculados', 'Comisiones calculadas por técnico', 'Reporte de productividad', 'Notificación automática al cliente'],
+      icon: icons.invoice, accent: C.signal,
+      title: 'Ventas y facturación electrónica sin fricción',
+      desc: 'Cada venta se factura con validación DIAN integrada en el mismo flujo. El CUFE, la aceptación y la importación de facturas XML de proveedores quedan registrados sin doble digitación.',
+      bullets: ['Validación DIAN en el mismo flujo de venta', 'Importación de facturas XML de proveedores', 'Envío automático al correo del cliente', 'Cuentas por cobrar y por pagar'],
       side: 'right',
     },
     {
-      icon: icons.invoice, accent: C.signal,
-      title: 'Facturación electrónica sin fricción',
-      desc: 'Cada venta se factura con validación DIAN integrada, sin exportar a otro sistema ni digitar dos veces. El CUFE y la aceptación quedan registrados junto a la venta.',
-      bullets: ['Validación DIAN en el mismo flujo de venta', 'Envío automático al correo del cliente', 'Historial de eventos DIAN', 'Sin doble digitación'],
+      icon: icons.book, accent: C.accentL,
+      title: 'Contabilidad que se arma sola',
+      desc: 'Plan de cuentas, asientos y estados financieros generados a partir de tu operación diaria — ventas, compras y gastos se contabilizan sin que tengas que digitar cada movimiento.',
+      bullets: ['Plan de cuentas configurable (PUC)', 'Asientos automáticos por operación', 'Balance y estado de resultados', 'Libros: diario, mayor, auxiliar e IVA'],
       side: 'left',
     },
     {
@@ -973,36 +1001,29 @@ function ProductSection() {
       bullets: ['Multi-bodega y multi-sede', 'Transferencias con trazabilidad', 'Alertas de stock configurables', 'Escaneo de código de barras'],
       side: 'right',
     },
-    {
-      icon: icons.sparkle, accent: C.ai, isNexa: true,
-      title: 'NEXA: contabilidad con inteligencia artificial',
-      desc: 'NEXA observa tus ventas, compras y gastos, y propone el registro contable correspondiente. Tú solo apruebas o rechazas: nada se contabiliza sin tu decisión.',
-      bullets: ['Propone gastos y pagos automáticamente', 'Genera asientos contables listos para postear', 'Aprobación de un clic', 'Trazabilidad completa de cada propuesta'],
-      side: 'left',
-    },
   ];
 
   return (
     <section id="producto" style={{ background: C.gray50, padding: 'clamp(4rem,8vw,7rem) clamp(1.5rem,5vw,4rem)' }}>
-      <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+      <div style={{ maxWidth: 1240, margin: '0 auto' }}>
         <div style={{ textAlign: 'center', marginBottom: 72 }}>
-          <div style={{ display: 'inline-block', background: '#FDECE4', borderRadius: 100, padding: '6px 16px', marginBottom: 16 }}>
-            <span style={{ fontSize: 12, color: C.accent, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Por qué Pitbox</span>
+          <div style={{ display: 'inline-block', background: '#F4E9D8', borderRadius: 100, padding: '6px 16px', marginBottom: 16 }}>
+            <span style={{ fontSize: 12, color: C.accent, fontWeight: 700, letterSpacing: '0.05em' }}>Por qué Pitbox</span>
           </div>
           <h2 style={{
-            fontFamily: "'Oswald', sans-serif",
-            fontSize: 'clamp(1.8rem,4vw,2.8rem)', fontWeight: 700, color: C.gray900,
-            letterSpacing: '-0.01em', lineHeight: 1.15, marginBottom: 16, textTransform: 'uppercase',
+            fontFamily: "'Space Grotesk', sans-serif",
+            fontSize: 'clamp(1.8rem,4vw,2.6rem)', fontWeight: 700, color: C.gray900,
+            letterSpacing: '-0.02em', lineHeight: 1.15, marginBottom: 16,
           }}>
-            Todo lo que necesita tu operación.<br />Nada que no necesites.
+            Del taller a los estados financieros,<br />sin salir de una sola plataforma
           </h2>
           <p style={{ color: C.gray500, fontSize: 'clamp(1rem,2vw,1.1rem)', maxWidth: 560, margin: '0 auto' }}>
-            Sin instalaciones complejas, sin sistemas sueltos entre sí. Una plataforma completa que puedes activar en menos de 24 horas.
+            Sin instalaciones complejas, sin sistemas sueltos entre sí. Actívala en menos de 24 horas.
           </p>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'clamp(4rem,8vw,7rem)' }}>
-          {features.map(({ icon, accent, isNexa, title, desc, bullets, side }, i) => {
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'clamp(4rem,8vw,6rem)' }}>
+          {features.map(({ icon, accent, title, desc, bullets, side }, i) => {
             const [ref, visible] = useInView();
             const isRight = side === 'right';
             return (
@@ -1017,19 +1038,16 @@ function ProductSection() {
               }}>
                 <div style={{ order: isRight ? 1 : 2 }}>
                   <div style={{
-                    width: 52, height: 52, borderRadius: 14,
-                    background: isNexa ? 'transparent' : `${accent}18`,
+                    width: 50, height: 50, borderRadius: 13,
+                    background: `${accent}15`,
                     display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 20,
-                    overflow: 'hidden',
                   }}>
-                    {isNexa
-                      ? <NexaIcon size={52} animated />
-                      : <Ico d={icon} size={24} color={accent} strokeWidth={1.7} />}
+                    <Ico d={icon} size={23} color={accent} strokeWidth={1.7} />
                   </div>
                   <h3 style={{
-                    fontFamily: "'Oswald', sans-serif",
-                    fontSize: 'clamp(1.3rem,2.6vw,1.8rem)', fontWeight: 700, color: C.gray900,
-                    letterSpacing: '-0.01em', marginBottom: 16, textTransform: 'uppercase',
+                    fontFamily: "'Space Grotesk', sans-serif",
+                    fontSize: 'clamp(1.3rem,2.4vw,1.7rem)', fontWeight: 700, color: C.gray900,
+                    letterSpacing: '-0.01em', marginBottom: 16,
                   }}>{title}</h3>
                   <p style={{ fontSize: 15, color: C.gray500, lineHeight: 1.7, marginBottom: 24 }}>{desc}</p>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -1049,17 +1067,16 @@ function ProductSection() {
 
                 <div style={{
                   order: isRight ? 2 : 1,
-                  background: `linear-gradient(135deg, ${accent}08, ${accent}04)`,
-                  border: `1px solid ${accent}20`,
+                  background: `linear-gradient(135deg, ${accent}0A, ${accent}04)`,
+                  border: `1px solid ${accent}22`,
                   borderRadius: 20, padding: 'clamp(1.5rem,3vw,3rem)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   minHeight: 220,
                 }}>
                   <div style={{ width: '100%' }}>
-                    {i === 0 && <MiniTaller />}
-                    {i === 1 && <MiniFacturacion accent={accent} />}
+                    {i === 0 && <MiniFacturacion accent={accent} />}
+                    {i === 1 && <MiniContabilidad accent={accent} />}
                     {i === 2 && <MiniInventario accent={accent} />}
-                    {i === 3 && <MiniNexa accent={accent} />}
                   </div>
                 </div>
               </div>
@@ -1078,7 +1095,7 @@ function AppShowcase() {
   const [ref, visible] = useInView();
   return (
     <section style={{
-      background: `linear-gradient(160deg, ${C.inkD} 0%, #141416 100%)`,
+      background: `linear-gradient(165deg, ${C.inkD} 0%, #121317 100%)`,
       padding: 'clamp(4rem,8vw,7rem) 0',
     }}>
       <div ref={ref} style={{
@@ -1088,21 +1105,116 @@ function AppShowcase() {
         transform: visible ? 'translateY(0)' : 'translateY(16px)',
         transition: 'opacity 0.6s, transform 0.6s',
       }}>
-        <div style={{ display: 'inline-block', background: 'rgba(240,87,43,0.12)', border: '1px solid rgba(240,87,43,0.25)', borderRadius: 100, padding: '6px 16px', marginBottom: 16 }}>
-          <span style={{ fontSize: 12, color: C.accentL, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>El aplicativo en acción</span>
+        <div style={{ display: 'inline-block', background: 'rgba(196,144,61,0.1)', border: '1px solid rgba(196,144,61,0.25)', borderRadius: 100, padding: '6px 16px', marginBottom: 16 }}>
+          <span style={{ fontSize: 12, color: C.accentL, fontWeight: 700, letterSpacing: '0.05em' }}>El aplicativo en acción</span>
         </div>
         <h2 style={{
-          fontFamily: "'Oswald', sans-serif",
-          fontSize: 'clamp(1.8rem,4vw,2.8rem)', fontWeight: 700, color: C.white,
-          letterSpacing: '-0.01em', lineHeight: 1.15, marginBottom: 12, textTransform: 'uppercase',
+          fontFamily: "'Space Grotesk', sans-serif",
+          fontSize: 'clamp(1.8rem,4vw,2.6rem)', fontWeight: 700, color: C.white,
+          letterSpacing: '-0.02em', lineHeight: 1.15, marginBottom: 12,
         }}>
           Diseñado para quienes operan<br />todos los días, sin pausas
         </h2>
         <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: 15, maxWidth: 540, margin: '0 auto' }}>
-          Una interfaz clara y rápida para gestionar inventario, taller, ventas y facturación en un solo lugar.
+          Una interfaz clara y rápida para gestionar taller, ventas, contabilidad e inventario en un solo lugar.
         </p>
       </div>
       <AppCarousel />
+    </section>
+  );
+}
+
+/* ─────────────────────────────────────────
+   SECCIÓN: NEXA (motor de valor — destacado)
+───────────────────────────────────────── */
+function NexaBanner({ onCta }) {
+  const [ref, visible] = useInView();
+  const cards = [
+    { icon: icons.bot, title: 'Ve toda tu operación', desc: 'Cuantos más módulos actives, más contexto tiene NEXA: ventas, compras, tesorería e inventario.' },
+    { icon: icons.check, title: 'Tú apruebas', desc: 'Cada propuesta de gasto, pago o asiento espera tu visto bueno antes de contabilizarse.' },
+    { icon: icons.chart, title: 'Multiplica el valor de Pitbox', desc: 'Con todo activo, NEXA hace el trabajo contable pesado — es donde más tiempo y dinero ahorras.' },
+  ];
+
+  return (
+    <section id="nexa" style={{
+      position: 'relative', overflow: 'hidden',
+      background: `radial-gradient(circle at 15% 20%, rgba(139,92,246,0.22), transparent 55%), radial-gradient(circle at 85% 80%, rgba(196,144,61,0.14), transparent 50%), ${C.inkD}`,
+      padding: 'clamp(4rem,8vw,7rem) clamp(1.5rem,5vw,4rem)',
+      borderTop: '1px solid rgba(255,255,255,0.06)', borderBottom: '1px solid rgba(255,255,255,0.06)',
+    }}>
+      <div ref={ref} style={{
+        maxWidth: 1100, margin: '0 auto', textAlign: 'center',
+        opacity: visible ? 1 : 0, transform: visible ? 'translateY(0)' : 'translateY(20px)',
+        transition: 'opacity 0.6s, transform 0.6s',
+      }}>
+        <div style={{
+          display: 'inline-flex', alignItems: 'center', gap: 8,
+          background: 'rgba(139,92,246,0.15)', border: '1px solid rgba(139,92,246,0.35)',
+          borderRadius: 100, padding: '6px 16px', marginBottom: 24,
+        }}>
+          <Ico d={icons.sparkle} size={13} color={C.aiL} />
+          <span style={{ fontSize: 12, color: C.aiL, fontWeight: 700, letterSpacing: '0.05em' }}>El motor de valor de Pitbox</span>
+        </div>
+
+        <h2 style={{
+          fontFamily: "'Space Grotesk', sans-serif",
+          fontSize: 'clamp(2rem,4.6vw,3rem)', fontWeight: 700, color: C.white,
+          letterSpacing: '-0.02em', lineHeight: 1.15, marginBottom: 18,
+        }}>
+          Conoce a <span style={{ color: C.aiL }}>NEXA</span>, tu copiloto contable
+        </h2>
+        <p style={{
+          color: 'rgba(255,255,255,0.6)', fontSize: 'clamp(1rem,2vw,1.15rem)',
+          lineHeight: 1.7, maxWidth: 640, margin: '0 auto 20px',
+        }}>
+          NEXA revisa tu operación, propone gastos, pagos y asientos contables, y solo
+          ejecuta lo que tú apruebas.
+        </p>
+        <p style={{
+          color: C.aiL, fontSize: 14.5, fontWeight: 600,
+          maxWidth: 560, margin: '0 auto 48px', lineHeight: 1.6,
+        }}>
+          Entre más módulos de Pitbox tengas activos — inventario, ventas, tesorería,
+          contabilidad —, más contexto tiene NEXA y más trabajo contable te ahorra.
+        </p>
+
+        <div style={{
+          display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px,1fr))',
+          gap: 20, marginBottom: 48, textAlign: 'left',
+        }}>
+          {cards.map(({ icon, title, desc }, i) => (
+            <div key={i} style={{
+              background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)',
+              borderRadius: 16, padding: '24px 22px',
+              opacity: visible ? 1 : 0, transform: visible ? 'translateY(0)' : 'translateY(16px)',
+              transition: `opacity 0.5s ${0.1 + i * 0.1}s, transform 0.5s ${0.1 + i * 0.1}s`,
+            }}>
+              <div style={{
+                width: 44, height: 44, borderRadius: 12, background: 'rgba(139,92,246,0.15)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16,
+              }}>
+                <Ico d={icon} size={20} color={C.aiL} strokeWidth={1.7} />
+              </div>
+              <h3 style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 16, fontWeight: 700, color: C.white, marginBottom: 8 }}>{title}</h3>
+              <p style={{ fontSize: 13.5, color: 'rgba(255,255,255,0.55)', lineHeight: 1.6 }}>{desc}</p>
+            </div>
+          ))}
+        </div>
+
+        <button onClick={onCta} style={{
+          background: C.ai, color: C.white, border: 'none', borderRadius: 11,
+          padding: '14px 32px', fontSize: 15, fontWeight: 600, cursor: 'pointer',
+          fontFamily: "'Space Grotesk', sans-serif",
+          display: 'inline-flex', alignItems: 'center', gap: 8,
+          boxShadow: '0 8px 32px rgba(139,92,246,0.4)',
+          transition: 'transform 0.2s, box-shadow 0.2s',
+        }}
+          onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 12px 40px rgba(139,92,246,0.5)'; }}
+          onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 8px 32px rgba(139,92,246,0.4)'; }}
+        >
+          Ver NEXA en acción <Ico d={icons.arrow} size={16} color="#fff" />
+        </button>
+      </div>
     </section>
   );
 }
@@ -1116,28 +1228,16 @@ function ModulesSection() {
 
   const modules = [
     {
-      name: 'Inventario',
-      icon: icons.package, accent: C.accentL,
-      desc: 'Productos, categorías y existencias sincronizadas en tiempo real, con escaneo de código de barras desde cámara o lector externo.',
-      bullets: ['Escaneo de código de barras', 'Categorías y proveedores', 'Ajustes de inventario con soporte', 'Devoluciones a proveedor y de cliente'],
-    },
-    {
       name: 'Taller',
       icon: icons.wrench, accent: C.accentL,
       desc: 'Órdenes de trabajo con vehículos, técnicos y estado en tiempo real, desde el ingreso hasta la entrega al cliente.',
-      bullets: ['Vehículos y ficha del cliente', 'Estados: espera, proceso, listo, entregado', 'Comisiones por técnico', 'Reporte de productividad'],
+      bullets: ['Vehículos y ficha del cliente', 'Consulta RUNT integrada', 'Comisiones por técnico', 'Seguimiento público de OT sin login'],
     },
     {
-      name: 'Facturación DIAN',
+      name: 'Ventas y facturación',
       icon: icons.invoice, accent: C.signal,
       desc: 'Ventas con facturación electrónica y validación DIAN integradas en el mismo flujo, sin doble digitación.',
-      bullets: ['CUFE y eventos DIAN en la venta', 'Cuentas por cobrar', 'Devoluciones de cliente', 'Envío automático al correo'],
-    },
-    {
-      name: 'Tesorería',
-      icon: icons.bank, accent: C.signal,
-      desc: 'Cuentas por pagar, gastos operativos y flujo de caja al día, con apertura y cierre de cajas por sede.',
-      bullets: ['Cuentas por pagar a proveedores', 'Gastos operativos por categoría', 'Flujo de caja en tiempo real', 'Cajas por sede con arqueo'],
+      bullets: ['CUFE y eventos DIAN en la venta', 'Importación de facturas XML de proveedores', 'Cuentas por cobrar', 'Envío automático al correo'],
     },
     {
       name: 'Contabilidad',
@@ -1146,10 +1246,22 @@ function ModulesSection() {
       bullets: ['Plan de cuentas configurable', 'Asientos contables automáticos', 'Mapeo de cuentas por tipo de operación', 'Balance y estado de resultados'],
     },
     {
+      name: 'Tesorería',
+      icon: icons.bank, accent: C.signal,
+      desc: 'Cuentas por pagar, gastos operativos y flujo de caja al día, con apertura y cierre de cajas por sede.',
+      bullets: ['Cuentas por pagar a proveedores', 'Gastos operativos por categoría', 'Flujo de caja en tiempo real', 'Cajas por sede con arqueo'],
+    },
+    {
       name: 'NEXA · IA',
       icon: icons.sparkle, accent: C.ai,
       desc: 'Tu asistente de inteligencia artificial: analiza tu operación y propone gastos, pagos y asientos contables listos para aprobar.',
-      bullets: ['Propone gastos y pagos automáticamente', 'Regenera asientos contables por ti', 'Tú apruebas o rechazas cada acción', 'Nada se contabiliza sin tu visto bueno'],
+      bullets: ['Propone gastos y pagos automáticamente', 'Genera asientos contables por ti', 'Tú apruebas o rechazas cada acción', 'Nada se contabiliza sin tu visto bueno'],
+    },
+    {
+      name: 'Inventario',
+      icon: icons.package, accent: C.caution,
+      desc: 'Productos, categorías y existencias sincronizadas en tiempo real, con escaneo de código de barras desde cámara o lector externo.',
+      bullets: ['Escaneo de código de barras', 'Categorías y proveedores', 'Ajustes de inventario con soporte', 'Devoluciones a proveedor y de cliente'],
     },
     {
       name: 'Alertas y reportes',
@@ -1169,15 +1281,15 @@ function ModulesSection() {
 
   return (
     <section id="modulos" style={{ background: C.gray50, padding: 'clamp(4rem,8vw,7rem) clamp(1.5rem,5vw,4rem)' }}>
-      <div ref={ref} style={{ maxWidth: 1200, margin: '0 auto' }}>
+      <div ref={ref} style={{ maxWidth: 1240, margin: '0 auto' }}>
         <div style={{ textAlign: 'center', marginBottom: 48 }}>
-          <div style={{ display: 'inline-block', background: '#FDECE4', borderRadius: 100, padding: '6px 16px', marginBottom: 16 }}>
-            <span style={{ fontSize: 12, color: C.accent, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Módulos</span>
+          <div style={{ display: 'inline-block', background: '#F4E9D8', borderRadius: 100, padding: '6px 16px', marginBottom: 16 }}>
+            <span style={{ fontSize: 12, color: C.accent, fontWeight: 700, letterSpacing: '0.05em' }}>Módulos</span>
           </div>
           <h2 style={{
-            fontFamily: "'Oswald', sans-serif",
-            fontSize: 'clamp(1.8rem,4vw,2.6rem)', fontWeight: 700, color: C.gray900,
-            letterSpacing: '-0.01em', lineHeight: 1.15, textTransform: 'uppercase',
+            fontFamily: "'Space Grotesk', sans-serif",
+            fontSize: 'clamp(1.8rem,4vw,2.4rem)', fontWeight: 700, color: C.gray900,
+            letterSpacing: '-0.02em', lineHeight: 1.15,
           }}>
             Un módulo para cada parte de tu operación
           </h2>
@@ -1212,7 +1324,7 @@ function ModulesSection() {
             }}>
               <Ico d={mod.icon} size={26} color={mod.accent} strokeWidth={1.6} />
             </div>
-            <h3 style={{ fontFamily: "'Oswald', sans-serif", fontSize: 22, fontWeight: 700, color: C.gray900, marginBottom: 12, textTransform: 'uppercase' }}>
+            <h3 style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 21, fontWeight: 700, color: C.gray900, marginBottom: 12 }}>
               {mod.name}
             </h3>
             <p style={{ fontSize: 15, color: C.gray500, lineHeight: 1.7, marginBottom: 24 }}>{mod.desc}</p>
@@ -1231,7 +1343,7 @@ function ModulesSection() {
             </div>
           </div>
           <div style={{ background: C.gray50, borderRadius: 12, padding: 24, border: `1px solid ${C.gray100}` }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: C.gray400, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 16 }}>Además incluye</div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: C.gray400, letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: 16 }}>Además incluye</div>
             {['Roles y permisos por sede', 'Transferencias entre bodegas', 'Compras y cuentas por pagar', 'Panel de superadministrador', 'Consumos internos', 'Historial de auditoría'].map((t, i) => (
               <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginBottom: 10 }}>
                 <div style={{ width: 5, height: 5, borderRadius: '50%', background: C.gray400, marginTop: 6, flexShrink: 0 }} />
@@ -1259,16 +1371,16 @@ function Sectors() {
 
   return (
     <section id="sectores" style={{ background: C.white, padding: 'clamp(4rem,8vw,7rem) clamp(1.5rem,5vw,4rem)' }}>
-      <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+      <div style={{ maxWidth: 1240, margin: '0 auto' }}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(280px,1fr))', gap: 'clamp(2rem,6vw,6rem)', alignItems: 'center' }}>
           <div ref={ref}>
-            <div style={{ display: 'inline-block', background: '#FDECE4', borderRadius: 100, padding: '6px 16px', marginBottom: 16 }}>
-              <span style={{ fontSize: 12, color: C.accent, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Sectores</span>
+            <div style={{ display: 'inline-block', background: '#F4E9D8', borderRadius: 100, padding: '6px 16px', marginBottom: 16 }}>
+              <span style={{ fontSize: 12, color: C.accent, fontWeight: 700, letterSpacing: '0.05em' }}>Sectores</span>
             </div>
             <h2 style={{
-              fontFamily: "'Oswald', sans-serif",
-              fontSize: 'clamp(1.8rem,3.5vw,2.4rem)', fontWeight: 700, color: C.gray900,
-              letterSpacing: '-0.01em', lineHeight: 1.15, marginBottom: 16, textTransform: 'uppercase',
+              fontFamily: "'Space Grotesk', sans-serif",
+              fontSize: 'clamp(1.8rem,3.5vw,2.3rem)', fontWeight: 700, color: C.gray900,
+              letterSpacing: '-0.02em', lineHeight: 1.15, marginBottom: 16,
               opacity: visible ? 1 : 0, transition: 'opacity 0.5s',
             }}>
               Pensado para la operación colombiana
@@ -1278,8 +1390,8 @@ function Sectors() {
             </p>
             <button onClick={() => document.getElementById('modulos')?.scrollIntoView({ behavior: 'smooth' })} style={{
               background: C.ink, color: 'white', border: 'none', borderRadius: 10,
-              padding: '12px 24px', fontSize: 14, fontWeight: 700, cursor: 'pointer',
-              fontFamily: "'Oswald', sans-serif", textTransform: 'uppercase', letterSpacing: '0.02em',
+              padding: '12px 24px', fontSize: 14, fontWeight: 600, cursor: 'pointer',
+              fontFamily: "'Space Grotesk', sans-serif",
               opacity: visible ? 1 : 0, transition: 'opacity 0.5s 0.2s',
             }}>
               Ver todos los módulos →
@@ -1316,15 +1428,15 @@ function FinalCta({ onCta }) {
   const [ref, visible] = useInView();
   return (
     <section style={{
-      background: `linear-gradient(135deg, ${C.inkD} 0%, #141416 60%, #17181C 100%)`,
+      background: `linear-gradient(150deg, ${C.inkD} 0%, #121317 60%, #15171D 100%)`,
       padding: 'clamp(4rem,8vw,7rem) clamp(1.5rem,5vw,4rem)',
       textAlign: 'center',
     }}>
       <div ref={ref} style={{ maxWidth: 680, margin: '0 auto' }}>
         <h2 style={{
-          fontFamily: "'Oswald', sans-serif",
-          fontSize: 'clamp(2rem,5vw,3rem)', fontWeight: 700, color: C.white,
-          letterSpacing: '-0.01em', lineHeight: 1.15, marginBottom: 20, textTransform: 'uppercase',
+          fontFamily: "'Space Grotesk', sans-serif",
+          fontSize: 'clamp(2rem,4.6vw,2.8rem)', fontWeight: 700, color: C.white,
+          letterSpacing: '-0.02em', lineHeight: 1.15, marginBottom: 20,
           opacity: visible ? 1 : 0, transform: visible ? 'translateY(0)' : 'translateY(16px)',
           transition: 'opacity 0.5s, transform 0.5s',
         }}>
@@ -1335,14 +1447,14 @@ function FinalCta({ onCta }) {
           lineHeight: 1.7, marginBottom: 36,
           opacity: visible ? 1 : 0, transition: 'opacity 0.5s 0.15s',
         }}>
-          Agenda una demo y te mostramos cómo Pitbox controla tu inventario, taller, tesorería y contabilidad — con NEXA proponiendo cada registro por ti.
+          Agenda una demo y te mostramos cómo Pitbox controla tu taller, ventas, tesorería y contabilidad — con NEXA proponiendo cada registro por ti.
         </p>
         <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap', opacity: visible ? 1 : 0, transition: 'opacity 0.5s 0.25s' }}>
           <button onClick={onCta} style={{
             background: C.accent, color: C.white, border: 'none', borderRadius: 12,
-            padding: '16px 40px', fontSize: 16, fontWeight: 700, cursor: 'pointer',
-            fontFamily: "'Oswald', sans-serif", textTransform: 'uppercase', letterSpacing: '0.03em',
-            boxShadow: '0 8px 32px rgba(207,58,11,0.4)',
+            padding: '16px 40px', fontSize: 16, fontWeight: 600, cursor: 'pointer',
+            fontFamily: "'Space Grotesk', sans-serif",
+            boxShadow: '0 8px 32px rgba(196,144,61,0.35)',
             transition: 'transform 0.2s',
           }}
             onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
@@ -1373,24 +1485,24 @@ function Footer() {
       background: C.inkD, borderTop: '1px solid rgba(255,255,255,0.06)',
       padding: 'clamp(2.5rem,5vw,4rem) clamp(1.5rem,5vw,4rem) 2rem',
     }}>
-      <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+      <div style={{ maxWidth: 1240, margin: '0 auto' }}>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '3rem 6rem', marginBottom: 40 }}>
           <div style={{ flex: '1 1 260px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
               <Logomark size={32} />
-              <span style={{ fontFamily: "'Oswald', sans-serif", fontSize: 18, fontWeight: 700, color: C.white, textTransform: 'uppercase' }}>Pitbox</span>
+              <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 18, fontWeight: 700, color: C.white }}>Pitbox</span>
             </div>
             <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)', lineHeight: 1.7, maxWidth: 280 }}>
-              Plataforma de inventario, taller, tesorería, contabilidad y facturación electrónica para negocios colombianos, con NEXA como asistente de IA. Desarrollado por DataCore.
+              Plataforma de taller, ventas, facturación electrónica, tesorería y contabilidad para negocios colombianos, con NEXA como asistente de IA. Desarrollado por DataCore.
             </p>
             <a href="mailto:contacto@datacore.com.co" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'rgba(255,255,255,0.45)', textDecoration: 'none', fontSize: 13, marginTop: 16, transition: 'color 0.2s' }}
               onMouseEnter={e => e.currentTarget.style.color = C.accentL}
               onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.45)'}>
-              <Ico d={icons.mail} size={14} color="currentColor" /> contacto@datacore.com.co
+              <Ico d={icons.mail} size={14} color="currentColor" /> info@esc-datacore.com
             </a>
           </div>
           {[
-            { title: 'Producto', links: ['Funciones', 'NEXA · IA', 'Módulos', 'Sectores'] },
+            { title: 'Producto', links: ['Taller', 'NEXA · IA', 'Módulos', 'Sectores'] },
             { title: 'Empresa', links: ['Acerca de', 'Contacto', 'Iniciar sesión'] },
           ].map(({ title, links }) => (
             <div key={title} style={{ flex: '0 0 auto' }}>
@@ -1421,7 +1533,7 @@ function Footer() {
 const MODAL_INPUT_BASE = {
   width: '100%', padding: '11px 14px', borderRadius: 8,
   border: `1.5px solid ${C.gray200}`, fontSize: 14, outline: 'none',
-  boxSizing: 'border-box', fontFamily: 'system-ui',
+  boxSizing: 'border-box', fontFamily: "'Inter', system-ui, sans-serif",
   color: C.gray900, background: C.white,
   transition: 'border-color 0.2s',
 };
@@ -1429,7 +1541,7 @@ const MODAL_INPUT_BASE = {
 function ModalField({ label, required, error, children }) {
   return (
     <div>
-      <label style={{ fontSize: 12, fontWeight: 600, color: C.gray700, display: 'block', marginBottom: 5, letterSpacing: '0.02em' }}>
+      <label style={{ fontSize: 12, fontWeight: 600, color: C.gray700, display: 'block', marginBottom: 5, letterSpacing: '0.01em' }}>
         {label}{required && <span style={{ color: C.accent, marginLeft: 2 }}>*</span>}
       </label>
       {children}
@@ -1500,7 +1612,7 @@ function OnboardingModal({ onClose }) {
     <div
       style={{
         position: 'fixed', inset: 0, zIndex: 200,
-        background: 'rgba(13,13,13,0.88)', backdropFilter: 'blur(6px)',
+        background: 'rgba(11,12,16,0.88)', backdropFilter: 'blur(6px)',
         display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem',
       }}
       onClick={e => e.target === e.currentTarget && onClose()}
@@ -1514,7 +1626,7 @@ function OnboardingModal({ onClose }) {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <Logomark size={30} />
-            <span style={{ fontFamily: "'Oswald', sans-serif", fontSize: 17, fontWeight: 700, color: C.gray900, textTransform: 'uppercase' }}>
+            <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 17, fontWeight: 700, color: C.gray900 }}>
               Pitbox
             </span>
           </div>
@@ -1523,7 +1635,7 @@ function OnboardingModal({ onClose }) {
           </button>
         </div>
 
-        <h3 style={{ fontFamily: "'Oswald', sans-serif", fontSize: 20, fontWeight: 700, color: C.gray900, marginBottom: 4, textTransform: 'uppercase' }}>
+        <h3 style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 19, fontWeight: 700, color: C.gray900, marginBottom: 4 }}>
           Solicita tu demo
         </h3>
         <p style={{ fontSize: 13, color: C.gray500, marginBottom: 24, lineHeight: 1.6 }}>
@@ -1606,15 +1718,15 @@ function OnboardingModal({ onClose }) {
             style={{
               background: C.accent, color: C.white,
               border: 'none', borderRadius: 10,
-              padding: '13px 0', fontSize: 15, fontWeight: 700,
+              padding: '13px 0', fontSize: 15, fontWeight: 600,
               cursor: 'pointer', width: '100%', marginTop: 4,
-              fontFamily: "'Oswald', sans-serif", textTransform: 'uppercase', letterSpacing: '0.02em',
+              fontFamily: "'Space Grotesk', sans-serif",
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-              boxShadow: '0 4px 16px rgba(207,58,11,0.3)',
+              boxShadow: '0 4px 16px rgba(196,144,61,0.3)',
               transition: 'transform 0.15s, box-shadow 0.15s',
             }}
-            onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(207,58,11,0.4)'; }}
-            onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 16px rgba(207,58,11,0.3)'; }}
+            onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(196,144,61,0.4)'; }}
+            onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 16px rgba(196,144,61,0.3)'; }}
           >
             Continuar <Ico d={icons.arrow} size={16} color="#fff" />
           </button>
@@ -1645,6 +1757,8 @@ function OnboardingModal({ onClose }) {
    ESTILOS GLOBALES
 ───────────────────────────────────────── */
 const GLOBAL_CSS = `
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+
   @keyframes pbPulse {
     0%, 100% { opacity: 1; }
     50%       { opacity: 0.4; }
@@ -1659,7 +1773,7 @@ const GLOBAL_CSS = `
 
   ::-webkit-scrollbar { width: 5px; }
   ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: rgba(240,87,43,0.3); border-radius: 10px; }
+  ::-webkit-scrollbar-thumb { background: rgba(196,144,61,0.3); border-radius: 10px; }
 `;
 
 /* ─────────────────────────────────────────
@@ -1677,12 +1791,13 @@ export default function LandingPage() {
   }, []);
 
   return (
-    <div style={{ margin: 0, padding: 0, overflowX: 'hidden', fontFamily: "'IBM Plex Sans', sans-serif" }}>
+    <div style={{ margin: 0, padding: 0, overflowX: 'hidden', fontFamily: "'Inter', sans-serif" }}>
       <Navbar onCta={() => setShowModal(true)} />
       <Hero onCta={() => setShowModal(true)} />
       <StatsBar />
-      <NexaBanner onCta={() => setShowModal(true)} />
+      <TallerSpotlight onCta={() => setShowModal(true)} />
       <ProductSection />
+      <NexaBanner onCta={() => setShowModal(true)} />
       <AppShowcase />
       <ModulesSection />
       <Sectors />
