@@ -69,6 +69,7 @@ const NAV = [
       { label: "Gastos Operativos",   path: "/expenses" },
       { label: "Flujo de Caja",       path: "/cashflow" },
       { label: "Cajas",               path: "/cash-sessions" },
+      { label: "Recibos",             path: "/receipts" },
     ],
   },
   {

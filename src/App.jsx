@@ -27,6 +27,7 @@ import AccountsPayablePage from './pages/finance/AccountsPayablePage';
 import ExpensesPage from './pages/finance/ExpensesPage';
 import CashFlowPage from './pages/finance/CashFlowPage';
 import CashSessionsPage from './pages/finance/CashSessionsPage';
+import ReceiptsPage from './pages/finance/ReceiptsPage';
 import ChartOfAccountsPage from './pages/accounting/ChartOfAccountsPage';
 import JournalEntriesPage from './pages/accounting/JournalEntriesPage';
 import AccountMappingsPage from './pages/accounting/AccountMappingsPage';
@@ -247,6 +248,7 @@ function App() {
         <Route path="accounting/fiscal-periods"    element={<TenantRoute module="accounting" roles={['admin', 'manager']}><FiscalPeriodsPage /></TenantRoute>} />
         <Route path="accounting/health"            element={<TenantRoute module="accounting" roles={['admin', 'manager']}><AccountingHealthPage /></TenantRoute>} />
         <Route path="cash-sessions"    element={<TenantRoute module="treasury"><CashSessionsPage /></TenantRoute>} />
+        <Route path="receipts"         element={<TenantRoute module="treasury"><ReceiptsPage /></TenantRoute>} />
 
         {/* ── Taller ─────────────────────────────────── */}
         {/* Lazy + Suspense: estas 6 rutas son el alcance completo de la PWA
