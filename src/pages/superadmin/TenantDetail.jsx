@@ -378,6 +378,34 @@ const TenantDetail = () => {
                     </span>
                   </div>
                 </div>
+
+                {/* Sedes */}
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">Sedes</span>
+                  <div className="flex items-center gap-2">
+                    <div className="w-32 bg-gray-200 rounded-full h-2">
+                      <div
+                        className="bg-purple-600 h-2 rounded-full transition-all"
+                        style={{
+                          width: tenant.max_branches === -1
+                            ? '100%'
+                            : `${Math.min(100, ((stats?.totalBranches || 0) / (tenant.max_branches || 1)) * 100)}%`
+                        }}
+                      ></div>
+                    </div>
+                    <span className="font-medium text-gray-900 text-sm w-20 text-right">
+                      {stats?.totalBranches || 0} / {tenant.max_branches === -1 ? '∞' : (tenant.max_branches ?? 'N/A')}
+                    </span>
+                  </div>
+                </div>
+
+                {tenant.allow_extra_branches && tenant.max_branches !== -1 && (stats?.totalBranches || 0) > tenant.max_branches && (
+                  <div className="p-2.5 bg-purple-50 border border-purple-200 rounded-lg text-xs text-purple-800">
+                    {(stats.totalBranches - tenant.max_branches)} sede(s) adicional(es) ×{' '}
+                    ${Number(tenant.extra_branch_price || 0).toLocaleString('es-CO')} ={' '}
+                    <strong>${((stats.totalBranches - tenant.max_branches) * (tenant.extra_branch_price || 0)).toLocaleString('es-CO')} sugerido este período</strong>
+                  </div>
+                )}
               </div>
             </div>
           </div>

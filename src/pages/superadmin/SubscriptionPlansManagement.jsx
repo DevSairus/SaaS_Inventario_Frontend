@@ -23,6 +23,9 @@ const SubscriptionPlansManagement = () => {
     max_users: 1,
     max_clients: 100,
     max_invoices_per_month: 100,
+    max_branches: 1,
+    allow_extra_branches: false,
+    extra_branch_price: 0,
     features: {},
     modules: [],
     is_active: true,
@@ -93,6 +96,9 @@ const SubscriptionPlansManagement = () => {
       max_users: plan.max_users,
       max_clients: plan.max_clients,
       max_invoices_per_month: plan.max_invoices_per_month,
+      max_branches: plan.max_branches ?? 1,
+      allow_extra_branches: plan.allow_extra_branches || false,
+      extra_branch_price: plan.extra_branch_price || 0,
       features: plan.features || {},
       modules: plan.modules || [],
       is_active: plan.is_active,
@@ -129,6 +135,9 @@ const SubscriptionPlansManagement = () => {
       max_users: 1,
       max_clients: 100,
       max_invoices_per_month: 100,
+      max_branches: 1,
+      allow_extra_branches: false,
+      extra_branch_price: 0,
       features: {},
       modules: [],
       is_active: true,
@@ -199,6 +208,10 @@ const SubscriptionPlansManagement = () => {
                 <p>{plan.max_users} usuarios</p>
                 <p>👨‍👩‍👧‍👦 {plan.max_clients} clientes</p>
                 <p>{plan.max_invoices_per_month} facturas/mes</p>
+                <p>
+                  {plan.max_branches === -1 ? 'Sedes ilimitadas' : `${plan.max_branches} sede(s)`}
+                  {plan.allow_extra_branches && ` · sede extra $${Number(plan.extra_branch_price || 0).toLocaleString('es-CO')}/mes`}
+                </p>
               </div>
 
               {(plan.modules || []).length > 0 && (
@@ -363,6 +376,53 @@ const SubscriptionPlansManagement = () => {
                       required
                     />
                   </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="label">Max Sedes (-1 = ilimitado)</label>
+                    <input
+                      type="number"
+                      className="input"
+                      value={formData.max_branches}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          max_branches: parseInt(e.target.value),
+                        })
+                      }
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="label">Precio sede adicional (COP/mes)</label>
+                    <input
+                      type="number"
+                      className="input"
+                      value={formData.extra_branch_price}
+                      disabled={!formData.allow_extra_branches}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          extra_branch_price: parseFloat(e.target.value),
+                        })
+                      }
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="allow_extra_branches"
+                    checked={formData.allow_extra_branches}
+                    onChange={(e) =>
+                      setFormData({ ...formData, allow_extra_branches: e.target.checked })
+                    }
+                  />
+                  <label htmlFor="allow_extra_branches" className="text-sm text-gray-700">
+                    Permitir sedes adicionales (facturables) por encima del máximo
+                  </label>
                 </div>
 
                 <div>
