@@ -135,13 +135,14 @@ const useWorkshopStore = create((set, get) => ({
   addItem: async (id, data) => {
     try {
       const res = await workOrdersApiOffline.addItem(id, data);
-      if (res.data.data._pendingSync) {
+      const pendingSync = res?.data?.data?._pendingSync;
+      if (pendingSync) {
         toast.success('Ítem guardado sin conexión — se agregará al sincronizar');
       } else {
         toast.success('Ítem agregado a la OT');
         await get().fetchOrder(id);
       }
-      return res.data.data;
+      return res?.data?.data;
     } catch (err) {
       const msg = err?.response?.data?.message || 'No se pudo agregar el ítem.';
       toast.error(msg);
@@ -151,17 +152,29 @@ const useWorkshopStore = create((set, get) => ({
 
   removeItem: async (orderId, itemId) => {
     try {
+      // Optimistic update: quitar el ítem del estado local de inmediato
+      set(state => ({
+        currentOrder: state.currentOrder ? {
+          ...state.currentOrder,
+          items: (state.currentOrder.items || []).filter(i => i.id !== itemId)
+        } : state.currentOrder
+      }));
+
       const res = await workOrdersApiOffline.removeItem(orderId, itemId);
-      if (res.data.data._pendingSync) {
+      const pendingSync = res?.data?.data?._pendingSync;
+
+      if (pendingSync) {
         toast.success('Eliminación guardada sin conexión — se aplicará al sincronizar');
       } else {
         toast.success('Ítem eliminado');
+        // Refetch para sincronizar totales y datos del servidor
         await get().fetchOrder(orderId);
       }
     } catch (err) {
+      // Revertir: volver a cargar la orden desde el servidor
+      await get().fetchOrder(orderId);
       const msg = err?.response?.data?.message || 'No se pudo eliminar el ítem.';
       toast.error(msg);
-      throw err;
     }
   },
 
