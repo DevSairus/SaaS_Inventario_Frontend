@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import useProductsStore from '../../store/productsStore';
 import useAuthStore from '../../store/authStore';
 import useCategoriesStore from '../../store/categoriesStore';
@@ -8,9 +9,12 @@ import BarcodePrintModal from '../../components/products/BarcodePrintModal';
 import QuickStockModal from '../../components/products/QuickStockModal';
 import Layout from '../../components/layout/Layout';
 import { exportProductsToExcel } from '../../utils/excelExport';
+import { vehicleApplicationsAPI } from '../../api/vehicleApplications';
 import toast from 'react-hot-toast';
+import { Car, X } from 'lucide-react';
 
 function ProductsPage() {
+  const navigate = useNavigate();
   const { user } = useAuthStore();
   const { categories, fetchCategories } = useCategoriesStore();
   const {
@@ -38,17 +42,61 @@ function ProductsPage() {
   const [barcodePrintProduct, setBarcodePrintProduct] = useState(null);
   const [quickStockProduct, setQuickStockProduct] = useState(null);
 
+  // Filtro vehicular
+  const [showVehicleFilter, setShowVehicleFilter] = useState(false);
+  const [vehicleFilter, setVehicleFilter] = useState({ brand: '', line: '', year: '' });
+  const [brandsAndLines, setBrandsAndLines] = useState([]);
+  const [brandSuggestions, setBrandSuggestions] = useState([]);
+  const [lineSuggestions, setLineSuggestions] = useState([]);
+  const [showBrandDropdown, setShowBrandDropdown] = useState(false);
+  const [showLineDropdown, setShowLineDropdown] = useState(false);
+
+  // Sugerencias de marca
+  useEffect(() => {
+    if (vehicleFilter.brand.length >= 1) {
+      const unique = [...new Set(brandsAndLines.map(b => b.brand))];
+      const filtered = unique.filter(b => b.toLowerCase().includes(vehicleFilter.brand.toLowerCase()));
+      setBrandSuggestions(filtered);
+    } else {
+      setBrandSuggestions([]);
+    }
+  }, [vehicleFilter.brand, brandsAndLines]);
+
+  // Sugerencias de línea
+  useEffect(() => {
+    if (vehicleFilter.line.length >= 1 && vehicleFilter.brand) {
+      const brandData = brandsAndLines.find(b => b.brand.toLowerCase() === vehicleFilter.brand.toLowerCase());
+      const lines = brandData ? brandData.lines : [];
+      const allLines = [...new Set([...lines, ...brandsAndLines.flatMap(b => b.lines)])];
+      const filtered = allLines.filter(l => l.toLowerCase().includes(vehicleFilter.line.toLowerCase()));
+      setLineSuggestions(filtered);
+    } else {
+      setLineSuggestions([]);
+    }
+  }, [vehicleFilter.line, vehicleFilter.brand, brandsAndLines]);
+
   // Refresh al entrar a la página
   useEffect(() => {
     fetchProducts(true);
     fetchStats();
     fetchCategories();
+    vehicleApplicationsAPI.getBrandsAndLines().then(res => {
+      if (res?.success) setBrandsAndLines(res.data || []);
+    }).catch(() => {});
   }, []); // ← Sin dependencias = se ejecuta siempre al montar
 
-  // Refresh cuando cambian filtros
+  // Refresh cuando cambian filtros (incluye filtro vehicular)
   useEffect(() => {
-    fetchProducts();
-  }, [filters.search, filters.category_id, filters.is_active, filters.sort_by, filters.sort_order, pagination.page]);
+    const vehicleParams = {};
+    if (vehicleFilter.brand && vehicleFilter.line) {
+      vehicleParams.applies_to_brand = vehicleFilter.brand;
+      vehicleParams.applies_to_line = vehicleFilter.line;
+      if (vehicleFilter.year) vehicleParams.applies_to_year = vehicleFilter.year;
+    }
+    // Pasar vehicleParams como parte de los filtros al store
+    // Necesitamos modificar fetchProducts para aceptar estos params
+    fetchProducts(false, vehicleParams);
+  }, [filters.search, filters.category_id, filters.is_active, filters.sort_by, filters.sort_order, pagination.page, vehicleFilter.brand, vehicleFilter.line, vehicleFilter.year]);
 
   // Búsqueda en tiempo real con debounce
   useEffect(() => {
@@ -435,7 +483,114 @@ function ProductsPage() {
                 <option value="">Todos</option>
               </select>
             </div>
+
+            {/* Vehicle Filter Toggle */}
+            <div className="flex items-end">
+              <button
+                onClick={() => {
+                  setShowVehicleFilter(!showVehicleFilter);
+                  if (showVehicleFilter) {
+                    setVehicleFilter({ brand: '', line: '', year: '' });
+                  }
+                }}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  showVehicleFilter
+                    ? 'bg-blue-100 text-blue-700 border border-blue-300'
+                    : 'bg-gray-100 text-gray-600 border border-gray-300 hover:bg-gray-200'
+                }`}
+              >
+                <Car className="w-4 h-4" />
+                {showVehicleFilter ? 'Limpiar filtro' : 'Filtrar por vehículo'}
+              </button>
+            </div>
           </div>
+
+          {/* Vehicle Filter Fields */}
+          {showVehicleFilter && (
+            <div className="mt-3 pt-3 border-t border-gray-200">
+              <div className="grid grid-cols-3 gap-3">
+                <div className="relative">
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Marca</label>
+                  <input
+                    type="text"
+                    value={vehicleFilter.brand}
+                    onChange={(e) => {
+                      setVehicleFilter(p => ({ ...p, brand: e.target.value }));
+                      setShowBrandDropdown(true);
+                    }}
+                    onFocus={() => setShowBrandDropdown(true)}
+                    onBlur={() => setTimeout(() => setShowBrandDropdown(false), 200)}
+                    placeholder="Chevrolet"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                  />
+                  {showBrandDropdown && brandSuggestions.length > 0 && (
+                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-32 overflow-y-auto">
+                      {brandSuggestions.map(b => (
+                        <button
+                          key={b}
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            setVehicleFilter(p => ({ ...p, brand: b }));
+                            setShowBrandDropdown(false);
+                          }}
+                          className="w-full text-left px-3 py-1.5 text-sm hover:bg-blue-50"
+                        >
+                          {b}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div className="relative">
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Línea</label>
+                  <input
+                    type="text"
+                    value={vehicleFilter.line}
+                    onChange={(e) => {
+                      setVehicleFilter(p => ({ ...p, line: e.target.value }));
+                      setShowLineDropdown(true);
+                    }}
+                    onFocus={() => setShowLineDropdown(true)}
+                    onBlur={() => setTimeout(() => setShowLineDropdown(false), 200)}
+                    placeholder="Aveo"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                  />
+                  {showLineDropdown && lineSuggestions.length > 0 && (
+                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-32 overflow-y-auto">
+                      {lineSuggestions.map(l => (
+                        <button
+                          key={l}
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            setVehicleFilter(p => ({ ...p, line: l }));
+                            setShowLineDropdown(false);
+                          }}
+                          className="w-full text-left px-3 py-1.5 text-sm hover:bg-blue-50"
+                        >
+                          {l}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Año</label>
+                  <input
+                    type="number"
+                    value={vehicleFilter.year}
+                    onChange={(e) => setVehicleFilter(p => ({ ...p, year: e.target.value }))}
+                    placeholder="2015"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+              {vehicleFilter.brand && vehicleFilter.line && (
+                <p className="text-xs text-blue-600 mt-2">
+                  Mostrando productos que aplican a: {vehicleFilter.brand} {vehicleFilter.line} {vehicleFilter.year ? `${vehicleFilter.year}` : '(todos los años)'}
+                </p>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Products Table */}
@@ -546,6 +701,17 @@ function ProductsPage() {
                         </td>
                         <td className="px-6 py-4 text-right text-sm font-medium">
                           <div className="flex justify-end gap-2">
+                            {/* Ver detalle */}
+                            <button
+                              onClick={() => navigate(`/products/${product.id}`)}
+                              className="text-gray-500 hover:text-blue-600"
+                              title="Ver detalle"
+                            >
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                              </svg>
+                            </button>
                             {/* Imprimir etiqueta */}
                             <button
                               onClick={() => setBarcodePrintProduct(product)}

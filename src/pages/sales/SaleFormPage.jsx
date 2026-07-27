@@ -2,6 +2,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import useSalesStore from '../../store/salesStore';
+import useBranchStore from '../../store/branchStore';
 import useTenantStore from '../../store/tenantStore';
 import useCustomersStore from '../../store/customersStore';
 import useProductsStore from '../../store/productsStore';
@@ -27,6 +28,7 @@ import {
 } from 'lucide-react';
 import BarcodeScanner from '../../components/common/BarcodeScanner';
 import { productsAPI } from '../../api/products';
+import { equivalencesAPI } from '../../api/equivalences';
 import { usersAPI } from '../../api/users';
 import { getServerOrigin } from '../../utils/env';
 import { 
@@ -57,6 +59,7 @@ function SaleFormPage() {
   const technicianFieldEnabled = features?.technician_field_enabled === true; // default false
   const { customers, fetchCustomers } = useCustomersStore();
   const { searchProducts } = useProductsStore();
+  const { branches, activeBranchId, fetchBranches } = useBranchStore();
 
   const isEditMode = Boolean(id);
 
@@ -91,6 +94,9 @@ function SaleFormPage() {
     sale_date: toLocalDateString(new Date()),
     notes: '',
     vehicle_plate: '',
+    vehicle_brand: '',
+    vehicle_model: '',
+    vehicle_year: '',
     mileage: '',
     technician_id: '',
   });
@@ -110,6 +116,7 @@ function SaleFormPage() {
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
+  const [stockAlternatives, setStockAlternatives] = useState([]);
 
   // Estados para búsqueda de clientes
   const [customerSearchTerm, setCustomerSearchTerm] = useState('');
@@ -126,18 +133,48 @@ function SaleFormPage() {
     });
   }, [customers, customerSearchTerm]);
 
-  // Cargar bodegas usando el servicio de API configurado
+  // Cargar bodegas usando el servicio de API configurado.
+  // En creación, el combo solo muestra las bodegas (activas) de la sede
+  // activa. En edición se mantiene la lista completa del tenant, para no
+  // perder la referencia si la venta ya guardada usa una bodega de otra sede.
   useEffect(() => {
     const loadWarehouses = async () => {
       try {
-        const data = await warehousesService.getAll();
-        setWarehouses(data.data || []);
+        const params = !isEditMode && activeBranchId ? { branch_id: activeBranchId } : {};
+        const data = await warehousesService.getAll(params);
+        const list = data.data || [];
+        setWarehouses(list);
+        // Si cambia la sede activa en creación y la bodega ya seleccionada no
+        // pertenece a la nueva sede, se limpia para que la precarga automática
+        // elija la de la nueva sede.
+        if (!isEditMode) {
+          setFormData(f => (f.warehouse_id && !list.some(w => w.id === f.warehouse_id))
+            ? { ...f, warehouse_id: '' }
+            : f);
+        }
       } catch (e) {
         setWarehouses([]);
       }
     };
     loadWarehouses();
+  }, [isEditMode, activeBranchId]);
+
+  useEffect(() => {
+    fetchBranches();
   }, []);
+
+  // Bodega de la sede activa: se precarga automáticamente al crear una venta
+  // nueva. No se aplica en edición (ya trae su propia warehouse_id) ni si el
+  // usuario ya seleccionó una bodega manualmente.
+  useEffect(() => {
+    if (isEditMode) return;
+    if (formData.warehouse_id) return;
+    const activeBranch = branches.find(b => b.id === activeBranchId);
+    const defaultWarehouseId = activeBranch?.warehouse?.id;
+    if (defaultWarehouseId) {
+      setFormData(f => (f.warehouse_id ? f : { ...f, warehouse_id: defaultWarehouseId }));
+    }
+  }, [branches, activeBranchId, isEditMode]);
 
   // Cargar técnicos si la feature está habilitada
   useEffect(() => {
@@ -173,7 +210,28 @@ function SaleFormPage() {
 
       setIsSearching(true);
       try {
-        const results = await searchProducts(searchTerm);
+        const vehicleParams = {};
+        if (formData.vehicle_brand && formData.vehicle_model) {
+          vehicleParams.applies_to_brand = formData.vehicle_brand;
+          vehicleParams.applies_to_line = formData.vehicle_model;
+          if (formData.vehicle_year) vehicleParams.applies_to_year = formData.vehicle_year;
+        }
+        let results = await searchProducts(searchTerm, vehicleParams);
+
+        // Verificar equivalentes para productos con stock 0
+        const zeroStockIds = results.filter(p => parseFloat(p.current_stock || 0) <= 0 && p.track_inventory && p.product_type !== 'service').map(p => p.id);
+        if (zeroStockIds.length > 0) {
+          try {
+            const eqRes = await equivalencesAPI.batchCheckEquivalents(zeroStockIds);
+            if (eqRes?.success) {
+              results = results.map(p => ({
+                ...p,
+                _equivalentsWithStock: eqRes.data[p.id] || 0
+              }));
+            }
+          } catch { /* silencioso */ }
+        }
+
         setSearchResults(results);
       } catch (error) {
         setSearchResults([]);
@@ -184,7 +242,7 @@ function SaleFormPage() {
 
     const timer = setTimeout(searchProductsDebounced, 300);
     return () => clearTimeout(timer);
-  }, [searchTerm, searchProducts]);
+  }, [searchTerm, searchProducts, formData.vehicle_brand, formData.vehicle_model, formData.vehicle_year]);
 
   // Cerrar dropdown de clientes al hacer clic fuera
   useEffect(() => {
@@ -269,11 +327,50 @@ function SaleFormPage() {
     setQuickCustomer(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleAddItem = (product) => {
-    // DEBUG: Ver qué información trae el producto
-    
+  const handleAddItem = async (product) => {
+    // Verificar stock antes de agregar al carrito
+    const stock = parseFloat(product.current_stock || 0);
+    if (stock <= 0 && product.track_inventory && product.product_type !== 'service') {
+      // Buscar equivalentes con stock
+      try {
+        const res = await equivalencesAPI.getByProductId(product.id);
+        const groups = res?.data || [];
+        const alts = [];
+        const seen = new Set();
+        for (const group of groups) {
+          for (const member of (group.members || [])) {
+            if (member.product_id === product.id) continue;
+            if (seen.has(member.product_id)) continue;
+            const memberStock = parseFloat(member.available_stock || member.current_stock || 0);
+            if (memberStock > 0) {
+              seen.add(member.product_id);
+              alts.push({
+                product_id: member.product_id,
+                sku: member.sku,
+                name: member.name,
+                available_stock: memberStock,
+                sale_price: member.sale_price,
+                base_price: member.sale_price
+              });
+            }
+          }
+        }
+        if (alts.length > 0) {
+          setStockAlternatives(alts);
+          toast.error(`Sin stock de ${product.name}. Se encontraron ${alts.length} equivalente(s) disponible(s).`);
+          setShowProductSearch(false);
+          setSearchTerm('');
+          return;
+        }
+      } catch (e) {
+        // Si falla la búsqueda de equivalentes, continuar con el flujo normal
+      }
+      toast.error(`Sin stock de ${product.name} y no hay equivalentes disponibles.`);
+      return;
+    }
+
     const existingIndex = items.findIndex(item => item.product_id === product.id);
-    
+
     if (existingIndex >= 0) {
       const newItems = [...items];
       newItems[existingIndex].quantity = toInteger(newItems[existingIndex].quantity, 0) + 1;
@@ -297,6 +394,7 @@ function SaleFormPage() {
       };
       setItems([...items, calculateItemTotals(newItem)]);
     }
+    setStockAlternatives([]);
     setShowProductSearch(false);
     setSearchTerm('');
   };
@@ -306,8 +404,8 @@ function SaleFormPage() {
     try {
       const response = await productsAPI.getByBarcode(code);
       if (response?.data) {
-        handleAddItem(response.data);
-        
+        await handleAddItem(response.data);
+
         // Dar feedback visual/sonoro
         if (navigator.vibrate) {
           navigator.vibrate(200);
@@ -640,6 +738,46 @@ function SaleFormPage() {
                   </p>
                 </div>
 
+                {/* Marca / Línea / Año del vehículo */}
+                <div className="grid grid-cols-3 gap-3 mt-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Marca</label>
+                    <input
+                      type="text"
+                      name="vehicle_brand"
+                      value={formData.vehicle_brand}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-sm"
+                      placeholder="Chevrolet"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Línea</label>
+                    <input
+                      type="text"
+                      name="vehicle_model"
+                      value={formData.vehicle_model}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-sm"
+                      placeholder="Aveo"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Año</label>
+                    <input
+                      type="number"
+                      name="vehicle_year"
+                      value={formData.vehicle_year}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-sm"
+                      placeholder="2015"
+                    />
+                  </div>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Marca y línea se usan para filtrar productos compatibles al buscar
+                </p>
+
                 {/* Kilometraje */}
                 <div className="mt-4">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -817,6 +955,46 @@ function SaleFormPage() {
                     </button>
                   </div>
                 </div>
+
+                {/* Alternativas de equivalencia cuando no hay stock */}
+                {stockAlternatives.length > 0 && (
+                  <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-xs font-semibold text-amber-800">
+                        Equivalentes disponibles ({stockAlternatives.length})
+                      </p>
+                      <button onClick={() => setStockAlternatives([])} className="text-amber-600 hover:text-amber-800 text-xs">✕ Cerrar</button>
+                    </div>
+                    <div className="space-y-1.5">
+                      {stockAlternatives.map(alt => (
+                        <button
+                          key={alt.product_id}
+                          onClick={() => {
+                            handleAddItem({
+                              id: alt.product_id,
+                              sku: alt.sku,
+                              name: alt.name,
+                              current_stock: alt.available_stock,
+                              base_price: alt.sale_price || alt.base_price,
+                              has_tax: true,
+                              tax_percentage: 19,
+                              product_type: 'simple',
+                              track_inventory: true
+                            });
+                            setStockAlternatives([]);
+                          }}
+                          className="w-full flex items-center justify-between p-2 bg-white border border-amber-200 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition text-left"
+                        >
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">{alt.name}</p>
+                            <p className="text-xs text-gray-500">{alt.sku} · Stock: <span className="text-green-600 font-medium">{alt.available_stock}</span></p>
+                          </div>
+                          <span className="text-xs font-medium text-blue-600">Agregar al carrito</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {items.length === 0 ? (
                   <div className="text-center py-16 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
@@ -1159,12 +1337,7 @@ function SaleFormPage() {
                 {searchResults.map(product => (
                   <button
                     key={product.id}
-                    onClick={() => {
-                      handleAddItem(product);
-                      setShowProductSearch(false);
-                      setSearchTerm('');
-                      setSearchResults([]);
-                    }}
+                    onClick={() => handleAddItem(product)}
                     className="w-full text-left p-4 border border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-300 transition-all duration-200"
                   >
                     <div className="flex justify-between items-start gap-3">
@@ -1182,16 +1355,21 @@ function SaleFormPage() {
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-gray-900">{product.name}</p>
                         <p className="text-sm text-gray-500 mt-1">SKU: {product.sku}</p>
-                        <div className="flex items-center gap-3 mt-2">
+                        <div className="flex items-center gap-3 mt-2 flex-wrap">
                           {product.product_type === 'service' ? (
                             <span className="inline-flex items-center gap-1 text-xs font-semibold text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full"><WrenchScrewdriverIcon className="w-3 h-3" /> Servicio</span>
                           ) : (
                             <span className={`text-sm font-medium ${
-                              product.current_stock > 0 
-                                ? 'text-green-600' 
+                              product.current_stock > 0
+                                ? 'text-green-600'
                                 : 'text-red-600'
                             }`}>
                               Stock: {product.current_stock || 0}
+                            </span>
+                          )}
+                          {product._equivalentsWithStock > 0 && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">
+                              {product._equivalentsWithStock} equivalente(s) disponible(s)
                             </span>
                           )}
                           {product.category?.name && (

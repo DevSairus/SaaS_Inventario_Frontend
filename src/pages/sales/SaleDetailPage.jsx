@@ -42,6 +42,7 @@ export default function SaleDetailPage() {
   const [lastPaymentIndex, setLastPaymentIndex] = useState(null);
   const [showVoidModal, setShowVoidModal] = useState(false);
   const [showNoteModal, setShowNoteModal] = useState(null); // null | 'credit' | 'debit'
+  const [stockErrors, setStockErrors] = useState([]);
 
   const openPaymentReceipt = async (paymentIndex) => {
     try {
@@ -99,7 +100,13 @@ export default function SaleDetailPage() {
       setShowConfirmWithPayment(false);
       fetchSaleById(id);
     } catch (error) {
-      toast.error('Error registrando pago: ' + (error.response?.data?.message || error.message));
+      const data = error.response?.data || {};
+      if (data.stock_errors && data.stock_errors.length > 0) {
+        setStockErrors(data.stock_errors);
+        toast.error(`Stock insuficiente en ${data.stock_errors.length} ítem(s). Revisa las alternativas disponibles.`);
+      } else {
+        toast.error('Error registrando pago: ' + (data.message || error.message));
+      }
     } finally {
       setConfirmingPayment(false);
     }
@@ -761,6 +768,44 @@ export default function SaleDetailPage() {
             </div>
           </div>
         </div>
+
+        {/* ── Errores de stock con alternativas ── */}
+        {stockErrors.length > 0 && (
+          <div className="no-print bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-amber-800">
+                Stock insuficiente en {stockErrors.length} ítem(s)
+              </h3>
+              <button onClick={() => setStockErrors([])} className="text-amber-600 hover:text-amber-800 text-sm">✕ Cerrar</button>
+            </div>
+            {stockErrors.map((err, idx) => (
+              <div key={idx} className="bg-white border border-amber-200 rounded-lg p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">{err.name}</p>
+                    <p className="text-xs text-gray-500">{err.sku} · Disponible: <span className="text-red-600 font-medium">{err.available_stock}</span> · Solicitado: {err.requested}</p>
+                  </div>
+                </div>
+                {err.alternatives && err.alternatives.length > 0 ? (
+                  <div className="space-y-1.5">
+                    <p className="text-xs font-medium text-green-700">Equivalentes disponibles:</p>
+                    {err.alternatives.map(alt => (
+                      <div key={alt.product_id} className="flex items-center justify-between p-2 bg-green-50 border border-green-200 rounded-lg">
+                        <div>
+                          <p className="text-sm text-gray-900">{alt.name}</p>
+                          <p className="text-xs text-gray-500">{alt.sku} · Stock: <span className="text-green-600 font-medium">{alt.available_stock}</span></p>
+                        </div>
+                        <span className="text-xs font-medium text-green-700">{formatCurrency(alt.sale_price)}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-gray-400 mt-1">No hay equivalentes con stock disponible</p>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* ── Modales ── */}
         <div className="no-print">
