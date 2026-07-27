@@ -243,6 +243,7 @@ const UserForm = () => {
                 >
                   <option value="admin">Administrador</option>
                   <option value="manager">Gerente</option>
+                  <option value="accountant">Contador</option>
                   <option value="seller">Vendedor</option>
                   <option value="warehouse_keeper">Bodeguero</option>
                   <option value="technician">Técnico</option>
@@ -257,6 +258,7 @@ const UserForm = () => {
                   <p className="text-sm font-semibold text-blue-900 mb-2">
                     {formData.role === 'admin'           && 'Administrador - Acceso Total'}
                     {formData.role === 'manager'         && 'Gerente - Gestión y Reportes'}
+                    {formData.role === 'accountant'      && 'Contador - Contabilidad y Tesorería'}
                     {formData.role === 'seller'          && 'Vendedor - Ventas y Clientes'}
                     {formData.role === 'warehouse_keeper'&& 'Bodeguero - Inventario'}
                     {formData.role === 'technician'      && 'Técnico - Órdenes de Trabajo'}
@@ -292,6 +294,22 @@ const UserForm = () => {
                         <ul className="list-disc list-inside ml-2 space-y-0.5">
                           <li>Crear o eliminar usuarios</li>
                           <li>Cambiar configuración del sistema</li>
+                        </ul>
+                      </>
+                    )}
+                    {formData.role === 'accountant' && (
+                      <>
+                        <p className="font-medium">Puede:</p>
+                        <ul className="list-disc list-inside ml-2 space-y-0.5">
+                          <li>Ver y gestionar el módulo de Contabilidad (plan de cuentas, asientos, libros, reportes financieros)</li>
+                          <li>Gestionar Tesorería (cuentas por pagar, gastos, flujo de caja, cajas, recibos)</li>
+                          <li>Ver Cartera (cuentas por cobrar)</li>
+                        </ul>
+                        <p className="font-medium text-red-700 mt-2">No puede:</p>
+                        <ul className="list-disc list-inside ml-2 space-y-0.5">
+                          <li>Crear o eliminar usuarios</li>
+                          <li>Cambiar configuración del sistema</li>
+                          <li>Gestionar productos, ventas o compras operativas</li>
                         </ul>
                       </>
                     )}
