@@ -204,12 +204,56 @@ export default function DiagramMapEditor({ workOrderId, vehicleType, disabled = 
 
   if (!vehicleType) return null;
 
+  // Resumen de sistemas ya diagnosticados en esta OT (puede haber más de uno:
+  // ej. "Suspensión delantera" + "Frenos traseros" en la misma orden). Se
+  // agrupa por diagrama para mostrar chips clicables que reabren ese sistema
+  // — sin esto, cambiar de sistema en los selectores de arriba hacía perder
+  // de vista que ya había marcas guardadas en otro diagrama.
+  const diagnosedSystems = useMemo(() => {
+    const map = new Map();
+    for (const m of marks) {
+      const tpl = m.diagram_template;
+      if (!tpl) continue;
+      if (!map.has(tpl.id)) map.set(tpl.id, { ...tpl, count: 0 });
+      map.get(tpl.id).count += 1;
+    }
+    return Array.from(map.values());
+  }, [marks]);
+
+  const openDiagnosedSystem = (tpl) => {
+    setSystem(tpl.system);
+    setConfiguration(tpl.configuration);
+  };
+
   return (
     <div className="bg-white border border-gray-100 rounded-xl p-4">
       <div className="flex items-center gap-2 mb-3">
         <Layers size={15} className="text-blue-600" />
         <h2 className="font-semibold text-sm text-gray-800">Mapa de intervención</h2>
       </div>
+
+      {diagnosedSystems.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 mb-3">
+          {diagnosedSystems.map(tpl => (
+            <button
+              key={tpl.id}
+              onClick={() => openDiagnosedSystem(tpl)}
+              className={`flex items-center gap-1 text-[11px] px-2 py-1 rounded-full border ${
+                template?.id === tpl.id
+                  ? 'bg-blue-50 border-blue-200 text-blue-700'
+                  : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              {tpl.name} <span className="opacity-60">· {tpl.count}</span>
+            </button>
+          ))}
+          {!disabled && (
+            <span className="flex items-center gap-1 text-[11px] px-2 py-1 rounded-full border border-dashed border-gray-200 text-gray-400">
+              <Plus size={11} /> otro sistema abajo
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Selección de sistema / configuración */}
       <div className="grid grid-cols-2 gap-2 mb-3">
