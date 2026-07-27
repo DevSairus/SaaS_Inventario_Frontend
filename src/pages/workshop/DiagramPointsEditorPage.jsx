@@ -4,7 +4,17 @@
 // puntos numerados de un diagrama, contra la imagen WEBP real (reemplazo del
 // SVG dibujado a mano). Arrastra los puntos sobre la imagen; "Guardar" manda
 // el array completo de puntos al backend (PATCH /diagram-templates/:id/points).
+//
+// Línea guía (label_dx/label_dy): cuando un punto queda muy pegado a otro,
+// se puede separar el número de su posición real sin mover el punto real
+// sobre la pieza. label_dx/label_dy son un offset DIRECTO en unidades del
+// viewBox (lx = x + label_dx, ly = y + label_dy) — igual que lo interpreta
+// DiagramMapEditor.jsx, el componente que ven los técnicos. Con el viewBox
+// a 600x400 y círculos de radio ~11-13, un offset cómodo para separar
+// números pegados ronda entre 20 y 35 unidades (los valores tipo ±1-5 que
+// venían en el catálogo son casi imperceptibles).
 import { useEffect, useRef, useState } from 'react';
+import { Link2, Link2Off } from 'lucide-react';
 import Layout from '../../components/layout/Layout';
 import { diagramTemplatesApi } from '../../api/workshop';
 import toast from 'react-hot-toast';
@@ -17,6 +27,10 @@ const VEHICLE_TYPES = [
   { value: 'otro', label: 'Otro' },
 ];
 
+// Offset por defecto al activar la línea guía de un punto — visible pero
+// discreto para un viewBox de 600x400 (ver nota arriba).
+const DEFAULT_LABEL_OFFSET = 28;
+
 function diagramImageUrl(imagePath) {
   return imagePath ? `/assets/diagrams/${imagePath}` : '';
 }
@@ -24,6 +38,10 @@ function diagramImageUrl(imagePath) {
 function parseViewBoxSize(viewBox) {
   const parts = (viewBox || '0 0 600 400').trim().split(/\s+/).map(Number);
   return { width: parts[2] || 600, height: parts[3] || 400 };
+}
+
+function hasOffset(p) {
+  return !!(p.label_dx || p.label_dy);
 }
 
 // Convierte un evento de mouse/pointer a coordenadas en unidades del viewBox,
@@ -47,7 +65,8 @@ export default function DiagramPointsEditorPage() {
   const [points, setPoints] = useState([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [dragIndex, setDragIndex] = useState(null);
+  const [dragIndex, setDragIndex] = useState(null);       // arrastrando el punto real (x/y)
+  const [labelDragIndex, setLabelDragIndex] = useState(null); // arrastrando la etiqueta/línea guía
   const [addMode, setAddMode] = useState(false);
   const svgRef = useRef(null);
 
@@ -76,19 +95,35 @@ export default function DiagramPointsEditorPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [configuration]);
 
-  const startDrag = (index) => (e) => {
+  // Arrastrar el punto real (dónde está la pieza sobre la imagen) — mueve x/y.
+  // Si el punto ya tiene línea guía, el número la sigue (el offset es relativo).
+  const startDragReal = (index) => (e) => {
     e.preventDefault();
     e.stopPropagation();
     setDragIndex(index);
   };
 
-  const handlePointerMove = (e) => {
-    if (dragIndex === null || !svgRef.current) return;
-    const { x, y } = clientToSvgPoint(svgRef.current, e.clientX, e.clientY);
-    setPoints(prev => prev.map((p, i) => (i === dragIndex ? { ...p, x, y } : p)));
+  // Arrastrar la etiqueta numerada — solo mueve label_dx/label_dy, nunca x/y.
+  const startDragLabel = (index) => (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setLabelDragIndex(index);
   };
 
-  const handlePointerUp = () => setDragIndex(null);
+  const handlePointerMove = (e) => {
+    if (!svgRef.current) return;
+    if (dragIndex !== null) {
+      const { x, y } = clientToSvgPoint(svgRef.current, e.clientX, e.clientY);
+      setPoints(prev => prev.map((p, i) => (i === dragIndex ? { ...p, x, y } : p)));
+    } else if (labelDragIndex !== null) {
+      const { x, y } = clientToSvgPoint(svgRef.current, e.clientX, e.clientY);
+      setPoints(prev => prev.map((p, i) => (
+        i === labelDragIndex ? { ...p, label_dx: x - p.x, label_dy: y - p.y } : p
+      )));
+    }
+  };
+
+  const handlePointerUp = () => { setDragIndex(null); setLabelDragIndex(null); };
 
   const handleSvgClick = (e) => {
     if (!addMode || !svgRef.current) return;
@@ -100,6 +135,20 @@ export default function DiagramPointsEditorPage() {
 
   const updatePartName = (index, name) => {
     setPoints(prev => prev.map((p, i) => (i === index ? { ...p, part_name: name } : p)));
+  };
+
+  // Activa/quita la línea guía de un punto. Al activarla usamos un offset
+  // por defecto en diagonal (visible de una) que después se puede afinar
+  // arrastrando la etiqueta sobre el diagrama.
+  const toggleGuideLine = (index) => {
+    setPoints(prev => prev.map((p, i) => {
+      if (i !== index) return p;
+      if (hasOffset(p)) {
+        const { label_dx, label_dy, ...rest } = p;
+        return rest;
+      }
+      return { ...p, label_dx: DEFAULT_LABEL_OFFSET, label_dy: -DEFAULT_LABEL_OFFSET };
+    }));
   };
 
   const removePoint = (index) => {
@@ -128,6 +177,7 @@ export default function DiagramPointsEditorPage() {
           <h1 className="text-xl font-bold text-gray-900">Calibrar puntos de diagrama</h1>
           <p className="text-sm text-gray-500 mt-0.5">
             Arrastra cada punto numerado hasta la parte real en la imagen. Clic en "Agregar punto" y luego en la imagen para crear uno nuevo.
+            Si dos números quedan pegados, activa su <strong>línea guía</strong> (ícono de cadena en la lista) y arrastra el número — el punto real no se mueve.
           </p>
         </div>
 
@@ -172,15 +222,40 @@ export default function DiagramPointsEditorPage() {
                   onPointerUp={handlePointerUp}
                   onPointerLeave={handlePointerUp}
                 >
-                  {points.map((p, i) => (
-                    <g key={p.point_number} onPointerDown={startDrag(i)} style={{ cursor: 'grab' }}>
-                      <circle cx={p.x} cy={p.y} r={dragIndex === i ? 14 : 11}
-                        fill="#2563eb" stroke="#ffffff" strokeWidth={2} />
-                      <text x={p.x} y={p.y + 4} fontSize="11" textAnchor="middle" fill="#ffffff" fontWeight="600">
-                        {p.point_number}
-                      </text>
-                    </g>
-                  ))}
+                  {points.map((p, i) => {
+                    const offset = hasOffset(p);
+                    const lx = p.x + (p.label_dx || 0);
+                    const ly = p.y + (p.label_dy || 0);
+                    return (
+                      <g key={p.point_number}>
+                        {offset && (
+                          <>
+                            <line x1={p.x} y1={p.y} x2={lx} y2={ly} stroke="#2563eb" strokeWidth={1.25} opacity={0.85} />
+                            {/* Punto real — arrastra esto para calibrar contra la imagen; nunca mueve la etiqueta por sí solo */}
+                            <circle
+                              cx={p.x} cy={p.y} r={dragIndex === i ? 7 : 5}
+                              fill="#2563eb" stroke="#ffffff" strokeWidth={1.5}
+                              onPointerDown={startDragReal(i)}
+                              style={{ cursor: 'grab' }}
+                            />
+                          </>
+                        )}
+                        {/* Etiqueta numerada — si hay línea guía, arrastrarla solo mueve label_dx/dy */}
+                        <g
+                          onPointerDown={offset ? startDragLabel(i) : startDragReal(i)}
+                          style={{ cursor: 'grab' }}
+                        >
+                          <circle
+                            cx={lx} cy={ly} r={(dragIndex === i || labelDragIndex === i) ? 14 : 11}
+                            fill="#2563eb" stroke="#ffffff" strokeWidth={2}
+                          />
+                          <text x={lx} y={ly + 4} fontSize="11" textAnchor="middle" fill="#ffffff" fontWeight="600">
+                            {p.point_number}
+                          </text>
+                        </g>
+                      </g>
+                    );
+                  })}
                 </svg>
               </div>
               <div className="flex items-center justify-between mt-3">
@@ -202,21 +277,36 @@ export default function DiagramPointsEditorPage() {
 
             <div className="bg-white rounded-xl shadow-sm p-3 space-y-1.5 max-h-[600px] overflow-y-auto">
               <p className="text-xs font-semibold text-gray-500 mb-1">Puntos ({points.length})</p>
-              {points.map((p, i) => (
-                <div key={p.point_number} className="flex items-center gap-2 bg-gray-50 rounded-lg px-2 py-1.5">
-                  <span className="w-5 h-5 rounded-full bg-blue-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0">
-                    {p.point_number}
-                  </span>
-                  <input
-                    type="text"
-                    value={p.part_name}
-                    onChange={e => updatePartName(i, e.target.value)}
-                    className="flex-1 min-w-0 text-xs px-1.5 py-1 border border-gray-200 rounded"
-                  />
-                  <span className="text-[10px] text-gray-400 shrink-0">{p.x},{p.y}</span>
-                  <button onClick={() => removePoint(i)} className="text-gray-300 hover:text-red-500 shrink-0">✕</button>
-                </div>
-              ))}
+              {points.map((p, i) => {
+                const offset = hasOffset(p);
+                return (
+                  <div key={p.point_number} className="bg-gray-50 rounded-lg px-2 py-1.5 space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="w-5 h-5 rounded-full bg-blue-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0">
+                        {p.point_number}
+                      </span>
+                      <input
+                        type="text"
+                        value={p.part_name}
+                        onChange={e => updatePartName(i, e.target.value)}
+                        className="flex-1 min-w-0 text-xs px-1.5 py-1 border border-gray-200 rounded"
+                      />
+                      <button
+                        onClick={() => toggleGuideLine(i)}
+                        title={offset ? 'Quitar línea guía' : 'Agregar línea guía (para números pegados)'}
+                        className={`shrink-0 p-1 rounded ${offset ? 'text-blue-600 bg-blue-50' : 'text-gray-300 hover:text-blue-500 hover:bg-blue-50'}`}
+                      >
+                        {offset ? <Link2 size={13} /> : <Link2Off size={13} />}
+                      </button>
+                      <button onClick={() => removePoint(i)} className="text-gray-300 hover:text-red-500 shrink-0">✕</button>
+                    </div>
+                    <div className="flex items-center gap-2 pl-7 text-[10px] text-gray-400">
+                      <span>real: {p.x},{p.y}</span>
+                      {offset && <span className="text-blue-500">etiqueta: {p.label_dx},{p.label_dy}</span>}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
