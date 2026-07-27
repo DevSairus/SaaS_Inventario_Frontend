@@ -1,15 +1,17 @@
 import { NavLink } from 'react-router-dom';
-import { ClipboardList, Car, ScanLine } from 'lucide-react';
+import { ClipboardList, Car } from 'lucide-react';
 
 const ITEMS = [
   { label: 'Órdenes', to: '/workshop/work-orders', icon: ClipboardList },
   { label: 'Vehículos', to: '/workshop/vehicles', icon: Car },
-  { label: 'Escanear', to: '/workshop/scan', icon: ScanLine },
 ];
 
-// Navegación de 3 ítems para la PWA "Taller" instalada — reemplaza al Sidebar
+// Navegación de 2 ítems para la PWA "Taller" instalada — reemplaza al Sidebar
 // completo de escritorio (ver Layout.jsx) para que el técnico solo vea lo
 // necesario para gestionar órdenes de trabajo desde el celular.
+// (Se quitó "Escanear": ya no se usa. La ruta /workshop/scan y ScannerPage
+// siguen existiendo por si se necesita reactivar, solo dejaron de ser
+// accesibles desde este menú.)
 function WorkshopBottomNav() {
   return (
     <nav

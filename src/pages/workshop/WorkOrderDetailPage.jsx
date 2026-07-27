@@ -1093,7 +1093,7 @@ export default function WorkOrderDetailPage() {
                                 onClick={() => { cameraRef.current?.click(); setUploadMenuOpen(null); }}
                                 className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-gray-50"
                               >
-                                <Camera size={14} /> Tomar foto/video
+                                <Camera size={14} /> Tomar foto
                               </button>
                               <button
                                 onClick={() => { galleryRef.current?.click(); setUploadMenuOpen(null); }}
@@ -1104,7 +1104,12 @@ export default function WorkOrderDetailPage() {
                             </div>
                           </>
                         )}
-                        <input ref={cameraRef} type="file" accept="image/*,video/*" capture="environment" className="hidden"
+                        {/* accept="image/*,video/*" combinado con capture hace que muchos
+                            navegadores móviles no abran la cámara nativa (Android/iOS no
+                            resuelven si debe ser foto o video). Con accept solo de imagen,
+                            capture="environment" sí dispara la cámara de forma confiable.
+                            Para video, el usuario puede grabarlo y adjuntarlo desde galería. */}
+                        <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="hidden"
                           onChange={e => handlePhotos(phase, e.target.files)} />
                         <input ref={galleryRef} type="file" accept="image/*,video/*" multiple className="hidden"
                           onChange={e => handlePhotos(phase, e.target.files)} />
