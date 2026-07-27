@@ -76,10 +76,24 @@ function DiagnosisDiagram({ diagram }) {
         <svg viewBox={diagram.view_box} className="absolute inset-0 w-full h-full">
           {markedPoints.map(p => {
             const style = severityStyle(marksByPoint[p.point_number].severity);
+            // Si el punto trae label_dx/label_dy (definidos en el catálogo para
+            // separar números que quedarían pegados o encima de la pieza), el
+            // círculo numerado se dibuja desplazado y una línea guía lo conecta
+            // con un puntito exacto sobre la pieza. Sin offset, se comporta
+            // igual que antes (número directo sobre el punto).
+            const hasOffset = !!(p.label_dx || p.label_dy);
+            const lx = p.x + (p.label_dx || 0);
+            const ly = p.y + (p.label_dy || 0);
             return (
               <g key={p.point_number}>
-                <circle cx={p.x} cy={p.y} r={11} fill={style.color} stroke="#ffffff" strokeWidth={2} />
-                <text x={p.x} y={p.y + 4} fontSize="11" textAnchor="middle" fill="#ffffff" fontWeight="600">
+                {hasOffset && (
+                  <>
+                    <line x1={p.x} y1={p.y} x2={lx} y2={ly} stroke={style.color} strokeWidth={1.25} opacity={0.85} />
+                    <circle cx={p.x} cy={p.y} r={3} fill={style.color} stroke="#ffffff" strokeWidth={1} />
+                  </>
+                )}
+                <circle cx={lx} cy={ly} r={11} fill={style.color} stroke="#ffffff" strokeWidth={2} />
+                <text x={lx} y={ly + 4} fontSize="11" textAnchor="middle" fill="#ffffff" fontWeight="600">
                   {p.point_number}
                 </text>
               </g>
@@ -108,6 +122,7 @@ function DiagnosisDiagram({ diagram }) {
                   {mark.observation && <p className="text-gray-500 mt-0.5">{mark.observation}</p>}
                 </div>
               </div>
+
             );
           })}
         </div>
