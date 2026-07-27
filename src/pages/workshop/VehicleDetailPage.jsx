@@ -2,7 +2,6 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Layout from '../../components/layout/Layout';
 import { vehiclesApi } from '../../api/workshop';
-import { vehiclesApiOffline } from '../../api/workshopOffline';
 import axios from '../../api/axios';
 import {
   ArrowLeft, Car, Wrench, User, Save, X, PencilLine,
@@ -19,6 +18,11 @@ const inputCls = "w-full border border-gray-200 rounded-lg px-3 py-2 text-sm foc
 const FUEL_LABELS = {
   gasolina: 'Gasolina', diesel: 'Diésel', gas: 'Gas',
   hibrido: 'Híbrido', electrico: 'Eléctrico', otro: 'Otro'
+};
+
+const VEHICLE_TYPE_LABELS = {
+  automovil: 'Automóvil', camioneta: 'Camioneta', motocicleta: 'Motocicleta',
+  camion: 'Camión', otro: 'Otro',
 };
 
 const OT_STATUS = {
@@ -83,6 +87,7 @@ export default function VehicleDetailPage() {
       model:                  v.model || '',
       year:                   v.year || '',
       color:                  v.color || '',
+      vehicle_type:           v.vehicle_type || 'automovil',
       fuel_type:              v.fuel_type || 'gasolina',
       current_mileage:        v.current_mileage || '',
       // Identificación técnica
@@ -109,24 +114,18 @@ export default function VehicleDetailPage() {
     if (!form.plate) return toast.error('La placa es requerida');
     setSaving(true);
     try {
-      const patch = {
+      const res = await vehiclesApi.update(id, {
         ...form,
         soat_expiry:          form.soat_expiry          || null,
         tecnomecanica_expiry: form.tecnomecanica_expiry  || null,
         customer_id:          form.customer_id           || null,
-      };
-      const res = await vehiclesApiOffline.update(id, patch, vehicle?.updated_at);
-      if (res.data.data._pendingSync) {
-        setVehicle((prev) => (prev ? { ...prev, ...patch, _pendingSync: true } : prev));
-        toast.success('Vehículo guardado sin conexión — se sincronizará automáticamente');
-      } else {
-        // Recargar para tener customer incluido
-        const reloaded = await vehiclesApi.getHistory(id);
-        setVehicle(reloaded.data.data.vehicle);
-        setHistory(reloaded.data.data.history || []);
-        toast.success('Vehículo actualizado');
-      }
+      });
+      // Recargar para tener customer incluido
+      const reloaded = await vehiclesApi.getHistory(id);
+      setVehicle(reloaded.data.data.vehicle);
+      setHistory(reloaded.data.data.history || []);
       setEditing(false);
+      toast.success('Vehículo actualizado');
     } catch (e) {
       toast.error(e.response?.data?.message || 'Error al guardar');
     } finally {
@@ -211,6 +210,7 @@ export default function VehicleDetailPage() {
                 <Car size={14} className="text-blue-500"/> Información del vehículo
               </h2>
               {[
+                { icon: Car,      label: 'Tipo',         val: VEHICLE_TYPE_LABELS[vehicle.vehicle_type] },
                 { icon: Palette,  label: 'Color',       val: vehicle.color },
                 { icon: Fuel,     label: 'Combustible', val: FUEL_LABELS[vehicle.fuel_type] },
                 { icon: Gauge,    label: 'Kilometraje', val: vehicle.current_mileage ? `${vehicle.current_mileage.toLocaleString()} km` : null },
@@ -388,6 +388,12 @@ export default function VehicleDetailPage() {
                       onChange={e => setF(k, k === 'plate' ? e.target.value.toUpperCase() : e.target.value)} />
                   </div>
                 ))}
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Tipo de vehículo</label>
+                  <select value={form.vehicle_type} onChange={e => setF('vehicle_type', e.target.value)} className={inputCls}>
+                    {Object.entries(VEHICLE_TYPE_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                  </select>
+                </div>
                 <div>
                   <label className="block text-xs text-gray-500 mb-1">Combustible</label>
                   <select value={form.fuel_type} onChange={e => setF('fuel_type', e.target.value)} className={inputCls}>

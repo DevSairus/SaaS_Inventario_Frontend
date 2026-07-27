@@ -52,3 +52,18 @@ export const commissionApi = {
   listProductSettlements: (params) => axios.get('/workshop/commission-settlements/products', { params }),
   getProductSettlementById: (id) => axios.get(`/workshop/commission-settlements/products/${id}`),
 };
+
+// ── Diagramas interactivos de intervención ────────────────
+export const diagramTemplatesApi = {
+  list: (params) => axios.get('/workshop/diagram-templates', { params }),
+  getById: (id) => axios.get(`/workshop/diagram-templates/${id}`),
+  updatePoints: (id, points) => axios.patch(`/workshop/diagram-templates/${id}/points`, { points }),
+};
+
+export const diagnosisMarksApi = {
+  list: (workOrderId) => axios.get(`/workshop/work-orders/${workOrderId}/diagnosis-marks`),
+  create: (workOrderId, data) => axios.post(`/workshop/work-orders/${workOrderId}/diagnosis-marks`, data),
+  update: (workOrderId, markId, data) => axios.put(`/workshop/work-orders/${workOrderId}/diagnosis-marks/${markId}`, data),
+  remove: (workOrderId, markId) => axios.delete(`/workshop/work-orders/${workOrderId}/diagnosis-marks/${markId}`),
+  generateItems: (workOrderId, markIds) => axios.post(`/workshop/work-orders/${workOrderId}/diagnosis-marks/generate-items`, { mark_ids: markIds }),
+};

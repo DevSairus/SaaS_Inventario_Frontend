@@ -29,6 +29,28 @@ registerRoute(
   })
 );
 
+// Diagram templates (catálogo de diagramas) — cache agresivo, cambia raramente.
+registerRoute(
+  ({ url, request }) =>
+    request.method === 'GET' &&
+    /\/api\/workshop\/diagram-templates/.test(url.pathname),
+  new NetworkFirst({
+    cacheName: 'diagram-api-cache',
+    networkTimeoutSeconds: 4,
+  })
+);
+
+// Diagnosis marks — network first, fallback a cache.
+registerRoute(
+  ({ url, request }) =>
+    request.method === 'GET' &&
+    /\/api\/workshop\/work-orders\/.*\/diagnosis-marks/.test(url.pathname),
+  new NetworkFirst({
+    cacheName: 'diagnosis-api-cache',
+    networkTimeoutSeconds: 4,
+  })
+);
+
 self.addEventListener('message', (event) => {
   if (event.data?.type === 'SKIP_WAITING') self.skipWaiting();
 });

@@ -29,8 +29,109 @@ const fmt = (dateStr) => {
   return new Date(dateStr).toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' });
 };
 
+// Mismos colores/labels de severidad que usa el técnico en DiagramMapEditor,
+// para que el cliente vea exactamente lo mismo que marcó el taller.
+const SEVERITY_STYLE = {
+  revisar:         { color: '#2563eb', label: 'Revisar' },
+  cambiar_pronto:  { color: '#d97706', label: 'Cambiar pronto' },
+  urgente:         { color: '#dc2626', label: 'Urgente' },
+};
+const severityStyle = (severity) => SEVERITY_STYLE[severity] || SEVERITY_STYLE.revisar;
+
+// El fondo del diagrama es una imagen WEBP (public/assets/diagrams/...) — los
+// puntos se dibujan encima en un <svg> transparente con el mismo viewBox,
+// mismo truco que usa el editor interno (DiagramMapEditor).
+function diagramImageUrl(imagePath) {
+  return imagePath ? `/assets/diagrams/${imagePath}` : '';
+}
+
+// "0 0 600 400" -> { width: 600, height: 400 }, para mantener el aspect-ratio
+// del contenedor igual al del viewBox.
+function parseViewBoxSize(viewBox) {
+  const parts = (viewBox || '0 0 600 400').trim().split(/\s+/).map(Number);
+  return { width: parts[2] || 600, height: parts[3] || 400 };
+}
+
+// ─── Mapa de intervención (solo lectura) ────────────────────────────────────
+// Pinta un diagrama con los puntos que el técnico marcó (rojo/naranja/azul
+// según severidad) y debajo el detalle de cada punto — el mismo "aha" visual
+// del PDF de referencia, pero interactivo dentro del flujo web.
+function DiagnosisDiagram({ diagram }) {
+  const marksByPoint = Object.fromEntries((diagram.marks || []).map(m => [m.point_number, m]));
+  const markedPoints = (diagram.points || []).filter(p => marksByPoint[p.point_number]);
+
+  return (
+    <div className="border border-gray-100 rounded-xl bg-gray-50 p-3">
+      <p className="text-xs font-semibold text-gray-600 mb-2">{diagram.name}</p>
+      <div
+        className="relative w-full max-h-72"
+        style={{ aspectRatio: `${parseViewBoxSize(diagram.view_box).width} / ${parseViewBoxSize(diagram.view_box).height}` }}
+      >
+        <img
+          src={diagramImageUrl(diagram.image_path)}
+          alt={diagram.name}
+          className="absolute inset-0 w-full h-full object-contain"
+          onError={(e) => { e.currentTarget.style.visibility = 'hidden'; }}
+        />
+        <svg viewBox={diagram.view_box} className="absolute inset-0 w-full h-full">
+          {markedPoints.map(p => {
+            const style = severityStyle(marksByPoint[p.point_number].severity);
+            return (
+              <g key={p.point_number}>
+                <circle cx={p.x} cy={p.y} r={11} fill={style.color} stroke="#ffffff" strokeWidth={2} />
+                <text x={p.x} y={p.y + 4} fontSize="11" textAnchor="middle" fill="#ffffff" fontWeight="600">
+                  {p.point_number}
+                </text>
+              </g>
+            );
+          })}
+        </svg>
+      </div>
+
+      {markedPoints.length > 0 && (
+        <div className="mt-3 space-y-1.5">
+          {markedPoints.map(p => {
+            const mark = marksByPoint[p.point_number];
+            const style = severityStyle(mark.severity);
+            return (
+              <div key={p.point_number} className="flex items-start gap-2 text-xs">
+                <span
+                  className="w-4 h-4 rounded-full flex items-center justify-center text-white text-[9px] font-bold shrink-0 mt-0.5"
+                  style={{ backgroundColor: style.color }}
+                >
+                  {p.point_number}
+                </span>
+                <div className="min-w-0">
+                  <span className="font-medium text-gray-800">{p.part_name}</span>
+                  {mark.side && <span className="text-gray-400"> · {mark.side}</span>}
+                  <span className="ml-1.5 font-medium" style={{ color: style.color }}>· {style.label}</span>
+                  {mark.observation && <p className="text-gray-500 mt-0.5">{mark.observation}</p>}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DiagnosisDiagramsSection({ diagrams, primaryColor, embedded = false }) {
+  if (!diagrams || diagrams.length === 0) return null;
+  const content = (
+    <div className="space-y-3">
+      <h3 className="text-xs font-semibold uppercase tracking-wide" style={{ color: embedded ? primaryColor : '#6b7280' }}>
+        Mapa de intervención
+      </h3>
+      {diagrams.map(d => <DiagnosisDiagram key={d.id} diagram={d} />)}
+    </div>
+  );
+  if (embedded) return content;
+  return <div className="bg-white rounded-2xl shadow-sm p-5">{content}</div>;
+}
+
 // ─── Sección de cotización pendiente de aprobación ─────────────────────────
-function QuoteApprovalSection({ activeQuoteRequest, token, primaryColor, onResponded }) {
+function QuoteApprovalSection({ activeQuoteRequest, diagrams, token, primaryColor, onResponded }) {
   const [checks, setChecks] = useState(() =>
     Object.fromEntries((activeQuoteRequest.items || []).map(i => [i.id, true]))
   );
@@ -72,6 +173,12 @@ function QuoteApprovalSection({ activeQuoteRequest, token, primaryColor, onRespo
         <p className="text-xs text-gray-500 mt-0.5">Revisa cada ítem y marca los que apruebas antes de enviar tu decisión.</p>
       </div>
       <div className="p-5 space-y-3">
+        {diagrams && diagrams.length > 0 && (
+          <div className="pb-3 border-b border-gray-100">
+            <DiagnosisDiagramsSection diagrams={diagrams} primaryColor={primaryColor} embedded />
+          </div>
+        )}
+
         {(activeQuoteRequest.items || []).map(item => (
           <label key={item.id} className="flex items-start gap-3 p-3 rounded-xl bg-gray-50 cursor-pointer">
             <input
@@ -235,6 +342,12 @@ function Timeline({ status }) {
 }
 
 // ─── Photo Gallery ────────────────────────────────────────────────────────────
+const resolvePhotoUrl = (url) => {
+  if (!url) return '';
+  if (url.startsWith('http')) return url;
+  return `${(import.meta.env.VITE_API_URL || '').replace(/\/api$/, '')}${url}`;
+};
+
 function PhotoGallery({ photos, title }) {
   const [selected, setSelected] = useState(null);
   if (!photos || photos.length === 0) return null;
@@ -250,7 +363,7 @@ function PhotoGallery({ photos, title }) {
             className="relative aspect-square overflow-hidden rounded-xl bg-gray-100 hover:opacity-90 transition"
           >
             <img
-              src={photo.url || photo}
+              src={resolvePhotoUrl(photo.url)}
               alt={photo.caption || `Foto ${i + 1}`}
               className="w-full h-full object-cover"
             />
@@ -273,7 +386,7 @@ function PhotoGallery({ photos, title }) {
             </svg>
           </button>
           <img
-            src={selected.url || selected}
+            src={resolvePhotoUrl(selected.url)}
             alt={selected.caption || 'Foto'}
             className="max-w-full max-h-[85vh] object-contain rounded-xl"
             onClick={e => e.stopPropagation()}
@@ -396,10 +509,21 @@ export default function WorkOrderPublicPage() {
         {order.active_quote_request && (
           <QuoteApprovalSection
             activeQuoteRequest={order.active_quote_request}
+            diagrams={order.diagrams}
             token={token}
             primaryColor={primaryColor}
             onResponded={fetchOrder}
           />
+        )}
+
+        {/* ── Mapa de intervención (standalone) ──────────────────────
+            Si no hay cotización activa pero sí hubo diagnóstico marcado,
+            se muestra igual como referencia visual — ya no justifica una
+            aprobación pendiente, pero le sirve al cliente para ver qué se
+            revisó (mismo dato que ya vio, ahora también en la sección de
+            cotización de arriba si aplicaba). */}
+        {!order.active_quote_request && (
+          <DiagnosisDiagramsSection diagrams={order.diagrams} primaryColor={primaryColor} />
         )}
 
         {/* ── Historial de cotizaciones ya respondidas ──────────────── */}

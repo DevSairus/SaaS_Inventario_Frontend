@@ -1,14 +1,13 @@
 import { useEffect, useState, useCallback } from 'react';
 import Layout from '../../components/layout/Layout';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import useWorkshopStore from '../../store/workshopStore';
 import { vehiclesApi } from '../../api/workshop';
-import { vehiclesApiOffline } from '../../api/workshopOffline';
 import RuntConsultaModal from '../../components/workshop/RuntConsultaModal';
 import axios from '../../api/axios';
 import toast from 'react-hot-toast';
 import {
-  Car, Plus, Search, History, X, Wrench, Clock,
+  Car, Bike, Plus, Search, History, X, Wrench, Clock,
   AlertTriangle, CheckCircle, ChevronRight, Gauge,
   User, FileText, Package, Banknote, XCircle, PencilLine,
   Trash2, Save,
@@ -23,6 +22,14 @@ const FUEL_OPTIONS = [
   { value: 'otro',     label: 'Otro' },
 ];
 const FUEL_LABELS = Object.fromEntries(FUEL_OPTIONS.map(o => [o.value, o.label]));
+const VEHICLE_TYPE_OPTIONS = [
+  { value: 'automovil',   label: 'Automóvil' },
+  { value: 'camioneta',   label: 'Camioneta' },
+  { value: 'motocicleta', label: 'Motocicleta' },
+  { value: 'camion',      label: 'Camión' },
+  { value: 'otro',        label: 'Otro' },
+];
+const VEHICLE_TYPE_LABELS = Object.fromEntries(VEHICLE_TYPE_OPTIONS.map(o => [o.value, o.label]));
 const STATUS_CONFIG = {
   recibido:   { label: 'Recibido',   color: 'bg-blue-100 text-blue-700',     dot: 'bg-blue-500',   icon: Clock },
   en_proceso: { label: 'En Proceso', color: 'bg-yellow-100 text-yellow-700', dot: 'bg-yellow-500', icon: Wrench },
@@ -39,7 +46,7 @@ const PAYMENT_CONFIG = {
 const COP = (n) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(n || 0);
 const fmtDate = (d) => new Date(d).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' });
 const inputCls = 'w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white';
-const EMPTY_VEHICLE = { plate: '', brand: '', model: '', year: '', color: '', fuel_type: 'gasolina', engine_number: '', vin: '', soat_number: '', soat_expiry: '', tecnomecanica_number: '', tecnomecanica_expiry: '', customer_id: '', notes: '' };
+const EMPTY_VEHICLE = { plate: '', brand: '', model: '', year: '', color: '', vehicle_type: 'automovil', fuel_type: 'gasolina', engine_number: '', vin: '', soat_number: '', soat_expiry: '', tecnomecanica_number: '', tecnomecanica_expiry: '', customer_id: '', notes: '' };
 
 /* ── Modal: Crear vehículo ─────────────────────────────────────────── */
 function CreateVehicleModal({ onClose, onCreated }) {
@@ -80,7 +87,7 @@ function CreateVehicleModal({ onClose, onCreated }) {
     if (!form.plate.trim()) return toast.error('La placa es requerida');
     setSaving(true);
     try {
-      const res = await vehiclesApiOffline.create({
+      const res = await vehiclesApi.create({
         ...form,
         plate: form.plate.toUpperCase().trim(),
         year:  form.year ? parseInt(form.year) : null,
@@ -88,7 +95,7 @@ function CreateVehicleModal({ onClose, onCreated }) {
         tecnomecanica_expiry: form.tecnomecanica_expiry || null,
         customer_id:          form.customer_id          || null,
       });
-      toast.success(res.data.data._pendingSync ? 'Vehículo guardado sin conexión — se sincronizará automáticamente' : 'Vehículo registrado');
+      toast.success('Vehículo registrado');
       onCreated(res.data.data);
     } catch (e) {
       toast.error(e.response?.data?.message || 'Error al crear vehículo');
@@ -135,6 +142,13 @@ function CreateVehicleModal({ onClose, onCreated }) {
                 <input value={form.year} onChange={e => setF('year', e.target.value)}
                   placeholder="2020" type="number" className={inputCls} />
               </div>
+            </div>
+            {/* Tipo de vehículo */}
+            <div>
+              <label className="text-xs font-medium text-gray-600 block mb-1">Tipo de vehículo</label>
+              <select value={form.vehicle_type} onChange={e => setF('vehicle_type', e.target.value)} className={inputCls}>
+                {VEHICLE_TYPE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
             </div>
             {/* Marca + Línea */}
             <div className="grid grid-cols-2 gap-3">
@@ -289,10 +303,8 @@ function DeleteConfirm({ vehicle, onConfirm, onCancel }) {
 /* ── Página principal ──────────────────────────────────────────────── */
 export default function VehiclesPage() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
   const { vehicles, vehiclesTotal, vehiclesLoading, fetchVehicles } = useWorkshopStore();
-  // Prellenar búsqueda si se llega desde el escáner de placa/VIN (workshop/scan)
-  const [search, setSearch]               = useState(() => searchParams.get('search') || '');
+  const [search, setSearch]               = useState('');
   const [page, setPage]                   = useState(1);
   const [showHistory, setShowHistory]     = useState(null);
   const [history, setHistory]             = useState(null);
@@ -385,6 +397,9 @@ export default function VehiclesPage() {
                     <tr key={v.id} className="hover:bg-gray-50 transition">
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
+                          {v.vehicle_type === 'motocicleta'
+                            ? <Bike size={14} className="text-gray-400 flex-shrink-0" />
+                            : <Car size={14} className="text-gray-400 flex-shrink-0" />}
                           <span className="font-mono font-bold text-gray-900 text-sm">{v.plate}</span>
                           {v.fuel_type && (
                             <span className="text-xs text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded hidden sm:inline">
