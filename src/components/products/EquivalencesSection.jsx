@@ -206,7 +206,10 @@ export default function EquivalencesSection({ productId }) {
       {showModal && (
         <EquivalenceGroupModal
           productId={productId}
-          onClose={() => setShowModal(false)}
+          onClose={() => {
+            setShowModal(false);
+            fetchEquivalences(productId);
+          }}
         />
       )}
     </div>

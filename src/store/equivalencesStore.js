@@ -26,6 +26,9 @@ const useEquivalencesStore = create((set, get) => ({
   },
 
   // Agregar producto a un grupo (existente o nuevo)
+  // Devuelve el `data` de la respuesta del backend (incluye group_id) en éxito,
+  // o null en error — antes solo devolvía true/false y obligaba a quien
+  // llamaba a adivinar el group_id refetcheando y buscando por nombre.
   addToGroup: async (productId, data) => {
     set({ isLoading: true, error: null });
     try {
@@ -34,15 +37,15 @@ const useEquivalencesStore = create((set, get) => ({
         toast.success(response.message || 'Producto agregado al grupo');
         await get().fetchEquivalences(productId);
         set({ isLoading: false });
-        return true;
+        return response.data || true;
       }
       set({ isLoading: false });
-      return false;
+      return null;
     } catch (error) {
       const msg = error.response?.data?.message || 'Error al agregar al grupo';
       toast.error(msg);
       set({ error: msg, isLoading: false });
-      return false;
+      return null;
     }
   },
 

@@ -67,28 +67,25 @@ export default function EquivalenceGroupModal({ productId, onClose }) {
     setSubmitting(true);
 
     // Crear grupo con el producto actual
-    const success = await addToGroup(productId, {
+    const created = await addToGroup(productId, {
       new_group_name: groupName.trim(),
       notes: notes.trim() || undefined,
       role: 'referencia' // El primero en el grupo es la referencia
     });
 
-    if (success) {
-      // Si hay productos seleccionados, agregarlos también
-      // Necesitamos el group_id recién creado — lo obtenemos refetchando
-      if (selectedProducts.length > 0) {
-        // Refetch para obtener el nuevo grupo
-        await useEquivalencesStore.getState().fetchEquivalences(productId);
-        const newGroups = useEquivalencesStore.getState().groups;
-        const newGroup = newGroups.find(g => g.group_name === groupName.trim());
-
-        if (newGroup) {
-          for (const prod of selectedProducts) {
-            await addToGroup(prod.id, {
-              group_id: newGroup.group_id,
-              role: 'equivalente'
-            });
-          }
+    if (created) {
+      // Si hay productos seleccionados, agregarlos también al MISMO grupo
+      // recién creado. Usamos el group_id que el backend ya nos devolvió en
+      // la respuesta de creación — antes se refetcheaba y se buscaba el
+      // grupo por coincidencia de nombre, lo cual podía engancharse al
+      // grupo equivocado (p. ej. si ya existía un grupo con ese nombre de
+      // un intento anterior) o simplemente no encontrarlo.
+      if (selectedProducts.length > 0 && created.group_id) {
+        for (const prod of selectedProducts) {
+          await addToGroup(prod.id, {
+            group_id: created.group_id,
+            role: 'equivalente'
+          });
         }
       }
       onClose();
