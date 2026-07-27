@@ -2,9 +2,11 @@ import React from 'react';
 import { Outlet } from 'react-router-dom';
 import { Menu } from 'lucide-react';
 import SuperAdminSidebar from './SuperAdminSidebar';
+import { useTicketNotifications } from '../../hooks/useTicketNotifications';
 
 const SuperAdminLayout = () => {
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
+  useTicketNotifications();
 
   const userStr = localStorage.getItem('user');
   const user = userStr ? JSON.parse(userStr) : null;

@@ -7,6 +7,7 @@ import WorkOrderPublicPage from './pages/workshop/WorkOrderPublicPage';
 import Loading from './components/common/Loading';
 import DashboardPage from './pages/dashboard/DashboardPage';
 import ProductsPage from './pages/products/ProductsPage';
+import ProductDetailPage from './pages/products/ProductDetailPage';
 import CategoriesPage from './pages/categories/CategoriesPage';
 import SuppliersPage from './pages/suppliers/SuppliersPage';
 import PurchasesPage from './pages/purchases/PurchasesPage';
@@ -48,6 +49,7 @@ import TechnicianProductivityPage from './pages/workshop/productivity/Technician
 import CommissionSettlementsPage from './pages/workshop/commissions/CommissionSettlementsPage';
 import CommissionSettlementDetailPage from './pages/workshop/commissions/CommissionSettlementDetailPage';
 import CommissionProductsReportPage from './pages/workshop/commissions/CommissionProductsReportPage';
+import DiagramPointsEditorPage from './pages/workshop/DiagramPointsEditorPage';
 import WorkshopReportPage from './pages/workshop/WorkshopReportPage';
 import CustomersPage from './pages/customers/CustomersPage';
 import CustomerDetailPage from './pages/customers/CustomerDetailPage';
@@ -97,6 +99,19 @@ import AnnouncementsModal from './components/common/AnnouncementsModal';
 import DianConfigPage from './pages/dian/DianConfigPage';
 import DianEventsPage from './pages/dian/DianEventsPage';
 
+// Soporte — Cliente
+import SupportFAQ from './pages/support/SupportFAQ';
+import MyTickets from './pages/support/MyTickets';
+import TicketDetail from './pages/support/TicketDetail';
+import CreateTicket from './pages/support/CreateTicket';
+
+// Soporte — SuperAdmin
+import SupportInbox from './pages/superadmin/support/SupportInbox';
+import SupportTicketDetail from './pages/superadmin/support/SupportTicketDetail';
+import FaqManagement from './pages/superadmin/support/FaqManagement';
+import SupportAnalytics from './pages/superadmin/support/SupportAnalytics';
+import RemoteSessionsHistory from './pages/superadmin/support/RemoteSessionsHistory';
+
 // Auth / Session
 import SessionMonitor from './components/auth/SessionMonitor';
 import { Toaster } from 'react-hot-toast';
@@ -104,6 +119,7 @@ import PrivateRoute from './components/auth/PrivateRoute';
 import useAuthStore from './store/authStore';
 import useTenantStore from './store/tenantStore';
 import SessionKeepAlive from './components/SessionKeepAlive';
+import RemoteSessionNotifier from './components/common/RemoteSessionNotifier';
 import PwaBootstrap from './pwa/PwaBootstrap';
 import InstallPrompt from './pwa/components/InstallPrompt';
 import ImpersonationBanner from './components/common/ImpersonationBanner';
@@ -113,14 +129,15 @@ import { ROLES, ROUTES } from './utils/constants';
 function RoleBasedRedirect() {
   const { user, isAuthenticated } = useAuthStore();
   if (!isAuthenticated) return <LandingPage />;
-  if (user?.role === ROLES.SUPER_ADMIN) return <Navigate to={ROUTES.SUPERADMIN_DASHBOARD} replace />;
+  if (user?.role === ROLES.SUPER_ADMIN || user?.role === ROLES.SUPPORT) return <Navigate to={ROUTES.SUPERADMIN_DASHBOARD} replace />;
   return <Navigate to={ROUTES.DASHBOARD} replace />;
 }
 
-function SuperAdminRoute({ children }) {
+function SuperAdminRoute({ children, roles }) {
   const { user, isAuthenticated } = useAuthStore();
+  const allowed = roles || [ROLES.SUPER_ADMIN];
   if (!isAuthenticated) return <Navigate to={ROUTES.LOGIN} replace />;
-  if (user?.role !== ROLES.SUPER_ADMIN) return <Navigate to={ROUTES.DASHBOARD} replace />;
+  if (!allowed.includes(user?.role)) return <Navigate to={ROUTES.DASHBOARD} replace />;
   return children;
 }
 
@@ -147,7 +164,8 @@ function TenantRoute({ children, module, roles }) {
 }
 
 function App() {
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, user } = useAuthStore();
+  const isTenantUser = isAuthenticated && user?.role !== ROLES.SUPER_ADMIN && user?.role !== ROLES.SUPPORT;
   const fetchFeatures = useTenantStore((s) => s.fetchFeatures);
   const resetTenantStore = useTenantStore((s) => s.reset);
 
@@ -175,6 +193,7 @@ function App() {
         }}
       />
       <SessionMonitor />
+      {isTenantUser && <RemoteSessionNotifier />}
 
       <Routes>
         {/* Root */}
@@ -211,8 +230,21 @@ function App() {
           <Route path="permissions"         element={<RolePermissionsPage />} />
         </Route>
 
+        {/* Soporte SuperAdmin — accesible para super_admin y support */}
+        <Route
+          path="/superadmin"
+          element={<SuperAdminRoute roles={[ROLES.SUPER_ADMIN, ROLES.SUPPORT]}><SuperAdminLayout /></SuperAdminRoute>}
+        >
+          <Route path="support/tickets"     element={<SupportInbox />} />
+          <Route path="support/tickets/:id" element={<SupportTicketDetail />} />
+          <Route path="support/faq"         element={<FaqManagement />} />
+          <Route path="support/stats"       element={<SupportAnalytics />} />
+          <Route path="support/remote-sessions" element={<RemoteSessionsHistory />} />
+        </Route>
+
         {/* ─── Tenant ──────────────────────────────────────── */}
         <Route path="dashboard"  element={<TenantRoute><DashboardPage /></TenantRoute>} />
+        <Route path="products/:id" element={<TenantRoute module="inventory"><ProductDetailPage /></TenantRoute>} />
         <Route path="products"   element={<TenantRoute module="inventory"><ProductsPage /></TenantRoute>} />
         <Route path="categories" element={<TenantRoute module="inventory"><CategoriesPage /></TenantRoute>} />
         <Route path="suppliers"  element={<TenantRoute module="inventory"><SuppliersPage /></TenantRoute>} />
@@ -266,6 +298,7 @@ function App() {
         <Route path="workshop/commission-settlements"  element={<TenantRoute module="workshop"><CommissionSettlementsPage /></TenantRoute>} />
         <Route path="workshop/commission-settlements/:id" element={<TenantRoute module="workshop"><CommissionSettlementDetailPage /></TenantRoute>} />
         <Route path="workshop/commission-products"     element={<TenantRoute module="workshop"><CommissionProductsReportPage /></TenantRoute>} />
+        <Route path="workshop/diagram-points-editor"   element={<TenantRoute module="workshop"><DiagramPointsEditorPage /></TenantRoute>} />
 
         {/* Customer Returns — ANTES de la ruta dinámica :id */}
         <Route path="sales/customer-returns"      element={<TenantRoute module="receivables"><CustomerReturnsPage /></TenantRoute>} />
@@ -307,6 +340,12 @@ function App() {
         {/* ✅ DIAN — Facturación Electrónica ────────── */}
         <Route path="dian/config"  element={<TenantRoute><DianConfigPage /></TenantRoute>} />
         <Route path="dian/eventos" element={<TenantRoute><DianEventsPage /></TenantRoute>} />
+
+        {/* ── Soporte ──────────────────────────────── */}
+        <Route path="support"              element={<TenantRoute><SupportFAQ /></TenantRoute>} />
+        <Route path="support/new-ticket"   element={<TenantRoute><CreateTicket /></TenantRoute>} />
+        <Route path="support/tickets"      element={<TenantRoute><MyTickets /></TenantRoute>} />
+        <Route path="support/tickets/:id"  element={<TenantRoute><TicketDetail /></TenantRoute>} />
 
         {/* 404 */}
         <Route path="*" element={<Navigate to="/" replace />} />

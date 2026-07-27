@@ -16,6 +16,10 @@ import {
   Settings,
   Megaphone, // ✅ NUEVO: Icono para Anuncios
   Link2,
+  Headphones,
+  Inbox,
+  HelpCircle,
+  Monitor,
 } from 'lucide-react';
 import useAuthStore from '@store/authStore';
 
@@ -124,7 +128,43 @@ const SuperAdminSidebar = ({ isOpen, toggleSidebar }) => {
       href: '/superadmin/permissions',
       icon: Shield,
     },
+    {
+      name: 'Soporte',
+      icon: Headphones,
+      roles: ['super_admin', 'support'],
+      children: [
+        {
+          name: 'Bandeja de Tickets',
+          href: '/superadmin/support/tickets',
+          icon: Inbox,
+          description: 'Gestionar tickets de soporte',
+        },
+        {
+          name: 'Gestión de FAQ',
+          href: '/superadmin/support/faq',
+          icon: HelpCircle,
+          description: 'Administrar artículos de ayuda',
+        },
+        {
+          name: 'Estadísticas',
+          href: '/superadmin/support/stats',
+          icon: BarChart3,
+          description: 'Métricas y rendimiento',
+        },
+        {
+          name: 'Sesiones Remotas',
+          href: '/superadmin/support/remote-sessions',
+          icon: Monitor,
+          description: 'Historial de accesos remotos',
+        },
+      ],
+    },
   ];
+
+  const isSupportRole = user?.role === 'support';
+  const filteredNavigation = isSupportRole
+    ? navigation.filter((item) => item.roles?.includes('support'))
+    : navigation;
 
   /* -------- AUTO ABRIR SUBMENÚ ACTIVO -------- */
   useEffect(() => {
@@ -133,7 +173,7 @@ const SuperAdminSidebar = ({ isOpen, toggleSidebar }) => {
     );
     const autoOpen = {};
 
-    navigation.forEach((item) => {
+    filteredNavigation.forEach((item) => {
       if (item.children) {
         const hasActiveChild = item.children.some((child) =>
           isActive(child.href)
@@ -182,7 +222,7 @@ const SuperAdminSidebar = ({ isOpen, toggleSidebar }) => {
 
         {/* Navigation */}
         <nav className="flex-1 px-2 py-4 space-y-1 overflow-y-auto">
-          {navigation.map((item) => {
+          {filteredNavigation.map((item) => {
             const Icon = item.icon;
 
             // ============ ITEM CON HIJOS (SUBMENÚ) ============
@@ -272,7 +312,7 @@ const SuperAdminSidebar = ({ isOpen, toggleSidebar }) => {
             <p className="text-xs text-gray-400 truncate">{user?.email}</p>
             <div className="mt-2">
               <span className="text-xs px-2 py-1 bg-red-600 text-white rounded-full">
-                Super Admin
+                {isSupportRole ? 'Soporte' : 'Super Admin'}
               </span>
             </div>
           </div>
