@@ -3,6 +3,7 @@ import Combobox from '../../components/common/Combobox';
 import Layout from '../../components/layout/Layout';
 import { useNavigate } from 'react-router-dom';
 import useWorkshopStore from '../../store/workshopStore';
+import useBranchStore from '../../store/branchStore';
 import { vehiclesApi } from '../../api/workshop';
 import { vehiclesApiOffline } from '../../api/workshopOffline';
 import axios from '../../api/axios';
@@ -26,6 +27,7 @@ function Field({ label, children }) {
 export default function WorkOrderFormPage() {
   const navigate        = useNavigate();
   const { createOrder } = useWorkshopStore();
+  const { branches, activeBranchId, fetchBranches } = useBranchStore();
   const [saving,   setSaving]   = useState(false);
   const [vehicles,    setVehicles]    = useState([]);
   const [customers,   setCustomers]   = useState([]);
@@ -40,7 +42,7 @@ export default function WorkOrderFormPage() {
   const [custAutoFilled, setCustAutoFilled] = useState(false); // vino de la moto, no manual
 
   const [showNewVehicle,  setShowNewVehicle]  = useState(false);
-  const [newVehicle, setNewVehicle] = useState({ plate: '', brand: '', model: '', year: '', color: '', fuel_type: 'gasolina', engine_number: '', vin: '', soat_number: '', soat_expiry: '', tecnomecanica_number: '', tecnomecanica_expiry: '' });
+  const [newVehicle, setNewVehicle] = useState({ plate: '', brand: '', model: '', year: '', color: '', vehicle_type: 'automovil', fuel_type: 'gasolina', engine_number: '', vin: '', soat_number: '', soat_expiry: '', tecnomecanica_number: '', tecnomecanica_expiry: '' });
   const [showNewCustomer, setShowNewCustomer] = useState(false);
   const [newCustomer, setNewCustomer] = useState({ first_name: '', last_name: '', phone: '', tax_id: '' });
   const [savingCust,  setSavingCust]  = useState(false);
@@ -58,8 +60,39 @@ export default function WorkOrderFormPage() {
       const list = r.data.data?.users || r.data.users || r.data.data || [];
       setTechnicians(Array.isArray(list) ? list.filter(t => t.role === 'technician' && t.is_active !== false) : []);
     }).catch(() => {});
-    axios.get('/inventory/warehouses').then(r => setWarehouses(r.data.data || [])).catch(() => {});
+    fetchBranches();
   }, []);
+
+  // Bodegas de la sede activa: el combo ahora solo muestra las bodegas
+  // (activas) de la sede seleccionada en el header, no todas las del tenant.
+  // Se recarga cada vez que cambia la sede activa.
+  useEffect(() => {
+    if (!activeBranchId) return;
+    axios.get(`/inventory/warehouses?branch_id=${activeBranchId}`)
+      .then(r => {
+        const list = r.data.data || [];
+        setWarehouses(list);
+        // Si la bodega ya seleccionada no pertenece a la nueva sede activa
+        // (ej. el usuario cambió de sede en el header), se limpia para que
+        // la precarga automática elija la de la nueva sede.
+        setForm(f => (f.warehouse_id && !list.some(w => w.id === f.warehouse_id))
+          ? { ...f, warehouse_id: '' }
+          : f);
+      })
+      .catch(() => {});
+  }, [activeBranchId]);
+
+  // Bodega de la sede activa: se precarga automáticamente al crear la OT.
+  // Solo se aplica mientras el campo siga vacío, para no pisar una selección
+  // manual del usuario.
+  useEffect(() => {
+    if (form.warehouse_id) return;
+    const activeBranch = branches.find(b => b.id === activeBranchId);
+    const defaultWarehouseId = activeBranch?.warehouse?.id;
+    if (defaultWarehouseId) {
+      setForm(f => (f.warehouse_id ? f : { ...f, warehouse_id: defaultWarehouseId }));
+    }
+  }, [branches, activeBranchId]);
 
   const clearVehicle = useCallback(() => {
     setSelVehicle(null); setVehicleDisp('');
@@ -146,7 +179,7 @@ export default function WorkOrderFormPage() {
       setVehicles(prev => [v, ...prev]);
       selectVehicle(v);
       setShowNewVehicle(false);
-      setNewVehicle({ plate: '', brand: '', model: '', year: '', color: '', fuel_type: 'gasolina', engine_number: '', vin: '', soat_number: '', soat_expiry: '', tecnomecanica_number: '', tecnomecanica_expiry: '' });
+      setNewVehicle({ plate: '', brand: '', model: '', year: '', color: '', vehicle_type: 'automovil', fuel_type: 'gasolina', engine_number: '', vin: '', soat_number: '', soat_expiry: '', tecnomecanica_number: '', tecnomecanica_expiry: '' });
       toast.success(res.data.data._pendingSync ? 'Vehículo guardado sin conexión — se sincronizará automáticamente' : 'Vehículo registrado');
     } catch (e) { toast.error(e.response?.data?.message || 'Error'); }
   };
@@ -183,6 +216,7 @@ export default function WorkOrderFormPage() {
         if (data.model)                patch.model                = data.model;
         if (data.year)                 patch.year                 = data.year;
         if (data.color)                patch.color                = data.color;
+        if (data.vehicle_type)         patch.vehicle_type         = data.vehicle_type;
         if (data.fuel_type)            patch.fuel_type            = data.fuel_type;
         if (data.engine_number)        patch.engine_number        = data.engine_number;
         if (data.vin)                  patch.vin                  = data.vin;
@@ -209,6 +243,7 @@ export default function WorkOrderFormPage() {
         model:                data.model                || '',
         year:                 data.year                 || '',
         color:                data.color                || '',
+        vehicle_type:         data.vehicle_type         || 'automovil',
         fuel_type:            data.fuel_type            || 'gasolina',
         engine_number:        data.engine_number        || '',
         vin:                  data.vin                  || '',
@@ -348,6 +383,17 @@ export default function WorkOrderFormPage() {
                     <label className="text-xs text-gray-500 block mb-0.5">Color</label>
                     <input value={newVehicle.color} placeholder="Blanco" className={inputCls}
                       onChange={e => setNewVehicle(p => ({ ...p, color: e.target.value }))} />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 block mb-0.5">Tipo</label>
+                    <select value={newVehicle.vehicle_type} className={inputCls}
+                      onChange={e => setNewVehicle(p => ({ ...p, vehicle_type: e.target.value }))}>
+                      <option value="automovil">Automóvil</option>
+                      <option value="camioneta">Camioneta</option>
+                      <option value="motocicleta">Motocicleta</option>
+                      <option value="camion">Camión</option>
+                      <option value="otro">Otro</option>
+                    </select>
                   </div>
                   <div>
                     <label className="text-xs text-gray-500 block mb-0.5">Combustible</label>

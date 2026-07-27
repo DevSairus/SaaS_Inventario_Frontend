@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import Layout from '../../components/layout/Layout';
 import { branchesService } from '../../api/branches';
 import { usersAPI } from '../../api/users';
@@ -117,6 +118,17 @@ const BranchesPage = () => {
     } catch (e) {
       toast.error('Error: ' + (e.response?.data?.message || e.message));
       setDeactivateConfirm(null);
+    }
+  };
+
+  const handleActivate = async (branch) => {
+    try {
+      await branchesService.update(branch.id, { is_active: true });
+      toast.success('Sede activada');
+      await fetchBranches();
+      await refreshBranchStore();
+    } catch (e) {
+      toast.error('Error: ' + (e.response?.data?.message || e.message));
     }
   };
 
@@ -281,7 +293,13 @@ const BranchesPage = () => {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{b.city || '—'}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                         {b.warehouse ? `${b.warehouse.name} (${b.warehouse.code})` : (
-                          <span className="text-amber-600 text-xs font-medium">Sin bodega asociada</span>
+                          <Link
+                            to="/warehouses"
+                            className="text-amber-600 text-xs font-medium hover:underline"
+                            title="Ir a Bodegas para crear/asignar una a esta sede"
+                          >
+                            Sin bodega asociada — asignar
+                          </Link>
                         )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -317,6 +335,17 @@ const BranchesPage = () => {
                             >
                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                            </button>
+                          )}
+                          {!b.is_active && (
+                            <button
+                              onClick={() => handleActivate(b)}
+                              title="Activar"
+                              className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                               </svg>
                             </button>
                           )}

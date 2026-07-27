@@ -1,8 +1,8 @@
 import api from './axios';
 
 export const warehousesService = {
-  getAll: async () => {
-    const response = await api.get('/inventory/warehouses');
+  getAll: async (params = {}) => {
+    const response = await api.get('/inventory/warehouses', { params });
     return response.data;
   },
   

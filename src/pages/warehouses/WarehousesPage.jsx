@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import Layout from '../../components/layout/Layout';
 import { warehousesService } from '../../api/warehouses';
+import useBranchStore from '../../store/branchStore';
 import toast from 'react-hot-toast';
 
 const WarehousesPage = () => {
@@ -8,6 +9,7 @@ const WarehousesPage = () => {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingWarehouse, setEditingWarehouse] = useState(null);
+  const { branches, fetchBranches } = useBranchStore();
   const [formData, setFormData] = useState({
     name: '',
     code: '',
@@ -15,7 +17,9 @@ const WarehousesPage = () => {
     city: '',
     manager_id: null,
     phone: '',
-    is_main: false
+    is_main: false,
+    branch_id: '',
+    is_default: false
   });
   const [saving, setSaving] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
@@ -34,11 +38,12 @@ const WarehousesPage = () => {
 
   useEffect(() => {
     fetchWarehouses();
+    fetchBranches();
   }, []);
 
   const openCreate = () => {
     setEditingWarehouse(null);
-    setFormData({ name: '', code: '', address: '', city: '', manager_id: null, phone: '', is_main: false });
+    setFormData({ name: '', code: '', address: '', city: '', manager_id: null, phone: '', is_main: false, branch_id: '', is_default: false });
     setShowModal(true);
   };
 
@@ -51,7 +56,9 @@ const WarehousesPage = () => {
       city: warehouse.city || '',
       manager_id: warehouse.manager_id || '',
       phone: warehouse.phone || '',
-      is_main: warehouse.is_main || false
+      is_main: warehouse.is_main || false,
+      branch_id: warehouse.branch_id || '',
+      is_default: warehouse.is_default || false
     });
     setShowModal(true);
   };
@@ -60,10 +67,15 @@ const WarehousesPage = () => {
     if (!formData.name || !formData.code) return;
     setSaving(true);
     try {
+      const payload = {
+        ...formData,
+        branch_id: formData.branch_id || null,
+        is_default: formData.branch_id ? formData.is_default : false
+      };
       if (editingWarehouse) {
-        await warehousesService.update(editingWarehouse.id, formData);
+        await warehousesService.update(editingWarehouse.id, payload);
       } else {
-        await warehousesService.create(formData);
+        await warehousesService.create(payload);
       }
       setShowModal(false);
       await fetchWarehouses();
@@ -152,6 +164,7 @@ const WarehousesPage = () => {
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Código</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nombre</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Sede</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ciudad</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Teléfono</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
@@ -172,6 +185,18 @@ const WarehousesPage = () => {
                           )}
                         </div>
                         {w.address && <p className="text-xs text-gray-500 mt-0.5">{w.address}</p>}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {w.branch ? (
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm text-gray-700">{w.branch.name}</span>
+                            {w.is_default && (
+                              <span className="text-xs bg-blue-100 text-blue-700 font-semibold px-2 py-0.5 rounded-full">Default</span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-sm text-gray-400">Sin sede</span>
+                        )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{w.city || '—'}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{w.phone || '—'}</td>
@@ -285,6 +310,21 @@ const WarehousesPage = () => {
                 </div>
               </div>
 
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Sede</label>
+                <select
+                  value={formData.branch_id}
+                  onChange={(e) => setFormData(prev => ({ ...prev, branch_id: e.target.value, is_default: e.target.value ? prev.is_default : false }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                >
+                  <option value="">Sin sede asignada</option>
+                  {branches.map(b => (
+                    <option key={b.id} value={b.id}>{b.name}</option>
+                  ))}
+                </select>
+                <p className="text-xs text-gray-400 mt-1">Una sede puede tener varias bodegas; marca abajo cuál es la que se usa por defecto.</p>
+              </div>
+
               {/* <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Encargado</label>
                 <input
@@ -306,6 +346,19 @@ const WarehousesPage = () => {
                 </button>
                 <span className="text-sm text-gray-700">Bodega principal</span>
               </div>
+
+              {formData.branch_id && (
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setFormData(prev => ({ ...prev, is_default: !prev.is_default }))}
+                    className={`relative w-10 h-6 rounded-full transition-colors ${formData.is_default ? 'bg-blue-500' : 'bg-gray-300'}`}
+                  >
+                    <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${formData.is_default ? 'translate-x-4' : ''}`}></span>
+                  </button>
+                  <span className="text-sm text-gray-700">Bodega predeterminada de esta sede</span>
+                </div>
+              )}
             </div>
 
             <div className="flex items-center justify-end gap-3 p-6 border-t bg-gray-50 rounded-b-xl">
