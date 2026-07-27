@@ -38,22 +38,23 @@ const useProductsStore = create((set, get) => ({
   lastFetch: null,
 
   // Obtener productos con cache inteligente
-  fetchProducts: async (forceRefresh = false) => {
+  fetchProducts: async (forceRefresh = false, extraParams = {}) => {
     set({ isLoading: true, error: null });
-    
+
     try {
       const { filters, pagination } = get();
-      
+
       const params = {
         ...filters,
+        ...extraParams,
         page: pagination.page,
         limit: pagination.limit
       };
-      
+
       if (forceRefresh) {
         params._t = Date.now();
       }
-      
+
       const response = await productsAPI.getAll(params);
 
       if (response && response.success) {
@@ -215,7 +216,7 @@ const useProductsStore = create((set, get) => ({
   // Buscar productos para ventas / órdenes de trabajo
   // Retorna el array de resultados y lanza toast si hay error,
   // para que el usuario sepa qué pasó en lugar de ver silencio.
-  searchProducts: async (searchTerm) => {
+  searchProducts: async (searchTerm, extraParams = {}) => {
     if (!searchTerm || searchTerm.trim().length < 2) {
       return [];
     }
@@ -226,7 +227,8 @@ const useProductsStore = create((set, get) => ({
         is_active: 'true',
         limit: 100,
         page: 1,
-        _t: Date.now()
+        _t: Date.now(),
+        ...extraParams
       });
 
       if (response && response.success) {
