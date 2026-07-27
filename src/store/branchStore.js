@@ -10,11 +10,18 @@ const useBranchStore = create((set, get) => ({
 
   // Carga las sedes del tenant. Si la sede activa guardada ya no existe
   // o está inactiva, la reemplaza por la principal (o la primera disponible).
+  //
+  // El endpoint /branches devuelve TODAS las sedes (incluso inactivas) para
+  // roles admin/super_admin, porque BranchesPage las necesita para poder
+  // reactivarlas. Este store alimenta el selector de sede operativo (arriba
+  // en el layout), así que aquí SIEMPRE filtramos las inactivas: no tiene
+  // sentido ofrecer para seleccionar una sede en la que el middleware va a
+  // rechazar cualquier request de todas formas.
   fetchBranches: async () => {
     set({ loading: true });
     try {
       const response = await branchesService.getAll();
-      const branches = response.data || [];
+      const branches = (response.data || []).filter(b => b.is_active !== false);
       set({ branches, loading: true, loaded: true });
 
       const current = get().activeBranchId;
