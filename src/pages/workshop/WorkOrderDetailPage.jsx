@@ -13,11 +13,12 @@ import BarcodeScanner from '../../components/common/BarcodeScanner';
 import {
   ArrowLeft, Wrench, Car, User, Package, Plus, Trash2,
   Camera, FileText, AlertTriangle, CheckCircle, Clock, DollarSign,
-  Printer, Download, ClipboardList, Share2,
+  Printer, Download, ClipboardList, Share2, Image,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { ClipboardDocumentListIcon, DocumentTextIcon } from '@heroicons/react/24/outline';
 import ProductImageViewer from '../../components/products/ProductImageViewer';
+import DiagramMapEditor from '../../components/workshop/DiagramMapEditor';
 
 const STATUS_FLOW = ['recibido', 'en_proceso', 'en_espera', 'listo', 'entregado'];
 
@@ -70,6 +71,7 @@ export default function WorkOrderDetailPage() {
     product_id: '', product_name: '', item_type: 'repuesto', quantity: 1, unit_price: '', technician_id: '', requires_approval: false,
   });
   const [addingItem, setAddingItem] = useState(false);
+  const [stockAlternatives, setStockAlternatives] = useState([]);
 
   const [generatingSale, setGeneratingSale] = useState(false);
   const [sendingWA, setSendingWA]            = useState(false);
@@ -133,12 +135,15 @@ export default function WorkOrderDetailPage() {
     }
   };
 
-  const photoInRef  = useRef(null);
-  const photoOutRef = useRef(null);
+  const photoInCameraRef   = useRef(null);
+  const photoInGalleryRef  = useRef(null);
+  const photoOutCameraRef  = useRef(null);
+  const photoOutGalleryRef = useRef(null);
+  const [uploadMenuOpen, setUploadMenuOpen] = useState(null); // 'in' | 'out' | null
 
   useEffect(() => { fetchOrder(id); fetchFeatures(); }, [id]);
 
-  // Búsqueda debounced
+  // Búsqueda debounced (con filtro vehicular si la OT tiene vehículo)
   useEffect(() => {
     if (searchTerm.trim().length < 2) {
       setSearchResults([]);
@@ -148,8 +153,31 @@ export default function WorkOrderDetailPage() {
     setIsSearching(true);
     const timer = setTimeout(async () => {
       try {
-        const results = await searchProducts(searchTerm);
-        setSearchResults(Array.isArray(results) ? results : []);
+        const vehicleParams = {};
+        if (order?.vehicle?.brand && order?.vehicle?.model) {
+          vehicleParams.applies_to_brand = order.vehicle.brand;
+          vehicleParams.applies_to_line = order.vehicle.model;
+          if (order.vehicle.year) vehicleParams.applies_to_year = order.vehicle.year;
+        }
+        let results = await searchProducts(searchTerm, vehicleParams);
+        results = Array.isArray(results) ? results : [];
+
+        // Verificar equivalentes para productos con stock 0
+        const zeroStockIds = results.filter(p => parseFloat(p.current_stock || 0) <= 0 && p.track_inventory && p.product_type !== 'service').map(p => p.id);
+        if (zeroStockIds.length > 0) {
+          try {
+            const { equivalencesAPI } = await import('../../api/equivalences');
+            const eqRes = await equivalencesAPI.batchCheckEquivalents(zeroStockIds);
+            if (eqRes?.success) {
+              results = results.map(p => ({
+                ...p,
+                _equivalentsWithStock: eqRes.data[p.id] || 0
+              }));
+            }
+          } catch { /* silencioso */ }
+        }
+
+        setSearchResults(results);
       } catch {
         setSearchResults([]);
       } finally {
@@ -157,7 +185,7 @@ export default function WorkOrderDetailPage() {
       }
     }, 300);
     return () => clearTimeout(timer);
-  }, [searchTerm]);
+  }, [searchTerm, order?.vehicle]);
 
   const handleSelectProduct = (product) => {
     setNewItem(prev => ({
@@ -215,9 +243,15 @@ export default function WorkOrderDetailPage() {
       });
       resetAddForm();
     } catch (e) {
-      const msg = e?.response?.data?.message || '';
+      const data = e?.response?.data || {};
+      const msg = data.message || '';
       if (msg.toLowerCase().includes('stock')) {
-        toast.error(`Sin stock suficiente: ${msg}`);
+        if (data.alternatives && data.alternatives.length > 0) {
+          setStockAlternatives(data.alternatives);
+          toast.error(`Sin stock suficiente. Se encontraron ${data.alternatives.length} equivalente(s) disponible(s).`);
+        } else {
+          toast.error(`Sin stock suficiente: ${msg}`);
+        }
       } else if (msg.toLowerCase().includes('bodega')) {
         toast.error('La OT no tiene bodega asignada. Asigna una bodega en el panel lateral antes de agregar repuestos.');
       } else {
@@ -588,6 +622,13 @@ export default function WorkOrderDetailPage() {
               </div>
             </div>
 
+            {/* Mapa de intervención (diagramas interactivos) */}
+            <DiagramMapEditor
+              workOrderId={order.id}
+              vehicleType={order.vehicle?.vehicle_type}
+              disabled={isClosed}
+            />
+
             {/* Repuestos & Servicios */}
             <div className="bg-white border border-gray-100 rounded-xl p-4">
               <div className="flex items-center justify-between mb-3">
@@ -698,6 +739,11 @@ export default function WorkOrderDetailPage() {
                                         Stock: {p.current_stock || 0}
                                       </span>
                                   }
+                                  {p._equivalentsWithStock > 0 && (
+                                    <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">
+                                      {p._equivalentsWithStock} equivalente(s) disponible(s)
+                                    </span>
+                                  )}
                                 </p>
                               </div>
                               <div className="flex items-center gap-2 flex-shrink-0">
@@ -780,6 +826,41 @@ export default function WorkOrderDetailPage() {
                       Cancelar
                     </button>
                   </div>
+
+                  {/* Alternativas de equivalencia cuando no hay stock */}
+                  {stockAlternatives.length > 0 && (
+                    <div className="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-xs font-semibold text-amber-800">
+                          Equivalentes disponibles ({stockAlternatives.length})
+                        </p>
+                        <button onClick={() => setStockAlternatives([])} className="text-amber-600 hover:text-amber-800 text-xs">✕ Cerrar</button>
+                      </div>
+                      <div className="space-y-1.5">
+                        {stockAlternatives.map(alt => (
+                          <button
+                            key={alt.product_id}
+                            onClick={() => {
+                              setNewItem(p => ({
+                                ...p,
+                                product_id: alt.product_id,
+                                product_name: alt.name,
+                                unit_price: alt.sale_price || p.unit_price
+                              }));
+                              setStockAlternatives([]);
+                            }}
+                            className="w-full flex items-center justify-between p-2 bg-white border border-amber-200 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition text-left"
+                          >
+                            <div>
+                              <p className="text-sm font-medium text-gray-900">{alt.name}</p>
+                              <p className="text-xs text-gray-500">{alt.sku} · Stock: <span className="text-green-600 font-medium">{alt.available_stock}</span></p>
+                            </div>
+                            <span className="text-xs font-medium text-blue-600">Seleccionar</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -984,44 +1065,72 @@ export default function WorkOrderDetailPage() {
 
             {/* Fotos */}
             {['in', 'out'].map(phase => {
-              const photos = phase === 'in' ? order.photos_in : order.photos_out;
-              const ref    = phase === 'in' ? photoInRef : photoOutRef;
-              const label  = phase === 'in' ? 'Fotos de Ingreso' : 'Fotos de Salida';
+              const photos     = phase === 'in' ? order.photos_in : order.photos_out;
+              const cameraRef  = phase === 'in' ? photoInCameraRef  : photoOutCameraRef;
+              const galleryRef = phase === 'in' ? photoInGalleryRef : photoOutGalleryRef;
+              const label      = phase === 'in' ? 'Fotos de Ingreso' : 'Fotos de Salida';
               return (
                 <div key={phase} className="bg-white border border-gray-100 rounded-xl p-4">
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
                       <Camera size={15} className="text-blue-600" />
                       <h2 className="font-semibold text-sm text-gray-800">{label}</h2>
-                      <span className="text-xs text-gray-400">{photos?.length || 0} foto(s)</span>
+                      <span className="text-xs text-gray-400">{photos?.length || 0} archivo(s)</span>
                     </div>
                     {!isClosed && (
-                      <>
-                        <button onClick={() => ref.current?.click()}
-                          className="text-xs text-blue-600 font-medium hover:text-blue-700 flex items-center gap-1">
+                      <div className="relative">
+                        <button
+                          onClick={() => setUploadMenuOpen(uploadMenuOpen === phase ? null : phase)}
+                          className="text-xs text-blue-600 font-medium hover:text-blue-700 flex items-center gap-1"
+                        >
                           <Plus size={12} /> Subir
                         </button>
-                        <input ref={ref} type="file" accept="image/*" multiple className="hidden"
+                        {uploadMenuOpen === phase && (
+                          <>
+                            <div className="fixed inset-0 z-10" onClick={() => setUploadMenuOpen(null)} />
+                            <div className="absolute right-0 mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-20 py-1">
+                              <button
+                                onClick={() => { cameraRef.current?.click(); setUploadMenuOpen(null); }}
+                                className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-gray-50"
+                              >
+                                <Camera size={14} /> Tomar foto/video
+                              </button>
+                              <button
+                                onClick={() => { galleryRef.current?.click(); setUploadMenuOpen(null); }}
+                                className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-gray-50"
+                              >
+                                <Image size={14} /> Elegir de galería
+                              </button>
+                            </div>
+                          </>
+                        )}
+                        <input ref={cameraRef} type="file" accept="image/*,video/*" capture="environment" className="hidden"
                           onChange={e => handlePhotos(phase, e.target.files)} />
-                      </>
+                        <input ref={galleryRef} type="file" accept="image/*,video/*" multiple className="hidden"
+                          onChange={e => handlePhotos(phase, e.target.files)} />
+                      </div>
                     )}
                   </div>
                   {photos?.length > 0 ? (
                     <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-                      {photos.map((photo, idx) => (
-                        <div key={idx} className="relative group aspect-square rounded-lg overflow-hidden bg-gray-100">
-                          <img
-                            src={photo.url?.startsWith('http') ? photo.url : `${(import.meta.env.VITE_API_URL || '').replace(/\/api$/, '')}${photo.url}`}
-                            alt={`foto ${idx + 1}`}
-                            className="w-full h-full object-cover" />
-                          {!isClosed && (
-                            <button onClick={() => deletePhoto(id, phase, idx)}
-                              className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded opacity-0 group-hover:opacity-100 transition">
-                              <Trash2 size={10} />
-                            </button>
-                          )}
-                        </div>
-                      ))}
+                      {photos.map((photo, idx) => {
+                        const src = photo.url?.startsWith('http') ? photo.url : `${(import.meta.env.VITE_API_URL || '').replace(/\/api$/, '')}${photo.url}`;
+                        return (
+                          <div key={idx} className="relative group aspect-square rounded-lg overflow-hidden bg-gray-100">
+                            {photo.type === 'video' ? (
+                              <video src={src} className="w-full h-full object-cover" controls muted />
+                            ) : (
+                              <img src={src} alt={`foto ${idx + 1}`} className="w-full h-full object-cover" />
+                            )}
+                            {!isClosed && (
+                              <button onClick={() => deletePhoto(id, phase, idx)}
+                                className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded opacity-0 group-hover:opacity-100 transition">
+                                <Trash2 size={10} />
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   ) : (
                     <p className="text-xs text-gray-400 text-center py-3">Sin fotos</p>
