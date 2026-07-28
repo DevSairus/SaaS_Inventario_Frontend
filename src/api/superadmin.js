@@ -38,8 +38,8 @@ export const superAdminAPI = {
     return response.data;
   },
 
-  deleteTenant: async (id) => {
-    const response = await api.delete(`/superadmin/tenants/${id}`);
+  deleteTenant: async (id, confirm) => {
+    const response = await api.delete(`/superadmin/tenants/${id}`, { data: { confirm } });
     return response.data;
   },
 

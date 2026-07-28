@@ -100,16 +100,16 @@ const useSuperAdminStore = create((set, get) => ({
     }
   },
 
-  deleteTenant: async (id) => {
+  deleteTenant: async (id, confirm) => {
     set({ isSubmitting: true, error: null });
     try {
-      await superAdminAPI.deleteTenant(id);
+      await superAdminAPI.deleteTenant(id, confirm);
       await get().fetchTenants();
       set({ isSubmitting: false });
       return true;
     } catch (error) {
       set({
-        error: error.response?.data?.message || 'Error al eliminar empresa',
+        error: error.response?.data?.error || error.response?.data?.message || 'Error al eliminar empresa',
         isSubmitting: false
       });
       return false;

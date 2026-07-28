@@ -20,6 +20,7 @@ import Badge from '../../components/common/Badge';
 import Pagination from '../../components/common/Pagination';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
 import Dropdown from '../../components/common/Dropdown';
+import DeleteTenantModal from '../../components/superadmin/DeleteTenantModal';
 
 const TenantsList = () => {
   const [page, setPage] = useState(1);
@@ -35,6 +36,7 @@ const TenantsList = () => {
     tenant: null,
     action: null,
   });
+  const [deleteModal, setDeleteModal] = useState({ open: false, tenant: null, error: null });
 
   const { tenants, tenantsPagination, isLoading, isSubmitting, fetchTenants, toggleTenantStatus, deleteTenant } =
     useSuperAdminStore();
@@ -71,25 +73,27 @@ const TenantsList = () => {
   };
 
   const handleDelete = (tenant) => {
-    setConfirmDialog({
-      open: true,
-      tenant,
-      action: 'delete',
-      title: 'Eliminar Empresa',
-      message: `¿Estás seguro de eliminar la empresa "${tenant.company_name}"? Esta acción desactivará la empresa y cancelará su suscripción.`,
-    });
+    setDeleteModal({ open: true, tenant, error: null });
   };
 
   const confirmAction = async () => {
-    let success = false;
-    if (confirmDialog.action === 'toggle') {
-      success = await toggleTenantStatus(confirmDialog.tenant.id);
-    } else if (confirmDialog.action === 'delete') {
-      success = await deleteTenant(confirmDialog.tenant.id);
-    }
+    const success = await toggleTenantStatus(confirmDialog.tenant.id);
     if (success) {
       setConfirmDialog({ open: false, tenant: null, action: null });
       doFetch();
+    }
+  };
+
+  const confirmDeleteTenant = async (confirmText) => {
+    const success = await deleteTenant(deleteModal.tenant.id, confirmText);
+    if (success) {
+      setDeleteModal({ open: false, tenant: null, error: null });
+      doFetch();
+    } else {
+      setDeleteModal((prev) => ({
+        ...prev,
+        error: useSuperAdminStore.getState().error,
+      }));
     }
   };
 
@@ -332,7 +336,7 @@ const TenantsList = () => {
         )}
       </Card>
 
-      {/* Confirm Dialog */}
+      {/* Confirm Dialog (activar/desactivar) */}
       <ConfirmDialog
         open={confirmDialog.open}
         title={confirmDialog.title}
@@ -341,13 +345,19 @@ const TenantsList = () => {
         onCancel={() =>
           setConfirmDialog({ open: false, tenant: null, action: null })
         }
-        confirmText={
-          confirmDialog.action === 'delete' ? 'Eliminar' : 'Confirmar'
-        }
-        confirmVariant={
-          confirmDialog.action === 'delete' ? 'danger' : 'primary'
-        }
+        confirmText="Confirmar"
+        confirmVariant="primary"
         loading={isSubmitting}
+      />
+
+      {/* Delete Tenant Modal (borrado permanente, requiere escribir el nombre) */}
+      <DeleteTenantModal
+        open={deleteModal.open}
+        tenant={deleteModal.tenant}
+        loading={isSubmitting}
+        error={deleteModal.error}
+        onConfirm={confirmDeleteTenant}
+        onCancel={() => setDeleteModal({ open: false, tenant: null, error: null })}
       />
     </div>
   );
