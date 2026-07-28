@@ -740,16 +740,16 @@ function SaleFormPage() {
                   </p>
                 </div>
 
-                {/* Tipo de vehículo — solo para cotizaciones: es lo único que
-                    falta para poder usar el mapa de intervención (mismo
-                    diagrama que ya existe en Órdenes de Trabajo) sobre esta
-                    cotización. No aplica a remisión/factura porque esas no
-                    llevan diagnóstico, solo la venta ya cerrada. */}
-                {formData.document_type === 'cotizacion' && (
+                {/* Tipo de vehículo — mismo gate que la placa. NO se puede
+                    condicionar a document_type==='cotizacion' porque una
+                    venta nueva siempre nace con document_type=null (se
+                    decide hasta "Confirmar"); mostrarlo aquí es gratis si
+                    luego no se usa. */}
+                {vehiclePlateEnabled && (
                   <div className="mt-3">
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Tipo de vehículo
-                      <span className="text-gray-400 text-xs ml-2">(para poder agregar diagrama de intervención)</span>
+                      <span className="text-gray-400 text-xs ml-2">(para poder agregar diagrama de intervención si es cotización)</span>
                     </label>
                     <select
                       name="vehicle_type"

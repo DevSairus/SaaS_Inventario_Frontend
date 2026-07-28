@@ -199,6 +199,13 @@ export default function SaleDetailPage() {
 
   const sale = currentSale;
 
+  // Una venta nace con document_type=null y solo se define al "Confirmar"
+  // (ver ConfirmSaleWithPaymentModal) — por eso el badge de arriba ya trata
+  // null como "Cotización" por defecto. Se reusa el mismo criterio para el
+  // mapa de intervención y la conversión a OT, para que funcionen desde el
+  // borrador y no solo después de confirmar.
+  const isQuote = !sale.document_type || sale.document_type === 'cotizacion';
+
   // ── Devoluciones aprobadas ─────────────────────────────────────────────────
   const approvedReturns = (sale.returns || []).filter(r => r.status === 'approved');
   const hasReturns      = approvedReturns.length > 0;
@@ -333,7 +340,7 @@ export default function SaleDetailPage() {
               )}
 
               {/* Cotización → Orden de Trabajo — solo con módulo Taller activo */}
-              {sale.document_type === 'cotizacion' && sale.status === 'draft' &&
+              {isQuote && sale.status === 'draft' &&
                !sale.converted_to_work_order_id && enabledModules?.includes('workshop') && (
                 <button
                   onClick={() => setShowConvertModal(true)}
@@ -460,7 +467,7 @@ export default function SaleDetailPage() {
 
               {/* Mapa de intervención — mismo componente que en OT, solo para
                   cotizaciones con tipo de vehículo definido y módulo Taller activo */}
-              {sale.document_type === 'cotizacion' && sale.vehicle_type && enabledModules?.includes('workshop') && (
+              {isQuote && sale.vehicle_type && enabledModules?.includes('workshop') && (
                 <DiagramMapEditor
                   entityType="sale"
                   entityId={sale.id}
