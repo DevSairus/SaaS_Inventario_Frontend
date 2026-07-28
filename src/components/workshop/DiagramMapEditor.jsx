@@ -8,6 +8,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Layers, Plus, Trash2, Wand2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { diagramTemplatesApi, diagnosisMarksApi } from '../../api/workshop';
+import { saleDiagnosisMarksApi } from '../../api/sales';
 import useProductsStore from '../../store/productsStore';
 
 const SYSTEM_LABELS = {
@@ -42,8 +43,15 @@ function parseViewBoxSize(viewBox) {
 
 const inputCls = 'w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400';
 
-export default function DiagramMapEditor({ workOrderId, vehicleType, disabled = false }) {
+export default function DiagramMapEditor({ entityType = 'work_order', entityId, workOrderId, vehicleType, disabled = false }) {
   const { searchProducts } = useProductsStore();
+
+  // Compatibilidad hacia atrás: el prop original se llamaba `workOrderId`
+  // porque el editor solo servía para OT. Ahora también sirve para
+  // cotizaciones (`entityType="sale"`) — se resuelve a un solo id interno
+  // y se elige el módulo de API correspondiente.
+  const resolvedEntityId = entityId || workOrderId;
+  const marksApi = entityType === 'sale' ? saleDiagnosisMarksApi : diagnosisMarksApi;
 
   const [systems, setSystems] = useState([]);       // catálogo crudo filtrado por vehicle_type
   const [system, setSystem] = useState('');
@@ -67,13 +75,13 @@ export default function DiagramMapEditor({ workOrderId, vehicleType, disabled = 
       .catch(() => toast.error('No se pudo cargar el catálogo de diagramas'));
   }, [vehicleType]);
 
-  // 2. Cargar las marcas ya guardadas de esta OT (sin importar el diagrama activo)
+  // 2. Cargar las marcas ya guardadas de esta OT/cotización (sin importar el diagrama activo)
   useEffect(() => {
-    if (!workOrderId) return;
-    diagnosisMarksApi.list(workOrderId)
+    if (!resolvedEntityId) return;
+    marksApi.list(resolvedEntityId)
       .then(res => setMarks(res.data.data || []))
       .catch(() => toast.error('No se pudieron cargar las marcas del diagnóstico'));
-  }, [workOrderId]);
+  }, [resolvedEntityId, marksApi]);
 
   const availableSystems = useMemo(() => [...new Set(systems.map(s => s.system))], [systems]);
   const availableConfigs = useMemo(
@@ -152,11 +160,11 @@ export default function DiagramMapEditor({ workOrderId, vehicleType, disabled = 
       };
       let res;
       if (existing) {
-        res = await diagnosisMarksApi.update(workOrderId, existing.id, payload);
+        res = await marksApi.update(resolvedEntityId, existing.id, payload);
         setMarks(prev => prev.map(m => m.id === existing.id ? res.data.data : m));
         toast.success('Marca actualizada');
       } else {
-        res = await diagnosisMarksApi.create(workOrderId, payload);
+        res = await marksApi.create(resolvedEntityId, payload);
         setMarks(prev => [...prev, res.data.data]);
         toast.success('Punto marcado');
       }
@@ -174,7 +182,7 @@ export default function DiagramMapEditor({ workOrderId, vehicleType, disabled = 
       return;
     }
     try {
-      await diagnosisMarksApi.remove(workOrderId, mark.id);
+      await marksApi.remove(resolvedEntityId, mark.id);
       setMarks(prev => prev.filter(m => m.id !== mark.id));
       toast.success('Marca eliminada');
       if (activePoint?.point_number === mark.point_number) setActivePoint(null);
@@ -191,9 +199,9 @@ export default function DiagramMapEditor({ workOrderId, vehicleType, disabled = 
     }
     setGenerating(true);
     try {
-      const res = await diagnosisMarksApi.generateItems(workOrderId, pending.map(m => m.id));
+      const res = await marksApi.generateItems(resolvedEntityId, pending.map(m => m.id));
       toast.success(res.data.message || 'Ítems generados');
-      const refreshed = await diagnosisMarksApi.list(workOrderId);
+      const refreshed = await marksApi.list(resolvedEntityId);
       setMarks(refreshed.data.data || []);
     } catch (e) {
       toast.error(e?.response?.data?.message || 'No se pudieron generar los ítems');

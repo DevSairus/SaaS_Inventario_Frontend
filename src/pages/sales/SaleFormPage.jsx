@@ -94,6 +94,7 @@ function SaleFormPage() {
     sale_date: toLocalDateString(new Date()),
     notes: '',
     vehicle_plate: '',
+    vehicle_type: '',
     vehicle_brand: '',
     vehicle_model: '',
     vehicle_year: '',
@@ -274,6 +275,7 @@ function SaleFormPage() {
           : toLocalDateString(new Date()),
         notes: currentSale.notes || '',
         vehicle_plate: currentSale.vehicle_plate || '',
+        vehicle_type: currentSale.vehicle_type || '',
         mileage: currentSale.mileage || '',
         technician_id: currentSale.technician_id || '',
       });
@@ -737,6 +739,33 @@ function SaleFormPage() {
                     Ingrese la placa del vehículo si aplica
                   </p>
                 </div>
+
+                {/* Tipo de vehículo — solo para cotizaciones: es lo único que
+                    falta para poder usar el mapa de intervención (mismo
+                    diagrama que ya existe en Órdenes de Trabajo) sobre esta
+                    cotización. No aplica a remisión/factura porque esas no
+                    llevan diagnóstico, solo la venta ya cerrada. */}
+                {formData.document_type === 'cotizacion' && (
+                  <div className="mt-3">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Tipo de vehículo
+                      <span className="text-gray-400 text-xs ml-2">(para poder agregar diagrama de intervención)</span>
+                    </label>
+                    <select
+                      name="vehicle_type"
+                      value={formData.vehicle_type}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                    >
+                      <option value="">Sin especificar</option>
+                      <option value="automovil">Automóvil</option>
+                      <option value="camioneta">Camioneta</option>
+                      <option value="motocicleta">Motocicleta</option>
+                      <option value="camion">Camión</option>
+                      <option value="otro">Otro</option>
+                    </select>
+                  </div>
+                )}
 
                 {/* Marca / Línea / Año del vehículo */}
                 <div className="grid grid-cols-3 gap-3 mt-3">

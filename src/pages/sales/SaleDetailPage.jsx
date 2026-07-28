@@ -11,7 +11,7 @@ import {
   PencilIcon,
   ClockIcon,
 } from '@heroicons/react/24/outline';
-import { RotateCcw, AlertTriangle, FileText } from 'lucide-react';
+import { RotateCcw, AlertTriangle, FileText, Wrench } from 'lucide-react';
 import Button from '../../components/common/Button';
 import Badge from '../../components/common/Badge';
 import Loading from '../../components/common/Loading';
@@ -25,6 +25,8 @@ import VoidSaleModal from '../../components/sales/VoidSaleModal';
 import CreditDebitNoteModal from '../../components/sales/CreditDebitNoteModal';
 import useTenantStore from '../../store/tenantStore';
 import toast from 'react-hot-toast';
+import DiagramMapEditor from '../../components/workshop/DiagramMapEditor';
+import ConvertQuoteToWorkOrderModal from '../../components/sales/ConvertQuoteToWorkOrderModal';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -32,7 +34,7 @@ export default function SaleDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { currentSale, loading, fetchSaleById, confirmSale, cancelSale } = useSalesStore();
-  const { features, fetchFeatures } = useTenantStore();
+  const { features, enabledModules, fetchFeatures } = useTenantStore();
   const hideRemisionTax = features?.hide_remision_tax === true;
   const [confirmDialog, setConfirmDialog] = useState({ show: false, action: null });
   const [sendingWA, setSendingWA] = useState(false);
@@ -42,6 +44,7 @@ export default function SaleDetailPage() {
   const [lastPaymentIndex, setLastPaymentIndex] = useState(null);
   const [showVoidModal, setShowVoidModal] = useState(false);
   const [showNoteModal, setShowNoteModal] = useState(null); // null | 'credit' | 'debit'
+  const [showConvertModal, setShowConvertModal] = useState(false);
   const [stockErrors, setStockErrors] = useState([]);
 
   const openPaymentReceipt = async (paymentIndex) => {
@@ -329,6 +332,27 @@ export default function SaleDetailPage() {
                 </>
               )}
 
+              {/* Cotización → Orden de Trabajo — solo con módulo Taller activo */}
+              {sale.document_type === 'cotizacion' && sale.status === 'draft' &&
+               !sale.converted_to_work_order_id && enabledModules?.includes('workshop') && (
+                <button
+                  onClick={() => setShowConvertModal(true)}
+                  className="inline-flex items-center gap-2 px-3 py-2 bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 text-sm font-semibold rounded-lg transition-colors"
+                >
+                  <Wrench className="w-4 h-4" />
+                  Convertir a Orden de Trabajo
+                </button>
+              )}
+              {sale.converted_to_work_order_id && (
+                <Link
+                  to={`/workshop/work-orders/${sale.converted_to_work_order_id}`}
+                  className="inline-flex items-center gap-2 px-3 py-2 bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 text-sm font-semibold rounded-lg transition-colors"
+                >
+                  <Wrench className="w-4 h-4" />
+                  Ver Orden de Trabajo
+                </Link>
+              )}
+
               <Button variant="secondary" icon={PrinterIcon} onClick={handlePrint}>Imprimir</Button>
               <Button variant="secondary" icon={DocumentArrowDownIcon} onClick={handleDownloadPDF}>PDF</Button>
 
@@ -433,6 +457,17 @@ export default function SaleDetailPage() {
                   </div>
                 )}
               </div>
+
+              {/* Mapa de intervención — mismo componente que en OT, solo para
+                  cotizaciones con tipo de vehículo definido y módulo Taller activo */}
+              {sale.document_type === 'cotizacion' && sale.vehicle_type && enabledModules?.includes('workshop') && (
+                <DiagramMapEditor
+                  entityType="sale"
+                  entityId={sale.id}
+                  vehicleType={sale.vehicle_type}
+                  disabled={sale.status !== 'draft'}
+                />
+              )}
 
               {/* Productos */}
               <div className="bg-white rounded-lg shadow p-6">
@@ -845,6 +880,16 @@ export default function SaleDetailPage() {
             onSuccess={() => {
               setShowNoteModal(null);
               fetchSaleById(id);
+            }}
+          />
+
+          <ConvertQuoteToWorkOrderModal
+            isOpen={showConvertModal}
+            onClose={() => setShowConvertModal(false)}
+            sale={sale}
+            onSuccess={(workOrder) => {
+              setShowConvertModal(false);
+              navigate(`/workshop/work-orders/${workOrder.id}`);
             }}
           />
         </div>

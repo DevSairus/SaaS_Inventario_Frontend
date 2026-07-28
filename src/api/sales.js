@@ -59,6 +59,19 @@ const salesApi = {
     
     return api.get(`/sales/stats?${params.toString()}`);
   },
+
+  // Convertir cotización en Orden de Trabajo (solo tenants con módulo Taller)
+  convertToWorkOrder: (id, data) => api.post(`/sales/${id}/convert-to-work-order`, data),
+};
+
+// Mapa de intervención sobre una cotización — mismo patrón que
+// diagnosisMarksApi en api/workshop.js, pero apuntando a /sales/:id/...
+export const saleDiagnosisMarksApi = {
+  list: (saleId) => api.get(`/sales/${saleId}/diagnosis-marks`),
+  create: (saleId, data) => api.post(`/sales/${saleId}/diagnosis-marks`, data),
+  update: (saleId, markId, data) => api.put(`/sales/${saleId}/diagnosis-marks/${markId}`, data),
+  remove: (saleId, markId) => api.delete(`/sales/${saleId}/diagnosis-marks/${markId}`),
+  generateItems: (saleId, markIds) => api.post(`/sales/${saleId}/diagnosis-marks/generate-items`, { mark_ids: markIds }),
 };
 
 export default salesApi;
