@@ -4,6 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import useSalesStore from '../../store/salesStore';
 import useBranchStore from '../../store/branchStore';
 import useTenantStore from '../../store/tenantStore';
+import DiagramMapEditor from '../../components/workshop/DiagramMapEditor';
 import useCustomersStore from '../../store/customersStore';
 import useProductsStore from '../../store/productsStore';
 import { warehousesService } from '../../api/warehouses';
@@ -52,7 +53,7 @@ function SaleFormPage() {
   const navigate = useNavigate();
   const { id } = useParams();
   const { createSale, updateSale, fetchSaleById, currentSale, loading } = useSalesStore();
-  const { features, fetchFeatures } = useTenantStore();
+  const { features, enabledModules, fetchFeatures } = useTenantStore();
   // true = ocultar IVA en remisiones (el store aplica este default si no está configurado)
   const hideRemisionTax = features?.hide_remision_tax === true;
   const vehiclePlateEnabled = features?.vehicle_field_enabled !== false; // default true
@@ -764,6 +765,28 @@ function SaleFormPage() {
                       <option value="camion">Camión</option>
                       <option value="otro">Otro</option>
                     </select>
+
+                    {/* El diagrama solo puede vivir en una cotización que YA
+                        existe (las marcas se guardan contra /sales/:id/...),
+                        así que en "Nueva Venta" solo se puede avisar; en
+                        "Editar Venta" (currentSale.id ya existe) se embebe
+                        directo aquí, igual que pidió el usuario. */}
+                    {formData.vehicle_type && enabledModules?.includes('workshop') && (
+                      isEditMode && currentSale ? (
+                        <div className="mt-3">
+                          <DiagramMapEditor
+                            entityType="sale"
+                            entityId={currentSale.id}
+                            vehicleType={formData.vehicle_type}
+                            disabled={currentSale.status !== 'draft'}
+                          />
+                        </div>
+                      ) : (
+                        <p className="text-xs text-amber-600 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2 mt-2">
+                          Guarda la cotización primero — el diagrama de intervención aparecerá en la página de la cotización justo después de guardarla.
+                        </p>
+                      )
+                    )}
                   </div>
                 )}
 
