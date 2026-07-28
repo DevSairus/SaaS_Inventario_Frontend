@@ -231,7 +231,17 @@ export default function SalesPage() {
                           <p className="text-sm font-medium text-gray-900">{sale.customer_name}</p>
                           {sale.vehicle_plate && <p className="text-xs text-gray-500">{sale.vehicle_plate}</p>}
                         </td>
-                        <td className="px-4 py-3 text-sm text-gray-600">{DOC_LABELS[sale.document_type] || '—'}</td>
+                        <td className="px-4 py-3 text-sm text-gray-600">
+                          {DOC_LABELS[sale.document_type] || '—'}
+                          {sale.converted_to_work_order_id && (
+                            <span
+                              className="ml-1.5 inline-flex text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-600"
+                              title="Esta cotización ya fue convertida en una Orden de Trabajo"
+                            >
+                              → OT
+                            </span>
+                          )}
+                        </td>
                         {branches.length > 1 && (
                           <td className="px-4 py-3 text-sm text-gray-600">{sale.branch?.name || '—'}</td>
                         )}
@@ -270,6 +280,9 @@ export default function SalesPage() {
                       <div className="flex items-center gap-2 mt-2">
                         <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${st.cls}`}>{st.label}</span>
                         <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${pt.cls}`}>{pt.label}</span>
+                        {sale.converted_to_work_order_id && (
+                          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-600">→ OT</span>
+                        )}
                         {branches.length > 1 && sale.branch?.name && (
                           <span className="text-xs text-gray-500">{sale.branch.name}</span>
                         )}
