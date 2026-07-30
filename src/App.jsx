@@ -92,6 +92,7 @@ import SubscriptionInvoicesManagement from './pages/superadmin/SubscriptionInvoi
 import SubscriptionManagement from './pages/superadmin/SubscriptionManagement';
 import SuperAdminMercadoPagoConfig from './pages/superadmin/SuperAdminMercadoPagoConfig';
 import SuperAdminNcfConfig from './pages/superadmin/SuperAdminNcfConfig';
+import TenantMigrationStatus from './pages/superadmin/TenantMigrationStatus';
 import AnnouncementsManagement from './pages/superadmin/AnnouncementsManagement';
 import AnnouncementsModal from './components/common/AnnouncementsModal';
 
@@ -225,6 +226,7 @@ function App() {
           <Route path="subscription-invoices" element={<SubscriptionInvoicesManagement />} />
           <Route path="mercadopago-config"  element={<SuperAdminMercadoPagoConfig />} />
           <Route path="ncf-config"          element={<SuperAdminNcfConfig />} />
+          <Route path="tenant-migration"    element={<TenantMigrationStatus />} />
           <Route path="announcements"       element={<AnnouncementsManagement />} />
           <Route path="analytics"           element={<Analytics />} />
           <Route path="permissions"         element={<RolePermissionsPage />} />

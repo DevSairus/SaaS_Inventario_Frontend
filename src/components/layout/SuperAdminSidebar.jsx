@@ -20,6 +20,7 @@ import {
   Inbox,
   HelpCircle,
   Monitor,
+  Database,
 } from 'lucide-react';
 import useAuthStore from '@store/authStore';
 
@@ -116,6 +117,12 @@ const SuperAdminSidebar = ({ isOpen, toggleSidebar }) => {
       name: 'Anuncios',
       href: '/superadmin/announcements',
       icon: Megaphone,
+    },
+
+    {
+      name: 'Migración de Tenants',
+      href: '/superadmin/tenant-migration',
+      icon: Database,
     },
 
     {
