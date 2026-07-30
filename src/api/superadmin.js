@@ -61,6 +61,11 @@ export const superAdminAPI = {
     return response.data;
   },
 
+  toggleTenantUserStatus: async (tenantId, userId) => {
+    const response = await api.patch(`/superadmin/tenants/${tenantId}/users/${userId}/toggle-status`);
+    return response.data;
+  },
+
   changeTenantUserRole: async (tenantId, userId, role) => {
     const response = await api.put(`/superadmin/tenants/${tenantId}/users/${userId}/role`, { role });
     return response.data;

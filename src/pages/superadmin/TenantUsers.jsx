@@ -6,6 +6,7 @@ import {
   Search,
   Filter,
   Trash2,
+  RotateCcw,
   Key,
   UserCog,
   UserPlus,
@@ -54,6 +55,7 @@ const TenantUsers = () => {
     error,
     fetchTenantUsers,
     deleteTenantUser,
+    toggleTenantUserStatus,
     changeTenantUserRole,
     resetTenantUserPassword,
     createTenantUser,
@@ -87,11 +89,30 @@ const TenantUsers = () => {
       title: 'Eliminar Usuario',
       message: `¿Estás seguro de eliminar a ${user.first_name} ${user.last_name}?`,
       user,
+      action: 'delete',
     });
   };
 
   const confirmDelete = async () => {
     const success = await deleteTenantUser(id, confirmDialog.user.id);
+    if (success) {
+      setConfirmDialog({ open: false });
+      doFetch();
+    }
+  };
+
+  const handleReactivateClick = (user) => {
+    setConfirmDialog({
+      open: true,
+      title: 'Reactivar Usuario',
+      message: `¿Reactivar a ${user.first_name} ${user.last_name}?`,
+      user,
+      action: 'reactivate',
+    });
+  };
+
+  const confirmReactivate = async () => {
+    const success = await toggleTenantUserStatus(id, confirmDialog.user.id);
     if (success) {
       setConfirmDialog({ open: false });
       doFetch();
@@ -374,13 +395,23 @@ const TenantUsers = () => {
                           >
                             <Key className="w-5 h-5" />
                           </button>
-                          <button
-                            onClick={() => handleDeleteClick(user)}
-                            className="text-red-600 hover:text-red-900"
-                            title="Eliminar"
-                          >
-                            <Trash2 className="w-5 h-5" />
-                          </button>
+                          {user.is_active ? (
+                            <button
+                              onClick={() => handleDeleteClick(user)}
+                              className="text-red-600 hover:text-red-900"
+                              title="Eliminar"
+                            >
+                              <Trash2 className="w-5 h-5" />
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => handleReactivateClick(user)}
+                              className="text-green-600 hover:text-green-900"
+                              title="Reactivar"
+                            >
+                              <RotateCcw className="w-5 h-5" />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -400,12 +431,12 @@ const TenantUsers = () => {
         )}
       </Card>
 
-      {/* Confirm Delete Dialog */}
+      {/* Confirm Delete/Reactivate Dialog */}
       <ConfirmDialog
         open={confirmDialog.open}
         title={confirmDialog.title}
         message={confirmDialog.message}
-        onConfirm={confirmDelete}
+        onConfirm={confirmDialog.action === 'reactivate' ? confirmReactivate : confirmDelete}
         onCancel={() => setConfirmDialog({ open: false })}
         loading={isSubmitting}
       />

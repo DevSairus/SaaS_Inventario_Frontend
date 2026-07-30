@@ -154,6 +154,21 @@ const useSuperAdminStore = create((set, get) => ({
     }
   },
 
+  toggleTenantUserStatus: async (tenantId, userId) => {
+    set({ isSubmitting: true, error: null });
+    try {
+      await superAdminAPI.toggleTenantUserStatus(tenantId, userId);
+      set({ isSubmitting: false });
+      return true;
+    } catch (error) {
+      set({
+        error: error.response?.data?.message || 'Error al cambiar estado del usuario',
+        isSubmitting: false
+      });
+      return false;
+    }
+  },
+
   changeTenantUserRole: async (tenantId, userId, role) => {
     set({ isSubmitting: true, error: null });
     try {
