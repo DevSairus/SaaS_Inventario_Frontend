@@ -26,6 +26,8 @@ const AdjustmentDetailPage = () => {
       const success = await confirmAdjustment(id);
       if (success) {
         toast.success('Ajuste confirmado exitosamente');
+      } else {
+        toast.error(useAdjustmentsStore.getState().error || 'Error al confirmar el ajuste');
       }
     }
   };
@@ -35,6 +37,8 @@ const AdjustmentDetailPage = () => {
       const success = await cancelAdjustment(id);
       if (success) {
         toast.success('Ajuste cancelado exitosamente');
+      } else {
+        toast.error(useAdjustmentsStore.getState().error || 'Error al cancelar el ajuste');
       }
     }
   };
