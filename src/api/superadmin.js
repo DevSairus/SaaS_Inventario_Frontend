@@ -39,14 +39,7 @@ export const superAdminAPI = {
   },
 
   deleteTenant: async (id, confirm) => {
-    // Ruta bajo /support porque ahí vive el DELETE que usa tenantPurgeService.js
-    // (borra los datos del schema dedicado del tenant + filas huérfanas en
-    // public en el orden correcto). El endpoint viejo en /superadmin/tenants/:id
-    // asumía que todo tenía ON DELETE CASCADE, lo cual es falso para varias
-    // tablas (work_orders, vehicles, inventory_movements, etc. son NO ACTION),
-    // así que reventaba con "tiene datos relacionados" en cualquier tenant con
-    // datos reales.
-    const response = await api.delete(`/superadmin/support/tenants/${id}`, { data: { confirm } });
+    const response = await api.delete(`/superadmin/tenants/${id}`, { data: { confirm } });
     return response.data;
   },
 
