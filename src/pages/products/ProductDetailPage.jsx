@@ -7,6 +7,7 @@ import useCategoriesStore from '../../store/categoriesStore';
 import ProductFormModal from '../../components/products/ProductFormModal';
 import EquivalencesSection from '../../components/products/EquivalencesSection';
 import VehicleApplicationsSection from '../../components/products/VehicleApplicationsSection';
+import MovementsSection from '../../components/products/MovementsSection';
 import { ArrowLeft, Package, Users, Truck, Car, Activity, Edit3 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -205,13 +206,7 @@ export default function ProductDetailPage() {
         )}
 
         {activeTab === 'movimientos' && (
-          <div className="bg-white rounded-xl border border-gray-200 p-6">
-            <div className="text-center py-8">
-              <Activity className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-              <p className="text-gray-500 font-medium">Movimientos de Stock</p>
-              <p className="text-sm text-gray-400 mt-1">Historial de entradas, salidas y ajustes</p>
-            </div>
-          </div>
+          <MovementsSection productId={id} />
         )}
       </div>
 
