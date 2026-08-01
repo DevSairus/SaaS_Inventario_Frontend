@@ -2,6 +2,7 @@ import { useState } from 'react';
 import Sidebar from './Sidebar';
 import WorkshopBottomNav from './WorkshopBottomNav';
 import StockAlerts from '../common/StockAlerts';
+import CrmNotifications from '../common/CrmNotifications';
 import BranchSelector from './BranchSelector';
 import NexaChatWidget from '../common/NexaChatWidget';
 import { useTicketNotifications } from '../../hooks/useTicketNotifications';
@@ -73,6 +74,7 @@ function Layout({ children }) {
 
           <div className="flex items-center gap-2">
             <BranchSelector />
+            <CrmNotifications />
             <StockAlerts />
           </div>
         </header>
@@ -80,6 +82,7 @@ function Layout({ children }) {
         {/* Barra desktop con alertas */}
         <div className="hidden lg:flex sticky top-0 z-30 items-center justify-end gap-3 bg-gray-50 px-6 pt-4 pb-1 flex-shrink-0">
           <BranchSelector />
+          <CrmNotifications />
           <StockAlerts />
         </div>
 

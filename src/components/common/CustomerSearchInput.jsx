@@ -36,7 +36,7 @@ const CustomerSearchInput = ({
   }, []);
 
   // Obtener cliente seleccionado
-  const selectedCustomer = customers.find(c => c.id === parseInt(value));
+  const selectedCustomer = customers.find(c => String(c.id) === String(value));
 
   // Filtrar clientes por búsqueda
   const filteredCustomers = customers.filter(customer => {
@@ -51,7 +51,7 @@ const CustomerSearchInput = ({
   });
 
   const handleSelect = (customer) => {
-    onChange(customer.id.toString());
+    onChange(String(customer.id));
     setSearchTerm('');
     setIsOpen(false);
     setHighlightedIndex(0);

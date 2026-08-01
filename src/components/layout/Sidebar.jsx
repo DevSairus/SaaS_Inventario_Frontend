@@ -23,6 +23,7 @@ const I = {
   book:      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="w-[17px] h-[17px] shrink-0"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>,
   headset:   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="w-[17px] h-[17px] shrink-0"><path d="M3 18v-6a9 9 0 0118 0v6"/><path d="M21 19a2 2 0 01-2 2h-1a2 2 0 01-2-2v-3a2 2 0 012-2h3zM3 19a2 2 0 002 2h1a2 2 0 002-2v-3a2 2 0 00-2-2H3z"/></svg>,
   nexa:      <NexaIcon size={17} className="rounded-[4px] shrink-0" />,
+  target:    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="w-[17px] h-[17px] shrink-0"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.3" fill="currentColor" stroke="none"/></svg>,
 };
 
 const NAV = [
@@ -54,6 +55,15 @@ const NAV = [
       { label: "Nueva Venta",      path: "/sales/new" },
       { label: "Historial Ventas", path: "/sales" },
       { label: "Clientes",         path: "/customers" },
+    ],
+  },
+  {
+    id: "crm", label: "CRM", icon: "target", module: "crm",
+    children: [
+      { label: "Pipeline",           path: "/crm/pipeline" },
+      { label: "Seguimientos",       path: "/crm/followups" },
+      { label: "Dashboard CRM",      path: "/crm/dashboard" },
+      { label: "Integración Meta",   path: "/crm/settings/meta", module: "crm_meta_leads" },
     ],
   },
   {
@@ -134,6 +144,14 @@ export default function Sidebar({ isCollapsed, setIsCollapsed, isMobileOpen, set
       (!item.roles || item.roles.includes(user?.role))
   );
 
+  // Un child con `module` propio (ej. "Integración Meta" bajo CRM) se
+  // filtra aparte de su grupo -- el grupo puede estar habilitado (crm)
+  // mientras el sub-módulo específico no lo esté todavía.
+  const visibleChildren = (item) =>
+    (item.children || []).filter(
+      (child) => !child.module || enabledModules === null || enabledModules.includes(child.module)
+    );
+
   const childIsActive = (child) => {
     const base = currentPath === child.path || currentPath.startsWith(child.path + "/");
     if (!base) return false;
@@ -142,14 +160,14 @@ export default function Sidebar({ isCollapsed, setIsCollapsed, isMobileOpen, set
   };
 
   const activeGroupId = visibleNav.find(item =>
-    item.children?.some(c => childIsActive(c))
+    visibleChildren(item).some(c => childIsActive(c))
   )?.id ?? null;
 
   const [openGroup, setOpenGroup] = useState(activeGroupId);
   const expanded = !isCollapsed;
 
   const isActive    = (path) => currentPath === path || currentPath.startsWith(path + "/");
-  const groupActive = (item) => item.path ? isActive(item.path) : item.children?.some(c => childIsActive(c));
+  const groupActive = (item) => item.path ? isActive(item.path) : visibleChildren(item).some(c => childIsActive(c));
 
   const toggleGroup = (id) => {
     if (!expanded) { setIsCollapsed(false); setOpenGroup(id); return; }
@@ -203,8 +221,8 @@ export default function Sidebar({ isCollapsed, setIsCollapsed, isMobileOpen, set
               )}
             </button>
             {(expanded || inMobile) && (
-              <div style={{ maxHeight: isOpen ? `${item.children.length * 28}px` : "0px", overflow: "hidden", transition: "max-height 190ms ease" }}>
-                {item.children.map((child) => {
+              <div style={{ maxHeight: isOpen ? `${visibleChildren(item).length * 28}px` : "0px", overflow: "hidden", transition: "max-height 190ms ease" }}>
+                {visibleChildren(item).map((child) => {
                   const childActive = childIsActive(child);
                   return (
                     <Link

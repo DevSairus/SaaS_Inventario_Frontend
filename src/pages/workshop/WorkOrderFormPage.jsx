@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import Combobox from '../../components/common/Combobox';
 import Layout from '../../components/layout/Layout';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import useWorkshopStore from '../../store/workshopStore';
 import useBranchStore from '../../store/branchStore';
 import { vehiclesApi } from '../../api/workshop';
@@ -26,6 +26,15 @@ function Field({ label, children }) {
 
 export default function WorkOrderFormPage() {
   const navigate        = useNavigate();
+  const [searchParams]  = useSearchParams();
+  // C.3 — "Oportunidad → OT en un clic": si se llega desde el botón del
+  // pipeline (PipelinePage#buildWorkOrderUrl), opportunity_id viaja en la
+  // URL y el backend (workOrders.controller.create) lo usa para vincular
+  // work_order_id y avanzar la etapa. El vehículo sigue siendo obligatorio
+  // — una Opportunity no trae vehículo propio, así que el asesor lo elige
+  // o lo crea acá igual que en cualquier OT nueva.
+  const opportunityId   = searchParams.get('opportunity_id');
+  const prefillCustomerId = searchParams.get('customer_id');
   const { createOrder } = useWorkshopStore();
   const { branches, activeBranchId, fetchBranches } = useBranchStore();
   const [saving,   setSaving]   = useState(false);
@@ -47,10 +56,12 @@ export default function WorkOrderFormPage() {
   const [newCustomer, setNewCustomer] = useState({ first_name: '', last_name: '', phone: '', tax_id: '' });
   const [savingCust,  setSavingCust]  = useState(false);
   const [showScanModal, setShowScanModal] = useState(false);
+  const prefilledRef = useRef(false);
 
   const [form, setForm] = useState({
     vehicle_id: '', customer_id: '', technician_id: '',
-    warehouse_id: '', mileage_in: '', problem_description: '', promised_at: '', notes: ''
+    warehouse_id: '', mileage_in: '', problem_description: '', promised_at: '', notes: '',
+    opportunity_id: opportunityId || null,
   });
 
   useEffect(() => {
@@ -164,6 +175,23 @@ export default function WorkOrderFormPage() {
     setCustAutoFilled(false);
     setForm(f => ({ ...f, customer_id: c.id }));
   }, []);
+
+  // C.3 — prefill del cliente cuando la OT nace de una oportunidad del
+  // pipeline (customer_id llega en la URL). Se hace una sola vez, cuando
+  // la lista de clientes ya está disponible; si no está ahí (recién creado),
+  // se pide directo al API.
+  useEffect(() => {
+    if (!prefillCustomerId || prefilledRef.current || customers.length === 0) return;
+    prefilledRef.current = true;
+    const c = customers.find(x => x.id === prefillCustomerId);
+    if (c) {
+      selectCustomer(c);
+    } else {
+      axios.get(`/customers/${prefillCustomerId}`)
+        .then(r => { if (r.data?.data) selectCustomer(r.data.data); })
+        .catch(() => {});
+    }
+  }, [customers, prefillCustomerId, selectCustomer]);
 
   const clearCustomer = useCallback(() => {
     setSelCustomer(null); setCustDisp('');
@@ -294,7 +322,10 @@ export default function WorkOrderFormPage() {
           </button>
           <div>
             <h1 className="text-xl font-bold text-gray-900">Nueva Orden de Trabajo</h1>
-            <p className="text-sm text-gray-500">Ingreso de vehículo al taller</p>
+            <p className="text-sm text-gray-500">
+              Ingreso de vehículo al taller
+              {opportunityId && <span className="text-accent"> · vinculada a oportunidad del pipeline</span>}
+            </p>
           </div>
         </div>
 

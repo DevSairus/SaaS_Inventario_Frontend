@@ -71,6 +71,13 @@ const StatsCard = ({
       valueText: 'text-indigo-600',
       border: 'border-indigo-100',
       gradient: 'from-indigo-500 to-indigo-600'
+    },
+    accent: {
+      bg: 'bg-accent/10',
+      text: 'text-accent',
+      valueText: 'text-accent',
+      border: 'border-accent/15',
+      gradient: 'from-accent to-accent-soft'
     }
   };
 

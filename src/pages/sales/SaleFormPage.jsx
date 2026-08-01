@@ -1,6 +1,6 @@
 // frontend/src/pages/sales/SaleFormPage.jsx
 import { useState, useEffect, useMemo } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import useSalesStore from '../../store/salesStore';
 import useBranchStore from '../../store/branchStore';
 import useTenantStore from '../../store/tenantStore';
@@ -25,7 +25,8 @@ import {
   ShoppingCart,
   X,
   Save,
-  ArrowLeft
+  ArrowLeft,
+  Target
 } from 'lucide-react';
 import BarcodeScanner from '../../components/common/BarcodeScanner';
 import { productsAPI } from '../../api/products';
@@ -52,6 +53,15 @@ import {
 function SaleFormPage() {
   const navigate = useNavigate();
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
+  // CRM — "Oportunidad → cotización en un clic" (Fase C.2): si llegamos
+  // acá desde el botón "Generar cotización" del Pipeline, traemos el
+  // customer_id y expected_value ya resueltos, y opportunity_id viaja en
+  // el payload de creación para que el backend (sales.controller.create)
+  // vincule quote_sale_id y avance la etapa a 'cotizado' automáticamente.
+  const opportunityId = searchParams.get('opportunity_id');
+  const opportunityCustomerId = searchParams.get('customer_id');
+  const opportunityExpectedValue = searchParams.get('expected_value');
   const { createSale, updateSale, fetchSaleById, currentSale, loading } = useSalesStore();
   const { features, enabledModules, fetchFeatures } = useTenantStore();
   // true = ocultar IVA en remisiones (el store aplica este default si no está configurado)
@@ -201,6 +211,43 @@ function SaleFormPage() {
     fetchCustomers();
     fetchFeatures();
   }, [fetchCustomers, fetchFeatures]);
+
+  // Prefill al llegar desde "Generar cotización" en el Pipeline: cliente ya
+  // resuelto (solo falta el nombre visible, que llega cuando carga el
+  // listado de clientes) y una línea libre de partida con el valor
+  // estimado, para que el asesor solo tenga que reemplazarla por los
+  // productos/servicios reales antes de guardar.
+  useEffect(() => {
+    if (isEditMode || !opportunityId || !opportunityCustomerId) return;
+    setFormData(prev => (prev.customer_id ? prev : { ...prev, customer_id: opportunityCustomerId }));
+  }, [isEditMode, opportunityId, opportunityCustomerId]);
+
+  useEffect(() => {
+    if (isEditMode || !opportunityId || !opportunityCustomerId || customers.length === 0) return;
+    const match = customers.find(c => c.id === opportunityCustomerId);
+    if (match) {
+      setCustomerSearchTerm(match.business_name || `${match.first_name || ''} ${match.last_name || ''}`.trim());
+    }
+  }, [customers, isEditMode, opportunityId, opportunityCustomerId]);
+
+  useEffect(() => {
+    if (isEditMode || !opportunityId || items.length > 0) return;
+    const estimated = toInteger(opportunityExpectedValue, 0);
+    if (estimated <= 0) return;
+    setItems([calculateItemTotals({
+      item_type: 'free_line',
+      product_id: null,
+      product_name: 'Estimado de la oportunidad — reemplaza esta línea por los productos/servicios reales',
+      product_sku: null,
+      quantity: 1,
+      unit_price: estimated,
+      discount_percentage: 0,
+      tax_percentage: 0,
+      price_includes_tax: false,
+      has_tax: false,
+    })]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEditMode, opportunityId, opportunityExpectedValue]);
 
   useEffect(() => {
     const searchProductsDebounced = async () => {
@@ -514,9 +561,19 @@ function SaleFormPage() {
         }))
       };
 
-      // El document_type NO se envía al crear — se elige al confirmar la venta
+      // El document_type NO se envía al crear — se elige al confirmar la
+      // venta. Excepción: si venimos de "Generar cotización" en el Pipeline,
+      // el backend necesita ver document_type='cotizacion' + opportunity_id
+      // en este mismo request para vincular quote_sale_id y mover la etapa a
+      // 'cotizado' (no persiste el tipo en la Sale — eso sigue pasando al
+      // confirmar — es solo la señal que activa el vínculo con el CRM).
       if (!isEditMode) {
-        delete saleData.document_type;
+        if (opportunityId) {
+          saleData.document_type = 'cotizacion';
+          saleData.opportunity_id = opportunityId;
+        } else {
+          delete saleData.document_type;
+        }
       }
 
       if (showQuickCustomer && quickCustomer.full_name) {
@@ -530,8 +587,12 @@ function SaleFormPage() {
         navigate(`/sales/${id}`);
       } else {
         const result = await createSale(saleData);
-        const docLabel = docType === 'factura' ? 'Factura' : docType === 'cotizacion' ? 'Cotización' : 'Remisión';
-        toast.success(`${docLabel} creada exitosamente`);
+        if (opportunityId) {
+          toast.success('Cotización creada y vinculada a la oportunidad');
+        } else {
+          const docLabel = docType === 'factura' ? 'Factura' : docType === 'cotizacion' ? 'Cotización' : 'Remisión';
+          toast.success(`${docLabel} creada exitosamente`);
+        }
         navigate(`/sales/${result.id}`);
       }
     } catch (error) {
@@ -555,10 +616,14 @@ function SaleFormPage() {
             </button>
             <div className="min-w-0">
               <h1 className="text-xl sm:text-2xl font-bold text-gray-900 truncate">
-                {isEditMode ? 'Editar Venta' : 'Nueva Venta'}
+                {isEditMode ? 'Editar Venta' : opportunityId ? 'Cotización desde el Pipeline' : 'Nueva Venta'}
               </h1>
               <p className="text-xs sm:text-sm text-gray-500 mt-0.5">
-                {isEditMode ? 'Modifica los datos de la venta' : 'Crea una nueva venta, factura o cotización'}
+                {isEditMode
+                  ? 'Modifica los datos de la venta'
+                  : opportunityId
+                    ? 'Se vinculará automáticamente a la oportunidad al guardar'
+                    : 'Crea una nueva venta, factura o cotización'}
               </p>
             </div>
           </div>
@@ -576,6 +641,17 @@ function SaleFormPage() {
             </Button>
           </div>
         </div>
+
+        {!isEditMode && opportunityId && (
+          <div className="flex items-start gap-2.5 px-4 py-3 bg-accent/[0.05] border border-accent/15 rounded-xl text-sm text-gray-700">
+            <Target className="w-4 h-4 text-accent flex-shrink-0 mt-0.5" />
+            <p>
+              Estás generando la cotización de una oportunidad del <strong>Pipeline</strong>. Cliente y valor estimado
+              ya quedaron precargados — reemplaza la línea de estimado por los productos o servicios reales antes de
+              guardar. Al guardar, la oportunidad pasará a la etapa <strong>Cotizado</strong> automáticamente.
+            </p>
+          </div>
+        )}
 
         {/* Content */}
         <div>

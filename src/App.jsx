@@ -52,7 +52,12 @@ import CommissionProductsReportPage from './pages/workshop/commissions/Commissio
 import DiagramPointsEditorPage from './pages/workshop/DiagramPointsEditorPage';
 import WorkshopReportPage from './pages/workshop/WorkshopReportPage';
 import CustomersPage from './pages/customers/CustomersPage';
-import CustomerDetailPage from './pages/customers/CustomerDetailPage';
+import CustomerDetailPage from './pages/crm/CustomerDetailPage';
+import PipelinePage from './pages/crm/PipelinePage';
+import FollowUpsPage from './pages/crm/FollowUpsPage';
+import CrmDashboardPage from './pages/crm/CrmDashboardPage';
+import MetaIntegrationSettingsPage from './pages/crm/MetaIntegrationSettingsPage';
+import CrmSettingsPage from './pages/crm/CrmSettingsPage';
 import WarehousesPage from './pages/warehouses/WarehousesPage';
 import BranchesPage from './pages/branches/BranchesPage';
 import NoBranchAssignedPage from './pages/branches/NoBranchAssignedPage';
@@ -92,6 +97,7 @@ import SubscriptionInvoicesManagement from './pages/superadmin/SubscriptionInvoi
 import SubscriptionManagement from './pages/superadmin/SubscriptionManagement';
 import SuperAdminMercadoPagoConfig from './pages/superadmin/SuperAdminMercadoPagoConfig';
 import SuperAdminNcfConfig from './pages/superadmin/SuperAdminNcfConfig';
+import SuperAdminMetaConfig from './pages/superadmin/SuperAdminMetaConfig';
 import TenantMigrationStatus from './pages/superadmin/TenantMigrationStatus';
 import AnnouncementsManagement from './pages/superadmin/AnnouncementsManagement';
 import AnnouncementsModal from './components/common/AnnouncementsModal';
@@ -226,6 +232,7 @@ function App() {
           <Route path="subscription-invoices" element={<SubscriptionInvoicesManagement />} />
           <Route path="mercadopago-config"  element={<SuperAdminMercadoPagoConfig />} />
           <Route path="ncf-config"          element={<SuperAdminNcfConfig />} />
+          <Route path="meta-config"         element={<SuperAdminMetaConfig />} />
           <Route path="tenant-migration"    element={<TenantMigrationStatus />} />
           <Route path="announcements"       element={<AnnouncementsManagement />} />
           <Route path="analytics"           element={<Analytics />} />
@@ -313,6 +320,13 @@ function App() {
         {/* Clientes */}
         <Route path="customers"     element={<TenantRoute module="sales"><CustomersPage /></TenantRoute>} />
         <Route path="customers/:id" element={<TenantRoute module="sales"><CustomerDetailPage /></TenantRoute>} />
+
+        {/* CRM — pipeline, seguimiento y dashboard */}
+        <Route path="crm/pipeline"  element={<TenantRoute module="crm"><PipelinePage /></TenantRoute>} />
+        <Route path="crm/followups" element={<TenantRoute module="crm"><FollowUpsPage /></TenantRoute>} />
+        <Route path="crm/dashboard" element={<TenantRoute module="crm"><CrmDashboardPage /></TenantRoute>} />
+        <Route path="crm/settings/meta" element={<TenantRoute module="crm_meta_leads"><MetaIntegrationSettingsPage /></TenantRoute>} />
+        <Route path="crm/settings" element={<TenantRoute module="crm"><CrmSettingsPage /></TenantRoute>} />
 
         {/* ── Inventario – Movimientos Avanzados ────── */}
         <Route path="inventory/supplier-returns"        element={<TenantRoute module="receivables"><SupplierReturnsPage /></TenantRoute>} />

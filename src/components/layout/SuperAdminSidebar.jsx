@@ -21,6 +21,7 @@ import {
   HelpCircle,
   Monitor,
   Database,
+  Facebook,
 } from 'lucide-react';
 import useAuthStore from '@store/authStore';
 
@@ -110,6 +111,21 @@ const SuperAdminSidebar = ({ isOpen, toggleSidebar }) => {
           description: 'Conexión con ESC DataCore',
         },
       ],
+    },
+
+    // Antes vivía como hijo de "Suscripciones" — se saca a nivel raíz por dos
+    // motivos: (1) no es realmente un tema de suscripciones/cobros, y (2) el
+    // acordeón de "Suscripciones" calculaba su alto máximo con una fórmula
+    // fija (children.length * 56px) pensada para 6 ítems; al agregar este
+    // como 7º hijo, el contenido real (nombre + descripción en dos líneas)
+    // superaba ese alto y quedaba recortado por el overflow-hidden del
+    // acordeón — invisible aunque el código estuviera bien. Como ítem de
+    // primer nivel, sin acordeón de por medio, ese problema desaparece del
+    // todo.
+    {
+      name: 'Integración con Meta',
+      href: '/superadmin/meta-config',
+      icon: Facebook,
     },
 
     // ✅ NUEVO: Anuncios
@@ -252,9 +268,14 @@ const SuperAdminSidebar = ({ isOpen, toggleSidebar }) => {
                   </button>
 
                   <div
-                    className={`ml-6 overflow-hidden transition-all duration-300 ${
-                      isOpenMenu ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
-                    }`}
+                    className={`ml-6 overflow-hidden transition-all duration-300 ${isOpenMenu ? 'opacity-100' : 'opacity-0'}`}
+                    // Antes: `${item.children.length * 56}px` — una fórmula ajustada
+                    // al pixel que recortaba silenciosamente el último ítem apenas el
+                    // contenido real (nombre + descripción en dos líneas) superaba la
+                    // estimación de 56px por fila. Con un valor fijo generoso alcanza
+                    // sobra para cualquier cantidad razonable de ítems (hasta ~15) sin
+                    // volver a depender de que el pixel-per-item calce exacto.
+                    style={{ maxHeight: isOpenMenu ? '640px' : '0px' }}
                   >
                     {item.children.map((child) => {
                       const ChildIcon = child.icon;
