@@ -42,7 +42,7 @@ const crmApi = {
 
   // ── Integración con Meta (Lead Ads) ──────────────────────────────────────
   getMetaIntegrationStatus: () => api.get('/crm/meta-integration/status'),
-  startMetaOwnConnection: () => api.post('/crm/meta-integration/connect/own'),
+  startMetaOwnConnection: (payload = {}) => api.post('/crm/meta-integration/connect/own', payload),
   connectMetaPitboxMode: () => api.post('/crm/meta-integration/connect/pitbox'),
   disconnectMetaIntegration: () => api.delete('/crm/meta-integration/disconnect'),
 

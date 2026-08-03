@@ -8,12 +8,21 @@ import toast from 'react-hot-toast';
 
 const fmtDateTime = d => d ? new Date(d).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
 
+// El backend arma el redirect URI del OAuth y la URL del webhook a partir de
+// esta misma base -- el tenant tiene que pegar exactamente estas URLs en el
+// dashboard de SU App de Meta (Facebook Login y Webhooks), ver
+// metaIntegration.controller.js (CALLBACK_PATH).
+const BACKEND_ORIGIN = (import.meta.env.VITE_API_URL || '').replace(/\/api\/?$/, '');
+const OAUTH_REDIRECT_URI = `${BACKEND_ORIGIN}/api/webhooks/meta/oauth-callback`;
+const WEBHOOK_URL = `${BACKEND_ORIGIN}/api/webhooks/meta`;
+
 export default function MetaIntegrationSettingsPage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(true);
   const [connecting, setConnecting] = useState(null); // 'own' | 'pitbox' | null
+  const [ownForm, setOwnForm] = useState({ own_app_id: '', own_app_secret: '', own_webhook_verify_token: '' });
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -40,9 +49,17 @@ export default function MetaIntegrationSettingsPage() {
   }, [searchParams, setSearchParams, load]);
 
   const handleConnectOwn = async () => {
+    if (!ownForm.own_app_id.trim() || !ownForm.own_app_secret.trim()) {
+      toast.error('Completá el App ID y el App Secret de tu App de Meta');
+      return;
+    }
     setConnecting('own');
     try {
-      const res = await crmApi.startMetaOwnConnection();
+      const res = await crmApi.startMetaOwnConnection({
+        own_app_id: ownForm.own_app_id.trim(),
+        own_app_secret: ownForm.own_app_secret.trim(),
+        own_webhook_verify_token: ownForm.own_webhook_verify_token.trim() || undefined,
+      });
       window.location.href = res.data.data.oauth_url;
     } catch (err) {
       toast.error(err.response?.data?.message || 'Error al iniciar la conexión con Meta');
@@ -150,8 +167,43 @@ export default function MetaIntegrationSettingsPage() {
               </div>
               <h2 className="font-semibold text-gray-800">Usar mi propia cuenta de Meta</h2>
               <p className="text-sm text-gray-500">
-                Conectá tu página de Facebook/Instagram Business — tus campañas y anuncios siguen exactamente igual, Pitbox solo lee los leads nuevos.
+                Conectá tu propia App de Meta for Developers — tus campañas y anuncios siguen exactamente igual, Pitbox solo lee los leads nuevos con tus propias credenciales.
               </p>
+
+              <details className="text-xs text-gray-500 bg-gray-50 rounded-lg p-2.5 space-y-1.5">
+                <summary className="cursor-pointer font-medium text-gray-600">¿Dónde consigo esto?</summary>
+                <p>1. Creá una App en <span className="font-mono">developers.facebook.com/apps</span> (tipo "Empresa").</p>
+                <p>2. En Facebook Login, agregá este Redirect URI:</p>
+                <p className="font-mono bg-white border border-gray-200 rounded px-1.5 py-1 break-all select-all">{OAUTH_REDIRECT_URI}</p>
+                <p>3. En Webhooks, suscribí el objeto Page al campo <span className="font-mono">leadgen</span> con esta URL:</p>
+                <p className="font-mono bg-white border border-gray-200 rounded px-1.5 py-1 break-all select-all">{WEBHOOK_URL}</p>
+                <p>4. Elegí ahí un Verify Token (cualquier texto) y repetilo abajo.</p>
+              </details>
+
+              <div className="space-y-2">
+                <input
+                  type="text"
+                  placeholder="App ID"
+                  value={ownForm.own_app_id}
+                  onChange={e => setOwnForm(f => ({ ...f, own_app_id: e.target.value }))}
+                  className="w-full text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30"
+                />
+                <input
+                  type="password"
+                  placeholder="App Secret"
+                  value={ownForm.own_app_secret}
+                  onChange={e => setOwnForm(f => ({ ...f, own_app_secret: e.target.value }))}
+                  className="w-full text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30"
+                />
+                <input
+                  type="text"
+                  placeholder="Webhook Verify Token (opcional)"
+                  value={ownForm.own_webhook_verify_token}
+                  onChange={e => setOwnForm(f => ({ ...f, own_webhook_verify_token: e.target.value }))}
+                  className="w-full text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30"
+                />
+              </div>
+
               <Button variant="primary" onClick={handleConnectOwn} disabled={connecting === 'own'} className="!bg-gradient-to-br !from-accent !to-accent-soft hover:!opacity-90 !shadow-sm !shadow-accent/30">
                 {connecting === 'own' ? 'Redirigiendo...' : 'Conectar con Meta'}
               </Button>
