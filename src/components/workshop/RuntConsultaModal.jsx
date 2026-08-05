@@ -12,7 +12,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { X, RefreshCw, Search, Loader, AlertTriangle, CheckCircle } from 'lucide-react';
 import axios from '../../api/axios';
 
-const inputCls = "w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white";
+const inputCls = "w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100";
 
 export default function RuntConsultaModal({ placa: placaProp = '', onConfirm, onClose }) {
   const [placa,        setPlaca]        = useState(placaProp.toUpperCase());
@@ -79,7 +79,7 @@ export default function RuntConsultaModal({ placa: placaProp = '', onConfirm, on
   /* ── UI ─────────────────────────────────────────────────────── */
   return (
     <div className="fixed inset-0 z-[9999] bg-black/60 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden dark:bg-graphite">
 
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 bg-gray-900 text-white">
@@ -96,13 +96,13 @@ export default function RuntConsultaModal({ placa: placaProp = '', onConfirm, on
         <div className="p-5 space-y-4">
 
           {/* Aviso privacidad */}
-          <div className="bg-blue-50 border border-blue-100 rounded-lg px-3 py-2 text-xs text-blue-700">
+          <div className="bg-blue-50 border border-blue-100 rounded-lg px-3 py-2 text-xs text-blue-700 dark:bg-blue-900/30 dark:border-blue-800/40 dark:text-blue-300">
             🔒 El documento del propietario <strong>no se almacena</strong> — solo se usa para esta consulta.
           </div>
 
           {/* Placa */}
           <div>
-            <label className="text-xs text-gray-500 block mb-1">Placa del vehículo *</label>
+            <label className="text-xs text-gray-500 block mb-1 dark:text-gray-400">Placa del vehículo *</label>
             <input
               type="text"
               value={placa}
@@ -117,7 +117,7 @@ export default function RuntConsultaModal({ placa: placaProp = '', onConfirm, on
           {/* Tipo documento + número */}
           <div className="flex gap-2">
             <div className="w-28">
-              <label className="text-xs text-gray-500 block mb-1">Tipo doc.</label>
+              <label className="text-xs text-gray-500 block mb-1 dark:text-gray-400">Tipo doc.</label>
               <select value={tipoDoc} onChange={e => setTipoDoc(e.target.value)} className={inputCls}>
                 <option value="C">Cédula</option>
                 <option value="E">C. Extranjer.</option>
@@ -126,7 +126,7 @@ export default function RuntConsultaModal({ placa: placaProp = '', onConfirm, on
               </select>
             </div>
             <div className="flex-1">
-              <label className="text-xs text-gray-500 block mb-1">Número de documento *</label>
+              <label className="text-xs text-gray-500 block mb-1 dark:text-gray-400">Número de documento *</label>
               <input
                 type="text"
                 value={documento}
@@ -142,7 +142,7 @@ export default function RuntConsultaModal({ placa: placaProp = '', onConfirm, on
           {/* CAPTCHA */}
           <div>
             <div className="flex items-center justify-between mb-1">
-              <label className="text-xs text-gray-500">CAPTCHA *</label>
+              <label className="text-xs text-gray-500 dark:text-gray-400">CAPTCHA *</label>
               <button
                 type="button"
                 onClick={fetchCaptcha}
@@ -156,9 +156,9 @@ export default function RuntConsultaModal({ placa: placaProp = '', onConfirm, on
 
             {/* Imagen captcha */}
             <div className="flex items-center gap-3">
-              <div className="flex-shrink-0 w-40 h-14 bg-gray-100 rounded-lg border border-gray-200 flex items-center justify-center overflow-hidden">
+              <div className="flex-shrink-0 w-40 h-14 bg-gray-100 rounded-lg border border-gray-200 flex items-center justify-center overflow-hidden dark:bg-white/5 dark:border-white/10">
                 {loadingCap ? (
-                  <Loader size={18} className="text-gray-400 animate-spin" />
+                  <Loader size={18} className="text-gray-400 animate-spin dark:text-gray-500" />
                 ) : captchaImg ? (
                   <img
                     src={captchaImg}
@@ -167,7 +167,7 @@ export default function RuntConsultaModal({ placa: placaProp = '', onConfirm, on
                     draggable={false}
                   />
                 ) : (
-                  <span className="text-xs text-gray-400">Sin imagen</span>
+                  <span className="text-xs text-gray-400 dark:text-gray-500">Sin imagen</span>
                 )}
               </div>
               <input
@@ -180,12 +180,12 @@ export default function RuntConsultaModal({ placa: placaProp = '', onConfirm, on
                 onKeyDown={e => e.key === 'Enter' && handleConsultar()}
               />
             </div>
-            <p className="text-xs text-gray-400 mt-1">Escribe los caracteres que ves en la imagen</p>
+            <p className="text-xs text-gray-400 mt-1 dark:text-gray-500">Escribe los caracteres que ves en la imagen</p>
           </div>
 
           {/* Error */}
           {error && (
-            <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-xs text-red-700">
+            <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-xs text-red-700 dark:bg-red-900/30 dark:border-red-800/40 dark:text-red-300">
               <AlertTriangle size={13} className="flex-shrink-0 mt-0.5" />
               {error}
             </div>
@@ -197,7 +197,7 @@ export default function RuntConsultaModal({ placa: placaProp = '', onConfirm, on
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 border border-gray-200 text-gray-600 text-sm py-2.5 rounded-xl hover:bg-gray-50 transition"
+            className="flex-1 border border-gray-200 text-gray-600 text-sm py-2.5 rounded-xl hover:bg-gray-50 transition dark:border-white/10 dark:text-gray-400 dark:hover:bg-white/5"
           >
             Cancelar
           </button>

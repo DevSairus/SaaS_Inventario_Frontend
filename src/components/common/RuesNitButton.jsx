@@ -49,7 +49,7 @@ export default function RuesNitButton({ nit = '', tipoCliente = 'individual', on
   // Persona natural — indicación de ingreso manual
   if (!esEmpresa) {
     return (
-      <p className="text-xs text-gray-400 mt-1">
+      <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
         💡 Para personas naturales ingresa los datos manualmente.
       </p>
     );
@@ -70,10 +70,10 @@ export default function RuesNitButton({ nit = '', tipoCliente = 'individual', on
           inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold
           border transition-all whitespace-nowrap
           ${!puedeConsultar
-            ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
+            ? 'bg-gray-100 dark:bg-white/5 text-gray-400 dark:text-gray-500 border-gray-200 dark:border-white/10 cursor-not-allowed'
             : success
-              ? 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100'
-              : 'bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100 active:scale-95'
+              ? 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800/40 hover:bg-green-100 dark:hover:bg-green-900/40'
+              : 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800/40 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 active:scale-95'
           }
         `}
       >
@@ -104,7 +104,7 @@ export default function RuesNitButton({ nit = '', tipoCliente = 'individual', on
       </button>
 
       {error && (
-        <p className="text-xs text-red-600 leading-tight">{error}</p>
+        <p className="text-xs text-red-600 dark:text-red-400 leading-tight">{error}</p>
       )}
     </div>
   );

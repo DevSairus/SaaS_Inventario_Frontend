@@ -62,10 +62,10 @@ const ProductLinkPicker = ({ value, productName, onChange }) => {
         onClick={() => setOpen((o) => !o)}
         className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium border w-full text-left ${
           isCreateNew
-            ? 'border-amber-300 bg-amber-50 text-amber-700'
+            ? 'border-amber-300 bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300'
             : value
-              ? 'border-green-300 bg-green-50 text-green-700'
-              : 'border-gray-300 bg-white text-gray-500'
+              ? 'border-green-300 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+              : 'border-gray-300 dark:border-white/10 bg-white dark:bg-graphite-2 text-gray-500 dark:text-gray-500'
         }`}
       >
         <Link2 className="w-3 h-3 flex-shrink-0" />
@@ -75,39 +75,39 @@ const ProductLinkPicker = ({ value, productName, onChange }) => {
       </button>
 
       {open && (
-        <div className="absolute z-20 mt-1 w-64 bg-white border border-gray-200 rounded-lg shadow-lg p-2">
-          <div className="flex items-center gap-1.5 border border-gray-200 rounded px-2 py-1.5 mb-1.5">
-            <Search className="w-3.5 h-3.5 text-gray-400" />
+        <div className="absolute z-20 mt-1 w-64 bg-white dark:bg-graphite border border-gray-200 dark:border-white/10 rounded-lg shadow-lg p-2">
+          <div className="flex items-center gap-1.5 border border-gray-200 dark:border-white/10 rounded px-2 py-1.5 mb-1.5">
+            <Search className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />
             <input
               autoFocus
               type="text"
               value={query}
               onChange={(e) => search(e.target.value)}
               placeholder="Buscar producto del catálogo..."
-              className="w-full text-xs outline-none"
+              className="w-full text-xs outline-none dark:bg-graphite dark:text-gray-100 dark:placeholder-gray-600"
             />
           </div>
           <div className="max-h-40 overflow-y-auto">
-            {searching && <p className="text-xs text-gray-400 px-2 py-1">Buscando...</p>}
+            {searching && <p className="text-xs text-gray-400 dark:text-gray-500 px-2 py-1">Buscando...</p>}
             {!searching && query && results.length === 0 && (
-              <p className="text-xs text-gray-400 px-2 py-1">Sin resultados</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 px-2 py-1">Sin resultados</p>
             )}
             {results.map((p) => (
               <button
                 key={p.id}
                 type="button"
                 onClick={() => pick(p)}
-                className="w-full text-left px-2 py-1.5 text-xs hover:bg-blue-50 rounded flex flex-col"
+                className="w-full text-left px-2 py-1.5 text-xs hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded flex flex-col"
               >
-                <span className="font-medium text-gray-800">{p.name}</span>
-                <span className="text-gray-400">{p.sku}</span>
+                <span className="font-medium text-gray-800 dark:text-gray-200">{p.name}</span>
+                <span className="text-gray-400 dark:text-gray-500">{p.sku}</span>
               </button>
             ))}
           </div>
           <button
             type="button"
             onClick={pickCreateNew}
-            className="w-full mt-1 text-left px-2 py-1.5 text-xs rounded flex items-center gap-1.5 text-amber-700 hover:bg-amber-50 border-t border-gray-100 pt-1.5"
+            className="w-full mt-1 text-left px-2 py-1.5 text-xs rounded flex items-center gap-1.5 text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-900/30 border-t border-gray-100 dark:border-white/10 pt-1.5"
           >
             <Sparkles className="w-3.5 h-3.5" /> Crear como producto nuevo
           </button>
@@ -246,7 +246,7 @@ const InvoiceImportModal = ({ isOpen, onClose, onSuccess }) => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+      <div className="bg-white dark:bg-graphite rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
 
         <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-4 flex items-center justify-between rounded-t-xl z-10">
           <h2 className="text-2xl font-bold flex items-center gap-2">
@@ -260,17 +260,17 @@ const InvoiceImportModal = ({ isOpen, onClose, onSuccess }) => {
         <div className="p-6">
 
           {result && (
-            <div className="mb-6 p-6 bg-green-50 border-2 border-green-500 rounded-xl">
+            <div className="mb-6 p-6 bg-green-50 dark:bg-green-900/30 border-2 border-green-500 dark:border-green-800/40 rounded-xl">
               <div className="flex items-start gap-4">
                 <CheckCircle className="w-12 h-12 text-green-600 flex-shrink-0" />
                 <div className="flex-1">
-                  <h3 className="text-xl font-bold text-green-900 mb-2">Factura Importada Exitosamente</h3>
+                  <h3 className="text-xl font-bold text-green-900 dark:text-green-300 mb-2">Factura Importada Exitosamente</h3>
                   <div className="grid grid-cols-2 gap-3 text-sm">
-                    <div><span className="text-green-700">Proveedor:</span><span className="ml-2 font-medium text-green-900">{result.summary.supplier}</span></div>
-                    <div><span className="text-green-700">Factura:</span><span className="ml-2 font-medium text-green-900">{result.summary.invoice_number}</span></div>
-                    <div><span className="text-green-700">Items:</span><span className="ml-2 font-medium text-green-900">{result.summary.items_count}</span></div>
-                    <div><span className="text-green-700">Nuevos productos:</span><span className="ml-2 font-medium text-green-900">{result.summary.new_products_created}</span></div>
-                    <div className="col-span-2"><span className="text-green-700">Total:</span><span className="ml-2 font-bold text-lg text-green-900">${fmt(result.summary.total_amount)}</span></div>
+                    <div><span className="text-green-700 dark:text-green-400">Proveedor:</span><span className="ml-2 font-medium text-green-900 dark:text-green-300">{result.summary.supplier}</span></div>
+                    <div><span className="text-green-700 dark:text-green-400">Factura:</span><span className="ml-2 font-medium text-green-900 dark:text-green-300">{result.summary.invoice_number}</span></div>
+                    <div><span className="text-green-700 dark:text-green-400">Items:</span><span className="ml-2 font-medium text-green-900 dark:text-green-300">{result.summary.items_count}</span></div>
+                    <div><span className="text-green-700 dark:text-green-400">Nuevos productos:</span><span className="ml-2 font-medium text-green-900 dark:text-green-300">{result.summary.new_products_created}</span></div>
+                    <div className="col-span-2"><span className="text-green-700 dark:text-green-400">Total:</span><span className="ml-2 font-bold text-lg text-green-900 dark:text-green-300">${fmt(result.summary.total_amount)}</span></div>
                   </div>
                 </div>
               </div>
@@ -278,10 +278,10 @@ const InvoiceImportModal = ({ isOpen, onClose, onSuccess }) => {
           )}
 
           {error && (
-            <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 rounded">
+            <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/30 border-l-4 border-red-500 dark:border-red-800/40 rounded">
               <div className="flex items-start gap-3">
                 <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-                <div><p className="text-red-800 font-medium">Error</p><p className="text-red-700 text-sm">{error}</p></div>
+                <div><p className="text-red-800 dark:text-red-300 font-medium">Error</p><p className="text-red-700 dark:text-red-400 text-sm">{error}</p></div>
               </div>
             </div>
           )}
@@ -289,19 +289,19 @@ const InvoiceImportModal = ({ isOpen, onClose, onSuccess }) => {
           {!preview && !result && (
             <div
               onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}
-              className={`border-2 border-dashed rounded-xl p-12 text-center transition-all ${isDragging ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50'}`}
+              className={`border-2 border-dashed rounded-xl p-12 text-center transition-all ${isDragging ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30' : 'border-gray-300 dark:border-white/10 hover:border-blue-400 hover:bg-gray-50 dark:hover:bg-white/5'}`}
             >
               {loading
-                ? <div className="flex flex-col items-center gap-3"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div><p className="text-gray-600">Procesando archivo...</p></div>
+                ? <div className="flex flex-col items-center gap-3"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div><p className="text-gray-600 dark:text-gray-400">Procesando archivo...</p></div>
                 : <>
-                    <Upload className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-                    <p className="text-lg font-medium text-gray-700 mb-2">Arrastra el archivo ZIP aquí</p>
-                    <p className="text-sm text-gray-500 mb-4">o haz clic para seleccionar</p>
+                    <Upload className="w-16 h-16 mx-auto mb-4 text-gray-400 dark:text-gray-500" />
+                    <p className="text-lg font-medium text-gray-700 dark:text-gray-300 mb-2">Arrastra el archivo ZIP aquí</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-500 mb-4">o haz clic para seleccionar</p>
                     <input type="file" accept=".zip" onChange={handleFileSelect} className="hidden" id="file-upload" key={fileInputKey} />
                     <label htmlFor="file-upload" className="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer transition-colors font-medium">
                       Seleccionar Archivo ZIP
                     </label>
-                    <p className="mt-4 text-xs text-gray-500">El ZIP debe contener el XML de la factura electrónica</p>
+                    <p className="mt-4 text-xs text-gray-500 dark:text-gray-500">El ZIP debe contener el XML de la factura electrónica</p>
                   </>
               }
             </div>
@@ -311,95 +311,95 @@ const InvoiceImportModal = ({ isOpen, onClose, onSuccess }) => {
             <div className="space-y-5">
 
               {preview.isDuplicate && (
-                <div className="p-4 bg-red-50 border-l-4 border-red-500 rounded">
+                <div className="p-4 bg-red-50 dark:bg-red-900/30 border-l-4 border-red-500 dark:border-red-800/40 rounded">
                   <div className="flex items-start gap-3">
                     <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
                     <div>
-                      <p className="text-red-800 font-bold mb-1">Factura Duplicada</p>
-                      <p className="text-red-700 text-sm">Esta factura ya fue importada: <strong>{preview.duplicateInfo?.purchase_number}</strong></p>
+                      <p className="text-red-800 dark:text-red-300 font-bold mb-1">Factura Duplicada</p>
+                      <p className="text-red-700 dark:text-red-400 text-sm">Esta factura ya fue importada: <strong>{preview.duplicateInfo?.purchase_number}</strong></p>
                     </div>
                   </div>
                 </div>
               )}
 
               {/* Proveedor */}
-              <div className="bg-gray-50 rounded-lg p-4">
-                <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+              <div className="bg-gray-50 dark:bg-graphite-2 rounded-lg p-4">
+                <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2">
                   <Package className="w-5 h-5 text-blue-600" /> Proveedor
                 </h3>
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <div className="col-span-2">
-                    <label className="block text-gray-600 mb-1 text-xs">Nombre (editable)</label>
+                    <label className="block text-gray-600 dark:text-gray-400 mb-1 text-xs">Nombre (editable)</label>
                     <input type="text" value={supplierName} onChange={e => setSupplierName(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-900 focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-white/10 dark:bg-graphite-2 rounded-lg text-sm font-medium text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
                       placeholder="Nombre del proveedor" />
                   </div>
-                  <div><span className="text-gray-500">NIT:</span><span className="ml-2 font-medium">{preview.supplier.tax_id || 'N/A'}</span></div>
-                  {preview.supplier.email && <div><span className="text-gray-500">Email:</span><span className="ml-2 font-medium">{preview.supplier.email}</span></div>}
+                  <div><span className="text-gray-500 dark:text-gray-500">NIT:</span><span className="ml-2 font-medium text-gray-900 dark:text-gray-100">{preview.supplier.tax_id || 'N/A'}</span></div>
+                  {preview.supplier.email && <div><span className="text-gray-500 dark:text-gray-500">Email:</span><span className="ml-2 font-medium text-gray-900 dark:text-gray-100">{preview.supplier.email}</span></div>}
                 </div>
               </div>
 
               {/* Factura */}
-              <div className="bg-blue-50 rounded-lg p-4">
-                <h3 className="font-semibold text-gray-900 mb-2">Factura</h3>
+              <div className="bg-blue-50 dark:bg-blue-900/30 rounded-lg p-4">
+                <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Factura</h3>
                 <div className="flex gap-6 text-sm">
-                  <div><span className="text-gray-500">Número:</span><span className="ml-2 font-medium">{preview.invoice.number}</span></div>
-                  <div><span className="text-gray-500">Fecha:</span><span className="ml-2 font-medium">{preview.invoice.date}</span></div>
-                  {preview.hasPdf && <div className="text-green-600 font-medium">✓ PDF incluido</div>}
+                  <div><span className="text-gray-500 dark:text-gray-500">Número:</span><span className="ml-2 font-medium text-gray-900 dark:text-gray-100">{preview.invoice.number}</span></div>
+                  <div><span className="text-gray-500 dark:text-gray-500">Fecha:</span><span className="ml-2 font-medium text-gray-900 dark:text-gray-100">{preview.invoice.date}</span></div>
+                  {preview.hasPdf && <div className="text-green-600 dark:text-green-400 font-medium">✓ PDF incluido</div>}
                 </div>
               </div>
 
               {/* Items */}
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-semibold text-gray-900">
-                    Ítems <span className="text-gray-400 font-normal text-sm">({activeItems.length} de {preview.items.length} seleccionados)</span>
+                  <h3 className="font-semibold text-gray-900 dark:text-gray-100">
+                    Ítems <span className="text-gray-400 dark:text-gray-500 font-normal text-sm">({activeItems.length} de {preview.items.length} seleccionados)</span>
                   </h3>
                   {removedItems.length > 0 && (
-                    <span className="text-xs text-red-600 bg-red-50 border border-red-200 px-2 py-1 rounded">
+                    <span className="text-xs text-red-600 dark:text-red-300 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800/40 px-2 py-1 rounded">
                       {removedItems.length} excluido(s)
                     </span>
                   )}
                 </div>
-                <div className="border rounded-lg overflow-hidden">
+                <div className="border dark:border-white/10 rounded-lg overflow-hidden">
                   <table className="w-full text-sm">
-                    <thead className="bg-gray-50">
+                    <thead className="bg-gray-50 dark:bg-graphite-2">
                       <tr>
-                        <th className="px-3 py-2 text-left font-medium text-gray-600">Producto</th>
-                        <th className="px-3 py-2 text-right font-medium text-gray-600">Cant.</th>
-                        <th className="px-3 py-2 text-right font-medium text-gray-600">Precio</th>
-                        <th className="px-3 py-2 text-center font-medium text-gray-600">
+                        <th className="px-3 py-2 text-left font-medium text-gray-600 dark:text-gray-400">Producto</th>
+                        <th className="px-3 py-2 text-right font-medium text-gray-600 dark:text-gray-400">Cant.</th>
+                        <th className="px-3 py-2 text-right font-medium text-gray-600 dark:text-gray-400">Precio</th>
+                        <th className="px-3 py-2 text-center font-medium text-gray-600 dark:text-gray-400">
                           IVA %
-                          <span className="block text-[10px] text-gray-400 font-normal leading-none">editable</span>
+                          <span className="block text-[10px] text-gray-400 dark:text-gray-500 font-normal leading-none">editable</span>
                         </th>
-                        <th className="px-3 py-2 text-right font-medium text-gray-600">Subtotal</th>
+                        <th className="px-3 py-2 text-right font-medium text-gray-600 dark:text-gray-400">Subtotal</th>
                         <th className="px-3 py-2 w-10"></th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-100">
+                    <tbody className="divide-y divide-gray-100 dark:divide-white/10">
                       {preview.items.map((item, idx) => {
                         const removed = removedItems.includes(idx);
                         const taxPct  = getItemTaxPct(idx);
                         const taxAmt  = parseFloat(item.subtotal || 0) * (taxPct / 100);
                         const isOverridden = itemTaxOverrides[idx] !== undefined;
                         return (
-                          <tr key={idx} className={removed ? 'bg-red-50' : 'hover:bg-gray-50'}>
-                            <td className={`px-3 py-2.5 ${removed ? 'line-through text-gray-400' : 'text-gray-900'}`}>
+                          <tr key={idx} className={removed ? 'bg-red-50 dark:bg-red-900/20' : 'hover:bg-gray-50 dark:hover:bg-white/5'}>
+                            <td className={`px-3 py-2.5 ${removed ? 'line-through text-gray-400 dark:text-gray-500' : 'text-gray-900 dark:text-gray-100'}`}>
                               {item.name}
-                              {item.sku && <span className="ml-2 text-xs text-gray-400">{item.sku}</span>}
+                              {item.sku && <span className="ml-2 text-xs text-gray-400 dark:text-gray-500">{item.sku}</span>}
                               {!removed && (
                                 <div className="mt-1.5">
                                   {item.suggestion?.match_type === 'code_exact' ? (
-                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-green-50 text-green-700 border border-green-200">
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800/40">
                                       <CheckCircle className="w-3 h-3" /> Vinculado: {item.suggestion.product_name}
                                     </span>
                                   ) : (
                                     <div className="max-w-[220px]">
                                       {item.suggestion?.match_type === 'name_fuzzy' && manualLinks[idx] === item.suggestion.product_id && (
-                                        <p className="text-[10px] text-blue-500 mb-0.5">Sugerido por nombre — confirmar</p>
+                                        <p className="text-[10px] text-blue-500 dark:text-blue-400 mb-0.5">Sugerido por nombre — confirmar</p>
                                       )}
                                       {item.suggestion?.match_type === 'sku_internal' && manualLinks[idx] === item.suggestion.product_id && (
-                                        <p className="text-[10px] text-blue-500 mb-0.5">Coincide con tu SKU interno — confirmar</p>
+                                        <p className="text-[10px] text-blue-500 dark:text-blue-400 mb-0.5">Coincide con tu SKU interno — confirmar</p>
                                       )}
                                       <ProductLinkPicker
                                         value={manualLinks[idx]}
@@ -411,11 +411,11 @@ const InvoiceImportModal = ({ isOpen, onClose, onSuccess }) => {
                                 </div>
                               )}
                             </td>
-                            <td className={`px-3 py-2.5 text-right ${removed ? 'text-gray-400' : ''}`}>{item.quantity}</td>
-                            <td className={`px-3 py-2.5 text-right ${removed ? 'text-gray-400' : ''}`}>${fmt(item.unit_price)}</td>
+                            <td className={`px-3 py-2.5 text-right ${removed ? 'text-gray-400 dark:text-gray-500' : 'dark:text-gray-100'}`}>{item.quantity}</td>
+                            <td className={`px-3 py-2.5 text-right ${removed ? 'text-gray-400 dark:text-gray-500' : 'dark:text-gray-100'}`}>${fmt(item.unit_price)}</td>
                             <td className="px-3 py-2.5 text-center">
                               {removed ? (
-                                <span className="text-gray-300 text-xs">—</span>
+                                <span className="text-gray-300 dark:text-gray-600 text-xs">—</span>
                               ) : (
                                 <div className="flex items-center justify-center gap-1">
                                   <input
@@ -430,11 +430,11 @@ const InvoiceImportModal = ({ isOpen, onClose, onSuccess }) => {
                                     }))}
                                     className={`w-16 px-1.5 py-1 text-center border rounded text-sm font-medium focus:ring-2 focus:ring-blue-400 focus:border-transparent ${
                                       isOverridden
-                                        ? 'border-blue-400 bg-blue-50 text-blue-800'
-                                        : 'border-gray-200 text-gray-700'
+                                        ? 'border-blue-400 bg-blue-50 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300'
+                                        : 'border-gray-200 dark:border-white/10 dark:bg-graphite-2 text-gray-700 dark:text-gray-300'
                                     }`}
                                   />
-                                  <span className="text-gray-400 text-xs">%</span>
+                                  <span className="text-gray-400 dark:text-gray-500 text-xs">%</span>
                                   {isOverridden && (
                                     <button
                                       type="button"
@@ -444,18 +444,18 @@ const InvoiceImportModal = ({ isOpen, onClose, onSuccess }) => {
                                         return next;
                                       })}
                                       title="Restaurar IVA original"
-                                      className="text-blue-400 hover:text-blue-600 text-xs leading-none"
+                                      className="text-blue-400 hover:text-blue-600 dark:hover:text-blue-300 text-xs leading-none"
                                     >↩</button>
                                   )}
                                 </div>
                               )}
                             </td>
-                            <td className={`px-3 py-2.5 text-right font-medium ${removed ? 'text-gray-400' : ''}`}>
+                            <td className={`px-3 py-2.5 text-right font-medium ${removed ? 'text-gray-400 dark:text-gray-500' : 'dark:text-gray-100'}`}>
                               {removed ? `$${fmt(item.total)}` : (
                                 <div>
                                   <div>${fmt(item.subtotal)}</div>
                                   {taxPct > 0 && (
-                                    <div className="text-xs text-gray-400">+${fmt(taxAmt)} IVA</div>
+                                    <div className="text-xs text-gray-400 dark:text-gray-500">+${fmt(taxAmt)} IVA</div>
                                   )}
                                 </div>
                               )}
@@ -463,7 +463,7 @@ const InvoiceImportModal = ({ isOpen, onClose, onSuccess }) => {
                             <td className="px-3 py-2.5 text-center">
                               <button onClick={() => toggleRemoveItem(idx)}
                                 title={removed ? 'Restaurar ítem' : 'Excluir ítem'}
-                                className={`p-1 rounded transition-colors text-base ${removed ? 'text-green-600 hover:bg-green-100' : 'text-red-400 hover:text-red-600 hover:bg-red-100'}`}>
+                                className={`p-1 rounded transition-colors text-base ${removed ? 'text-green-600 hover:bg-green-100 dark:hover:bg-green-900/30' : 'text-red-400 hover:text-red-600 hover:bg-red-100 dark:hover:bg-red-900/30'}`}>
                                 {removed ? '↩' : <Trash2 className="w-4 h-4" />}
                               </button>
                             </td>
@@ -474,98 +474,98 @@ const InvoiceImportModal = ({ isOpen, onClose, onSuccess }) => {
                   </table>
                 </div>
                 {removedItems.length > 0 && (
-                  <p className="mt-1 text-xs text-gray-400 italic">
+                  <p className="mt-1 text-xs text-gray-400 dark:text-gray-500 italic">
                     Los ítems excluidos no se crean como productos ni afectan el total.
                   </p>
                 )}
               </div>
 
               {/* Flete */}
-              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+              <div className="bg-gray-50 dark:bg-graphite-2 border border-gray-200 dark:border-white/10 rounded-lg p-4">
                 <div className="flex items-center justify-between gap-4">
                   <div className="flex items-center gap-2">
-                    <Truck className="w-5 h-5 text-gray-400" />
+                    <Truck className="w-5 h-5 text-gray-400 dark:text-gray-500" />
                     <div>
-                      <p className="font-medium text-gray-800 text-sm">Costo de flete <span className="text-gray-400 font-normal">(opcional)</span></p>
-                      <p className="text-xs text-gray-400">Se suma al total de la compra como costo de envío</p>
+                      <p className="font-medium text-gray-800 dark:text-gray-200 text-sm">Costo de flete <span className="text-gray-400 dark:text-gray-500 font-normal">(opcional)</span></p>
+                      <p className="text-xs text-gray-400 dark:text-gray-500">Se suma al total de la compra como costo de envío</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-1 flex-shrink-0">
-                    <span className="text-gray-400 text-sm">$</span>
+                    <span className="text-gray-400 dark:text-gray-500 text-sm">$</span>
                     <input type="number" min="0" value={shippingCost} onChange={e => setShippingCost(e.target.value)}
                       placeholder="0"
-                      className="w-32 px-3 py-2 text-right border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 bg-white" />
+                      className="w-32 px-3 py-2 text-right border border-gray-300 dark:border-white/10 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 bg-white dark:bg-graphite-2 dark:text-gray-100" />
                   </div>
                 </div>
               </div>
 
               {/* Descuento global */}
-              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+              <div className="bg-gray-50 dark:bg-graphite-2 border border-gray-200 dark:border-white/10 rounded-lg p-4">
                 <div className="flex items-center justify-between gap-4">
                   <div className="flex items-center gap-2">
-                    <span className="text-lg text-gray-400 font-bold">%</span>
+                    <span className="text-lg text-gray-400 dark:text-gray-500 font-bold">%</span>
                     <div>
-                      <p className="font-medium text-gray-800 text-sm">Descuento global <span className="text-gray-400 font-normal">(opcional)</span></p>
-                      <p className="text-xs text-gray-400">Monto fijo que se resta al total de la compra</p>
+                      <p className="font-medium text-gray-800 dark:text-gray-200 text-sm">Descuento global <span className="text-gray-400 dark:text-gray-500 font-normal">(opcional)</span></p>
+                      <p className="text-xs text-gray-400 dark:text-gray-500">Monto fijo que se resta al total de la compra</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-1 flex-shrink-0">
-                    <span className="text-gray-400 text-sm">$</span>
+                    <span className="text-gray-400 dark:text-gray-500 text-sm">$</span>
                     <input type="number" min="0" value={discountAmount} onChange={e => setDiscountAmount(e.target.value)}
                       placeholder="0"
-                      className="w-32 px-3 py-2 text-right border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 bg-white" />
+                      className="w-32 px-3 py-2 text-right border border-gray-300 dark:border-white/10 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 bg-white dark:bg-graphite-2 dark:text-gray-100" />
                   </div>
                 </div>
               </div>
 
               {/* Totales */}
-              <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-4 border border-blue-200">
+              <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/30 dark:to-purple-900/30 rounded-lg p-4 border border-blue-200 dark:border-blue-800/40">
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Subtotal ({activeItems.length} ítems):</span>
-                    <span className="font-medium">${fmt(totals.subtotal)}</span>
+                    <span className="text-gray-600 dark:text-gray-400">Subtotal ({activeItems.length} ítems):</span>
+                    <span className="font-medium dark:text-gray-100">${fmt(totals.subtotal)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-600">IVA:</span>
-                    <span className="font-medium">${fmt(totals.tax)}</span>
+                    <span className="text-gray-600 dark:text-gray-400">IVA:</span>
+                    <span className="font-medium dark:text-gray-100">${fmt(totals.tax)}</span>
                   </div>
                   {totals.discount > 0 && (
-                    <div className="flex justify-between text-red-600">
+                    <div className="flex justify-between text-red-600 dark:text-red-400">
                       <span>Descuento:</span>
                       <span className="font-medium">- ${fmt(totals.discount)}</span>
                     </div>
                   )}
                   {totals.freight > 0 && (
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Flete:</span>
-                      <span className="font-medium">${fmt(totals.freight)}</span>
+                      <span className="text-gray-600 dark:text-gray-400">Flete:</span>
+                      <span className="font-medium dark:text-gray-100">${fmt(totals.freight)}</span>
                     </div>
                   )}
-                  <div className="flex justify-between text-base font-bold border-t border-blue-200 pt-2">
-                    <span>Total:</span>
-                    <span className="text-blue-700">${fmt(totals.total)}</span>
+                  <div className="flex justify-between text-base font-bold border-t border-blue-200 dark:border-blue-800/40 pt-2">
+                    <span className="dark:text-gray-100">Total:</span>
+                    <span className="text-blue-700 dark:text-blue-300">${fmt(totals.total)}</span>
                   </div>
                 </div>
               </div>
 
               {/* Utilidad */}
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+              <div className="bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800/40 rounded-lg p-4">
                 <div className="flex items-center justify-between gap-4">
                   <div>
-                    <p className="font-semibold text-amber-900 text-sm">% Utilidad para productos nuevos</p>
-                    <p className="text-xs text-amber-600 mt-0.5">Solo aplica a productos que no existen en el catálogo</p>
+                    <p className="font-semibold text-amber-900 dark:text-amber-300 text-sm">% Utilidad para productos nuevos</p>
+                    <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">Solo aplica a productos que no existen en el catálogo</p>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <input type="number" min="0" max="500" value={profitMargin}
                       onChange={e => setProfitMargin(Math.max(0, parseFloat(e.target.value) || 0))}
-                      className="w-20 px-3 py-2 text-center font-bold text-lg border-2 border-amber-300 rounded-lg focus:ring-2 focus:ring-amber-400 bg-white" />
-                    <span className="text-amber-700 font-bold text-lg">%</span>
+                      className="w-20 px-3 py-2 text-center font-bold text-lg border-2 border-amber-300 dark:border-amber-800/40 rounded-lg focus:ring-2 focus:ring-amber-400 bg-white dark:bg-graphite-2 dark:text-gray-100" />
+                    <span className="text-amber-700 dark:text-amber-300 font-bold text-lg">%</span>
                   </div>
                 </div>
               </div>
 
               {pendingLinkCount > 0 && (
-                <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                <p className="text-xs text-amber-600 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800/40 rounded-lg px-3 py-2">
                   {pendingLinkCount} {pendingLinkCount === 1 ? 'ítem necesita' : 'ítems necesitan'} que confirmes con qué producto vincularlo (o crearlo nuevo) antes de importar.
                 </p>
               )}
@@ -574,7 +574,7 @@ const InvoiceImportModal = ({ isOpen, onClose, onSuccess }) => {
               <div className="flex gap-3 pt-1">
                 <button
                   onClick={() => { setFile(null); setPreview(null); setRemovedItems([]); setShippingCost(''); setDiscountAmount(''); setItemTaxOverrides({}); setManualLinks({}); setFileInputKey(k => k + 1); }}
-                  className="flex-1 px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium">
+                  className="flex-1 px-6 py-3 border border-gray-300 dark:border-white/10 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-white/5 transition-colors font-medium">
                   Cancelar
                 </button>
                 <button

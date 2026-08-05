@@ -15,8 +15,8 @@ import Loading from '@components/common/Loading';
 import toast from 'react-hot-toast';
 
 const STATUS_BADGE = {
-  migrado: 'bg-green-100 text-green-800',
-  legado: 'bg-gray-100 text-gray-700',
+  migrado: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+  legado: 'bg-gray-100 text-gray-700 dark:bg-white/10 dark:text-gray-300',
 };
 
 const formatDate = (value) => {
@@ -102,11 +102,11 @@ const TenantMigrationStatus = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2 dark:text-gray-100">
             <Database className="w-6 h-6" />
             Migración de Tenants a Schema-per-Tenant
           </h1>
-          <p className="text-gray-500 mt-1">
+          <p className="text-gray-500 mt-1 dark:text-gray-500">
             Estado de corte por tenant y acciones de cutover / rollback / limpieza, sin necesitar consola.
           </p>
         </div>
@@ -117,9 +117,9 @@ const TenantMigrationStatus = () => {
 
       <Card>
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
+          <table className="min-w-full divide-y divide-gray-200 dark:divide-white/10">
             <thead>
-              <tr className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <tr className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-500">
                 <th className="px-4 py-2">Tenant</th>
                 <th className="px-4 py-2">Estado</th>
                 <th className="px-4 py-2">Schema</th>
@@ -127,15 +127,15 @@ const TenantMigrationStatus = () => {
                 <th className="px-4 py-2">Acciones</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-gray-100 dark:divide-white/10">
               {tenants.map((t) => {
                 const isBusy = actionSlug === t.slug;
                 const failed = t.cutover_last_status === 'failed';
                 return (
-                  <tr key={t.id} className={failed ? 'bg-red-50' : ''}>
+                  <tr key={t.id} className={failed ? 'bg-red-50 dark:bg-red-900/20' : ''}>
                     <td className="px-4 py-3">
-                      <div className="font-medium text-gray-900">{t.business_name}</div>
-                      <div className="text-xs text-gray-500">{t.slug}</div>
+                      <div className="font-medium text-gray-900 dark:text-gray-100">{t.business_name}</div>
+                      <div className="text-xs text-gray-500 dark:text-gray-500">{t.slug}</div>
                     </td>
                     <td className="px-4 py-3">
                       <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${STATUS_BADGE[t.status]}`}>
@@ -143,7 +143,7 @@ const TenantMigrationStatus = () => {
                         {t.status === 'migrado' ? 'Migrado' : 'Legado'}
                       </span>
                       {failed && (
-                        <div className="mt-1 flex items-start gap-1 text-xs text-red-700 max-w-xs">
+                        <div className="mt-1 flex items-start gap-1 text-xs text-red-700 max-w-xs dark:text-red-400">
                           <AlertTriangle className="w-3 h-3 mt-0.5 shrink-0" />
                           <span title={t.cutover_last_error}>
                             {(t.cutover_last_error || '').slice(0, 80)}
@@ -152,10 +152,10 @@ const TenantMigrationStatus = () => {
                         </div>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-600 font-mono">
+                    <td className="px-4 py-3 text-sm text-gray-600 font-mono dark:text-gray-400">
                       {t.schema_name || '—'}
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-500">
+                    <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-500">
                       {formatDate(t.cutover_last_attempt_at)}
                     </td>
                     <td className="px-4 py-3">
@@ -211,7 +211,7 @@ const TenantMigrationStatus = () => {
               })}
               {tenants.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-gray-400">
+                  <td colSpan={5} className="px-4 py-8 text-center text-gray-400 dark:text-gray-500">
                     No hay tenants registrados.
                   </td>
                 </tr>
@@ -223,7 +223,7 @@ const TenantMigrationStatus = () => {
 
       {cleanupReport && (
         <Card title={`Reporte de limpieza — ${cleanupReport.slug} (${cleanupReport.execute ? 'ejecutado' : 'dry-run'})`}>
-          <pre className="text-xs bg-gray-50 rounded-lg p-4 overflow-x-auto max-h-96">
+          <pre className="text-xs bg-gray-50 rounded-lg p-4 overflow-x-auto max-h-96 dark:bg-graphite-2">
             {JSON.stringify(cleanupReport.report, null, 2)}
           </pre>
         </Card>

@@ -48,21 +48,21 @@ function SortableStageRow({ s, i, total, onMove, onEdit, onDelete }) {
       <td className="px-4 py-2.5">
         <div className="flex items-center gap-1">
           <button {...attributes} {...listeners} title="Arrastrar para reordenar"
-            className="p-0.5 text-gray-300 hover:text-gray-600 cursor-grab active:cursor-grabbing touch-none">
+            className="p-0.5 text-gray-300 hover:text-gray-600 dark:text-gray-600 dark:hover:text-gray-400 cursor-grab active:cursor-grabbing touch-none">
             <GripVertical size={14} />
           </button>
-          <button onClick={() => onMove(i, -1)} disabled={i === 0} className="p-0.5 text-gray-400 hover:text-gray-700 disabled:opacity-20"><ArrowUp size={14} /></button>
-          <button onClick={() => onMove(i, 1)} disabled={i === total - 1} className="p-0.5 text-gray-400 hover:text-gray-700 disabled:opacity-20"><ArrowDown size={14} /></button>
+          <button onClick={() => onMove(i, -1)} disabled={i === 0} className="p-0.5 text-gray-400 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300 disabled:opacity-20"><ArrowUp size={14} /></button>
+          <button onClick={() => onMove(i, 1)} disabled={i === total - 1} className="p-0.5 text-gray-400 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300 disabled:opacity-20"><ArrowDown size={14} /></button>
         </div>
       </td>
-      <td className="px-4 py-2.5"><span className="inline-block w-5 h-5 rounded-full border border-gray-200" style={{ background: s.color || '#e5e7eb' }} /></td>
-      <td className="px-4 py-2.5 font-medium text-gray-800">{s.label} <span className="text-gray-300 font-normal">({s.key})</span></td>
-      <td className="px-4 py-2.5 text-gray-500">{STAGE_TYPE_LABELS[s.stage_type]}</td>
-      <td className="px-4 py-2.5 text-gray-500">{s.default_probability != null ? `${s.default_probability}%` : '—'}</td>
+      <td className="px-4 py-2.5"><span className="inline-block w-5 h-5 rounded-full border border-gray-200 dark:border-white/10" style={{ background: s.color || '#e5e7eb' }} /></td>
+      <td className="px-4 py-2.5 font-medium text-gray-800 dark:text-gray-200">{s.label} <span className="text-gray-300 dark:text-gray-600 font-normal">({s.key})</span></td>
+      <td className="px-4 py-2.5 text-gray-500 dark:text-gray-500">{STAGE_TYPE_LABELS[s.stage_type]}</td>
+      <td className="px-4 py-2.5 text-gray-500 dark:text-gray-500">{s.default_probability != null ? `${s.default_probability}%` : '—'}</td>
       <td className="px-4 py-2.5">
         <div className="flex items-center justify-end gap-1">
-          <button onClick={() => onEdit(s)} className="p-1.5 text-gray-400 hover:text-accent rounded-full hover:bg-gray-50"><Pencil size={14} /></button>
-          <button onClick={() => onDelete(s)} className="p-1.5 text-gray-400 hover:text-red-500 rounded-full hover:bg-gray-50"><Trash2 size={14} /></button>
+          <button onClick={() => onEdit(s)} className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-accent rounded-full hover:bg-gray-50 dark:hover:bg-white/5"><Pencil size={14} /></button>
+          <button onClick={() => onDelete(s)} className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-red-500 rounded-full hover:bg-gray-50 dark:hover:bg-white/5"><Trash2 size={14} /></button>
         </div>
       </td>
     </tr>
@@ -176,16 +176,16 @@ function StagesTab() {
     persistOrder(reordered);
   };
 
-  if (loading) return <div className="text-sm text-gray-400 py-8 text-center">Cargando etapas...</div>;
+  if (loading) return <div className="text-sm text-gray-400 dark:text-gray-500 py-8 text-center">Cargando etapas...</div>;
 
   return (
     <div className="space-y-3">
       <div className="flex justify-end">
         <Button variant="primary" icon={Plus} onClick={openNew}>Nueva etapa</Button>
       </div>
-      <div className="bg-white border border-gray-100 rounded-xl overflow-hidden overflow-x-auto">
+      <div className="bg-white dark:bg-graphite border border-gray-100 dark:border-white/10 rounded-xl overflow-hidden overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wide">
+          <thead className="bg-gray-50 dark:bg-graphite-2 text-gray-500 dark:text-gray-500 text-xs uppercase tracking-wide">
             <tr>
               <th className="text-left px-4 py-2.5 font-medium">Orden</th>
               <th className="text-left px-4 py-2.5 font-medium">Color</th>
@@ -195,7 +195,7 @@ function StagesTab() {
               <th className="px-4 py-2.5"></th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-50">
+          <tbody className="divide-y divide-gray-50 dark:divide-white/10">
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
               <SortableContext items={stages.map(s => s.id)} strategy={verticalListSortingStrategy}>
                 {stages.map((s, i) => (
@@ -217,14 +217,14 @@ function StagesTab() {
           )}
           <Input label="Etiqueta" value={form.label} onChange={e => setForm(f => ({ ...f, label: e.target.value }))} required />
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Color</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Color</label>
             <input type="color" value={form.color} onChange={e => setForm(f => ({ ...f, color: e.target.value }))}
-              className="w-16 h-9 border border-gray-300 rounded-lg" />
+              className="w-16 h-9 border border-gray-300 dark:border-white/10 dark:bg-graphite-2 rounded-lg" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de etapa</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tipo de etapa</label>
             <select value={form.stage_type} onChange={e => setForm(f => ({ ...f, stage_type: e.target.value }))}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2">
+              className="w-full border border-gray-300 dark:border-white/10 dark:bg-graphite-2 dark:text-gray-100 rounded-lg px-3 py-2">
               <option value="open">Abierta</option>
               <option value="won">Ganada</option>
               <option value="lost">Perdida</option>
@@ -233,7 +233,7 @@ function StagesTab() {
           <Input label="Probabilidad por defecto (%)" type="number" min="0" max="100" value={form.default_probability}
             onChange={e => setForm(f => ({ ...f, default_probability: e.target.value }))}
             helperText="Usada en el forecast del dashboard cuando la oportunidad no trae su propia probabilidad" />
-          <div className="flex justify-end gap-2 pt-4 border-t">
+          <div className="flex justify-end gap-2 pt-4 border-t dark:border-white/10">
             <Button type="button" variant="secondary" onClick={() => setModal(null)}>Cancelar</Button>
             <Button type="submit" variant="primary" disabled={saving}>{saving ? 'Guardando...' : 'Guardar'}</Button>
           </div>
@@ -297,24 +297,24 @@ function LossReasonsTab() {
     }
   };
 
-  if (loading) return <div className="text-sm text-gray-400 py-8 text-center">Cargando motivos...</div>;
+  if (loading) return <div className="text-sm text-gray-400 dark:text-gray-500 py-8 text-center">Cargando motivos...</div>;
 
   return (
     <div className="space-y-3">
       <div className="flex justify-end">
         <Button variant="primary" icon={Plus} onClick={openNew}>Nuevo motivo</Button>
       </div>
-      <div className="bg-white border border-gray-100 rounded-xl divide-y divide-gray-50">
+      <div className="bg-white dark:bg-graphite border border-gray-100 dark:border-white/10 rounded-xl divide-y divide-gray-50 dark:divide-white/10">
         {reasons.map(r => (
           <div key={r.id} className="flex items-center justify-between px-4 py-2.5">
-            <span className="text-sm font-medium text-gray-800">{r.label} <span className="text-gray-300 font-normal">({r.key})</span></span>
+            <span className="text-sm font-medium text-gray-800 dark:text-gray-200">{r.label} <span className="text-gray-300 dark:text-gray-600 font-normal">({r.key})</span></span>
             <div className="flex items-center gap-1">
-              <button onClick={() => openEdit(r)} className="p-1.5 text-gray-400 hover:text-accent rounded-full hover:bg-gray-50"><Pencil size={14} /></button>
-              <button onClick={() => handleDelete(r)} className="p-1.5 text-gray-400 hover:text-red-500 rounded-full hover:bg-gray-50"><Trash2 size={14} /></button>
+              <button onClick={() => openEdit(r)} className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-accent rounded-full hover:bg-gray-50 dark:hover:bg-white/5"><Pencil size={14} /></button>
+              <button onClick={() => handleDelete(r)} className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-red-500 rounded-full hover:bg-gray-50 dark:hover:bg-white/5"><Trash2 size={14} /></button>
             </div>
           </div>
         ))}
-        {reasons.length === 0 && <p className="text-xs text-gray-300 text-center py-6">Sin motivos configurados</p>}
+        {reasons.length === 0 && <p className="text-xs text-gray-300 dark:text-gray-600 text-center py-6">Sin motivos configurados</p>}
       </div>
 
       <Modal isOpen={!!modal} onClose={() => setModal(null)} title={modal === 'new' ? 'Nuevo motivo' : 'Editar motivo'} size="sm">
@@ -325,7 +325,7 @@ function LossReasonsTab() {
               helperText="Sin espacios ni tildes, ej: fuera_de_presupuesto" required />
           )}
           <Input label="Etiqueta" value={form.label} onChange={e => setForm(f => ({ ...f, label: e.target.value }))} required />
-          <div className="flex justify-end gap-2 pt-4 border-t">
+          <div className="flex justify-end gap-2 pt-4 border-t dark:border-white/10">
             <Button type="button" variant="secondary" onClick={() => setModal(null)}>Cancelar</Button>
             <Button type="submit" variant="primary" disabled={saving}>{saving ? 'Guardando...' : 'Guardar'}</Button>
           </div>
@@ -389,52 +389,52 @@ function TemplatesTab() {
     }
   };
 
-  if (loading) return <div className="text-sm text-gray-400 py-8 text-center">Cargando plantillas...</div>;
+  if (loading) return <div className="text-sm text-gray-400 dark:text-gray-500 py-8 text-center">Cargando plantillas...</div>;
 
   return (
     <div className="space-y-3">
       <div className="flex justify-end">
         <Button variant="primary" icon={Plus} onClick={openNew}>Nueva plantilla</Button>
       </div>
-      <div className="bg-white border border-gray-100 rounded-xl divide-y divide-gray-50">
+      <div className="bg-white dark:bg-graphite border border-gray-100 dark:border-white/10 rounded-xl divide-y divide-gray-50 dark:divide-white/10">
         {templates.map(t => (
           <div key={t.id} className="flex items-center justify-between px-4 py-2.5">
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <MessageSquare size={13} className="text-gray-300 flex-shrink-0" />
-                <span className="text-sm font-medium text-gray-800">{t.name}</span>
-                <span className="text-[11px] text-gray-400">{CHANNEL_LABELS[t.channel]}</span>
+                <MessageSquare size={13} className="text-gray-300 dark:text-gray-600 flex-shrink-0" />
+                <span className="text-sm font-medium text-gray-800 dark:text-gray-200">{t.name}</span>
+                <span className="text-[11px] text-gray-400 dark:text-gray-500">{CHANNEL_LABELS[t.channel]}</span>
               </div>
-              <p className="text-xs text-gray-400 truncate mt-0.5">{t.body}</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 truncate mt-0.5">{t.body}</p>
             </div>
             <div className="flex items-center gap-1 flex-shrink-0">
-              <button onClick={() => openEdit(t)} className="p-1.5 text-gray-400 hover:text-accent rounded-full hover:bg-gray-50"><Pencil size={14} /></button>
-              <button onClick={() => handleDelete(t)} className="p-1.5 text-gray-400 hover:text-red-500 rounded-full hover:bg-gray-50"><Trash2 size={14} /></button>
+              <button onClick={() => openEdit(t)} className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-accent rounded-full hover:bg-gray-50 dark:hover:bg-white/5"><Pencil size={14} /></button>
+              <button onClick={() => handleDelete(t)} className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-red-500 rounded-full hover:bg-gray-50 dark:hover:bg-white/5"><Trash2 size={14} /></button>
             </div>
           </div>
         ))}
-        {templates.length === 0 && <p className="text-xs text-gray-300 text-center py-6">Sin plantillas configuradas</p>}
+        {templates.length === 0 && <p className="text-xs text-gray-300 dark:text-gray-600 text-center py-6">Sin plantillas configuradas</p>}
       </div>
 
       <Modal isOpen={!!modal} onClose={() => setModal(null)} title={modal === 'new' ? 'Nueva plantilla' : 'Editar plantilla'} size="md">
         <form onSubmit={handleSave} className="space-y-4">
           <Input label="Nombre" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} required />
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Canal</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Canal</label>
             <select value={form.channel} onChange={e => setForm(f => ({ ...f, channel: e.target.value }))}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2">
+              className="w-full border border-gray-300 dark:border-white/10 dark:bg-graphite-2 dark:text-gray-100 rounded-lg px-3 py-2">
               <option value="whatsapp">WhatsApp</option>
               <option value="llamada">Llamada</option>
               <option value="email">Email</option>
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Mensaje</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Mensaje</label>
             <textarea value={form.body} onChange={e => setForm(f => ({ ...f, body: e.target.value }))}
               rows={5} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" required />
-            <p className="text-xs text-gray-400 mt-1">Variables disponibles: <code>{'{{cliente}}'}</code>, <code>{'{{asesor}}'}</code>, <code>{'{{monto}}'}</code></p>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Variables disponibles: <code>{'{{cliente}}'}</code>, <code>{'{{asesor}}'}</code>, <code>{'{{monto}}'}</code></p>
           </div>
-          <div className="flex justify-end gap-2 pt-4 border-t">
+          <div className="flex justify-end gap-2 pt-4 border-t dark:border-white/10">
             <Button type="button" variant="secondary" onClick={() => setModal(null)}>Cancelar</Button>
             <Button type="submit" variant="primary" disabled={saving}>{saving ? 'Guardando...' : 'Guardar'}</Button>
           </div>
@@ -584,7 +584,7 @@ function AutomationRulesTab() {
     return '';
   };
 
-  if (loading) return <div className="text-sm text-gray-400 py-8 text-center">Cargando automatizaciones...</div>;
+  if (loading) return <div className="text-sm text-gray-400 dark:text-gray-500 py-8 text-center">Cargando automatizaciones...</div>;
 
   return (
     <div className="space-y-3">
@@ -595,7 +595,7 @@ function AutomationRulesTab() {
       <div className="flex justify-end">
         <Button variant="primary" icon={Plus} onClick={openNew}>Nueva automatización</Button>
       </div>
-      <div className="bg-white border border-gray-100 rounded-xl divide-y divide-gray-50">
+      <div className="bg-white dark:bg-graphite border border-gray-100 dark:border-white/10 rounded-xl divide-y divide-gray-50 dark:divide-white/10">
         {rules.map(rule => (
           <div key={rule.id} className="flex items-center justify-between px-4 py-3 gap-3">
             <div className="min-w-0">
@@ -613,12 +613,12 @@ function AutomationRulesTab() {
                 className={`p-1.5 rounded-full hover:bg-gray-50 ${rule.is_active ? 'text-accent' : 'text-gray-300'}`}>
                 <Power size={14} />
               </button>
-              <button onClick={() => openEdit(rule)} className="p-1.5 text-gray-400 hover:text-accent rounded-full hover:bg-gray-50"><Pencil size={14} /></button>
-              <button onClick={() => handleDelete(rule)} className="p-1.5 text-gray-400 hover:text-red-500 rounded-full hover:bg-gray-50"><Trash2 size={14} /></button>
+              <button onClick={() => openEdit(rule)} className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-accent rounded-full hover:bg-gray-50 dark:hover:bg-white/5"><Pencil size={14} /></button>
+              <button onClick={() => handleDelete(rule)} className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-red-500 rounded-full hover:bg-gray-50 dark:hover:bg-white/5"><Trash2 size={14} /></button>
             </div>
           </div>
         ))}
-        {rules.length === 0 && <p className="text-xs text-gray-300 text-center py-6">Sin automatizaciones configuradas</p>}
+        {rules.length === 0 && <p className="text-xs text-gray-300 dark:text-gray-600 text-center py-6">Sin automatizaciones configuradas</p>}
       </div>
 
       <Modal isOpen={!!modal} onClose={() => setModal(null)} title={modal === 'new' ? 'Nueva automatización' : 'Editar automatización'} size="md">
@@ -627,9 +627,9 @@ function AutomationRulesTab() {
             placeholder='Ej: "Lead sin contactar en 2 horas"' required />
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Cuándo (disparador)</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Cuándo (disparador)</label>
             <select value={form.trigger_type} onChange={e => setForm(f => ({ ...f, trigger_type: e.target.value }))}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2">
+              className="w-full border border-gray-300 dark:border-white/10 dark:bg-graphite-2 dark:text-gray-100 rounded-lg px-3 py-2">
               {Object.entries(TRIGGER_TYPE_LABELS).map(([k, label]) => <option key={k} value={k}>{label}</option>)}
             </select>
           </div>
@@ -639,9 +639,9 @@ function AutomationRulesTab() {
               <Input label="Horas sin contactar" type="number" min="0" step="0.5" value={form.hours}
                 onChange={e => setForm(f => ({ ...f, hours: e.target.value }))} required />
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Origen (opcional)</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Origen (opcional)</label>
                 <select value={form.source} onChange={e => setForm(f => ({ ...f, source: e.target.value }))}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2">
+                  className="w-full border border-gray-300 dark:border-white/10 dark:bg-graphite-2 dark:text-gray-100 rounded-lg px-3 py-2">
                   <option value="">Cualquiera</option>
                   {Object.entries(SOURCE_LABELS).map(([k, label]) => <option key={k} value={k}>{label}</option>)}
                 </select>
@@ -652,9 +652,9 @@ function AutomationRulesTab() {
           {form.trigger_type === 'stage_stale' && (
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Etapa a vigilar</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Etapa a vigilar</label>
                 <select value={form.stage_key} onChange={e => setForm(f => ({ ...f, stage_key: e.target.value }))}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2" required>
+                  className="w-full border border-gray-300 dark:border-white/10 dark:bg-graphite-2 dark:text-gray-100 rounded-lg px-3 py-2" required>
                   <option value="">Elige una etapa</option>
                   {stages.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
                 </select>
@@ -666,20 +666,20 @@ function AutomationRulesTab() {
 
           {form.trigger_type === 'opportunity_created' && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Origen (opcional)</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Origen (opcional)</label>
               <select value={form.source} onChange={e => setForm(f => ({ ...f, source: e.target.value }))}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2">
+                className="w-full border border-gray-300 dark:border-white/10 dark:bg-graphite-2 dark:text-gray-100 rounded-lg px-3 py-2">
                 <option value="">Cualquiera</option>
                 {Object.entries(SOURCE_LABELS).map(([k, label]) => <option key={k} value={k}>{label}</option>)}
               </select>
-              <p className="text-xs text-gray-400 mt-1">Ej: solo cuando el origen sea Meta Ads.</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Ej: solo cuando el origen sea Meta Ads.</p>
             </div>
           )}
 
           <div className="border-t pt-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Entonces (acción)</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Entonces (acción)</label>
             <select value={form.action_type} onChange={e => setForm(f => ({ ...f, action_type: e.target.value }))}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2">
+              className="w-full border border-gray-300 dark:border-white/10 dark:bg-graphite-2 dark:text-gray-100 rounded-lg px-3 py-2">
               {Object.entries(ACTION_TYPE_LABELS).map(([k, label]) => <option key={k} value={k}>{label}</option>)}
             </select>
           </div>
@@ -704,7 +704,7 @@ function AutomationRulesTab() {
             Regla activa
           </label>
 
-          <div className="flex justify-end gap-2 pt-4 border-t">
+          <div className="flex justify-end gap-2 pt-4 border-t dark:border-white/10">
             <Button type="button" variant="secondary" onClick={() => setModal(null)}>Cancelar</Button>
             <Button type="submit" variant="primary" disabled={saving}>{saving ? 'Guardando...' : 'Guardar'}</Button>
           </div>

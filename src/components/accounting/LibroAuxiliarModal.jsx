@@ -86,25 +86,25 @@ const LibroAuxiliarModal = ({ thirdParty, onClose }) => {
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-3xl max-h-[85vh] flex flex-col">
-        <div className="px-5 py-4 border-b border-gray-200 flex items-center justify-between">
+      <div className="bg-white dark:bg-graphite rounded-xl shadow-xl w-full max-w-3xl max-h-[85vh] flex flex-col">
+        <div className="px-5 py-4 border-b border-gray-200 flex items-center justify-between dark:border-white/10">
           <div>
-            <h3 className="font-semibold text-gray-900">Libro Auxiliar — {thirdParty.type === 'customer' ? 'Cliente' : 'Proveedor'}</h3>
-            <p className="text-sm text-gray-500">{thirdParty.name}{thirdParty.tax_id ? ` - ${thirdParty.tax_id}` : ''}</p>
+            <h3 className="font-semibold text-gray-900 dark:text-gray-100">Libro Auxiliar — {thirdParty.type === 'customer' ? 'Cliente' : 'Proveedor'}</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400">{thirdParty.name}{thirdParty.tax_id ? ` - ${thirdParty.tax_id}` : ''}</p>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-700">
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
             <XMarkIcon className="w-5 h-5" />
           </button>
         </div>
 
-        <div className="px-5 py-3 border-b border-gray-200 flex flex-wrap items-center gap-3">
-          <span className="text-sm text-gray-500">Periodo:</span>
-          <input type="date" value={range.from} onChange={(e) => setRange((r) => ({ ...r, from: e.target.value }))} className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm" />
-          <span className="text-gray-400 text-sm">a</span>
-          <input type="date" value={range.to} onChange={(e) => setRange((r) => ({ ...r, to: e.target.value }))} className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm" />
+        <div className="px-5 py-3 border-b border-gray-200 flex flex-wrap items-center gap-3 dark:border-white/10">
+          <span className="text-sm text-gray-500 dark:text-gray-400">Periodo:</span>
+          <input type="date" value={range.from} onChange={(e) => setRange((r) => ({ ...r, from: e.target.value }))} className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100" />
+          <span className="text-gray-400 text-sm dark:text-gray-500">a</span>
+          <input type="date" value={range.to} onChange={(e) => setRange((r) => ({ ...r, to: e.target.value }))} className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100" />
           <button onClick={load} className="px-3 py-1.5 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700">Generar</button>
           {branches.length > 1 && (
-            <select value={branchId} onChange={(e) => setBranchId(e.target.value)} className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm">
+            <select value={branchId} onChange={(e) => setBranchId(e.target.value)} className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100">
               <option value="">Todas las sedes</option>
               {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
             </select>
@@ -115,7 +115,7 @@ const LibroAuxiliarModal = ({ thirdParty, onClose }) => {
           <button
             onClick={() => handleExport('excel')}
             disabled={downloading !== null || !data}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-green-700 bg-green-50 border border-green-200 rounded-lg hover:bg-green-100 disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-green-700 bg-green-50 border border-green-200 rounded-lg hover:bg-green-100 disabled:opacity-50 dark:text-green-300 dark:bg-green-900/30 dark:border-green-800/40 dark:hover:bg-green-900/50"
           >
             <TableCellsIcon className="w-4 h-4" />
             {downloading === 'excel' ? 'Generando...' : 'Excel'}
@@ -123,7 +123,7 @@ const LibroAuxiliarModal = ({ thirdParty, onClose }) => {
           <button
             onClick={() => handleExport('pdf')}
             disabled={downloading !== null || !data}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-red-700 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-red-700 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 disabled:opacity-50 dark:text-red-300 dark:bg-red-900/30 dark:border-red-800/40 dark:hover:bg-red-900/50"
           >
             <DocumentArrowDownIcon className="w-4 h-4" />
             {downloading === 'pdf' ? 'Generando...' : 'PDF'}
@@ -131,46 +131,46 @@ const LibroAuxiliarModal = ({ thirdParty, onClose }) => {
         </div>
 
         <div className="overflow-y-auto flex-1">
-          {loading && <div className="text-center py-12 text-gray-400">Generando...</div>}
+          {loading && <div className="text-center py-12 text-gray-400 dark:text-gray-500">Generando...</div>}
 
           {!loading && data && (
             <div className="p-5">
-              <div className="flex justify-between text-sm text-gray-500 mb-3">
-                <span>Saldo inicial: <span className="font-semibold text-gray-800">{formatCurrency(data.opening_balance)}</span></span>
+              <div className="flex justify-between text-sm text-gray-500 mb-3 dark:text-gray-400">
+                <span>Saldo inicial: <span className="font-semibold text-gray-800 dark:text-gray-200">{formatCurrency(data.opening_balance)}</span></span>
                 <span>{data.movement_count} {data.movement_count === 1 ? 'movimiento' : 'movimientos'}</span>
               </div>
 
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-white/10">
+                <thead className="bg-gray-50 dark:bg-graphite-2">
                   <tr>
                     {['Fecha', 'N° Asiento', 'Cuenta', 'Detalle', 'Débito', 'Crédito', 'Saldo'].map((h) => (
-                      <th key={h} className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">{h}</th>
+                      <th key={h} className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase dark:text-gray-400">{h}</th>
                     ))}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody className="divide-y divide-gray-100 dark:divide-white/10">
                   {data.movements.length === 0 && (
-                    <tr><td colSpan={7} className="px-3 py-8 text-center text-gray-400">Sin movimientos en el periodo seleccionado</td></tr>
+                    <tr><td colSpan={7} className="px-3 py-8 text-center text-gray-400 dark:text-gray-500">Sin movimientos en el periodo seleccionado</td></tr>
                   )}
                   {data.movements.map((m) => (
                     <tr key={m.line_id}>
-                      <td className="px-3 py-2 text-sm text-gray-500">{m.entry_date}</td>
-                      <td className="px-3 py-2 text-sm font-mono text-gray-500">{m.entry_number}</td>
-                      <td className="px-3 py-2 text-xs text-gray-500">{m.account_code} - {m.account_name}</td>
-                      <td className="px-3 py-2 text-sm text-gray-800">{m.description || '—'}</td>
-                      <td className="px-3 py-2 text-sm text-right">{m.debit ? formatCurrency(m.debit) : ''}</td>
-                      <td className="px-3 py-2 text-sm text-right">{m.credit ? formatCurrency(m.credit) : ''}</td>
-                      <td className="px-3 py-2 text-sm text-right font-medium">{formatCurrency(m.running_balance)}</td>
+                      <td className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400">{m.entry_date}</td>
+                      <td className="px-3 py-2 text-sm font-mono text-gray-500 dark:text-gray-400">{m.entry_number}</td>
+                      <td className="px-3 py-2 text-xs text-gray-500 dark:text-gray-400">{m.account_code} - {m.account_name}</td>
+                      <td className="px-3 py-2 text-sm text-gray-800 dark:text-gray-200">{m.description || '—'}</td>
+                      <td className="px-3 py-2 text-sm text-right dark:text-gray-300">{m.debit ? formatCurrency(m.debit) : ''}</td>
+                      <td className="px-3 py-2 text-sm text-right dark:text-gray-300">{m.credit ? formatCurrency(m.credit) : ''}</td>
+                      <td className="px-3 py-2 text-sm text-right font-medium dark:text-gray-100">{formatCurrency(m.running_balance)}</td>
                     </tr>
                   ))}
                 </tbody>
                 {data.movements.length > 0 && (
                   <tfoot>
-                    <tr className="font-semibold border-t border-gray-200 bg-gray-50">
-                      <td colSpan={4} className="px-3 py-2 text-sm">Total periodo / Saldo final</td>
-                      <td className="px-3 py-2 text-sm text-right">{formatCurrency(data.totals.debit)}</td>
-                      <td className="px-3 py-2 text-sm text-right">{formatCurrency(data.totals.credit)}</td>
-                      <td className="px-3 py-2 text-sm text-right">{formatCurrency(data.closing_balance)}</td>
+                    <tr className="font-semibold border-t border-gray-200 bg-gray-50 dark:border-white/10 dark:bg-graphite-2">
+                      <td colSpan={4} className="px-3 py-2 text-sm dark:text-gray-200">Total periodo / Saldo final</td>
+                      <td className="px-3 py-2 text-sm text-right dark:text-gray-200">{formatCurrency(data.totals.debit)}</td>
+                      <td className="px-3 py-2 text-sm text-right dark:text-gray-200">{formatCurrency(data.totals.credit)}</td>
+                      <td className="px-3 py-2 text-sm text-right dark:text-gray-200">{formatCurrency(data.closing_balance)}</td>
                     </tr>
                   </tfoot>
                 )}

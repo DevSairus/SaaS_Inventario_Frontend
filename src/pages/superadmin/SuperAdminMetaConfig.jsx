@@ -127,12 +127,12 @@ const SuperAdminMetaConfig = () => {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
-        <div className="p-2 bg-blue-100 rounded-lg">
+        <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
           <Facebook className="w-6 h-6 text-[#1877F2]" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Integración con Meta</h1>
-          <p className="text-sm text-gray-500">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Integración con Meta</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-500">
             App de Meta for Developers registrada por Pitbox -- se usa para el OAuth de "cuenta propia" de cualquier
             tenant y como página/WABA compartida para los tenants en modo "servicio Pitbox". El módulo se activa por
             tenant en <code>crm_meta_leads</code>, con costo aparte del CRM base.
@@ -141,9 +141,9 @@ const SuperAdminMetaConfig = () => {
       </div>
 
       <Card>
-        <div className="flex items-start gap-3 p-4 bg-blue-50 border border-blue-200 rounded-lg mb-6">
-          <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-          <div className="text-sm text-blue-800">
+        <div className="flex items-start gap-3 p-4 bg-blue-50 border border-blue-200 rounded-lg mb-6 dark:bg-blue-900/30 dark:border-blue-800/40">
+          <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5 dark:text-blue-400" />
+          <div className="text-sm text-blue-800 dark:text-blue-300">
             <p className="font-medium mb-1">Esta App es del sistema completo, no de un tenant</p>
             <p>
               El App ID/Secret son los de la App de Meta for Developers de Pitbox. Cada tenant conecta SU PROPIA
@@ -155,19 +155,19 @@ const SuperAdminMetaConfig = () => {
 
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">App ID</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">App ID</label>
             <input
               type="text"
               value={config.app_id}
               onChange={(e) => setConfig({ ...config, app_id: e.target.value })}
               placeholder="1234567890123456"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100 dark:placeholder-gray-600"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              App Secret {meta.has_app_secret && <span className="text-blue-600 text-xs">(configurado -- deja en blanco para no cambiarlo)</span>}
+            <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">
+              App Secret {meta.has_app_secret && <span className="text-blue-600 text-xs dark:text-blue-400">(configurado -- deja en blanco para no cambiarlo)</span>}
             </label>
             <div className="relative">
               <input
@@ -175,66 +175,66 @@ const SuperAdminMetaConfig = () => {
                 value={config.app_secret}
                 onChange={(e) => setConfig({ ...config, app_secret: e.target.value })}
                 placeholder={meta.has_app_secret ? '••••••••••••••••••••' : 'App Secret de Meta for Developers'}
-                className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100 dark:placeholder-gray-600"
               />
-              <button type="button" onClick={() => setShowSecret(!showSecret)} className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600">
+              <button type="button" onClick={() => setShowSecret(!showSecret)} className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300">
                 {showSecret ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
               </button>
             </div>
-            <p className="mt-1 text-xs text-gray-500">
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-500">
               Se usa tanto para el intercambio OAuth como para verificar la firma HMAC de los webhooks entrantes.
             </p>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Webhook verify token {meta.has_webhook_verify_token && <span className="text-blue-600 text-xs">(configurado)</span>}
+            <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">
+              Webhook verify token {meta.has_webhook_verify_token && <span className="text-blue-600 text-xs dark:text-blue-400">(configurado)</span>}
             </label>
             <input
               type="text"
               value={config.webhook_verify_token}
               onChange={(e) => setConfig({ ...config, webhook_verify_token: e.target.value })}
               placeholder={meta.has_webhook_verify_token ? '••••••••••••••••••••' : 'Un texto cualquiera, se pega igual en el dashboard de Meta'}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100 dark:placeholder-gray-600"
             />
           </div>
 
           {meta.webhookUrl && (
-            <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm">
-              <p className="font-medium text-gray-700 mb-1">Webhook URL a registrar en el dashboard de Meta:</p>
-              <code className="text-xs text-gray-600 break-all">{meta.webhookUrl}</code>
+            <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm dark:bg-graphite-2 dark:border-white/10">
+              <p className="font-medium text-gray-700 mb-1 dark:text-gray-300">Webhook URL a registrar en el dashboard de Meta:</p>
+              <code className="text-xs text-gray-600 break-all dark:text-gray-400">{meta.webhookUrl}</code>
             </div>
           )}
 
-          <hr className="border-gray-100" />
+          <hr className="border-gray-100 dark:border-white/10" />
 
-          <p className="text-sm font-medium text-gray-700">Modo "servicio Pitbox" (página/WABA compartida)</p>
+          <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Modo "servicio Pitbox" (página/WABA compartida)</p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Page ID compartida</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">Page ID compartida</label>
               <input
                 type="text"
                 value={config.shared_page_id}
                 onChange={(e) => setConfig({ ...config, shared_page_id: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">WABA ID compartido</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">WABA ID compartido</label>
               <input
                 type="text"
                 value={config.shared_waba_id}
                 onChange={(e) => setConfig({ ...config, shared_waba_id: e.target.value })}
                 placeholder="Fase WhatsApp Cloud API -- todavía no operativo"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100 dark:placeholder-gray-600"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Token de usuario de sistema {meta.has_shared_system_user_token && <span className="text-blue-600 text-xs">(configurado -- deja en blanco para no cambiarlo)</span>}
+            <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">
+              Token de usuario de sistema {meta.has_shared_system_user_token && <span className="text-blue-600 text-xs dark:text-blue-400">(configurado -- deja en blanco para no cambiarlo)</span>}
             </label>
             <div className="relative">
               <input
@@ -242,9 +242,9 @@ const SuperAdminMetaConfig = () => {
                 value={config.shared_system_user_token}
                 onChange={(e) => setConfig({ ...config, shared_system_user_token: e.target.value })}
                 placeholder={meta.has_shared_system_user_token ? '••••••••••••••••••••' : 'Token de larga duración con permisos sobre la página/WABA compartida'}
-                className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100 dark:placeholder-gray-600"
               />
-              <button type="button" onClick={() => setShowSharedToken(!showSharedToken)} className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600">
+              <button type="button" onClick={() => setShowSharedToken(!showSharedToken)} className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300">
                 {showSharedToken ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
               </button>
             </div>
@@ -255,15 +255,15 @@ const SuperAdminMetaConfig = () => {
               type="checkbox"
               checked={config.is_active}
               onChange={(e) => setConfig({ ...config, is_active: e.target.checked })}
-              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-white/10"
             />
-            <span className="text-sm text-gray-700">
+            <span className="text-sm text-gray-700 dark:text-gray-300">
               Conexión activa (si está apagado, se rechaza cualquier conexión nueva aunque haya credenciales guardadas)
             </span>
           </label>
 
           {lastTest && (
-            <div className={`flex items-start gap-2 p-3 rounded-lg border text-sm ${lastTest.ok ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-red-50 border-red-200 text-red-800'}`}>
+            <div className={`flex items-start gap-2 p-3 rounded-lg border text-sm ${lastTest.ok ? 'bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-emerald-900/30 dark:border-emerald-800/40 dark:text-emerald-300' : 'bg-red-50 border-red-200 text-red-800 dark:bg-red-900/30 dark:border-red-800/40 dark:text-red-300'}`}>
               {lastTest.ok ? <CheckCircle className="w-4 h-4 flex-shrink-0 mt-0.5" /> : <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />}
               <div>
                 <p>{lastTest.message}</p>
@@ -285,8 +285,8 @@ const SuperAdminMetaConfig = () => {
 
       <Card>
         <div className="mb-4">
-          <h3 className="text-lg font-semibold text-gray-900">Tenants conectados</h3>
-          <p className="text-sm text-gray-500">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Tenants conectados</h3>
+          <p className="text-sm text-gray-500 dark:text-gray-500">
             En modo "servicio Pitbox" hay que asignar a mano los IDs de formulario de Lead Ads que le pertenecen a
             cada tenant (separados por coma) -- así el webhook sabe a quién asignar cada lead nuevo.
           </p>
@@ -295,7 +295,7 @@ const SuperAdminMetaConfig = () => {
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm">
             <thead>
-              <tr className="text-left text-xs uppercase tracking-wide text-gray-500 border-b border-gray-200">
+              <tr className="text-left text-xs uppercase tracking-wide text-gray-500 border-b border-gray-200 dark:text-gray-500 dark:border-white/10">
                 <th className="py-2 pr-4">Tenant</th>
                 <th className="py-2 pr-4">Modo</th>
                 <th className="py-2 pr-4">Página propia</th>
@@ -303,16 +303,16 @@ const SuperAdminMetaConfig = () => {
                 <th className="py-2 pr-4">Último lead</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-gray-100 dark:divide-white/10">
               {tenants.map((t) => (
                 <tr key={t.id}>
-                  <td className="py-2 pr-4 text-gray-800">{t.tenant?.business_name || t.tenant?.company_name}</td>
+                  <td className="py-2 pr-4 text-gray-800 dark:text-gray-200">{t.tenant?.business_name || t.tenant?.company_name}</td>
                   <td className="py-2 pr-4">
-                    <span className={`px-2 py-0.5 rounded-full text-xs ${t.provider_mode === 'own' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
+                    <span className={`px-2 py-0.5 rounded-full text-xs ${t.provider_mode === 'own' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300' : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'}`}>
                       {t.provider_mode === 'own' ? 'Cuenta propia' : 'Servicio Pitbox'}
                     </span>
                   </td>
-                  <td className="py-2 pr-4 text-gray-500">{t.own_page_name || t.own_page_id || '--'}</td>
+                  <td className="py-2 pr-4 text-gray-500 dark:text-gray-500">{t.own_page_name || t.own_page_id || '--'}</td>
                   <td className="py-2 pr-4">
                     {t.provider_mode === 'pitbox' ? (
                       <input
@@ -320,18 +320,18 @@ const SuperAdminMetaConfig = () => {
                         defaultValue={(t.pitbox_lead_form_ids || []).join(', ')}
                         onBlur={(e) => handleFormIdsChange(t.tenant_id, e.target.value)}
                         placeholder="123456, 789012"
-                        className="w-48 px-2 py-1 text-xs border border-gray-300 rounded"
+                        className="w-48 px-2 py-1 text-xs border border-gray-300 rounded dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100 dark:placeholder-gray-600"
                       />
                     ) : '--'}
                   </td>
-                  <td className="py-2 pr-4 text-gray-500 text-xs">
+                  <td className="py-2 pr-4 text-gray-500 text-xs dark:text-gray-500">
                     {t.last_lead_at ? new Date(t.last_lead_at).toLocaleString('es-CO') : 'Nunca'}
                   </td>
                 </tr>
               ))}
               {tenants.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="py-6 text-center text-gray-400">
+                  <td colSpan={5} className="py-6 text-center text-gray-400 dark:text-gray-500">
                     Ningún tenant conectó Meta todavía
                   </td>
                 </tr>

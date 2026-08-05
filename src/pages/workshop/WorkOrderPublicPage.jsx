@@ -61,8 +61,8 @@ function DiagnosisDiagram({ diagram }) {
   const markedPoints = (diagram.points || []).filter(p => marksByPoint[p.point_number]);
 
   return (
-    <div className="border border-gray-100 rounded-xl bg-gray-50 p-3">
-      <p className="text-xs font-semibold text-gray-600 mb-2">{diagram.name}</p>
+    <div className="border border-gray-100 dark:border-white/10 rounded-xl bg-gray-50 dark:bg-graphite-2 p-3">
+      <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2">{diagram.name}</p>
       <div
         className="relative w-full max-h-72"
         style={{ aspectRatio: `${parseViewBoxSize(diagram.view_box).width} / ${parseViewBoxSize(diagram.view_box).height}` }}
@@ -116,10 +116,10 @@ function DiagnosisDiagram({ diagram }) {
                   {p.point_number}
                 </span>
                 <div className="min-w-0">
-                  <span className="font-medium text-gray-800">{p.part_name}</span>
-                  {mark.side && <span className="text-gray-400"> · {mark.side}</span>}
+                  <span className="font-medium text-gray-800 dark:text-gray-200">{p.part_name}</span>
+                  {mark.side && <span className="text-gray-400 dark:text-gray-500"> · {mark.side}</span>}
                   <span className="ml-1.5 font-medium" style={{ color: style.color }}>· {style.label}</span>
-                  {mark.observation && <p className="text-gray-500 mt-0.5">{mark.observation}</p>}
+                  {mark.observation && <p className="text-gray-500 dark:text-gray-500 mt-0.5">{mark.observation}</p>}
                 </div>
               </div>
 
@@ -142,7 +142,7 @@ function DiagnosisDiagramsSection({ diagrams, primaryColor, embedded = false }) 
     </div>
   );
   if (embedded) return content;
-  return <div className="bg-white rounded-2xl shadow-sm p-5">{content}</div>;
+  return <div className="bg-white dark:bg-graphite rounded-2xl shadow-sm p-5">{content}</div>;
 }
 
 // ─── Sección de cotización pendiente de aprobación ─────────────────────────
@@ -182,35 +182,35 @@ function QuoteApprovalSection({ activeQuoteRequest, diagrams, token, primaryColo
   const total = (activeQuoteRequest.items || []).reduce((s, i) => s + (checks[i.id] ? i.total : 0), 0);
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm overflow-hidden border-2" style={{ borderColor: primaryColor }}>
+    <div className="bg-white dark:bg-graphite rounded-2xl shadow-sm overflow-hidden border-2" style={{ borderColor: primaryColor }}>
       <div style={{ backgroundColor: `${primaryColor}15` }} className="px-5 py-3">
         <h3 className="text-sm font-bold" style={{ color: primaryColor }}>Cotización pendiente de tu aprobación</h3>
-        <p className="text-xs text-gray-500 mt-0.5">Revisa cada ítem y marca los que apruebas antes de enviar tu decisión.</p>
+        <p className="text-xs text-gray-500 dark:text-gray-500 mt-0.5">Revisa cada ítem y marca los que apruebas antes de enviar tu decisión.</p>
       </div>
       <div className="p-5 space-y-3">
         {diagrams && diagrams.length > 0 && (
-          <div className="pb-3 border-b border-gray-100">
+          <div className="pb-3 border-b border-gray-100 dark:border-white/10">
             <DiagnosisDiagramsSection diagrams={diagrams} primaryColor={primaryColor} embedded />
           </div>
         )}
 
         {(activeQuoteRequest.items || []).map(item => (
-          <label key={item.id} className="flex items-start gap-3 p-3 rounded-xl bg-gray-50 cursor-pointer">
+          <label key={item.id} className="flex items-start gap-3 p-3 rounded-xl bg-gray-50 dark:bg-graphite-2 cursor-pointer">
             <input
               type="checkbox"
               checked={!!checks[item.id]}
               onChange={() => toggle(item.id)}
-              className="mt-0.5 w-4 h-4 rounded border-gray-300"
+              className="mt-0.5 w-4 h-4 rounded border-gray-300 dark:border-white/10"
             />
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-900">{item.product_name}</p>
-              <p className="text-xs text-gray-400">{item.quantity} × {COP(item.unit_price)}</p>
+              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{item.product_name}</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500">{item.quantity} × {COP(item.unit_price)}</p>
             </div>
-            <span className="text-sm font-semibold text-gray-900 shrink-0">{COP(item.total)}</span>
+            <span className="text-sm font-semibold text-gray-900 dark:text-gray-100 shrink-0">{COP(item.total)}</span>
           </label>
         ))}
 
-        <div className="flex justify-between text-sm font-bold text-gray-900 pt-2 border-t border-gray-100">
+        <div className="flex justify-between text-sm font-bold text-gray-900 dark:text-gray-100 pt-2 border-t border-gray-100 dark:border-white/10">
           <span>Total aprobado</span>
           <span>{COP(total)}</span>
         </div>
@@ -221,7 +221,7 @@ function QuoteApprovalSection({ activeQuoteRequest, diagrams, token, primaryColo
             placeholder="Nombre completo"
             value={name}
             onChange={e => setName(e.target.value)}
-            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2"
+            className="w-full border border-gray-200 dark:border-white/10 dark:bg-graphite-2 dark:text-gray-100 dark:placeholder-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2"
             style={{ '--tw-ring-color': primaryColor }}
           />
           <input
@@ -229,10 +229,10 @@ function QuoteApprovalSection({ activeQuoteRequest, diagrams, token, primaryColo
             placeholder="Documento de identidad (cédula)"
             value={document_}
             onChange={e => setDocument(e.target.value)}
-            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2"
+            className="w-full border border-gray-200 dark:border-white/10 dark:bg-graphite-2 dark:text-gray-100 dark:placeholder-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2"
             style={{ '--tw-ring-color': primaryColor }}
           />
-          {error && <p className="text-xs text-red-500">{error}</p>}
+          {error && <p className="text-xs text-red-500 dark:text-red-400">{error}</p>}
           <button
             onClick={handleSubmit}
             disabled={submitting}
@@ -241,7 +241,7 @@ function QuoteApprovalSection({ activeQuoteRequest, diagrams, token, primaryColo
           >
             {submitting ? 'Enviando...' : 'Enviar mi decisión'}
           </button>
-          <p className="text-xs text-gray-400 text-center">
+          <p className="text-xs text-gray-400 dark:text-gray-500 text-center">
             Tu respuesta queda registrada de forma definitiva y no se puede modificar después.
           </p>
         </div>
@@ -254,19 +254,19 @@ function QuoteApprovalSection({ activeQuoteRequest, diagrams, token, primaryColo
 function QuoteHistorySection({ quoteHistory }) {
   if (!quoteHistory || quoteHistory.length === 0) return null;
   return (
-    <div className="bg-white rounded-2xl shadow-sm p-5">
-      <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Cotizaciones respondidas</h3>
+    <div className="bg-white dark:bg-graphite rounded-2xl shadow-sm p-5">
+      <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-500 uppercase tracking-wide mb-3">Cotizaciones respondidas</h3>
       <div className="space-y-3">
         {quoteHistory.map((q, idx) => (
-          <div key={idx} className="border border-gray-100 rounded-xl p-3">
-            <p className="text-xs text-gray-400 mb-2">
+          <div key={idx} className="border border-gray-100 dark:border-white/10 rounded-xl p-3">
+            <p className="text-xs text-gray-400 dark:text-gray-500 mb-2">
               Respondida el {fmt(q.responded_at)} por {q.approved_by_name}
             </p>
             <ul className="space-y-1">
               {(q.items || []).map((i, j) => (
                 <li key={j} className="text-xs flex justify-between">
-                  <span className="text-gray-600">{i.product_name} × {i.quantity}</span>
-                  <span className={i.approval_status === 'aprobado' ? 'text-green-600 font-medium' : 'text-red-500 font-medium'}>
+                  <span className="text-gray-600 dark:text-gray-400">{i.product_name} × {i.quantity}</span>
+                  <span className={i.approval_status === 'aprobado' ? 'text-green-600 dark:text-green-400 font-medium' : 'text-red-500 dark:text-red-400 font-medium'}>
                     {i.approval_status === 'aprobado' ? `Aprobado — ${COP(i.total)}` : 'Rechazado'}
                   </span>
                 </li>
@@ -369,13 +369,13 @@ function PhotoGallery({ photos, title }) {
 
   return (
     <div>
-      <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">{title}</h3>
+      <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-500 uppercase tracking-wide mb-3">{title}</h3>
       <div className="grid grid-cols-3 gap-2">
         {photos.map((photo, i) => (
           <button
             key={i}
             onClick={() => setSelected(photo)}
-            className="relative aspect-square overflow-hidden rounded-xl bg-gray-100 hover:opacity-90 transition"
+            className="relative aspect-square overflow-hidden rounded-xl bg-gray-100 dark:bg-graphite-2 hover:opacity-90 transition"
           >
             <img
               src={resolvePhotoUrl(photo.url)}
@@ -446,10 +446,10 @@ export default function WorkOrderPublicPage() {
   // ── Loading ──────────────────────────────────────────────────────────────
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-ink flex items-center justify-center">
         <div className="text-center">
           <div className="inline-block w-10 h-10 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mb-4" />
-          <p className="text-gray-500 text-sm">Cargando información de tu orden...</p>
+          <p className="text-gray-500 dark:text-gray-500 text-sm">Cargando información de tu orden...</p>
         </div>
       </div>
     );
@@ -458,15 +458,15 @@ export default function WorkOrderPublicPage() {
   // ── Error ────────────────────────────────────────────────────────────────
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gray-50 dark:bg-ink flex items-center justify-center p-4">
         <div className="text-center max-w-sm">
-          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
             <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
               <path d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </div>
-          <h2 className="text-lg font-bold text-gray-900 mb-2">Enlace inválido</h2>
-          <p className="text-gray-500 text-sm">{error}</p>
+          <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">Enlace inválido</h2>
+          <p className="text-gray-500 dark:text-gray-500 text-sm">{error}</p>
         </div>
       </div>
     );
@@ -500,13 +500,13 @@ export default function WorkOrderPublicPage() {
       <div className="max-w-lg mx-auto px-4 py-5 space-y-4">
 
         {/* ── Card Estado Principal ──────────────────────────────────── */}
-        <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+        <div className="bg-white dark:bg-graphite rounded-2xl shadow-sm overflow-hidden">
           <div style={{ backgroundColor: statusCfg?.bg || '#eff6ff' }} className="px-5 py-4">
             <div className="flex items-start justify-between mb-1">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Orden de trabajo</p>
+              <p className="text-xs font-semibold text-gray-500 dark:text-gray-500 uppercase tracking-wide">Orden de trabajo</p>
               <StatusBadge status={order.status} />
             </div>
-            <h2 className="text-2xl font-black text-gray-900">{order.order_number}</h2>
+            <h2 className="text-2xl font-black text-gray-900 dark:text-gray-100">{order.order_number}</h2>
             <p style={{ color: statusCfg?.color }} className="text-sm font-medium mt-1">
               {statusCfg?.desc}
             </p>
@@ -514,7 +514,7 @@ export default function WorkOrderPublicPage() {
 
           {/* Timeline */}
           {order.status !== 'cancelado' && (
-            <div className="px-5 py-4 border-t border-gray-100">
+            <div className="px-5 py-4 border-t border-gray-100 dark:border-white/10">
               <Timeline status={order.status} />
             </div>
           )}
@@ -546,8 +546,8 @@ export default function WorkOrderPublicPage() {
 
         {/* ── Datos del Vehículo ─────────────────────────────────────── */}
         {order.vehicle && (
-          <div className="bg-white rounded-2xl shadow-sm p-5">
-            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3 flex items-center gap-1.5">
+          <div className="bg-white dark:bg-graphite rounded-2xl shadow-sm p-5">
+            <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-500 uppercase tracking-wide mb-3 flex items-center gap-1.5">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
                 <path d="M5 17H3a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v4" stroke="#6b7280" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                 <circle cx="7" cy="17" r="2" stroke="#6b7280" strokeWidth="2"/>
@@ -557,34 +557,34 @@ export default function WorkOrderPublicPage() {
               Vehículo
             </h3>
             <div className="grid grid-cols-2 gap-3">
-              <div className="bg-gray-50 rounded-xl p-3 col-span-2">
-                <p className="text-xs text-gray-500">Placa</p>
-                <p className="text-xl font-black tracking-widest text-gray-900">{order.vehicle.plate}</p>
+              <div className="bg-gray-50 dark:bg-graphite-2 rounded-xl p-3 col-span-2">
+                <p className="text-xs text-gray-500 dark:text-gray-500">Placa</p>
+                <p className="text-xl font-black tracking-widest text-gray-900 dark:text-gray-100">{order.vehicle.plate}</p>
               </div>
               {order.vehicle.brand && (
-                <div className="bg-gray-50 rounded-xl p-3">
-                  <p className="text-xs text-gray-500">Marca / Modelo</p>
-                  <p className="text-sm font-semibold text-gray-900">
+                <div className="bg-gray-50 dark:bg-graphite-2 rounded-xl p-3">
+                  <p className="text-xs text-gray-500 dark:text-gray-500">Marca / Modelo</p>
+                  <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
                     {order.vehicle.brand} {order.vehicle.model}
                   </p>
                 </div>
               )}
               {order.vehicle.year && (
-                <div className="bg-gray-50 rounded-xl p-3">
-                  <p className="text-xs text-gray-500">Año</p>
-                  <p className="text-sm font-semibold text-gray-900">{order.vehicle.year}</p>
+                <div className="bg-gray-50 dark:bg-graphite-2 rounded-xl p-3">
+                  <p className="text-xs text-gray-500 dark:text-gray-500">Año</p>
+                  <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{order.vehicle.year}</p>
                 </div>
               )}
               {order.mileage_in && (
-                <div className="bg-gray-50 rounded-xl p-3">
-                  <p className="text-xs text-gray-500">Kilometraje entrada</p>
-                  <p className="text-sm font-semibold text-gray-900">{order.mileage_in.toLocaleString('es-CO')} km</p>
+                <div className="bg-gray-50 dark:bg-graphite-2 rounded-xl p-3">
+                  <p className="text-xs text-gray-500 dark:text-gray-500">Kilometraje entrada</p>
+                  <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{order.mileage_in.toLocaleString('es-CO')} km</p>
                 </div>
               )}
               {order.mileage_out && (
-                <div className="bg-gray-50 rounded-xl p-3">
-                  <p className="text-xs text-gray-500">Kilometraje salida</p>
-                  <p className="text-sm font-semibold text-gray-900">{order.mileage_out.toLocaleString('es-CO')} km</p>
+                <div className="bg-gray-50 dark:bg-graphite-2 rounded-xl p-3">
+                  <p className="text-xs text-gray-500 dark:text-gray-500">Kilometraje salida</p>
+                  <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{order.mileage_out.toLocaleString('es-CO')} km</p>
                 </div>
               )}
             </div>
@@ -592,8 +592,8 @@ export default function WorkOrderPublicPage() {
         )}
 
         {/* ── Fechas ────────────────────────────────────────────────── */}
-        <div className="bg-white rounded-2xl shadow-sm p-5">
-          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3 flex items-center gap-1.5">
+        <div className="bg-white dark:bg-graphite rounded-2xl shadow-sm p-5">
+          <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-500 uppercase tracking-wide mb-3 flex items-center gap-1.5">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
               <rect x="3" y="4" width="18" height="18" rx="2" stroke="#6b7280" strokeWidth="2"/>
               <path d="M16 2v4M8 2v4M3 10h18" stroke="#6b7280" strokeWidth="2" strokeLinecap="round"/>
@@ -604,9 +604,9 @@ export default function WorkOrderPublicPage() {
             {[
               { label: 'Ingreso', val: order.received_at },
             ].filter(f => f.val).map(({ label, val }) => (
-              <div key={label} className="flex justify-between items-center py-1.5 border-b border-gray-50 last:border-0">
-                <span className="text-sm text-gray-500">{label}</span>
-                <span className="text-sm font-semibold text-gray-800">{fmt(val)}</span>
+              <div key={label} className="flex justify-between items-center py-1.5 border-b border-gray-50 dark:border-white/10 last:border-0">
+                <span className="text-sm text-gray-500 dark:text-gray-500">{label}</span>
+                <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">{fmt(val)}</span>
               </div>
             ))}
           </div>
@@ -614,23 +614,23 @@ export default function WorkOrderPublicPage() {
 
         {/* ── Descripción y diagnóstico ─────────────────────────────── */}
         {(order.problem_description || order.diagnosis || order.work_performed) && (
-          <div className="bg-white rounded-2xl shadow-sm p-5 space-y-4">
+          <div className="bg-white dark:bg-graphite rounded-2xl shadow-sm p-5 space-y-4">
             {order.problem_description && (
               <div>
-                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Problema reportado</h3>
-                <p className="text-sm text-gray-700 leading-relaxed">{order.problem_description}</p>
+                <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-500 uppercase tracking-wide mb-2">Problema reportado</h3>
+                <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{order.problem_description}</p>
               </div>
             )}
             {order.diagnosis && (
               <div>
-                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Diagnóstico técnico</h3>
-                <p className="text-sm text-gray-700 leading-relaxed">{order.diagnosis}</p>
+                <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-500 uppercase tracking-wide mb-2">Diagnóstico técnico</h3>
+                <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{order.diagnosis}</p>
               </div>
             )}
             {order.work_performed && (
               <div>
-                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Trabajo realizado</h3>
-                <p className="text-sm text-gray-700 leading-relaxed">{order.work_performed}</p>
+                <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-500 uppercase tracking-wide mb-2">Trabajo realizado</h3>
+                <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{order.work_performed}</p>
               </div>
             )}
           </div>

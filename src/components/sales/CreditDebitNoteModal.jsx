@@ -132,24 +132,24 @@ export default function CreditDebitNoteModal({ isOpen, onClose, sale, onSuccess,
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={step < 4 ? handleClose : undefined} />
 
-      <div className="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl overflow-hidden">
+      <div className="relative w-full max-w-2xl bg-white dark:bg-graphite rounded-2xl shadow-2xl overflow-hidden">
 
         {/* Header */}
-        <div className={`px-6 py-4 flex items-center justify-between border-b ${step === 4 ? 'bg-green-50 border-green-100' : 'bg-white'}`}>
+        <div className={`px-6 py-4 flex items-center justify-between border-b dark:border-white/10 ${step === 4 ? 'bg-green-50 border-green-100 dark:bg-green-900/30 dark:border-green-800/40' : 'bg-white dark:bg-graphite'}`}>
           <div className="flex items-center gap-3">
             {step < 4
-              ? <div className={`w-8 h-8 rounded-full bg-${accentColor}-100 flex items-center justify-center`}>
-                  <AccentIcon className={`w-4 h-4 text-${accentColor}-600`} />
+              ? <div className={`w-8 h-8 rounded-full bg-${accentColor}-100 dark:bg-${accentColor}-900/30 flex items-center justify-center`}>
+                  <AccentIcon className={`w-4 h-4 text-${accentColor}-600 dark:text-${accentColor}-300`} />
                 </div>
-              : <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
-                  <Check className="w-4 h-4 text-green-600" />
+              : <div className="w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                  <Check className="w-4 h-4 text-green-600 dark:text-green-300" />
                 </div>
             }
             <div>
-              <h2 className="font-semibold text-gray-900">
+              <h2 className="font-semibold text-gray-900 dark:text-gray-100">
                 {step < 4 ? `Crear ${title}` : `${title} creada`}
               </h2>
-              <p className="text-xs text-gray-500">{sale.sale_number} · {stepLabel[step]}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-500">{sale.sale_number} · {stepLabel[step]}</p>
             </div>
           </div>
 
@@ -159,14 +159,14 @@ export default function CreditDebitNoteModal({ isOpen, onClose, sale, onSuccess,
                 <div key={s} className={`h-1.5 rounded-full transition-all duration-300 ${
                   s < step  ? `w-6 bg-${accentColor}-500` :
                   s === step ? `w-8 bg-${accentColor}-600` :
-                               'w-4 bg-gray-200'
+                               'w-4 bg-gray-200 dark:bg-white/10'
                 }`} />
               ))}
             </div>
           )}
 
-          <button onClick={handleClose} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
-            <X className="w-4 h-4 text-gray-500" />
+          <button onClick={handleClose} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 transition-colors">
+            <X className="w-4 h-4 text-gray-500 dark:text-gray-500" />
           </button>
         </div>
 
@@ -176,52 +176,52 @@ export default function CreditDebitNoteModal({ isOpen, onClose, sale, onSuccess,
           {/* PASO 1: Modo */}
           {step === 1 && (
             <div className="space-y-4">
-              <div className={`flex items-start gap-3 bg-${accentColor}-50 border border-${accentColor}-200 rounded-xl px-4 py-3`}>
+              <div className={`flex items-start gap-3 bg-${accentColor}-50 border border-${accentColor}-200 dark:bg-${accentColor}-900/30 dark:border-${accentColor}-800/40 rounded-xl px-4 py-3`}>
                 <AlertTriangle className={`w-4 h-4 text-${accentColor}-500 flex-shrink-0 mt-0.5`} />
-                <p className={`text-sm text-${accentColor}-800`}>
+                <p className={`text-sm text-${accentColor}-800 dark:text-${accentColor}-300`}>
                   Se creará una <strong>{title.toLowerCase()}</strong> para la factura{' '}
                   <strong>{sale.dian_invoice_number || sale.sale_number}</strong> y se enviará a la DIAN.
                 </p>
               </div>
 
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
                 Factura original: <span className="font-semibold">{formatCurrency(sale.total_amount)}</span>
               </p>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {isCredit && (
                   <button onClick={() => handleModeSelect('total')}
-                    className="group flex flex-col items-center gap-3 p-5 border-2 border-gray-200 hover:border-red-400 hover:bg-red-50 rounded-xl transition-all">
-                    <div className="w-10 h-10 rounded-full bg-red-100 group-hover:bg-red-200 flex items-center justify-center">
-                      <FileText className="w-5 h-5 text-red-600" />
+                    className="group flex flex-col items-center gap-3 p-5 border-2 border-gray-200 dark:border-white/10 hover:border-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all">
+                    <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/30 group-hover:bg-red-200 flex items-center justify-center">
+                      <FileText className="w-5 h-5 text-red-600 dark:text-red-300" />
                     </div>
                     <div className="text-center">
-                      <p className="font-semibold text-gray-900 text-sm">Total</p>
-                      <p className="text-xs text-gray-500 mt-0.5">Acreditar el total</p>
+                      <p className="font-semibold text-gray-900 dark:text-gray-100 text-sm">Total</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-500 mt-0.5">Acreditar el total</p>
                     </div>
-                    <span className="text-base font-bold text-red-600">{formatCurrency(sale.total_amount)}</span>
+                    <span className="text-base font-bold text-red-600 dark:text-red-400">{formatCurrency(sale.total_amount)}</span>
                   </button>
                 )}
 
                 <button onClick={() => handleModeSelect('items')}
-                  className="group flex flex-col items-center gap-3 p-5 border-2 border-gray-200 hover:border-blue-400 hover:bg-blue-50 rounded-xl transition-all">
-                  <div className="w-10 h-10 rounded-full bg-blue-100 group-hover:bg-blue-200 flex items-center justify-center">
-                    <FileText className="w-5 h-5 text-blue-600" />
+                  className="group flex flex-col items-center gap-3 p-5 border-2 border-gray-200 dark:border-white/10 hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all">
+                  <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 group-hover:bg-blue-200 flex items-center justify-center">
+                    <FileText className="w-5 h-5 text-blue-600 dark:text-blue-300" />
                   </div>
                   <div className="text-center">
-                    <p className="font-semibold text-gray-900 text-sm">Por ítems</p>
-                    <p className="text-xs text-gray-500 mt-0.5">Seleccionar ítems y cantidades</p>
+                    <p className="font-semibold text-gray-900 dark:text-gray-100 text-sm">Por ítems</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-500 mt-0.5">Seleccionar ítems y cantidades</p>
                   </div>
                 </button>
 
                 <button onClick={() => { setMode('amount'); setStep(3); }}
-                  className="group flex flex-col items-center gap-3 p-5 border-2 border-gray-200 hover:border-amber-400 hover:bg-amber-50 rounded-xl transition-all">
-                  <div className="w-10 h-10 rounded-full bg-amber-100 group-hover:bg-amber-200 flex items-center justify-center">
-                    <FileText className="w-5 h-5 text-amber-600" />
+                  className="group flex flex-col items-center gap-3 p-5 border-2 border-gray-200 dark:border-white/10 hover:border-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-xl transition-all">
+                  <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900/30 group-hover:bg-amber-200 flex items-center justify-center">
+                    <FileText className="w-5 h-5 text-amber-600 dark:text-amber-300" />
                   </div>
                   <div className="text-center">
-                    <p className="font-semibold text-gray-900 text-sm">Por monto</p>
-                    <p className="text-xs text-gray-500 mt-0.5">Ingresar monto fijo</p>
+                    <p className="font-semibold text-gray-900 dark:text-gray-100 text-sm">Por monto</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-500 mt-0.5">Ingresar monto fijo</p>
                   </div>
                 </button>
               </div>
@@ -231,7 +231,7 @@ export default function CreditDebitNoteModal({ isOpen, onClose, sale, onSuccess,
           {/* PASO 2: Selección de ítems */}
           {step === 2 && (
             <div className="space-y-4">
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
                 {isCredit ? 'Selecciona los ítems y cantidades a acreditar.' : 'Selecciona los ítems para el cargo.'}
               </p>
 
@@ -243,33 +243,33 @@ export default function CreditDebitNoteModal({ isOpen, onClose, sale, onSuccess,
 
                   return (
                     <div key={item.id} className={`flex items-center gap-4 p-3 rounded-xl border transition-all ${
-                      qty > 0 ? `border-${accentColor}-200 bg-${accentColor}-50` : 'border-gray-100 bg-gray-50'
+                      qty > 0 ? `border-${accentColor}-200 bg-${accentColor}-50 dark:border-${accentColor}-800/40 dark:bg-${accentColor}-900/20` : 'border-gray-100 bg-gray-50 dark:border-white/10 dark:bg-graphite-2'
                     }`}>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900 truncate">{item.product_name}</p>
+                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{item.product_name}</p>
                         <div className="flex items-center gap-2 mt-0.5">
-                          <p className="text-xs text-gray-500">Disponible: <span className="font-medium">{max}</span></p>
-                          <span className="text-gray-300">·</span>
-                          <p className="text-xs text-gray-500">{formatCurrency(item.unit_price)} c/u</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-500">Disponible: <span className="font-medium">{max}</span></p>
+                          <span className="text-gray-300 dark:text-gray-600">·</span>
+                          <p className="text-xs text-gray-500 dark:text-gray-500">{formatCurrency(item.unit_price)} c/u</p>
                         </div>
-                        <div className="mt-1.5 h-1 bg-gray-200 rounded-full overflow-hidden">
+                        <div className="mt-1.5 h-1 bg-gray-200 dark:bg-white/10 rounded-full overflow-hidden">
                           <div className={`h-full bg-${accentColor}-500 rounded-full transition-all`} style={{ width: `${pct}%` }} />
                         </div>
                       </div>
 
                       <div className="flex items-center gap-1 flex-shrink-0">
                         <button onClick={() => handleQtyChange(item.id, qty - 1)}
-                          className="w-7 h-7 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 flex items-center justify-center text-gray-600 font-bold text-sm">−</button>
+                          className="w-7 h-7 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 dark:border-white/10 dark:bg-graphite-2 dark:hover:bg-white/10 flex items-center justify-center text-gray-600 dark:text-gray-400 font-bold text-sm">−</button>
                         <input type="number" min="0" max={max} step="1" value={qty}
                           onChange={e => handleQtyChange(item.id, e.target.value)}
-                          className="w-14 text-center text-sm font-semibold border border-gray-200 rounded-lg py-1 focus:outline-none focus:ring-2 focus:ring-red-400" />
+                          className="w-14 text-center text-sm font-semibold border border-gray-200 rounded-lg py-1 focus:outline-none focus:ring-2 focus:ring-red-400 dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100" />
                         <button onClick={() => handleQtyChange(item.id, qty + 1)}
-                          className="w-7 h-7 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 flex items-center justify-center text-gray-600 font-bold text-sm">+</button>
-                        <span className="text-xs text-gray-400 ml-1">/ {max}</span>
+                          className="w-7 h-7 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 dark:border-white/10 dark:bg-graphite-2 dark:hover:bg-white/10 flex items-center justify-center text-gray-600 dark:text-gray-400 font-bold text-sm">+</button>
+                        <span className="text-xs text-gray-400 dark:text-gray-500 ml-1">/ {max}</span>
                       </div>
 
                       <div className="text-right w-20 flex-shrink-0">
-                        <p className={`text-sm font-semibold ${qty > 0 ? `text-${accentColor}-700` : 'text-gray-300'}`}>
+                        <p className={`text-sm font-semibold ${qty > 0 ? `text-${accentColor}-700 dark:text-${accentColor}-300` : 'text-gray-300 dark:text-gray-600'}`}>
                           {formatCurrency(parseFloat(item.total) * (qty / max))}
                         </p>
                       </div>
@@ -279,11 +279,11 @@ export default function CreditDebitNoteModal({ isOpen, onClose, sale, onSuccess,
               </div>
 
               {selectedItems.length > 0 && (
-                <div className={`flex justify-between items-center bg-${accentColor}-50 border border-${accentColor}-100 rounded-xl px-4 py-3`}>
-                  <p className={`text-sm text-${accentColor}-700`}>
+                <div className={`flex justify-between items-center bg-${accentColor}-50 border border-${accentColor}-100 dark:bg-${accentColor}-900/20 dark:border-${accentColor}-800/40 rounded-xl px-4 py-3`}>
+                  <p className={`text-sm text-${accentColor}-700 dark:text-${accentColor}-300`}>
                     {selectedItems.length} ítem{selectedItems.length !== 1 ? 's' : ''} seleccionado{selectedItems.length !== 1 ? 's' : ''}
                   </p>
-                  <p className={`font-bold text-${accentColor}-800`}>{formatCurrency(itemsTotal)}</p>
+                  <p className={`font-bold text-${accentColor}-800 dark:text-${accentColor}-300`}>{formatCurrency(itemsTotal)}</p>
                 </div>
               )}
             </div>
@@ -292,48 +292,48 @@ export default function CreditDebitNoteModal({ isOpen, onClose, sale, onSuccess,
           {/* PASO 3: Confirmar */}
           {step === 3 && (
             <div className="space-y-5">
-              <div className="bg-gray-50 rounded-xl p-4 space-y-2">
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Resumen</p>
+              <div className="bg-gray-50 dark:bg-graphite-2 rounded-xl p-4 space-y-2">
+                <p className="text-xs font-semibold text-gray-500 dark:text-gray-500 uppercase tracking-wider mb-3">Resumen</p>
 
                 {mode === 'total' && (
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-700">Total de la factura</span>
-                    <span className="font-medium">{formatCurrency(sale.total_amount)}</span>
+                    <span className="text-gray-700 dark:text-gray-300">Total de la factura</span>
+                    <span className="font-medium dark:text-gray-100">{formatCurrency(sale.total_amount)}</span>
                   </div>
                 )}
 
                 {mode === 'items' && selectedItems.map(item => (
                   <div key={item.id} className="flex justify-between text-sm">
-                    <span className="text-gray-700">
-                      {item.product_name} <span className="text-gray-400">× {quantities[item.id]}</span>
+                    <span className="text-gray-700 dark:text-gray-300">
+                      {item.product_name} <span className="text-gray-400 dark:text-gray-500">× {quantities[item.id]}</span>
                     </span>
-                    <span className="font-medium">{formatCurrency(parseFloat(item.total) * (quantities[item.id] / parseFloat(item.quantity)))}</span>
+                    <span className="font-medium dark:text-gray-100">{formatCurrency(parseFloat(item.total) * (quantities[item.id] / parseFloat(item.quantity)))}</span>
                   </div>
                 ))}
 
                 {mode === 'amount' && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Monto</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Monto</label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">$</span>
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-500 font-medium">$</span>
                       <input type="number" value={amount} onChange={e => setAmount(e.target.value)}
-                        className="w-full pl-8 pr-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent text-lg font-medium"
+                        className="w-full pl-8 pr-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent text-lg font-medium dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100"
                         min="1" max={sale.total_amount} step="any" placeholder="0" />
                     </div>
                     {parseFloat(amount) > parseFloat(sale.total_amount) && (
-                      <p className="mt-1 text-xs text-red-600">El monto no puede exceder el total de la factura</p>
+                      <p className="mt-1 text-xs text-red-600 dark:text-red-400">El monto no puede exceder el total de la factura</p>
                     )}
                   </div>
                 )}
 
-                <div className="border-t pt-2 flex justify-between font-bold text-base">
-                  <span>Total {title.toLowerCase()}</span>
-                  <span className={`text-${accentColor}-600`}>{formatCurrency(mode === 'total' ? sale.total_amount : noteTotal)}</span>
+                <div className="border-t dark:border-white/10 pt-2 flex justify-between font-bold text-base">
+                  <span className="dark:text-gray-100">Total {title.toLowerCase()}</span>
+                  <span className={`text-${accentColor}-600 dark:text-${accentColor}-400`}>{formatCurrency(mode === 'total' ? sale.total_amount : noteTotal)}</span>
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
                   Motivo <span className="text-red-500">*</span>
                 </label>
                 <div className="grid grid-cols-2 gap-2">
@@ -341,8 +341,8 @@ export default function CreditDebitNoteModal({ isOpen, onClose, sale, onSuccess,
                     <button key={r.value} onClick={() => setReason(r.value)}
                       className={`text-left text-sm px-3 py-2 rounded-lg border transition-all ${
                         reason === r.value
-                          ? `border-${accentColor}-400 bg-${accentColor}-50 text-${accentColor}-700 font-medium`
-                          : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                          ? `border-${accentColor}-400 bg-${accentColor}-50 text-${accentColor}-700 font-medium dark:bg-${accentColor}-900/30 dark:text-${accentColor}-300 dark:border-${accentColor}-800/40`
+                          : 'border-gray-200 hover:border-gray-300 text-gray-700 dark:border-white/10 dark:hover:border-white/20 dark:text-gray-300'
                       }`}>
                       {r.label}
                     </button>
@@ -351,12 +351,12 @@ export default function CreditDebitNoteModal({ isOpen, onClose, sale, onSuccess,
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                  Observaciones <span className="text-gray-400">(opcional)</span>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                  Observaciones <span className="text-gray-400 dark:text-gray-500">(opcional)</span>
                 </label>
                 <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2}
                   placeholder="Detalle adicional..."
-                  className="w-full text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-300 resize-none" />
+                  className="w-full text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-300 resize-none dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100 dark:placeholder-gray-600" />
               </div>
             </div>
           )}
@@ -365,34 +365,34 @@ export default function CreditDebitNoteModal({ isOpen, onClose, sale, onSuccess,
           {step === 4 && result && (
             <div className="space-y-4 py-2">
               <div className="flex flex-col items-center gap-2 py-4">
-                <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center">
-                  <Check className="w-8 h-8 text-green-600" />
+                <div className="w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                  <Check className="w-8 h-8 text-green-600 dark:text-green-300" />
                 </div>
-                <p className="text-lg font-semibold text-gray-900">{title} creada</p>
-                <p className="text-sm text-gray-500 text-center">
-                  Se creó <span className="font-mono font-medium text-gray-700">{result.data?.sale_number}</span>
+                <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">{title} creada</p>
+                <p className="text-sm text-gray-500 dark:text-gray-500 text-center">
+                  Se creó <span className="font-mono font-medium text-gray-700 dark:text-gray-300">{result.data?.sale_number}</span>
                 </p>
               </div>
 
-              <div className="bg-gray-50 rounded-xl p-4 space-y-2 text-sm">
+              <div className="bg-gray-50 dark:bg-graphite-2 rounded-xl p-4 space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Documento</span>
-                  <span className="font-medium text-green-700">{result.data?.sale_number}</span>
+                  <span className="text-gray-600 dark:text-gray-400">Documento</span>
+                  <span className="font-medium text-green-700 dark:text-green-400">{result.data?.sale_number}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Tipo</span>
-                  <span className="font-medium">{title}</span>
+                  <span className="text-gray-600 dark:text-gray-400">Tipo</span>
+                  <span className="font-medium dark:text-gray-100">{title}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Monto</span>
-                  <span className="font-bold text-red-600">{formatCurrency(result.data?.total_amount)}</span>
+                  <span className="text-gray-600 dark:text-gray-400">Monto</span>
+                  <span className="font-bold text-red-600 dark:text-red-400">{formatCurrency(result.data?.total_amount)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">DIAN</span>
+                  <span className="text-gray-600 dark:text-gray-400">DIAN</span>
                   <span className={`font-medium ${
-                    result.data?.dian_status === 'accepted' ? 'text-green-600' :
-                    result.data?.dian_status === 'pending'  ? 'text-amber-600' :
-                                                              'text-gray-500'
+                    result.data?.dian_status === 'accepted' ? 'text-green-600 dark:text-green-400' :
+                    result.data?.dian_status === 'pending'  ? 'text-amber-600 dark:text-amber-400' :
+                                                              'text-gray-500 dark:text-gray-500'
                   }`}>
                     {result.data?.dian_status === 'accepted' ? '✓ Aceptada' :
                      result.data?.dian_status === 'pending'  ? '⏳ En proceso...' :
@@ -405,16 +405,16 @@ export default function CreditDebitNoteModal({ isOpen, onClose, sale, onSuccess,
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t bg-gray-50 flex items-center justify-between gap-3">
+        <div className="px-6 py-4 border-t bg-gray-50 dark:bg-graphite-2 dark:border-white/10 flex items-center justify-between gap-3">
           {step === 2 && (
             <button onClick={() => setStep(1)}
-              className="flex items-center gap-1.5 text-sm text-gray-600 hover:text-gray-900 transition-colors">
+              className="flex items-center gap-1.5 text-sm text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 transition-colors">
               <ChevronLeft className="w-4 h-4" /> Volver
             </button>
           )}
           {step === 3 && (
             <button onClick={() => setStep(mode === 'items' ? 2 : 1)}
-              className="flex items-center gap-1.5 text-sm text-gray-600 hover:text-gray-900 transition-colors">
+              className="flex items-center gap-1.5 text-sm text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 transition-colors">
               <ChevronLeft className="w-4 h-4" /> Volver
             </button>
           )}
@@ -423,7 +423,7 @@ export default function CreditDebitNoteModal({ isOpen, onClose, sale, onSuccess,
           <div className="flex items-center gap-2 ml-auto">
             {step < 4 && (
               <button onClick={handleClose}
-                className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors">
+                className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900 border border-gray-200 rounded-lg hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-100 dark:border-white/10 dark:hover:bg-white/10 transition-colors">
                 Cancelar
               </button>
             )}

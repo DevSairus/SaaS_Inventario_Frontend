@@ -13,11 +13,11 @@ const STATUS_OPTIONS = [
 ];
 
 const STATUS_LABELS = {
-  pending: { text: 'Pendiente', color: 'bg-yellow-100 text-yellow-800', icon: Clock },
-  active: { text: 'Activa', color: 'bg-green-100 text-green-800', icon: Monitor },
-  ended: { text: 'Finalizada', color: 'bg-gray-100 text-gray-600', icon: CheckCircle },
-  rejected: { text: 'Rechazada', color: 'bg-red-100 text-red-800', icon: XCircle },
-  expired: { text: 'Expirada', color: 'bg-orange-100 text-orange-800', icon: AlertCircle },
+  pending: { text: 'Pendiente', color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300', icon: Clock },
+  active: { text: 'Activa', color: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300', icon: Monitor },
+  ended: { text: 'Finalizada', color: 'bg-gray-100 text-gray-600 dark:bg-white/10 dark:text-gray-400', icon: CheckCircle },
+  rejected: { text: 'Rechazada', color: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300', icon: XCircle },
+  expired: { text: 'Expirada', color: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300', icon: AlertCircle },
 };
 
 export default function RemoteSessionsHistory() {
@@ -87,18 +87,18 @@ export default function RemoteSessionsHistory() {
     <div className="p-6 max-w-6xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-purple-100 rounded-lg">
-            <Monitor className="w-6 h-6 text-purple-600" />
+          <div className="p-2 bg-purple-100 rounded-lg dark:bg-purple-900/30">
+            <Monitor className="w-6 h-6 text-purple-600 dark:text-purple-400" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Historial de Sesiones Remotas</h1>
-            <p className="text-sm text-gray-500">Registro de accesos remotos realizados</p>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Historial de Sesiones Remotas</h1>
+            <p className="text-sm text-gray-500 dark:text-gray-500">Registro de accesos remotos realizados</p>
           </div>
         </div>
         <button
           onClick={() => setShowFilters(!showFilters)}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-            showFilters || hasActiveFilters ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            showFilters || hasActiveFilters ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300' : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-white/10 dark:text-gray-300 dark:hover:bg-white/20'
           }`}
         >
           <Filter className="w-4 h-4" />
@@ -109,14 +109,14 @@ export default function RemoteSessionsHistory() {
 
       {/* Filtros */}
       {showFilters && (
-        <div className="bg-white rounded-xl border border-gray-200 p-4 mb-4">
+        <div className="bg-white rounded-xl border border-gray-200 p-4 mb-4 dark:bg-graphite dark:border-white/10">
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Estado</label>
+              <label className="block text-xs text-gray-500 mb-1 dark:text-gray-500">Estado</label>
               <select
                 value={filters.status}
                 onChange={(e) => handleFilterChange('status', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100"
               >
                 {STATUS_OPTIONS.map((s) => (
                   <option key={s.value} value={s.value}>{s.label}</option>
@@ -124,28 +124,28 @@ export default function RemoteSessionsHistory() {
               </select>
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Desde</label>
+              <label className="block text-xs text-gray-500 mb-1 dark:text-gray-500">Desde</label>
               <input
                 type="date"
                 value={filters.start_date}
                 onChange={(e) => handleFilterChange('start_date', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100"
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Hasta</label>
+              <label className="block text-xs text-gray-500 mb-1 dark:text-gray-500">Hasta</label>
               <input
                 type="date"
                 value={filters.end_date}
                 onChange={(e) => handleFilterChange('end_date', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100"
               />
             </div>
             <div className="flex items-end">
               {hasActiveFilters && (
                 <button
                   onClick={clearFilters}
-                  className="flex items-center gap-1 px-3 py-2 text-sm text-gray-500 hover:text-red-600 transition-colors"
+                  className="flex items-center gap-1 px-3 py-2 text-sm text-gray-500 hover:text-red-600 transition-colors dark:text-gray-500 dark:hover:text-red-400"
                 >
                   <X className="w-4 h-4" />
                   Limpiar
@@ -161,18 +161,18 @@ export default function RemoteSessionsHistory() {
           <Loader2 className="w-8 h-8 animate-spin text-purple-600" />
         </div>
       ) : sessions.length === 0 ? (
-        <div className="text-center py-20 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
-          <Monitor className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-          <p className="text-gray-500 font-medium">
+        <div className="text-center py-20 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200 dark:bg-graphite-2 dark:border-white/10">
+          <Monitor className="w-12 h-12 text-gray-300 mx-auto mb-3 dark:text-gray-600" />
+          <p className="text-gray-500 font-medium dark:text-gray-500">
             {hasActiveFilters ? 'No hay sesiones con esos filtros' : 'No hay sesiones remotas registradas'}
           </p>
         </div>
       ) : (
         <>
-          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden dark:bg-graphite dark:border-white/10">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-gray-50 text-left text-gray-500 border-b">
+                <tr className="bg-gray-50 text-left text-gray-500 border-b dark:bg-graphite-2 dark:text-gray-500 dark:border-white/10">
                   <th className="px-4 py-3 font-medium">Ticket</th>
                   <th className="px-4 py-3 font-medium">Agente</th>
                   <th className="px-4 py-3 font-medium">Cliente</th>
@@ -188,22 +188,22 @@ export default function RemoteSessionsHistory() {
                   const st = STATUS_LABELS[s.status] || STATUS_LABELS.ended;
                   const Icon = st.icon;
                   return (
-                    <tr key={s.id} className="border-b last:border-b-0 hover:bg-gray-50 transition-colors">
+                    <tr key={s.id} className="border-b last:border-b-0 hover:bg-gray-50 transition-colors dark:border-white/10 dark:hover:bg-white/5">
                       <td className="px-4 py-3">
                         <button
                           onClick={() => navigate(`/superadmin/support/tickets/${s.ticket?.id}`)}
-                          className="text-indigo-600 hover:text-indigo-800 font-medium truncate max-w-[180px] block"
+                          className="text-indigo-600 hover:text-indigo-800 font-medium truncate max-w-[180px] block dark:text-indigo-400 dark:hover:text-indigo-300"
                         >
                           {s.ticket?.subject || '—'}
                         </button>
                       </td>
-                      <td className="px-4 py-3 text-gray-700">
+                      <td className="px-4 py-3 text-gray-700 dark:text-gray-300">
                         {s.agent?.first_name} {s.agent?.last_name}
                       </td>
-                      <td className="px-4 py-3 text-gray-700">
+                      <td className="px-4 py-3 text-gray-700 dark:text-gray-300">
                         {s.user?.first_name} {s.user?.last_name}
                       </td>
-                      <td className="px-4 py-3 text-gray-500 text-xs">
+                      <td className="px-4 py-3 text-gray-500 text-xs dark:text-gray-500">
                         {s.tenant?.company_name || '—'}
                       </td>
                       <td className="px-4 py-3">
@@ -212,13 +212,13 @@ export default function RemoteSessionsHistory() {
                           {st.text}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-xs text-gray-500">
+                      <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-500">
                         {s.mode === 'view_only' ? 'Solo ver' : 'Control remoto'}
                       </td>
-                      <td className="px-4 py-3 text-xs text-gray-500">
+                      <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-500">
                         {formatDateTime(s.started_at || s.created_at)}
                       </td>
-                      <td className="px-4 py-3 text-xs text-gray-500">
+                      <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-500">
                         {getDuration(s.started_at, s.ended_at)}
                       </td>
                     </tr>
@@ -233,15 +233,15 @@ export default function RemoteSessionsHistory() {
               <button
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page === 1}
-                className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm disabled:opacity-50"
+                className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm disabled:opacity-50 dark:bg-graphite-2 dark:border-white/10 dark:text-gray-200"
               >
                 Anterior
               </button>
-              <span className="text-sm text-gray-500">Página {page} de {totalPages}</span>
+              <span className="text-sm text-gray-500 dark:text-gray-500">Página {page} de {totalPages}</span>
               <button
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={page === totalPages}
-                className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm disabled:opacity-50"
+                className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm disabled:opacity-50 dark:bg-graphite-2 dark:border-white/10 dark:text-gray-200"
               >
                 Siguiente
               </button>

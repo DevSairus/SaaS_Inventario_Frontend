@@ -28,9 +28,9 @@ class ErrorBoundary extends Component {
     if (!this.state.hasError) return this.props.children;
 
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-white rounded-2xl shadow-sm p-8 text-center">
-          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-5">
+      <div className="min-h-screen bg-gray-50 dark:bg-ink flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white dark:bg-graphite rounded-2xl shadow-sm p-8 text-center">
+          <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-5">
             <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
               <path
                 d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"
@@ -41,25 +41,25 @@ class ErrorBoundary extends Component {
               />
             </svg>
           </div>
-          <h1 className="text-xl font-bold text-gray-900 mb-2">Algo salió mal</h1>
-          <p className="text-sm text-gray-500 mb-6">
+          <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">Algo salió mal</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-500 mb-6">
             Ocurrió un error inesperado en la aplicación. Puedes recargar la página o volver al inicio.
           </p>
           {import.meta.env.DEV && this.state.error && (
-            <pre className="text-left text-xs bg-gray-100 text-gray-700 rounded-lg p-3 mb-4 overflow-auto max-h-48">
+            <pre className="text-left text-xs bg-gray-100 text-gray-700 dark:bg-graphite-2 dark:text-gray-300 rounded-lg p-3 mb-4 overflow-auto max-h-48">
               {String(this.state.error?.stack || this.state.error)}
             </pre>
           )}
           <div className="flex gap-2 justify-center">
             <button
               onClick={this.handleReload}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold transition-colors"
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white rounded-lg text-sm font-semibold transition-colors"
             >
               Recargar
             </button>
             <button
               onClick={this.handleGoHome}
-              className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg text-sm font-semibold transition-colors"
+              className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-graphite-2 dark:hover:bg-white/10 dark:text-gray-200 rounded-lg text-sm font-semibold transition-colors"
             >
               Ir al inicio
             </button>

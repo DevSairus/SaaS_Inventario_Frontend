@@ -88,37 +88,37 @@ const TenantNcfConfig = () => {
 
   return (
     <div className="space-y-6">
-      <Link to={`/superadmin/tenants/${tenantId}`} className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700">
+      <Link to={`/superadmin/tenants/${tenantId}`} className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300">
         <ArrowLeft className="w-4 h-4" /> Volver a {tenant?.business_name || tenant?.company_name || 'tenant'}
       </Link>
 
       <div className="flex items-center gap-3">
-        <div className="p-2 bg-emerald-100 rounded-lg">
-          <Building2 className="w-6 h-6 text-emerald-600" />
+        <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg">
+          <Building2 className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Facturación centralizada (NCF)</h1>
-          <p className="text-sm text-gray-500">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Facturación centralizada (NCF)</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-500">
             Datos fiscales para que ESC DataCore le facture a <strong>{tenant?.business_name || tenant?.company_name}</strong> su suscripción a Pitbox.
           </p>
         </div>
       </div>
 
       <Card>
-        <label className="flex items-center gap-2 mb-6 p-3 bg-gray-50 rounded-lg border border-gray-200">
+        <label className="flex items-center gap-2 mb-6 p-3 bg-gray-50 rounded-lg border border-gray-200 dark:bg-graphite-2 dark:border-white/10">
           <input
             type="checkbox"
             checked={config.facturacion_centralizada_activa}
             onChange={(e) => setConfig({ ...config, facturacion_centralizada_activa: e.target.checked })}
-            className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+            className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 dark:border-white/10"
           />
-          <span className="text-sm font-medium text-gray-800">
+          <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
             Facturación centralizada activa para este tenant
           </span>
         </label>
 
         {validacion && !validacion.valid && (
-          <div className="flex items-start gap-2 p-3 mb-6 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
+          <div className="flex items-start gap-2 p-3 mb-6 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800 dark:bg-amber-900/30 dark:border-amber-800/40 dark:text-amber-300">
             <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
             <div>
               <p className="font-medium">Faltan datos para poder facturar:</p>
@@ -128,18 +128,18 @@ const TenantNcfConfig = () => {
           </div>
         )}
         {validacion?.valid && (
-          <div className="flex items-center gap-2 p-3 mb-6 bg-emerald-50 border border-emerald-200 rounded-lg text-sm text-emerald-800">
+          <div className="flex items-center gap-2 p-3 mb-6 bg-emerald-50 border border-emerald-200 rounded-lg text-sm text-emerald-800 dark:bg-emerald-900/30 dark:border-emerald-800/40 dark:text-emerald-300">
             <CheckCircle className="w-4 h-4" /> Datos fiscales completos
           </div>
         )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de documento</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">Tipo de documento</label>
             <select
               value={config.tipo_documento}
               onChange={(e) => setConfig({ ...config, tipo_documento: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100"
             >
               <option value="NIT">NIT</option>
               <option value="CC">Cédula</option>
@@ -148,84 +148,84 @@ const TenantNcfConfig = () => {
           </div>
           <div className="grid grid-cols-3 gap-2">
             <div className="col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Número de documento</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">Número de documento</label>
               <input
                 value={config.numero_documento || ''}
                 onChange={(e) => setConfig({ ...config, numero_documento: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">DV</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">DV</label>
               <input
                 value={config.dv || ''}
                 onChange={(e) => setConfig({ ...config, dv: e.target.value })}
                 maxLength={1}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100"
               />
             </div>
           </div>
 
           <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Razón social</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">Razón social</label>
             <input
               value={config.razon_social || ''}
               onChange={(e) => setConfig({ ...config, razon_social: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email de facturación</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">Email de facturación</label>
             <input
               type="email"
               value={config.email_facturacion || ''}
               onChange={(e) => setConfig({ ...config, email_facturacion: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">Teléfono</label>
             <input
               value={config.telefono || ''}
               onChange={(e) => setConfig({ ...config, telefono: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Dirección</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">Dirección</label>
             <input
               value={config.direccion || ''}
               onChange={(e) => setConfig({ ...config, direccion: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Ciudad</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">Ciudad</label>
             <input
               value={config.ciudad || ''}
               onChange={(e) => setConfig({ ...config, ciudad: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Régimen fiscal (código DIAN)</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">Régimen fiscal (código DIAN)</label>
             <input
               value={config.regimen_code || ''}
               onChange={(e) => setConfig({ ...config, regimen_code: e.target.value })}
               placeholder="O-47"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100 dark:placeholder-gray-600"
             />
           </div>
 
           <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Nota interna (opcional)</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">Nota interna (opcional)</label>
             <input
               value={config.notes || ''}
               onChange={(e) => setConfig({ ...config, notes: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100"
             />
           </div>
         </div>

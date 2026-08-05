@@ -93,15 +93,15 @@ const AdjustmentDetailPage = () => {
             <div className="flex items-center gap-4">
               <button
                 onClick={() => navigate('/adjustments')}
-                className="text-gray-600 hover:text-gray-800"
+                className="text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                 </svg>
               </button>
               <div>
-                <h1 className="text-3xl font-bold text-gray-800">Ajuste {adjustment.adjustment_number}</h1>
-                <p className="text-gray-600 mt-1">{adjustment.reason}</p>
+                <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100">Ajuste {adjustment.adjustment_number}</h1>
+                <p className="text-gray-600 mt-1 dark:text-gray-400">{adjustment.reason}</p>
               </div>
             </div>
             <div className="flex gap-2">
@@ -133,56 +133,56 @@ const AdjustmentDetailPage = () => {
 
         {/* Info General */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-sm font-medium text-gray-500 mb-2">Estado</h3>
+          <div className="bg-white rounded-lg shadow p-6 dark:bg-graphite">
+            <h3 className="text-sm font-medium text-gray-500 mb-2 dark:text-gray-500">Estado</h3>
             {getStatusBadge(adjustment.status)}
           </div>
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-sm font-medium text-gray-500 mb-2">Tipo</h3>
-            <p className="text-lg font-semibold text-gray-900 capitalize">{adjustment.adjustment_type}</p>
+          <div className="bg-white rounded-lg shadow p-6 dark:bg-graphite">
+            <h3 className="text-sm font-medium text-gray-500 mb-2 dark:text-gray-500">Tipo</h3>
+            <p className="text-lg font-semibold text-gray-900 capitalize dark:text-gray-100">{adjustment.adjustment_type}</p>
           </div>
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-sm font-medium text-gray-500 mb-2">Fecha</h3>
-            <p className="text-lg font-semibold text-gray-900">
+          <div className="bg-white rounded-lg shadow p-6 dark:bg-graphite">
+            <h3 className="text-sm font-medium text-gray-500 mb-2 dark:text-gray-500">Fecha</h3>
+            <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
               {new Date(adjustment.adjustment_date + 'T12:00:00').toLocaleDateString()}
             </p>
           </div>
         </div>
 
         {/* Items */}
-        <div className="bg-white rounded-lg shadow mb-6">
-          <div className="p-4 border-b border-gray-200">
-            <h2 className="text-xl font-semibold text-gray-800">Productos</h2>
+        <div className="bg-white rounded-lg shadow mb-6 dark:bg-graphite">
+          <div className="p-4 border-b border-gray-200 dark:border-white/10">
+            <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100">Productos</h2>
           </div>
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-white/10">
+              <thead className="bg-gray-50 dark:bg-graphite-2">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Producto</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Cantidad</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Costo Unit.</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase dark:text-gray-500">Producto</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase dark:text-gray-500">Cantidad</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase dark:text-gray-500">Costo Unit.</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase dark:text-gray-500">Total</th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white divide-y divide-gray-200 dark:bg-graphite dark:divide-white/10">
                 {adjustment.items?.map((item) => (
                   <tr key={item.id}>
                     <td className="px-6 py-4">
-                      <div className="text-sm font-medium text-gray-900">{item.product?.name}</div>
-                      <div className="text-sm text-gray-500">{item.product?.sku}</div>
+                      <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{item.product?.name}</div>
+                      <div className="text-sm text-gray-500 dark:text-gray-500">{item.product?.sku}</div>
                     </td>
-                    <td className="px-6 py-4 text-right text-sm text-gray-900">{item.quantity}</td>
-                    <td className="px-6 py-4 text-right text-sm text-gray-900">{formatCurrency(item.unit_cost)}</td>
-                    <td className="px-6 py-4 text-right text-sm font-bold text-gray-900">
+                    <td className="px-6 py-4 text-right text-sm text-gray-900 dark:text-gray-100">{item.quantity}</td>
+                    <td className="px-6 py-4 text-right text-sm text-gray-900 dark:text-gray-100">{formatCurrency(item.unit_cost)}</td>
+                    <td className="px-6 py-4 text-right text-sm font-bold text-gray-900 dark:text-gray-100">
                       {formatCurrency(item.total_cost)}
                     </td>
                   </tr>
                 ))}
               </tbody>
-              <tfoot className="bg-gray-50">
+              <tfoot className="bg-gray-50 dark:bg-graphite-2">
                 <tr>
-                  <td className="px-6 py-4 text-sm font-semibold text-gray-900">TOTALES</td>
-                  <td className="px-6 py-4 text-right text-sm font-semibold text-gray-900">{totals.quantity}</td>
+                  <td className="px-6 py-4 text-sm font-semibold text-gray-900 dark:text-gray-100">TOTALES</td>
+                  <td className="px-6 py-4 text-right text-sm font-semibold text-gray-900 dark:text-gray-100">{totals.quantity}</td>
                   <td className="px-6 py-4"></td>
                   <td className="px-6 py-4 text-right text-sm font-bold text-blue-600">
                     {formatCurrency(totals.cost)}
@@ -195,9 +195,9 @@ const AdjustmentDetailPage = () => {
 
         {/* Notas */}
         {adjustment.notes && (
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-semibold text-gray-800 mb-2">Notas</h3>
-            <p className="text-gray-700">{adjustment.notes}</p>
+          <div className="bg-white rounded-lg shadow p-6 dark:bg-graphite">
+            <h3 className="text-lg font-semibold text-gray-800 mb-2 dark:text-gray-100">Notas</h3>
+            <p className="text-gray-700 dark:text-gray-300">{adjustment.notes}</p>
           </div>
         )}
       </div>

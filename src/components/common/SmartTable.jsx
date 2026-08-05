@@ -111,34 +111,34 @@ const SmartTable = ({
   
   if (!data || data.length === 0) {
     return (
-      <div className="bg-white rounded-xl shadow-md p-12 text-center">
-        <p className="text-gray-500">{emptyMessage}</p>
+      <div className="bg-white dark:bg-graphite rounded-xl shadow-md p-12 text-center">
+        <p className="text-gray-500 dark:text-gray-500">{emptyMessage}</p>
       </div>
     );
   }
   
   return (
-    <div className={`bg-white rounded-xl shadow-md overflow-hidden ${className}`}>
+    <div className={`bg-white dark:bg-graphite rounded-xl shadow-md overflow-hidden ${className}`}>
       <div className="overflow-x-auto">
         <table className="w-full">
-          <thead className="bg-gray-50 border-b border-gray-200">
+          <thead className="bg-gray-50 dark:bg-graphite-2 border-b border-gray-200 dark:border-white/10">
             <tr>
               {columns.map((column) => (
                 <th
                   key={column.key}
-                  className={`px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider ${column.headerClassName || ''}`}
+                  className={`px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider ${column.headerClassName || ''}`}
                 >
                   {column.label}
                 </th>
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200">
+          <tbody className="divide-y divide-gray-200 dark:divide-white/10">
             {data.map((row, index) => (
               <tr
                 key={row.id || index}
                 onClick={() => onRowClick?.(row)}
-                className={`hover:bg-gray-50 transition-colors ${onRowClick ? 'cursor-pointer' : ''}`}
+                className={`hover:bg-gray-50 dark:hover:bg-white/5 transition-colors ${onRowClick ? 'cursor-pointer' : ''}`}
               >
                 {columns.map((column) => (
                   <td key={column.key} className="px-6 py-4">
@@ -171,9 +171,9 @@ export const SmartTableWithPagination = ({
       <SmartTable columns={columns} data={data} {...props} />
       
       {pagination && pagination.pages > 1 && (
-        <div className="bg-white rounded-b-xl border-t border-gray-200 px-6 py-4">
+        <div className="bg-white dark:bg-graphite rounded-b-xl border-t border-gray-200 dark:border-white/10 px-6 py-4">
           <div className="flex items-center justify-between">
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
               Mostrando <span className="font-medium">{(pagination.page - 1) * pagination.limit + 1}</span> a{' '}
               <span className="font-medium">
                 {Math.min(pagination.page * pagination.limit, pagination.total)}
@@ -184,14 +184,14 @@ export const SmartTableWithPagination = ({
               <button
                 onClick={() => onPageChange?.(pagination.page - 1)}
                 disabled={pagination.page === 1}
-                className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="px-4 py-2 border border-gray-300 dark:border-white/10 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 Anterior
               </button>
               <button
                 onClick={() => onPageChange?.(pagination.page + 1)}
                 disabled={pagination.page >= pagination.pages}
-                className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="px-4 py-2 border border-gray-300 dark:border-white/10 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 Siguiente
               </button>

@@ -45,6 +45,7 @@ export default function WorkOrderFormPage() {
 
   const [selVehicle,  setSelVehicle]  = useState(null);
   const [vehicleDisp, setVehicleDisp] = useState('');
+  const [vehicleQuery, setVehicleQuery] = useState(''); // texto tecleado al buscar vehículo
   const [selCustomer, setSelCustomer] = useState(null);
   const [custDisp,    setCustDisp]    = useState('');
   const [loadingCust, setLoadingCust] = useState(false);
@@ -347,6 +348,7 @@ export default function WorkOrderFormPage() {
                     displayValue={vehicleDisp}
                     onSelect={selectVehicle}
                     onClear={clearVehicle}
+                    onQueryChange={setVehicleQuery}
                     filterFn={(v, q) => {
                       const s = q.toLowerCase();
                       return (v.plate||'').toLowerCase().includes(s)
@@ -377,7 +379,15 @@ export default function WorkOrderFormPage() {
                 </Field>
               </div>
               <div className="flex items-end gap-2">
-                <button type="button" onClick={() => setShowNewVehicle(v => !v)}
+                <button type="button" onClick={() => {
+                  setShowNewVehicle(v => !v);
+                  // Si el usuario ya escribió algo en la búsqueda (ej: la placa
+                  // de un vehículo que no existe), precargarlo como placa
+                  const typed = vehicleQuery.trim().toUpperCase();
+                  if (typed && !newVehicle.plate) {
+                    setNewVehicle(p => ({ ...p, plate: typed }));
+                  }
+                }}
                   className="flex-1 border border-dashed border-blue-300 text-blue-600 text-sm py-2 rounded-lg hover:bg-blue-50 transition">
                   + Registrar nuevo vehículo
                 </button>

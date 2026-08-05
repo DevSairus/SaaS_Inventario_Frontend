@@ -107,7 +107,7 @@ const BarcodeScanner = ({ onDetect, onClose, hint, formatFilter }) => {
 
   return (
     <div className="fixed inset-0 z-[9999] bg-black bg-opacity-70 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
+      <div className="bg-white dark:bg-graphite rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
         <div className="flex items-center justify-between px-5 py-4 bg-gray-900 text-white">
           <span className="font-semibold text-sm">📷 Escanear código</span>
           <button onClick={onClose} className="text-2xl leading-none">✕</button>
@@ -139,7 +139,7 @@ const BarcodeScanner = ({ onDetect, onClose, hint, formatFilter }) => {
             </div>
           )}
         </div>
-        <div className="px-5 py-3 bg-gray-50 text-center text-sm text-gray-500">
+        <div className="px-5 py-3 bg-gray-50 dark:bg-graphite-2 text-center text-sm text-gray-500 dark:text-gray-500">
           {hint || 'Apunta al código de barras — pistola USB o cámara'}
         </div>
       </div>

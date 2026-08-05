@@ -14,19 +14,19 @@ const COP = n => new Intl.NumberFormat('es-CO', { style: 'currency', currency: '
 const fmtDate = d => d ? new Date(d).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
 
 const SALE_STATUS = {
-  draft:     { label: 'Borrador',   cls: 'bg-gray-100 text-gray-600' },
-  pending:   { label: 'Pendiente',  cls: 'bg-yellow-100 text-yellow-700' },
-  completed: { label: 'Completada', cls: 'bg-green-100 text-green-700' },
-  cancelled: { label: 'Cancelada',  cls: 'bg-red-100 text-red-600' },
+  draft:     { label: 'Borrador',   cls: 'bg-gray-100 text-gray-600 dark:bg-white/10 dark:text-gray-400' },
+  pending:   { label: 'Pendiente',  cls: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300' },
+  completed: { label: 'Completada', cls: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' },
+  cancelled: { label: 'Cancelada',  cls: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-300' },
 };
 
 const OT_STATUS = {
-  recibido:   { label: 'Recibido',   cls: 'bg-blue-100 text-blue-700' },
-  en_proceso: { label: 'En Proceso', cls: 'bg-yellow-100 text-yellow-700' },
-  en_espera:  { label: 'En Espera',  cls: 'bg-orange-100 text-orange-700' },
-  listo:      { label: 'Listo',      cls: 'bg-green-100 text-green-700' },
-  entregado:  { label: 'Entregado',  cls: 'bg-gray-100 text-gray-600' },
-  cancelado:  { label: 'Cancelado',  cls: 'bg-red-100 text-red-600' },
+  recibido:   { label: 'Recibido',   cls: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' },
+  en_proceso: { label: 'En Proceso', cls: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300' },
+  en_espera:  { label: 'En Espera',  cls: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300' },
+  listo:      { label: 'Listo',      cls: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' },
+  entregado:  { label: 'Entregado',  cls: 'bg-gray-100 text-gray-600 dark:bg-white/10 dark:text-gray-400' },
+  cancelado:  { label: 'Cancelado',  cls: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-300' },
 };
 
 export default function CustomerDetailPage() {
@@ -128,17 +128,17 @@ export default function CustomerDetailPage() {
         {/* Header */}
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-3">
-            <button onClick={() => navigate('/customers')} className="p-2 hover:bg-gray-100 rounded-lg">
+            <button onClick={() => navigate('/customers')} className="p-2 hover:bg-gray-100 rounded-lg dark:hover:bg-white/10">
               <ArrowLeft size={18} />
             </button>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-xl font-bold text-gray-900">{displayName}</h1>
-                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${customer.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>
+                <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">{displayName}</h1>
+                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${customer.is_active ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' : 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-300'}`}>
                   {customer.is_active ? 'Activo' : 'Inactivo'}
                 </span>
               </div>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-gray-500 dark:text-gray-500">
                 {customer.customer_type === 'company' ? 'Empresa' : 'Persona natural'}
                 {customer.tax_id && ` · CC/NIT: ${customer.tax_id}`}
               </p>
@@ -158,18 +158,18 @@ export default function CustomerDetailPage() {
             { label: 'Órd. de trabajo', value: workOrders.length,   Icon: WrenchIcon },
             { label: 'Vehículos',       value: allVehicles.length,  Icon: MotorcycleIcon },
           ].map(({ label, value, Icon }) => (
-            <div key={label} className="bg-white border border-gray-100 rounded-xl p-4">
-              <div className="mb-1"><Icon className="w-5 h-5 text-gray-400" /></div>
-              <p className="text-lg font-bold text-gray-900">{value}</p>
-              <p className="text-xs text-gray-500">{label}</p>
+            <div key={label} className="bg-white border border-gray-100 rounded-xl p-4 dark:bg-graphite dark:border-white/10">
+              <div className="mb-1"><Icon className="w-5 h-5 text-gray-400 dark:text-gray-500" /></div>
+              <p className="text-lg font-bold text-gray-900 dark:text-gray-100">{value}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-500">{label}</p>
             </div>
           ))}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
           {/* Contacto */}
-          <div className="bg-white border border-gray-100 rounded-xl p-4 space-y-3">
-            <h2 className="font-semibold text-sm text-gray-800 mb-2">Contacto</h2>
+          <div className="bg-white border border-gray-100 rounded-xl p-4 space-y-3 dark:bg-graphite dark:border-white/10">
+            <h2 className="font-semibold text-sm text-gray-800 mb-2 dark:text-gray-200">Contacto</h2>
             {[
               { Icon: Phone,  label: 'Teléfono',  val: customer.phone || customer.mobile },
               { Icon: Mail,   label: 'Email',     val: customer.email },
@@ -177,47 +177,47 @@ export default function CustomerDetailPage() {
               { Icon: MapPin, label: 'Dirección', val: customer.address },
             ].filter(x => x.val).map(({ Icon, label, val }) => (
               <div key={label} className="flex items-start gap-2 text-sm">
-                <Icon size={14} className="text-gray-400 mt-0.5 flex-shrink-0" />
+                <Icon size={14} className="text-gray-400 mt-0.5 flex-shrink-0 dark:text-gray-500" />
                 <div>
-                  <p className="text-xs text-gray-400">{label}</p>
-                  <p className="text-gray-700">{val}</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500">{label}</p>
+                  <p className="text-gray-700 dark:text-gray-300">{val}</p>
                 </div>
               </div>
             ))}
             {customer.notes && (
-              <div className="pt-2 border-t border-gray-100">
-                <p className="text-xs text-gray-400 mb-1">Notas</p>
-                <p className="text-sm text-gray-600">{customer.notes}</p>
+              <div className="pt-2 border-t border-gray-100 dark:border-white/10">
+                <p className="text-xs text-gray-400 mb-1 dark:text-gray-500">Notas</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">{customer.notes}</p>
               </div>
             )}
           </div>
 
           {/* Ventas recientes */}
-          <div className="lg:col-span-2 bg-white border border-gray-100 rounded-xl p-4">
+          <div className="lg:col-span-2 bg-white border border-gray-100 rounded-xl p-4 dark:bg-graphite dark:border-white/10">
             <div className="flex items-center gap-2 mb-3">
               <FileText size={15} className="text-purple-600" />
-              <h2 className="font-semibold text-sm text-gray-800">Ventas recientes</h2>
+              <h2 className="font-semibold text-sm text-gray-800 dark:text-gray-200">Ventas recientes</h2>
             </div>
             {sales.length === 0 ? (
-              <div className="text-center py-8 text-gray-400">
+              <div className="text-center py-8 text-gray-400 dark:text-gray-500">
                 <FileText size={28} className="mx-auto mb-2 opacity-30" />
                 <p className="text-sm">Sin ventas registradas</p>
               </div>
             ) : (
-              <div className="divide-y divide-gray-50">
+              <div className="divide-y divide-gray-50 dark:divide-white/10">
                 {sales.slice(0, 8).map(sale => {
                   const ss = SALE_STATUS[sale.status] || SALE_STATUS.pending;
                   return (
                     <div key={sale.id} onClick={() => navigate(`/sales/${sale.id}`)}
-                      className="flex items-center justify-between py-2.5 hover:bg-gray-50 rounded-lg px-1 cursor-pointer transition">
+                      className="flex items-center justify-between py-2.5 hover:bg-gray-50 rounded-lg px-1 cursor-pointer transition dark:hover:bg-white/5">
                       <div>
                         <div className="flex items-center gap-2">
-                          <span className="font-mono text-xs font-bold text-gray-800">{sale.sale_number}</span>
+                          <span className="font-mono text-xs font-bold text-gray-800 dark:text-gray-200">{sale.sale_number}</span>
                           <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${ss.cls}`}>{ss.label}</span>
                         </div>
-                        <p className="text-xs text-gray-400 mt-0.5">{fmtDate(sale.sale_date)}</p>
+                        <p className="text-xs text-gray-400 mt-0.5 dark:text-gray-500">{fmtDate(sale.sale_date)}</p>
                       </div>
-                      <p className="text-sm font-semibold text-gray-900">{COP(sale.total_amount)}</p>
+                      <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{COP(sale.total_amount)}</p>
                     </div>
                   );
                 })}

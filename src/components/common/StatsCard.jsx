@@ -24,52 +24,52 @@ const StatsCard = ({
 }) => {
   const colorSchemes = {
     blue: {
-      bg: 'bg-blue-50',
-      text: 'text-blue-600',
-      valueText: 'text-blue-600',
-      border: 'border-blue-100',
+      bg: 'bg-blue-50 dark:bg-blue-900/30',
+      text: 'text-blue-600 dark:text-blue-300',
+      valueText: 'text-blue-600 dark:text-blue-300',
+      border: 'border-blue-100 dark:border-blue-800/40',
       gradient: 'from-blue-500 to-blue-600'
     },
     green: {
-      bg: 'bg-green-50',
-      text: 'text-green-600',
-      valueText: 'text-green-600',
-      border: 'border-green-100',
+      bg: 'bg-green-50 dark:bg-green-900/30',
+      text: 'text-green-600 dark:text-green-300',
+      valueText: 'text-green-600 dark:text-green-300',
+      border: 'border-green-100 dark:border-green-800/40',
       gradient: 'from-green-500 to-emerald-600'
     },
     red: {
-      bg: 'bg-red-50',
-      text: 'text-red-600',
-      valueText: 'text-red-600',
-      border: 'border-red-100',
+      bg: 'bg-red-50 dark:bg-red-900/30',
+      text: 'text-red-600 dark:text-red-300',
+      valueText: 'text-red-600 dark:text-red-300',
+      border: 'border-red-100 dark:border-red-800/40',
       gradient: 'from-red-500 to-red-600'
     },
     purple: {
-      bg: 'bg-purple-50',
-      text: 'text-purple-600',
-      valueText: 'text-purple-600',
-      border: 'border-purple-100',
+      bg: 'bg-purple-50 dark:bg-purple-900/30',
+      text: 'text-purple-600 dark:text-purple-300',
+      valueText: 'text-purple-600 dark:text-purple-300',
+      border: 'border-purple-100 dark:border-purple-800/40',
       gradient: 'from-purple-500 to-purple-600'
     },
     gray: {
-      bg: 'bg-gray-50',
-      text: 'text-gray-600',
-      valueText: 'text-gray-900',
-      border: 'border-gray-100',
+      bg: 'bg-gray-50 dark:bg-graphite-2',
+      text: 'text-gray-600 dark:text-gray-400',
+      valueText: 'text-gray-900 dark:text-gray-100',
+      border: 'border-gray-100 dark:border-white/10',
       gradient: 'from-gray-500 to-gray-600'
     },
     yellow: {
-      bg: 'bg-yellow-50',
-      text: 'text-yellow-600',
-      valueText: 'text-yellow-600',
-      border: 'border-yellow-100',
+      bg: 'bg-yellow-50 dark:bg-yellow-900/30',
+      text: 'text-yellow-600 dark:text-yellow-300',
+      valueText: 'text-yellow-600 dark:text-yellow-300',
+      border: 'border-yellow-100 dark:border-yellow-800/40',
       gradient: 'from-yellow-500 to-yellow-600'
     },
     indigo: {
-      bg: 'bg-indigo-50',
-      text: 'text-indigo-600',
-      valueText: 'text-indigo-600',
-      border: 'border-indigo-100',
+      bg: 'bg-indigo-50 dark:bg-indigo-900/30',
+      text: 'text-indigo-600 dark:text-indigo-300',
+      valueText: 'text-indigo-600 dark:text-indigo-300',
+      border: 'border-indigo-100 dark:border-indigo-800/40',
       gradient: 'from-indigo-500 to-indigo-600'
     },
     accent: {
@@ -124,7 +124,7 @@ const StatsCard = ({
 
   return (
     <div 
-      className={`bg-white rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 p-6 border ${scheme.border} ${onClick ? 'cursor-pointer' : ''}`}
+      className={`bg-white dark:bg-graphite rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 p-6 border ${scheme.border} ${onClick ? 'cursor-pointer' : ''}`}
       onClick={onClick}
     >
       <div className="flex items-center justify-between mb-3">
@@ -133,9 +133,9 @@ const StatsCard = ({
         </div>
         {getTrendIcon()}
       </div>
-      <p className="text-gray-600 text-sm font-medium mb-1">{title}</p>
+      <p className="text-gray-600 dark:text-gray-400 text-sm font-medium mb-1">{title}</p>
       <p className={`text-3xl font-bold ${scheme.valueText}`}>{value}</p>
-      {subtitle && <p className="text-gray-500 text-xs mt-2">{subtitle}</p>}
+      {subtitle && <p className="text-gray-500 dark:text-gray-500 text-xs mt-2">{subtitle}</p>}
     </div>
   );
 };

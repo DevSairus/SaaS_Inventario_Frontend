@@ -4,18 +4,18 @@ import useSupportStore from '../../store/supportStore';
 import Layout from '../../components/layout/Layout';
 
 const STATUS_LABELS = {
-  open: { text: 'Abierto', color: 'bg-blue-100 text-blue-800' },
-  in_progress: { text: 'En progreso', color: 'bg-yellow-100 text-yellow-800' },
-  waiting_customer: { text: 'Esperando cliente', color: 'bg-orange-100 text-orange-800' },
-  resolved: { text: 'Resuelto', color: 'bg-green-100 text-green-800' },
-  closed: { text: 'Cerrado', color: 'bg-gray-100 text-gray-600' },
+  open: { text: 'Abierto', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' },
+  in_progress: { text: 'En progreso', color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300' },
+  waiting_customer: { text: 'Esperando cliente', color: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300' },
+  resolved: { text: 'Resuelto', color: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' },
+  closed: { text: 'Cerrado', color: 'bg-gray-100 text-gray-600 dark:bg-white/5 dark:text-gray-400' },
 };
 
 const PRIORITY_LABELS = {
-  low: { text: 'Baja', color: 'bg-gray-100 text-gray-600' },
-  medium: { text: 'Media', color: 'bg-blue-100 text-blue-700' },
-  high: { text: 'Alta', color: 'bg-orange-100 text-orange-700' },
-  urgent: { text: 'Urgente', color: 'bg-red-100 text-red-700' },
+  low: { text: 'Baja', color: 'bg-gray-100 text-gray-600 dark:bg-white/5 dark:text-gray-400' },
+  medium: { text: 'Media', color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' },
+  high: { text: 'Alta', color: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300' },
+  urgent: { text: 'Urgente', color: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' },
 };
 
 const MyTickets = () => {
@@ -41,8 +41,8 @@ const MyTickets = () => {
     <div className="p-6 max-w-4xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Mis Tickets</h1>
-          <p className="mt-1 text-sm text-gray-500">Historial de tus solicitudes de soporte</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Mis Tickets</h1>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-500">Historial de tus solicitudes de soporte</p>
         </div>
         <button
           onClick={() => navigate('/support')}
@@ -61,7 +61,7 @@ const MyTickets = () => {
             className={`px-3 py-1.5 text-xs font-medium rounded-full transition-colors ${
               statusFilter === s
                 ? 'bg-indigo-600 text-white'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-white/5 dark:text-gray-400 dark:hover:bg-white/10'
             }`}
           >
             {s === '' ? 'Todos' : STATUS_LABELS[s]?.text}
@@ -75,11 +75,11 @@ const MyTickets = () => {
           <div className="inline-block animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600" />
         </div>
       ) : tickets.length === 0 ? (
-        <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
-          <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="text-center py-12 bg-white rounded-lg border border-gray-200 dark:bg-graphite dark:border-white/10">
+          <svg className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
           </svg>
-          <p className="mt-3 text-sm text-gray-500">No tienes tickets{statusFilter ? ' con este estado' : ''}</p>
+          <p className="mt-3 text-sm text-gray-500 dark:text-gray-500">No tienes tickets{statusFilter ? ' con este estado' : ''}</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -91,12 +91,12 @@ const MyTickets = () => {
               <button
                 key={ticket.id}
                 onClick={() => navigate(`/support/tickets/${ticket.id}`)}
-                className="w-full text-left bg-white rounded-lg border border-gray-200 p-4 hover:border-indigo-300 hover:shadow-sm transition-all"
+                className="w-full text-left bg-white rounded-lg border border-gray-200 p-4 hover:border-indigo-300 hover:shadow-sm transition-all dark:bg-graphite dark:border-white/10 dark:hover:border-indigo-700"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
-                    <h3 className="text-sm font-semibold text-gray-900 truncate">{ticket.subject}</h3>
-                    <p className="text-xs text-gray-500 mt-1">
+                    <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">{ticket.subject}</h3>
+                    <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
                       {formatDate(ticket.created_at)}
                       {ticket.assigned_agent && (
                         <span className="ml-2">· Asignado a: {ticket.assigned_agent.first_name} {ticket.assigned_agent.last_name}</span>
@@ -132,7 +132,7 @@ const MyTickets = () => {
               className={`px-3 py-1 text-sm rounded ${
                 ticketsPagination.page === p
                   ? 'bg-indigo-600 text-white'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-white/5 dark:text-gray-400 dark:hover:bg-white/10'
               }`}
             >
               {p}

@@ -15,6 +15,8 @@ import { Search, X } from 'lucide-react';
  *  filterFn(item, query) — función de filtrado
  *  disabled      — deshabilita el input
  *  className     — clases adicionales para el wrapper
+ *  onQueryChange(query) — callback opcional con el texto tecleado (ej: para
+ *                         precargarlo en un formulario de "registrar nuevo")
  */
 export default function Combobox({
   placeholder,
@@ -27,6 +29,7 @@ export default function Combobox({
   filterFn,
   disabled = false,
   className = '',
+  onQueryChange,
 }) {
   const [query, setQuery] = useState('');
   const [open,  setOpen]  = useState(false);
@@ -49,26 +52,26 @@ export default function Combobox({
     ? items.filter(i => filterFn(i, query)).slice(0, 12)
     : items.slice(0, 12);
 
-  const inputCls = 'w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white';
+  const inputCls = 'w-full border border-gray-200 dark:border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white dark:bg-graphite-2 dark:text-gray-100';
 
   return (
     <div ref={ref} className={`relative ${className}`}>
       <div className="relative">
-        <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+        <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 pointer-events-none" />
         <input
           type="text"
           value={query}
           disabled={disabled}
-          onChange={e => { setQuery(e.target.value); setOpen(true); }}
+          onChange={e => { setQuery(e.target.value); setOpen(true); onQueryChange?.(e.target.value); }}
           onFocus={() => !disabled && setOpen(true)}
           placeholder={placeholder}
-          className={`${inputCls} pl-8 pr-8 ${disabled ? 'bg-gray-50 text-gray-400 cursor-default' : ''}`}
+          className={`${inputCls} pl-8 pr-8 ${disabled ? 'bg-gray-50 dark:bg-white/5 text-gray-400 dark:text-gray-500 cursor-default' : ''}`}
         />
         {(value || query) && !disabled && (
           <button
             type="button"
             onClick={() => { setQuery(''); onClear(); setOpen(false); }}
-            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500"
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-300 dark:text-gray-600 hover:text-gray-500 dark:hover:text-gray-400"
           >
             <X size={13} />
           </button>
@@ -76,14 +79,14 @@ export default function Combobox({
       </div>
 
       {open && filtered.length > 0 && (
-        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-60 overflow-y-auto">
+        <div className="absolute z-50 w-full mt-1 bg-white dark:bg-graphite border border-gray-200 dark:border-white/10 rounded-xl shadow-lg max-h-60 overflow-y-auto">
           {filtered.map(item => (
             <button
               key={item.id}
               type="button"
               onClick={() => { onSelect(item); setQuery(displayValue || ''); setOpen(false); }}
-              className={`w-full text-left px-3 py-2.5 hover:bg-blue-50 transition border-b border-gray-50 last:border-0 text-sm ${
-                value === item.id ? 'bg-blue-50' : ''
+              className={`w-full text-left px-3 py-2.5 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition border-b border-gray-50 dark:border-white/5 last:border-0 text-sm ${
+                value === item.id ? 'bg-blue-50 dark:bg-blue-900/20' : ''
               }`}
             >
               {renderItem(item)}
@@ -93,8 +96,8 @@ export default function Combobox({
       )}
 
       {open && query.trim() && filtered.length === 0 && (
-        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg">
-          <p className="px-3 py-3 text-xs text-gray-400 text-center">
+        <div className="absolute z-50 w-full mt-1 bg-white dark:bg-graphite border border-gray-200 dark:border-white/10 rounded-xl shadow-lg">
+          <p className="px-3 py-3 text-xs text-gray-400 dark:text-gray-500 text-center">
             Sin resultados para "{query}"
           </p>
         </div>

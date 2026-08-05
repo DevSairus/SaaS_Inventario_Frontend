@@ -77,13 +77,13 @@ function CategoriesPage() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Categorías</h1>
-            <p className="text-sm text-gray-500 mt-0.5">Organiza tus productos en categorías y subcategorías</p>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">Categorías</h1>
+            <p className="text-sm text-gray-500 mt-0.5 dark:text-gray-500">Organiza tus productos en categorías y subcategorías</p>
           </div>
           <div className="flex gap-2 flex-wrap">
             <button
               onClick={handleExport}
-              className="inline-flex items-center gap-2 px-4 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 shadow-sm"
+              className="inline-flex items-center gap-2 px-4 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 shadow-sm dark:border-white/10 dark:text-gray-300 dark:bg-graphite dark:hover:bg-white/5"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -103,42 +103,42 @@ function CategoriesPage() {
         </div>
         {/* Stats Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="bg-white rounded-xl shadow-md hover:shadow-xl transition-shadow p-6 border-l-4 border-purple-500">
+          <div className="bg-white rounded-xl shadow-md hover:shadow-xl transition-shadow p-6 border-l-4 border-purple-500 dark:bg-graphite">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Total Categorías</p>
-                <p className="text-3xl font-bold text-gray-900 mt-2">{categories.length}</p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Categorías</p>
+                <p className="text-3xl font-bold text-gray-900 mt-2 dark:text-gray-100">{categories.length}</p>
               </div>
-              <div className="w-14 h-14 bg-purple-100 rounded-full flex items-center justify-center">
-                <svg className="w-8 h-8 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
+              <div className="w-14 h-14 bg-purple-100 rounded-full flex items-center justify-center dark:bg-purple-900/30">
+                <svg className="w-8 h-8 text-purple-600 dark:text-purple-300" fill="currentColor" viewBox="0 0 20 20">
                   <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
                 </svg>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow-md hover:shadow-xl transition-shadow p-6 border-l-4 border-green-500">
+          <div className="bg-white rounded-xl shadow-md hover:shadow-xl transition-shadow p-6 border-l-4 border-green-500 dark:bg-graphite">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Activas</p>
-                <p className="text-3xl font-bold text-green-600 mt-2">{activeCategories.length}</p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Activas</p>
+                <p className="text-3xl font-bold text-green-600 mt-2 dark:text-green-400">{activeCategories.length}</p>
               </div>
-              <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center">
-                <svg className="w-8 h-8 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+              <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center dark:bg-green-900/30">
+                <svg className="w-8 h-8 text-green-600 dark:text-green-300" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                 </svg>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow-md hover:shadow-xl transition-shadow p-6 border-l-4 border-gray-500">
+          <div className="bg-white rounded-xl shadow-md hover:shadow-xl transition-shadow p-6 border-l-4 border-gray-500 dark:bg-graphite">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Inactivas</p>
-                <p className="text-3xl font-bold text-gray-600 mt-2">{inactiveCategories.length}</p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Inactivas</p>
+                <p className="text-3xl font-bold text-gray-600 mt-2 dark:text-gray-400">{inactiveCategories.length}</p>
               </div>
-              <div className="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center">
-                <svg className="w-8 h-8 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
+              <div className="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center dark:bg-white/5">
+                <svg className="w-8 h-8 text-gray-600 dark:text-gray-400" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M13.477 14.89A6 6 0 015.11 6.524l8.367 8.368zm1.414-1.414L6.524 5.11a6 6 0 018.367 8.367zM18 10a8 8 0 11-16 0 8 8 0 0116 0z" clipRule="evenodd" />
                 </svg>
               </div>
@@ -147,20 +147,20 @@ function CategoriesPage() {
         </div>
 
         {/* Filter */}
-        <div className="bg-white rounded-xl shadow-md p-4">
+        <div className="bg-white rounded-xl shadow-md p-4 dark:bg-graphite">
           <div className="flex items-center justify-between">
             <label className="flex items-center cursor-pointer">
               <input
                 type="checkbox"
                 checked={showInactive}
                 onChange={(e) => setShowInactive(e.target.checked)}
-                className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+                className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500 dark:border-white/10 dark:bg-graphite-2"
               />
-              <span className="ml-2 text-sm font-medium text-gray-700">
+              <span className="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300">
                 Mostrar categorías inactivas
               </span>
             </label>
-            <span className="text-sm text-gray-500">
+            <span className="text-sm text-gray-500 dark:text-gray-500">
               Mostrando {displayCategories.length} categorías
             </span>
           </div>
@@ -168,18 +168,18 @@ function CategoriesPage() {
 
         {/* Error Message */}
         {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg mb-6 flex items-center justify-between">
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg mb-6 flex items-center justify-between dark:bg-red-900/30 dark:border-red-800/40 dark:text-red-300">
             <span>{error}</span>
-            <button onClick={clearError} className="text-red-700 hover:text-red-900">
+            <button onClick={clearError} className="text-red-700 hover:text-red-900 dark:text-red-300 dark:hover:text-red-200">
               ✕
             </button>
           </div>
         )}
 
         {/* Categories Table */}
-        <div className="bg-white rounded-xl shadow-md overflow-hidden">
+        <div className="bg-white rounded-xl shadow-md overflow-hidden dark:bg-graphite">
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-white/10">
               <thead className="bg-gradient-to-r from-purple-600 to-pink-600 text-white">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
@@ -199,7 +199,7 @@ function CategoriesPage() {
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white divide-y divide-gray-200 dark:bg-graphite dark:divide-white/10">
                 {isLoading ? (
                   <tr>
                     <td colSpan="5" className="px-6 py-12 text-center">
@@ -210,35 +210,35 @@ function CategoriesPage() {
                   </tr>
                 ) : displayCategories.length === 0 ? (
                   <tr>
-                    <td colSpan="5" className="px-6 py-12 text-center text-gray-500">
+                    <td colSpan="5" className="px-6 py-12 text-center text-gray-500 dark:text-gray-500">
                       {showInactive ? 'No hay categorías' : 'No hay categorías activas'}
                     </td>
                   </tr>
                 ) : (
                   displayCategories.map((category) => (
-                    <tr key={category.id} className="hover:bg-gray-50 transition-colors">
+                    <tr key={category.id} className="hover:bg-gray-50 transition-colors dark:hover:bg-white/5">
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="font-medium text-gray-900">{category.name}</div>
+                        <div className="font-medium text-gray-900 dark:text-gray-100">{category.name}</div>
                       </td>
                       <td className="px-6 py-4">
-                        <div className="text-sm text-gray-500 max-w-xs truncate">
+                        <div className="text-sm text-gray-500 max-w-xs truncate dark:text-gray-500">
                           {category.description || '-'}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         {category.parent ? (
-                          <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                          <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
                             {category.parent.name}
                           </span>
                         ) : (
-                          <span className="text-sm text-gray-400">Principal</span>
+                          <span className="text-sm text-gray-400 dark:text-gray-600">Principal</span>
                         )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
                           category.is_active
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-gray-100 text-gray-800'
+                            ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+                            : 'bg-gray-100 text-gray-800 dark:bg-white/10 dark:text-gray-400'
                         }`}>
                           {category.is_active ? 'Activa' : 'Inactiva'}
                         </span>

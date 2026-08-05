@@ -216,8 +216,8 @@ const BranchesPage = () => {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Sedes</h1>
-            <p className="text-sm text-gray-500 mt-0.5">Gestión de sucursales, bodegas y usuarios por sede</p>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">Sedes</h1>
+            <p className="text-sm text-gray-500 mt-0.5 dark:text-gray-500">Gestión de sucursales, bodegas y usuarios por sede</p>
           </div>
           <button
             onClick={openCreate}
@@ -231,10 +231,10 @@ const BranchesPage = () => {
         </div>
 
         {/* Búsqueda */}
-        <div className="bg-white rounded-lg shadow p-4">
+        <div className="bg-white rounded-lg shadow p-4 dark:bg-graphite">
           <div className="flex gap-3 items-center">
             <div className="relative flex-1">
-              <svg className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
               <input
@@ -242,56 +242,56 @@ const BranchesPage = () => {
                 placeholder="Buscar por nombre, código o ciudad..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent text-sm"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent text-sm dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100 dark:placeholder-gray-600"
               />
             </div>
-            <span className="text-sm text-gray-500">{filtered.length} sede{filtered.length !== 1 ? 's' : ''}</span>
+            <span className="text-sm text-gray-500 dark:text-gray-500">{filtered.length} sede{filtered.length !== 1 ? 's' : ''}</span>
           </div>
         </div>
 
         {/* Tabla */}
-        <div className="bg-white rounded-lg shadow overflow-hidden">
+        <div className="bg-white rounded-lg shadow overflow-hidden dark:bg-graphite">
           {loading ? (
             <div className="p-12 text-center">
               <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-pink-600"></div>
             </div>
           ) : filtered.length === 0 ? (
             <div className="p-12 text-center">
-              <svg className="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-16 h-16 text-gray-300 mx-auto mb-4 dark:text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 21h18M5 21V6a1 1 0 011-1h5a1 1 0 011 1v15M14 21V10a1 1 0 011-1h4a1 1 0 011 1v11" />
               </svg>
-              <p className="text-gray-500 font-medium">No hay sedes{search ? ' que coincidan' : ''}</p>
-              {!search && <p className="text-gray-400 text-sm mt-1">Crea la primera sede usando el botón de arriba</p>}
+              <p className="text-gray-500 font-medium dark:text-gray-500">No hay sedes{search ? ' que coincidan' : ''}</p>
+              {!search && <p className="text-gray-400 text-sm mt-1 dark:text-gray-600">Crea la primera sede usando el botón de arriba</p>}
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-white/10">
+                <thead className="bg-gray-50 dark:bg-graphite-2">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Código</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nombre</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ciudad</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Bodega</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase dark:text-gray-500">Código</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase dark:text-gray-500">Nombre</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase dark:text-gray-500">Ciudad</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase dark:text-gray-500">Bodega</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase dark:text-gray-500">Estado</th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase dark:text-gray-500">Acciones</th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="bg-white divide-y divide-gray-200 dark:bg-graphite dark:divide-white/10">
                   {filtered.map((b) => (
-                    <tr key={b.id} className="hover:bg-gray-50 transition-colors">
+                    <tr key={b.id} className="hover:bg-gray-50 transition-colors dark:hover:bg-white/5">
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="text-sm font-mono font-semibold text-pink-700 bg-pink-50 px-2 py-1 rounded">{b.code}</span>
+                        <span className="text-sm font-mono font-semibold text-pink-700 bg-pink-50 px-2 py-1 rounded dark:bg-pink-900/30 dark:text-pink-300">{b.code}</span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center gap-2">
-                          <span className="text-sm font-semibold text-gray-900">{b.name}</span>
+                          <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{b.name}</span>
                           {b.is_main && (
-                            <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-medium">Principal</span>
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-medium dark:bg-blue-900/30 dark:text-blue-300">Principal</span>
                           )}
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{b.city || '—'}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{b.city || '—'}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
                         {b.warehouse ? `${b.warehouse.name} (${b.warehouse.code})` : (
                           <Link
                             to="/warehouses"
@@ -303,7 +303,7 @@ const BranchesPage = () => {
                         )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`text-xs px-2 py-1 rounded-full font-medium ${b.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-500'}`}>
+                        <span className={`text-xs px-2 py-1 rounded-full font-medium ${b.is_active ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' : 'bg-gray-200 text-gray-500 dark:bg-white/10 dark:text-gray-500'}`}>
                           {b.is_active ? 'Activa' : 'Inactiva'}
                         </span>
                       </td>
@@ -312,7 +312,7 @@ const BranchesPage = () => {
                           <button
                             onClick={() => openUsersModal(b)}
                             title="Gestionar usuarios"
-                            className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors dark:text-gray-500 dark:hover:text-blue-400 dark:hover:bg-blue-900/30"
                           >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" />
@@ -321,7 +321,7 @@ const BranchesPage = () => {
                           <button
                             onClick={() => openEdit(b)}
                             title="Editar"
-                            className="p-2 text-gray-400 hover:text-pink-600 hover:bg-pink-50 rounded-lg transition-colors"
+                            className="p-2 text-gray-400 hover:text-pink-600 hover:bg-pink-50 rounded-lg transition-colors dark:text-gray-500 dark:hover:text-pink-400 dark:hover:bg-pink-900/30"
                           >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -331,7 +331,7 @@ const BranchesPage = () => {
                             <button
                               onClick={() => setDeactivateConfirm(b.id)}
                               title="Desactivar"
-                              className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                              className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors dark:text-gray-500 dark:hover:text-red-400 dark:hover:bg-red-900/30"
                             >
                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -342,7 +342,7 @@ const BranchesPage = () => {
                             <button
                               onClick={() => handleActivate(b)}
                               title="Activar"
-                              className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                              className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors dark:text-gray-500 dark:hover:text-green-400 dark:hover:bg-green-900/30"
                             >
                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -363,12 +363,12 @@ const BranchesPage = () => {
       {/* Modal Crear/Editar */}
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg my-8">
-            <div className="flex items-center justify-between p-6 border-b">
-              <h2 className="text-xl font-bold text-gray-900">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg my-8 dark:bg-graphite">
+            <div className="flex items-center justify-between p-6 border-b dark:border-white/10">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
                 {editingBranch ? 'Editar Sede' : 'Nueva Sede'}
               </h2>
-              <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600">
+              <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
@@ -378,70 +378,70 @@ const BranchesPage = () => {
             <div className="p-5 space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">Nombre *</label>
                   <input
                     type="text"
                     value={formData.name}
                     onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                     placeholder="Ej: Sede Norte"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-pink-500 focus:border-transparent dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100 dark:placeholder-gray-600"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Código *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">Código *</label>
                   <input
                     type="text"
                     value={formData.code}
                     onChange={(e) => setFormData(prev => ({ ...prev, code: e.target.value.toUpperCase() }))}
                     placeholder="Ej: NORTE"
                     disabled={!!editingBranch}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-pink-500 focus:border-transparent disabled:bg-gray-100 disabled:text-gray-400"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-pink-500 focus:border-transparent disabled:bg-gray-100 disabled:text-gray-400 dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100 dark:placeholder-gray-600 dark:disabled:bg-white/5 dark:disabled:text-gray-600"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Dirección</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">Dirección</label>
                 <input
                   type="text"
                   value={formData.address}
                   onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
                   placeholder="Dirección completa"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-pink-500 focus:border-transparent dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100 dark:placeholder-gray-600"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Ciudad</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">Ciudad</label>
                   <input
                     type="text"
                     value={formData.city}
                     onChange={(e) => setFormData(prev => ({ ...prev, city: e.target.value }))}
                     placeholder="Ciudad"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-pink-500 focus:border-transparent dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100 dark:placeholder-gray-600"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">Teléfono</label>
                   <input
                     type="text"
                     value={formData.phone}
                     onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
                     placeholder="Teléfono"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-pink-500 focus:border-transparent dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100 dark:placeholder-gray-600"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">Email</label>
                 <input
                   type="email"
                   value={formData.email}
                   onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
                   placeholder="sede@empresa.com"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-pink-500 focus:border-transparent dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100 dark:placeholder-gray-600"
                 />
               </div>
 
@@ -449,46 +449,46 @@ const BranchesPage = () => {
                 <button
                   type="button"
                   onClick={() => setFormData(prev => ({ ...prev, is_main: !prev.is_main }))}
-                  className={`relative w-10 h-6 rounded-full transition-colors ${formData.is_main ? 'bg-pink-500' : 'bg-gray-300'}`}
+                  className={`relative w-10 h-6 rounded-full transition-colors ${formData.is_main ? 'bg-pink-500' : 'bg-gray-300 dark:bg-white/10'}`}
                 >
                   <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${formData.is_main ? 'translate-x-4' : ''}`}></span>
                 </button>
-                <span className="text-sm text-gray-700">Sede principal</span>
+                <span className="text-sm text-gray-700 dark:text-gray-300">Sede principal</span>
               </div>
 
               {!editingBranch && (
-                <div className="border-t pt-4 space-y-3">
+                <div className="border-t pt-4 space-y-3 dark:border-white/10">
                   <div className="flex items-center gap-3">
                     <button
                       type="button"
                       onClick={() => setFormData(prev => ({ ...prev, create_warehouse: !prev.create_warehouse }))}
-                      className={`relative w-10 h-6 rounded-full transition-colors ${formData.create_warehouse ? 'bg-pink-500' : 'bg-gray-300'}`}
+                      className={`relative w-10 h-6 rounded-full transition-colors ${formData.create_warehouse ? 'bg-pink-500' : 'bg-gray-300 dark:bg-white/10'}`}
                     >
                       <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${formData.create_warehouse ? 'translate-x-4' : ''}`}></span>
                     </button>
-                    <span className="text-sm text-gray-700">Crear bodega automáticamente para esta sede</span>
+                    <span className="text-sm text-gray-700 dark:text-gray-300">Crear bodega automáticamente para esta sede</span>
                   </div>
 
                   {formData.create_warehouse && (
                     <div className="grid grid-cols-2 gap-4 pl-1">
                       <div>
-                        <label className="block text-xs font-medium text-gray-500 mb-1">Código bodega (opcional)</label>
+                        <label className="block text-xs font-medium text-gray-500 mb-1 dark:text-gray-500">Código bodega (opcional)</label>
                         <input
                           type="text"
                           value={formData.warehouse_code}
                           onChange={(e) => setFormData(prev => ({ ...prev, warehouse_code: e.target.value.toUpperCase() }))}
                           placeholder={`BOD-${formData.code || '...'}`}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-pink-500 focus:border-transparent dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100 dark:placeholder-gray-600"
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-500 mb-1">Nombre bodega (opcional)</label>
+                        <label className="block text-xs font-medium text-gray-500 mb-1 dark:text-gray-500">Nombre bodega (opcional)</label>
                         <input
                           type="text"
                           value={formData.warehouse_name}
                           onChange={(e) => setFormData(prev => ({ ...prev, warehouse_name: e.target.value }))}
                           placeholder={`Bodega ${formData.name || '...'}`}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-pink-500 focus:border-transparent dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100 dark:placeholder-gray-600"
                         />
                       </div>
                     </div>
@@ -497,10 +497,10 @@ const BranchesPage = () => {
               )}
             </div>
 
-            <div className="flex items-center justify-end gap-3 p-6 border-t bg-gray-50 rounded-b-xl">
+            <div className="flex items-center justify-end gap-3 p-6 border-t bg-gray-50 rounded-b-xl dark:border-white/10 dark:bg-graphite-2">
               <button
                 onClick={() => setShowModal(false)}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors dark:text-gray-300 dark:bg-graphite dark:border-white/10 dark:hover:bg-white/5"
               >
                 Cancelar
               </button>
@@ -519,26 +519,26 @@ const BranchesPage = () => {
       {/* Modal confirmación desactivar */}
       {deactivateConfirm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6 dark:bg-graphite">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
-                <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center dark:bg-red-900/30">
+                <svg className="w-5 h-5 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v3.75m-9.303 3.376a12 12 0 1021.593 0A12 12 0 002.697 16.126zM12 15.75h.008v.008H12v-.008z" />
                 </svg>
               </div>
               <div>
-                <h3 className="text-lg font-bold text-gray-900">Desactivar sede</h3>
-                <p className="text-sm text-gray-500">Podrás reactivarla después editándola</p>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Desactivar sede</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-500">Podrás reactivarla después editándola</p>
               </div>
             </div>
-            <p className="text-sm text-gray-600 mb-6">
+            <p className="text-sm text-gray-600 mb-6 dark:text-gray-400">
               Los usuarios asignados a esta sede perderán acceso a ella. El historial de ventas
               y compras se conserva intacto.
             </p>
             <div className="flex justify-end gap-3">
               <button
                 onClick={() => setDeactivateConfirm(null)}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 dark:text-gray-300 dark:bg-graphite-2 dark:border-white/10 dark:hover:bg-white/5"
               >
                 Cancelar
               </button>
@@ -556,24 +556,24 @@ const BranchesPage = () => {
       {/* Modal de asignación de usuarios */}
       {usersModalBranch && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[85vh] flex flex-col">
-            <div className="flex items-center justify-between p-6 border-b shrink-0">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[85vh] flex flex-col dark:bg-graphite">
+            <div className="flex items-center justify-between p-6 border-b shrink-0 dark:border-white/10">
               <div>
-                <h2 className="text-lg font-bold text-gray-900">Usuarios de {usersModalBranch.name}</h2>
-                <p className="text-xs text-gray-500 mt-0.5">Solo los usuarios asignados podrán operar en esta sede</p>
+                <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">Usuarios de {usersModalBranch.name}</h2>
+                <p className="text-xs text-gray-500 mt-0.5 dark:text-gray-500">Solo los usuarios asignados podrán operar en esta sede</p>
               </div>
-              <button onClick={closeUsersModal} className="text-gray-400 hover:text-gray-600">
+              <button onClick={closeUsersModal} className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
             </div>
 
-            <div className="p-5 border-b shrink-0 flex gap-2">
+            <div className="p-5 border-b shrink-0 flex gap-2 dark:border-white/10">
               <select
                 value={selectedUserId}
                 onChange={(e) => setSelectedUserId(e.target.value)}
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-pink-500 focus:border-transparent dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100"
               >
                 <option value="">Selecciona un usuario para asignar...</option>
                 {availableUsersToAssign.map(u => (
@@ -595,22 +595,22 @@ const BranchesPage = () => {
                   <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-pink-600"></div>
                 </div>
               ) : assignedUsers.length === 0 ? (
-                <p className="text-sm text-gray-400 text-center py-8">Ningún usuario asignado todavía</p>
+                <p className="text-sm text-gray-400 text-center py-8 dark:text-gray-600">Ningún usuario asignado todavía</p>
               ) : (
                 <div className="space-y-2">
                   {assignedUsers.map(a => (
-                    <div key={a.user_id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div key={a.user_id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg dark:bg-graphite-2">
                       <div>
-                        <p className="text-sm font-medium text-gray-900">{a.user?.first_name} {a.user?.last_name}</p>
-                        <p className="text-xs text-gray-500">{a.user?.email} · <span className="capitalize">{a.user?.role}</span></p>
+                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{a.user?.first_name} {a.user?.last_name}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-500">{a.user?.email} · <span className="capitalize">{a.user?.role}</span></p>
                       </div>
                       <div className="flex items-center gap-2">
                         {a.is_default ? (
-                          <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-700 font-medium">Por defecto</span>
+                          <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-700 font-medium dark:bg-blue-900/30 dark:text-blue-300">Por defecto</span>
                         ) : (
                           <button
                             onClick={() => handleSetDefault(a.user_id)}
-                            className="text-xs px-2 py-1 rounded-full border border-gray-300 text-gray-600 hover:bg-gray-100 transition-colors"
+                            className="text-xs px-2 py-1 rounded-full border border-gray-300 text-gray-600 hover:bg-gray-100 transition-colors dark:border-white/10 dark:text-gray-400 dark:hover:bg-white/10"
                           >
                             Hacer por defecto
                           </button>
@@ -618,7 +618,7 @@ const BranchesPage = () => {
                         <button
                           onClick={() => handleRemoveUser(a.user_id)}
                           title="Quitar de la sede"
-                          className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors dark:text-gray-500 dark:hover:text-red-400 dark:hover:bg-red-900/30"
                         >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -631,10 +631,10 @@ const BranchesPage = () => {
               )}
             </div>
 
-            <div className="p-4 border-t shrink-0 flex justify-end">
+            <div className="p-4 border-t shrink-0 flex justify-end dark:border-white/10">
               <button
                 onClick={closeUsersModal}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors dark:text-gray-300 dark:bg-graphite-2 dark:border-white/10 dark:hover:bg-white/5"
               >
                 Cerrar
               </button>

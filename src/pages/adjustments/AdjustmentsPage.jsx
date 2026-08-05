@@ -105,8 +105,8 @@ const AdjustmentsPage = () => {
                 {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Ajustes de Inventario</h1>
-            <p className="text-sm text-gray-500 mt-0.5">Registra entradas, salidas y correcciones de stock</p>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">Ajustes de Inventario</h1>
+            <p className="text-sm text-gray-500 mt-0.5 dark:text-gray-500">Registra entradas, salidas y correcciones de stock</p>
           </div>
           <button
             onClick={() => navigate('/adjustments/new')}
@@ -120,7 +120,7 @@ const AdjustmentsPage = () => {
         </div>
 
         {/* Filtros */}
-        <div className="bg-white rounded-lg shadow mb-6 p-4">
+        <div className="bg-white rounded-lg shadow mb-6 p-4 dark:bg-graphite">
           <form onSubmit={handleSearch}>
             <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
               <div className="md:col-span-2">
@@ -130,7 +130,7 @@ const AdjustmentsPage = () => {
                   value={localFilters.search}
                   onChange={handleFilterChange}
                   placeholder="Buscar por número o notas..."
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100 dark:placeholder-gray-600"
                 />
               </div>
 
@@ -139,7 +139,7 @@ const AdjustmentsPage = () => {
                   name="adjustment_type"
                   value={localFilters.adjustment_type}
                   onChange={handleFilterChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100"
                 >
                   <option value="">Todos los tipos</option>
                   <option value="entrada">Entrada</option>
@@ -152,7 +152,7 @@ const AdjustmentsPage = () => {
                   name="status"
                   value={localFilters.status}
                   onChange={handleFilterChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100"
                 >
                   <option value="">Todos los estados</option>
                   <option value="draft">Borrador</option>
@@ -171,7 +171,7 @@ const AdjustmentsPage = () => {
                 <button
                   type="button"
                   onClick={handleClearFilters}
-                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 dark:border-white/10 dark:text-gray-300 dark:hover:bg-white/5"
                 >
                   Limpiar
                 </button>
@@ -181,15 +181,15 @@ const AdjustmentsPage = () => {
         </div>
 
         {/* Tabla */}
-        <div className="bg-white rounded-lg shadow overflow-hidden">
+        <div className="bg-white rounded-lg shadow overflow-hidden dark:bg-graphite">
           {isLoading ? (
             <div className="p-8 text-center">
               <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-              <p className="mt-2 text-gray-600">Cargando ajustes...</p>
+              <p className="mt-2 text-gray-600 dark:text-gray-400">Cargando ajustes...</p>
             </div>
           ) : adjustments.length === 0 ? (
-            <div className="p-8 text-center text-gray-500">
-              <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="p-8 text-center text-gray-500 dark:text-gray-500">
+              <svg className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
               <p className="mt-2">No se encontraron ajustes</p>
@@ -197,41 +197,41 @@ const AdjustmentsPage = () => {
           ) : (
             <>
               <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
+                <table className="min-w-full divide-y divide-gray-200 dark:divide-white/10">
+                  <thead className="bg-gray-50 dark:bg-graphite-2">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Número</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tipo</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Razón</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Items</th>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase dark:text-gray-500">Número</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase dark:text-gray-500">Fecha</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase dark:text-gray-500">Tipo</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase dark:text-gray-500">Razón</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase dark:text-gray-500">Estado</th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase dark:text-gray-500">Items</th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase dark:text-gray-500">Total</th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase dark:text-gray-500">Acciones</th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
+                  <tbody className="bg-white divide-y divide-gray-200 dark:bg-graphite dark:divide-white/10">
                     {adjustments.map((adjustment) => (
-                      <tr key={adjustment.id} className="hover:bg-gray-50">
+                      <tr key={adjustment.id} className="hover:bg-gray-50 dark:hover:bg-white/5">
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-medium text-gray-900">{adjustment.adjustment_number}</div>
+                          <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{adjustment.adjustment_number}</div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-500">
                           {new Date(adjustment.adjustment_date + 'T12:00:00').toLocaleDateString()}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           {getTypeBadge(adjustment.adjustment_type)}
                         </td>
-                        <td className="px-6 py-4 text-sm text-gray-900">
+                        <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-100">
                           {adjustment.reason}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           {getStatusBadge(adjustment.status)}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-500">
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-500 dark:text-gray-500">
                           {adjustment.items_count || 0}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium text-gray-900">
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium text-gray-900 dark:text-gray-100">
                           {formatCurrency(adjustment.total_cost || 0)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -278,27 +278,27 @@ const AdjustmentsPage = () => {
 
               {/* Paginación */}
               {pagination.pages > 1 && (
-                <div className="bg-white px-4 py-3 border-t border-gray-200 sm:px-6">
+                <div className="bg-white px-4 py-3 border-t border-gray-200 sm:px-6 dark:bg-graphite dark:border-white/10">
                   <div className="flex items-center justify-between">
                     <div className="flex-1 flex justify-between sm:hidden">
                       <button
                         onClick={() => setPage(pagination.page - 1)}
                         disabled={pagination.page === 1}
-                        className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
+                        className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 dark:border-white/10 dark:text-gray-300 dark:bg-graphite dark:hover:bg-white/5"
                       >
                         Anterior
                       </button>
                       <button
                         onClick={() => setPage(pagination.page + 1)}
                         disabled={pagination.page === pagination.pages}
-                        className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
+                        className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 dark:border-white/10 dark:text-gray-300 dark:bg-graphite dark:hover:bg-white/5"
                       >
                         Siguiente
                       </button>
                     </div>
                     <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
                       <div>
-                        <p className="text-sm text-gray-700">
+                        <p className="text-sm text-gray-700 dark:text-gray-300">
                           Mostrando <span className="font-medium">{((pagination.page - 1) * pagination.limit) + 1}</span> a{' '}
                           <span className="font-medium">
                             {Math.min(pagination.page * pagination.limit, pagination.total)}
@@ -311,7 +311,7 @@ const AdjustmentsPage = () => {
                           <button
                             onClick={() => setPage(pagination.page - 1)}
                             disabled={pagination.page === 1}
-                            className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                            className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 dark:border-white/10 dark:bg-graphite dark:text-gray-500 dark:hover:bg-white/5"
                           >
                             <span className="sr-only">Anterior</span>
                             <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
@@ -324,8 +324,8 @@ const AdjustmentsPage = () => {
                               onClick={() => setPage(i + 1)}
                               className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
                                 pagination.page === i + 1
-                                  ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
-                                  : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                                  ? 'z-10 bg-blue-50 border-blue-500 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300'
+                                  : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50 dark:bg-graphite dark:border-white/10 dark:text-gray-500 dark:hover:bg-white/5'
                               }`}
                             >
                               {i + 1}
@@ -334,7 +334,7 @@ const AdjustmentsPage = () => {
                           <button
                             onClick={() => setPage(pagination.page + 1)}
                             disabled={pagination.page === pagination.pages}
-                            className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                            className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 dark:border-white/10 dark:bg-graphite dark:text-gray-500 dark:hover:bg-white/5"
                           >
                             <span className="sr-only">Siguiente</span>
                             <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">

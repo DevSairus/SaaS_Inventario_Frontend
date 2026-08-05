@@ -3,7 +3,8 @@
  * Ruta: /bienvenida (pública)
  *
  * Rediseño 2026 — dirección visual premium:
- *   - Paleta neutra grafito con acento "latón" (bronce/dorado) + violeta NEXA
+ *   - Paleta neutra grafito con acento rojo (mismo rojo del theme global,
+ *     tailwind.config.js `accent`) + violeta NEXA
  *   - Tipografía: Space Grotesk (títulos) + Inter (cuerpo) — reemplaza el
  *     estilo "tablero de carreras" anterior por un lenguaje SaaS premium
  *   - Taller sigue siendo el corazón del producto (sección propia, primero
@@ -22,18 +23,18 @@ import { Link } from 'react-router-dom';
 import NexaIcon from '../components/common/NexaIcon';
 
 /* ─────────────────────────────────────────
-   PALETA — dirección premium (grafito + latón + violeta NEXA)
+   PALETA — dirección premium (grafito + rojo + violeta NEXA)
 ───────────────────────────────────────── */
 const C = {
   ink:      '#0B0C10',
   inkD:     '#000000',
   graphite: '#15171D',
   graphite2:'#1B1D24',
-  accent:   '#C4903D',
-  accentL:  '#E0AC5F',
+  accent:   '#CF3A0B',
+  accentL:  '#F0572B',
   signal:   '#22C55E',
   signalL:  '#4ADE80',
-  caution:  '#E2665B',
+  caution:  '#E2A83B',
   ai:       '#8B5CF6',
   aiL:      '#A78BFA',
   white:    '#FFFFFF',
@@ -49,8 +50,8 @@ const C = {
 /* ─────────────────────────────────────────
    ÍCONOS
 ───────────────────────────────────────── */
-const Ico = ({ d, size = 20, color = 'currentColor', strokeWidth = 1.6 }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
+const Ico = ({ d, size = 20, color = 'currentColor', strokeWidth = 1.6, style }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" style={style}
     stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round">
     {d}
   </svg>
@@ -73,6 +74,7 @@ const icons = {
   users:       <><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></>,
   building:    <><rect x="2" y="2" width="20" height="20" rx="1"/><path d="M8 6h2M14 6h2M8 10h2M14 10h2M8 14h2M14 14h2M10 18v4M14 18v4"/></>,
   car:         <><path d="M5 17h14M5 17a2 2 0 002 2h0a2 2 0 002-2M5 17V11l2-5h10l2 5v6M17 17a2 2 0 002 2h0a2 2 0 002-2M5 11h14"/></>,
+  motorcycle:  <><circle cx="5.5" cy="17.5" r="2.5"/><circle cx="18.5" cy="17.5" r="2.5"/><path d="M8 17.5h7M12 17.5V13h4l2.5 2M9 13l1.5-4h3M4 13h3l2-4"/></>,
   package:     <><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8M12 13v8"/></>,
   menu:        <><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></>,
   close:       <><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></>,
@@ -440,7 +442,7 @@ function AppCarousel() {
             style={{
               padding: '8px 18px', borderRadius: 100, fontSize: 13, fontWeight: 600, cursor: 'pointer',
               border: `1.5px solid ${i === current ? C.accentL : 'rgba(255,255,255,0.15)'}`,
-              background: i === current ? 'rgba(196,144,61,0.15)' : 'transparent',
+              background: i === current ? 'rgba(207,58,11,0.15)' : 'transparent',
               color: i === current ? C.accentL : 'rgba(255,255,255,0.5)',
               transition: 'all 0.2s',
             }}>
@@ -511,7 +513,7 @@ function Logomark({ size = 34 }) {
     <div style={{
       width: size, height: size, borderRadius: 9,
       background: `linear-gradient(155deg, ${C.graphite2}, ${C.ink})`,
-      border: `1px solid rgba(196,144,61,0.4)`,
+      border: `1px solid rgba(207,58,11,0.4)`,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
     }}>
       <Ico d={icons.stopwatch} size={size * 0.48} color={C.accentL} strokeWidth={1.8} />
@@ -588,7 +590,7 @@ function Navbar({ onCta }) {
             background: C.accent, color: C.white, border: 'none', borderRadius: 9,
             padding: '9px 22px', fontSize: 14, fontWeight: 600, cursor: 'pointer',
             transition: 'background 0.2s, transform 0.15s',
-            boxShadow: '0 4px 16px rgba(196,144,61,0.3)',
+            boxShadow: '0 4px 16px rgba(207,58,11,0.3)',
           }}
             onMouseEnter={e => { e.currentTarget.style.background = C.accentL; e.currentTarget.style.transform = 'translateY(-1px)'; }}
             onMouseLeave={e => { e.currentTarget.style.background = C.accent; e.currentTarget.style.transform = 'translateY(0)'; }}
@@ -645,7 +647,7 @@ function Hero({ onCta }) {
   return (
     <section id="inicio" style={{
       minHeight: '100vh',
-      background: `radial-gradient(ellipse 70% 60% at 65% 40%, rgba(196,144,61,0.12) 0%, transparent 70%), radial-gradient(ellipse 50% 50% at 15% 85%, rgba(139,92,246,0.10) 0%, transparent 60%), linear-gradient(165deg, ${C.inkD} 0%, #121317 55%, #15171D 100%)`,
+      background: `radial-gradient(ellipse 70% 60% at 65% 40%, rgba(207,58,11,0.12) 0%, transparent 70%), radial-gradient(ellipse 50% 50% at 15% 85%, rgba(139,92,246,0.10) 0%, transparent 60%), linear-gradient(165deg, ${C.inkD} 0%, #121317 55%, #15171D 100%)`,
       display: 'flex', alignItems: 'center',
       padding: '0 clamp(1.5rem, 5vw, 4rem)',
       paddingTop: 68,
@@ -662,14 +664,14 @@ function Hero({ onCta }) {
         <div>
           <div style={{
             display: 'inline-flex', alignItems: 'center', gap: 8,
-            background: 'rgba(196,144,61,0.12)', border: '1px solid rgba(196,144,61,0.3)',
+            background: 'rgba(207,58,11,0.12)', border: '1px solid rgba(207,58,11,0.3)',
             borderRadius: 100, padding: '6px 14px', marginBottom: 28,
             opacity: mounted ? 1 : 0, transform: mounted ? 'translateY(0)' : 'translateY(8px)',
             transition: 'opacity 0.5s, transform 0.5s',
           }}>
             <div style={{ width: 6, height: 6, borderRadius: '50%', background: C.accentL, animation: 'pbPulse 2s infinite' }} />
             <span style={{ fontSize: 12, color: C.accentL, fontWeight: 600, letterSpacing: '0.04em' }}>
-              Taller · Ventas · Contabilidad · NEXA IA
+              Taller · Ventas ·  NEXA IA
             </span>
           </div>
 
@@ -707,11 +709,11 @@ function Hero({ onCta }) {
               padding: '14px 30px', fontSize: 15, fontWeight: 600, cursor: 'pointer',
               fontFamily: "'Space Grotesk', sans-serif", letterSpacing: '0.01em',
               display: 'flex', alignItems: 'center', gap: 8,
-              boxShadow: '0 8px 30px rgba(196,144,61,0.32)',
+              boxShadow: '0 8px 30px rgba(207,58,11,0.32)',
               transition: 'transform 0.2s, box-shadow 0.2s',
             }}
-              onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 12px 38px rgba(196,144,61,0.42)'; }}
-              onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 8px 30px rgba(196,144,61,0.32)'; }}
+              onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 12px 38px rgba(207,58,11,0.42)'; }}
+              onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 8px 30px rgba(207,58,11,0.32)'; }}
             >
               Solicitar demo <Ico d={icons.arrow} size={16} color="#fff" />
             </button>
@@ -747,7 +749,7 @@ function Hero({ onCta }) {
         }}>
           <div style={{
             border: '1px solid rgba(255,255,255,0.1)', borderRadius: 18,
-            boxShadow: '0 40px 90px rgba(0,0,0,0.55), 0 0 0 1px rgba(196,144,61,0.08)',
+            boxShadow: '0 40px 90px rgba(0,0,0,0.55), 0 0 0 1px rgba(207,58,11,0.08)',
             overflow: 'hidden', background: '#101114',
           }}>
             <div style={{ display: 'flex', gap: 6, padding: '12px 14px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
@@ -822,17 +824,30 @@ function TallerSpotlight({ onCta }) {
 
   return (
     <section id="taller" style={{
+      position: 'relative', overflow: 'hidden',
       background: `linear-gradient(175deg, ${C.ink} 0%, #101116 100%)`,
       padding: 'clamp(4rem,8vw,7rem) clamp(1.5rem,5vw,4rem)',
       borderBottom: '1px solid rgba(255,255,255,0.06)',
     }}>
-      <div ref={ref} style={{ maxWidth: 1240, margin: '0 auto' }}>
+      {/* Marca de agua — vehículos en filigrana, decorativo, no interactivo */}
+      <div aria-hidden="true" style={{
+        position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none', zIndex: 0,
+      }}>
+        <Ico d={icons.car} size={340} color="#FFFFFF" strokeWidth={0.7}
+          style={{ position: 'absolute', top: '-6%', right: '-4%', opacity: 0.05, transform: 'rotate(-8deg)' }} />
+        <Ico d={icons.motorcycle} size={220} color="#FFFFFF" strokeWidth={0.7}
+          style={{ position: 'absolute', bottom: '-8%', left: '-3%', opacity: 0.05, transform: 'rotate(6deg)' }} />
+        <Ico d={icons.wrench} size={140} color="#FFFFFF" strokeWidth={0.7}
+          style={{ position: 'absolute', top: '38%', left: '46%', opacity: 0.035, transform: 'rotate(18deg)' }} />
+      </div>
+
+      <div ref={ref} style={{ maxWidth: 1240, margin: '0 auto', position: 'relative', zIndex: 1 }}>
         <div style={{
           display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(320px,1fr))',
           gap: 'clamp(2.5rem,6vw,5rem)', alignItems: 'center', marginBottom: 56,
         }}>
           <div style={{ opacity: visible ? 1 : 0, transform: visible ? 'translateY(0)' : 'translateY(16px)', transition: 'opacity 0.6s, transform 0.6s' }}>
-            <div style={{ display: 'inline-block', background: 'rgba(196,144,61,0.12)', border: '1px solid rgba(196,144,61,0.28)', borderRadius: 100, padding: '6px 16px', marginBottom: 18 }}>
+            <div style={{ display: 'inline-block', background: 'rgba(207,58,11,0.12)', border: '1px solid rgba(207,58,11,0.28)', borderRadius: 100, padding: '6px 16px', marginBottom: 18 }}>
               <span style={{ fontSize: 12, color: C.accentL, fontWeight: 700, letterSpacing: '0.05em' }}>El núcleo de Pitbox</span>
             </div>
             <h2 style={{
@@ -855,7 +870,7 @@ function TallerSpotlight({ onCta }) {
               display: 'inline-flex', alignItems: 'center', gap: 8,
               transition: 'border-color 0.2s, background 0.2s',
             }}
-              onMouseEnter={e => { e.currentTarget.style.borderColor = C.accentL; e.currentTarget.style.background = 'rgba(196,144,61,0.08)'; }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = C.accentL; e.currentTarget.style.background = 'rgba(207,58,11,0.08)'; }}
               onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.22)'; e.currentTarget.style.background = 'transparent'; }}
             >
               Solicitar demo <Ico d={icons.arrow} size={15} color={C.white} />
@@ -881,7 +896,7 @@ function TallerSpotlight({ onCta }) {
               transition: `opacity 0.5s ${0.1 + i * 0.08}s, transform 0.5s ${0.1 + i * 0.08}s`,
             }}>
               <div style={{
-                width: 40, height: 40, borderRadius: 11, background: 'rgba(196,144,61,0.14)',
+                width: 40, height: 40, borderRadius: 11, background: 'rgba(207,58,11,0.14)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 14,
               }}>
                 <Ico d={icon} size={18} color={C.accentL} strokeWidth={1.7} />
@@ -1105,7 +1120,7 @@ function AppShowcase() {
         transform: visible ? 'translateY(0)' : 'translateY(16px)',
         transition: 'opacity 0.6s, transform 0.6s',
       }}>
-        <div style={{ display: 'inline-block', background: 'rgba(196,144,61,0.1)', border: '1px solid rgba(196,144,61,0.25)', borderRadius: 100, padding: '6px 16px', marginBottom: 16 }}>
+        <div style={{ display: 'inline-block', background: 'rgba(207,58,11,0.1)', border: '1px solid rgba(207,58,11,0.25)', borderRadius: 100, padding: '6px 16px', marginBottom: 16 }}>
           <span style={{ fontSize: 12, color: C.accentL, fontWeight: 700, letterSpacing: '0.05em' }}>El aplicativo en acción</span>
         </div>
         <h2 style={{
@@ -1138,7 +1153,7 @@ function NexaBanner({ onCta }) {
   return (
     <section id="nexa" style={{
       position: 'relative', overflow: 'hidden',
-      background: `radial-gradient(circle at 15% 20%, rgba(139,92,246,0.22), transparent 55%), radial-gradient(circle at 85% 80%, rgba(196,144,61,0.14), transparent 50%), ${C.inkD}`,
+      background: `radial-gradient(circle at 15% 20%, rgba(139,92,246,0.22), transparent 55%), radial-gradient(circle at 85% 80%, rgba(207,58,11,0.14), transparent 50%), ${C.inkD}`,
       padding: 'clamp(4rem,8vw,7rem) clamp(1.5rem,5vw,4rem)',
       borderTop: '1px solid rgba(255,255,255,0.06)', borderBottom: '1px solid rgba(255,255,255,0.06)',
     }}>
@@ -1454,7 +1469,7 @@ function FinalCta({ onCta }) {
             background: C.accent, color: C.white, border: 'none', borderRadius: 12,
             padding: '16px 40px', fontSize: 16, fontWeight: 600, cursor: 'pointer',
             fontFamily: "'Space Grotesk', sans-serif",
-            boxShadow: '0 8px 32px rgba(196,144,61,0.35)',
+            boxShadow: '0 8px 32px rgba(207,58,11,0.35)',
             transition: 'transform 0.2s',
           }}
             onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
@@ -1722,11 +1737,11 @@ function OnboardingModal({ onClose }) {
               cursor: 'pointer', width: '100%', marginTop: 4,
               fontFamily: "'Space Grotesk', sans-serif",
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-              boxShadow: '0 4px 16px rgba(196,144,61,0.3)',
+              boxShadow: '0 4px 16px rgba(207,58,11,0.3)',
               transition: 'transform 0.15s, box-shadow 0.15s',
             }}
-            onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(196,144,61,0.4)'; }}
-            onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 16px rgba(196,144,61,0.3)'; }}
+            onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(207,58,11,0.4)'; }}
+            onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 16px rgba(207,58,11,0.3)'; }}
           >
             Continuar <Ico d={icons.arrow} size={16} color="#fff" />
           </button>
@@ -1773,7 +1788,7 @@ const GLOBAL_CSS = `
 
   ::-webkit-scrollbar { width: 5px; }
   ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: rgba(196,144,61,0.3); border-radius: 10px; }
+  ::-webkit-scrollbar-thumb { background: rgba(207,58,11,0.3); border-radius: 10px; }
 `;
 
 /* ─────────────────────────────────────────

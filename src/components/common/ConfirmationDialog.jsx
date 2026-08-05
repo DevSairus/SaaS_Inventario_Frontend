@@ -93,7 +93,7 @@ function ConfirmationDialog({
 
       {/* Modal */}
       <div className="flex min-h-full items-center justify-center p-4">
-        <div className="relative bg-white rounded-lg shadow-xl max-w-md w-full">
+        <div className="relative bg-white dark:bg-graphite rounded-lg shadow-xl max-w-md w-full">
           
           {/* Content */}
           <div className="p-6">
@@ -103,26 +103,26 @@ function ConfirmationDialog({
             </div>
 
             {/* Title */}
-            <h3 className="text-xl font-bold text-gray-900 text-center mb-2">
+            <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 text-center mb-2">
               {title}
             </h3>
 
             {/* Message */}
-            <p className="text-gray-600 text-center mb-6">
+            <p className="text-gray-600 dark:text-gray-400 text-center mb-6">
               {message}
             </p>
 
             {/* Typing Confirmation */}
             {requireTyping && (
               <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Escribe <span className="font-bold text-red-600">{confirmationWord}</span> para confirmar:
                 </label>
                 <input
                   type="text"
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-red-500"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-white/10 dark:bg-graphite-2 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-red-500"
                   placeholder={confirmationWord}
                   autoFocus
                 />
@@ -134,7 +134,7 @@ function ConfirmationDialog({
               <button
                 onClick={handleClose}
                 disabled={isConfirming}
-                className="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 px-4 py-2.5 border border-gray-300 dark:border-white/10 text-gray-700 dark:text-gray-300 font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-white/5 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {cancelText}
               </button>

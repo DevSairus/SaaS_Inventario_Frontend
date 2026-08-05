@@ -103,7 +103,7 @@ const CustomerSearchInput = ({
     <div ref={wrapperRef} className={`relative ${className}`}>
       <div className="relative">
         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-          <MagnifyingGlassIcon className="h-4 w-4 text-gray-400" />
+          <MagnifyingGlassIcon className="h-4 w-4 text-gray-400 dark:text-gray-500" />
         </div>
         
         <input
@@ -121,14 +121,14 @@ const CustomerSearchInput = ({
           onFocus={() => setIsOpen(true)}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
-          className="w-full pl-9 pr-9 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full pl-9 pr-9 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100 dark:placeholder-gray-600"
         />
 
         {(selectedCustomer || searchTerm) && (
           <button
             type="button"
             onClick={handleClear}
-            className="absolute inset-y-0 right-0 pr-3 flex items-center hover:text-gray-700 text-gray-400"
+            className="absolute inset-y-0 right-0 pr-3 flex items-center hover:text-gray-700 text-gray-400 dark:text-gray-500 dark:hover:text-gray-300"
           >
             <XMarkIcon className="h-4 w-4" />
           </button>
@@ -137,37 +137,37 @@ const CustomerSearchInput = ({
 
       {/* Dropdown de resultados */}
       {isOpen && filteredCustomers.length > 0 && (
-        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+        <div className="absolute z-50 w-full mt-1 bg-white dark:bg-graphite border border-gray-300 dark:border-white/10 rounded-lg shadow-lg max-h-60 overflow-y-auto">
           {filteredCustomers.map((customer, index) => (
             <button
               key={customer.id}
               type="button"
               onClick={() => handleSelect(customer)}
-              className={`w-full text-left px-4 py-2.5 hover:bg-blue-50 transition-colors border-b border-gray-100 last:border-b-0 ${
-                index === highlightedIndex ? 'bg-blue-50' : ''
+              className={`w-full text-left px-4 py-2.5 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors border-b border-gray-100 dark:border-white/10 last:border-b-0 ${
+                index === highlightedIndex ? 'bg-blue-50 dark:bg-blue-900/30' : ''
               }`}
               onMouseEnter={() => setHighlightedIndex(index)}
             >
               <div className="flex items-center justify-between">
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 truncate">
+                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
                     {customer.full_name}
                   </p>
                   <div className="flex items-center gap-2 mt-0.5">
                     {customer.tax_id && (
-                      <span className="text-xs text-gray-500">
+                      <span className="text-xs text-gray-500 dark:text-gray-500">
                         {customer.tax_id}
                       </span>
                     )}
                     {customer.email && (
-                      <span className="text-xs text-gray-400">
+                      <span className="text-xs text-gray-400 dark:text-gray-500">
                         {customer.email}
                       </span>
                     )}
                   </div>
                 </div>
                 {customer.customer_type === 'company' && (
-                  <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 flex-shrink-0">
+                  <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 flex-shrink-0">
                     Empresa
                   </span>
                 )}
@@ -179,8 +179,8 @@ const CustomerSearchInput = ({
 
       {/* Mensaje cuando no hay resultados */}
       {isOpen && searchTerm && filteredCustomers.length === 0 && (
-        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg p-4">
-          <p className="text-sm text-gray-500 text-center">
+        <div className="absolute z-50 w-full mt-1 bg-white dark:bg-graphite border border-gray-300 dark:border-white/10 rounded-lg shadow-lg p-4">
+          <p className="text-sm text-gray-500 dark:text-gray-500 text-center">
             No se encontraron clientes con "{searchTerm}"
           </p>
         </div>

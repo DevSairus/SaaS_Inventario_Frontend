@@ -78,9 +78,9 @@ function ImportOpeningInventoryModal({ isOpen, onClose, products, onImported }) 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
-        <div className="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75" onClick={handleClose} />
+        <div className="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75 dark:bg-black/60" onClick={handleClose} />
 
-        <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full">
+        <div className="inline-block align-bottom bg-white dark:bg-graphite rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full">
           <div className="bg-gradient-to-r from-green-500 to-blue-500 px-6 py-4">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold text-white">Saldo Inicial de Inventario</h3>
@@ -95,9 +95,9 @@ function ImportOpeningInventoryModal({ isOpen, onClose, products, onImported }) 
           <div className="px-6 py-4">
             {step === 1 && (
               <div className="space-y-4">
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <h4 className="font-semibold text-blue-900 mb-2">📋 Instrucciones:</h4>
-                  <ol className="text-sm text-blue-800 space-y-1 list-decimal list-inside">
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 dark:bg-blue-900/30 dark:border-blue-800/40">
+                  <h4 className="font-semibold text-blue-900 mb-2 dark:text-blue-300">📋 Instrucciones:</h4>
+                  <ol className="text-sm text-blue-800 space-y-1 list-decimal list-inside dark:text-blue-300">
                     <li>Descarga la plantilla, complétala con SKU/cantidad/costo</li>
                     <li>Los productos deben existir ya en Pitbox y tener bodega asignada</li>
                     <li>Indica la fecha de corte (una sola, para todo el lote)</li>
@@ -106,12 +106,12 @@ function ImportOpeningInventoryModal({ isOpen, onClose, products, onImported }) 
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Fecha de corte del inventario*</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">Fecha de corte del inventario*</label>
                   <input
                     type="date"
                     value={entryDate}
                     onChange={(e) => setEntryDate(e.target.value)}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100"
                   />
                 </div>
 
@@ -122,11 +122,11 @@ function ImportOpeningInventoryModal({ isOpen, onClose, products, onImported }) 
                   Descargar Plantilla de Excel
                 </button>
 
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-500 transition-colors">
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-500 transition-colors dark:border-white/10">
                   <input type="file" accept=".xlsx,.xls" onChange={handleFileChange} className="hidden" id="opening-inventory-file-upload" />
                   <label htmlFor="opening-inventory-file-upload" className="cursor-pointer">
-                    <p className="mt-2 text-sm text-gray-600">{file ? file.name : 'Haz clic para seleccionar un archivo Excel'}</p>
-                    <p className="text-xs text-gray-500 mt-1">XLSX o XLS</p>
+                    <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">{file ? file.name : 'Haz clic para seleccionar un archivo Excel'}</p>
+                    <p className="text-xs text-gray-500 mt-1 dark:text-gray-500">XLSX o XLS</p>
                   </label>
                 </div>
               </div>
@@ -135,28 +135,28 @@ function ImportOpeningInventoryModal({ isOpen, onClose, products, onImported }) 
             {step === 2 && validationResult && (
               <div className="space-y-4">
                 <div className="grid grid-cols-3 gap-4">
-                  <div className="bg-blue-50 rounded-lg p-4 text-center">
-                    <p className="text-2xl font-bold text-blue-600">{validationResult.summary.total}</p>
-                    <p className="text-xs text-blue-800">Total</p>
+                  <div className="bg-blue-50 rounded-lg p-4 text-center dark:bg-blue-900/30">
+                    <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{validationResult.summary.total}</p>
+                    <p className="text-xs text-blue-800 dark:text-blue-300">Total</p>
                   </div>
-                  <div className="bg-green-50 rounded-lg p-4 text-center">
-                    <p className="text-2xl font-bold text-green-600">{validationResult.summary.valid}</p>
-                    <p className="text-xs text-green-800">Válidos</p>
+                  <div className="bg-green-50 rounded-lg p-4 text-center dark:bg-green-900/30">
+                    <p className="text-2xl font-bold text-green-600 dark:text-green-400">{validationResult.summary.valid}</p>
+                    <p className="text-xs text-green-800 dark:text-green-300">Válidos</p>
                   </div>
-                  <div className="bg-red-50 rounded-lg p-4 text-center">
-                    <p className="text-2xl font-bold text-red-600">{validationResult.summary.invalid}</p>
-                    <p className="text-xs text-red-800">Rechazados</p>
+                  <div className="bg-red-50 rounded-lg p-4 text-center dark:bg-red-900/30">
+                    <p className="text-2xl font-bold text-red-600 dark:text-red-400">{validationResult.summary.invalid}</p>
+                    <p className="text-xs text-red-800 dark:text-red-300">Rechazados</p>
                   </div>
                 </div>
 
                 {validationResult.errors.length > 0 && (
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-4 max-h-64 overflow-y-auto">
-                    <h4 className="font-semibold text-red-900 mb-2">❌ Filas rechazadas:</h4>
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4 max-h-64 overflow-y-auto dark:bg-red-900/30 dark:border-red-800/40">
+                    <h4 className="font-semibold text-red-900 mb-2 dark:text-red-300">❌ Filas rechazadas:</h4>
                     <div className="space-y-2">
                       {validationResult.errors.map((error, index) => (
-                        <div key={index} className="bg-white rounded p-2 border border-red-200">
-                          <p className="text-sm font-medium text-red-900">Fila {error.row} — {error.identifier}</p>
-                          <ul className="text-xs text-red-700 mt-1 list-disc list-inside">
+                        <div key={index} className="bg-white rounded p-2 border border-red-200 dark:bg-graphite-2 dark:border-red-800/40">
+                          <p className="text-sm font-medium text-red-900 dark:text-red-300">Fila {error.row} — {error.identifier}</p>
+                          <ul className="text-xs text-red-700 mt-1 list-disc list-inside dark:text-red-400">
                             {error.errors.map((err, i) => <li key={i}>{err}</li>)}
                           </ul>
                         </div>
@@ -166,8 +166,8 @@ function ImportOpeningInventoryModal({ isOpen, onClose, products, onImported }) 
                 )}
 
                 {validationResult.validRows.length > 0 && (
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                    <p className="text-green-900 font-medium">
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4 dark:bg-green-900/30 dark:border-green-800/40">
+                    <p className="text-green-900 font-medium dark:text-green-300">
                       ✅ {validationResult.validRows.length} producto(s) listos — valor total a cargar: $
                       {validationResult.validRows.reduce((sum, r) => sum + r.quantity * r.unit_cost, 0).toLocaleString('es-CO')}
                     </p>
@@ -177,17 +177,17 @@ function ImportOpeningInventoryModal({ isOpen, onClose, products, onImported }) 
             )}
 
             {step === 3 && importResult && (
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center space-y-1">
-                <p className="text-2xl font-bold text-green-600">{importResult.itemsLoaded} producto(s)</p>
-                <p className="text-sm text-green-800">
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center space-y-1 dark:bg-green-900/30 dark:border-green-800/40">
+                <p className="text-2xl font-bold text-green-600 dark:text-green-400">{importResult.itemsLoaded} producto(s)</p>
+                <p className="text-sm text-green-800 dark:text-green-300">
                   cargados — valor total: ${Number(importResult.totalValue).toLocaleString('es-CO')}, ya contabilizado en el asiento de apertura
                 </p>
               </div>
             )}
           </div>
 
-          <div className="bg-gray-50 px-6 py-4 flex justify-between">
-            <button onClick={handleClose} className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100">
+          <div className="bg-gray-50 px-6 py-4 flex justify-between dark:bg-graphite-2">
+            <button onClick={handleClose} className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 dark:border-white/10 dark:text-gray-300 dark:hover:bg-white/10">
               {step === 3 ? 'Cerrar' : 'Cancelar'}
             </button>
 

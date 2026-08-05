@@ -115,10 +115,10 @@ const SuperAdminMercadoPagoConfig = () => {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
           Configuración de MercadoPago - SuperAdmin
         </h1>
-        <p className="text-gray-600 mt-1">
+        <p className="text-gray-600 dark:text-gray-400 mt-1">
           Configura MercadoPago para cobrar las suscripciones de los tenants
         </p>
       </div>
@@ -126,10 +126,10 @@ const SuperAdminMercadoPagoConfig = () => {
       <Card>
         <div className="space-y-6">
           {/* Info Alert */}
-          <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <div className="p-4 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800/40 rounded-lg">
             <div className="flex gap-3">
-              <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-              <div className="text-sm text-blue-800">
+              <Info className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+              <div className="text-sm text-blue-800 dark:text-blue-300">
                 <p className="font-semibold mb-2">Configuración del Sistema</p>
                 <p className="mb-2">
                   Esta configuración es <strong>independiente</strong> de las
@@ -150,10 +150,10 @@ const SuperAdminMercadoPagoConfig = () => {
           </div>
 
           {/* How to get credentials */}
-          <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
+          <div className="p-4 bg-gray-50 dark:bg-graphite-2 border border-gray-200 dark:border-white/10 rounded-lg">
             <div className="flex gap-3">
-              <AlertCircle className="w-5 h-5 text-gray-600 flex-shrink-0 mt-0.5" />
-              <div className="text-sm text-gray-800">
+              <AlertCircle className="w-5 h-5 text-gray-600 dark:text-gray-400 flex-shrink-0 mt-0.5" />
+              <div className="text-sm text-gray-800 dark:text-gray-200">
                 <p className="font-semibold mb-1">
                   ¿Cómo obtener las credenciales?
                 </p>
@@ -184,14 +184,14 @@ const SuperAdminMercadoPagoConfig = () => {
 
           {/* Status */}
           {hasConfig && (
-            <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+            <div className="p-4 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800/40 rounded-lg">
               <div className="flex items-start gap-3">
-                <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
                 <div>
-                  <p className="font-semibold text-green-900">
+                  <p className="font-semibold text-green-900 dark:text-green-300">
                     MercadoPago Configurado
                   </p>
-                  <p className="text-sm text-green-700 mt-1">
+                  <p className="text-sm text-green-700 dark:text-green-300 mt-1">
                     El sistema está listo para procesar pagos de suscripciones
                   </p>
                 </div>
@@ -202,12 +202,12 @@ const SuperAdminMercadoPagoConfig = () => {
           {/* Form */}
           <div className="space-y-4">
             {/* Test Mode Toggle */}
-            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+            <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-graphite-2 rounded-lg">
               <div>
-                <label className="font-medium text-gray-900">
+                <label className="font-medium text-gray-900 dark:text-gray-100">
                   Modo de Prueba
                 </label>
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-gray-600 dark:text-gray-400">
                   Usar credenciales de TEST (recomendado para desarrollo)
                 </p>
               </div>
@@ -220,7 +220,7 @@ const SuperAdminMercadoPagoConfig = () => {
                   }
                   className="sr-only peer"
                 />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
+                <div className="w-11 h-6 bg-gray-200 dark:bg-white/10 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 dark:after:border-white/10 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
               </label>
             </div>
 
@@ -243,7 +243,7 @@ const SuperAdminMercadoPagoConfig = () => {
                 <button
                   type="button"
                   onClick={() => setShowToken(!showToken)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
                 >
                   {showToken ? (
                     <EyeOff className="w-5 h-5" />
@@ -252,7 +252,7 @@ const SuperAdminMercadoPagoConfig = () => {
                   )}
                 </button>
               </div>
-              <p className="text-sm text-gray-500 mt-1">
+              <p className="text-sm text-gray-500 dark:text-gray-500 mt-1">
                 Token privado para procesar pagos de suscripciones
               </p>
             </div>
@@ -268,14 +268,14 @@ const SuperAdminMercadoPagoConfig = () => {
                 className="input"
                 placeholder="APP_USR-XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX"
               />
-              <p className="text-sm text-gray-500 mt-1">
+              <p className="text-sm text-gray-500 dark:text-gray-500 mt-1">
                 Clave pública (menos sensible)
               </p>
             </div>
           </div>
 
           {/* Actions */}
-          <div className="flex gap-3 pt-4 border-t">
+          <div className="flex gap-3 pt-4 border-t dark:border-white/10">
             <Button
               variant="primary"
               icon={Save}
@@ -300,10 +300,10 @@ const SuperAdminMercadoPagoConfig = () => {
 
           {/* Warning */}
           {!hasConfig && (
-            <div className="p-4 bg-orange-50 border border-orange-200 rounded-lg">
+            <div className="p-4 bg-orange-50 dark:bg-orange-900/30 border border-orange-200 dark:border-orange-800/40 rounded-lg">
               <div className="flex gap-3">
-                <AlertCircle className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
-                <div className="text-sm text-orange-800">
+                <AlertCircle className="w-5 h-5 text-orange-600 dark:text-orange-400 flex-shrink-0 mt-0.5" />
+                <div className="text-sm text-orange-800 dark:text-orange-300">
                   <p className="font-semibold">Sin Configuración</p>
                   <p className="mt-1">
                     Los tenants no podrán pagar sus suscripciones hasta que

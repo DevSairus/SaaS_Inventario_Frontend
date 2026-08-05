@@ -92,46 +92,46 @@ export default function CustomersPage() {
       <div className="space-y-5">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Clientes</h1>
-            <p className="text-sm text-gray-500 mt-0.5">Gestiona tu base de clientes</p>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">Clientes</h1>
+            <p className="text-sm text-gray-500 mt-0.5 dark:text-gray-500">Gestiona tu base de clientes</p>
           </div>
           <button onClick={() => handleOpenModal()} className="inline-flex items-center gap-2 px-4 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-semibold shadow-sm transition-colors">
             <PlusIcon className="h-5 w-5" /> Nuevo Cliente
           </button>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-4 mb-6">
+        <div className="bg-white rounded-lg shadow p-4 mb-6 dark:bg-graphite">
           <div className="relative">
             <input type="text" placeholder="Buscar por nombre, NIT o email..." value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg pl-10 pr-4 py-2" />
-            <MagnifyingGlassIcon className="h-5 w-5 text-gray-400 absolute left-3 top-3" />
+              className="w-full border border-gray-300 rounded-lg pl-10 pr-4 py-2 dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100 dark:placeholder-gray-600" />
+            <MagnifyingGlassIcon className="h-5 w-5 text-gray-400 absolute left-3 top-3 dark:text-gray-500" />
           </div>
         </div>
 
-        {error && <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">{error}</div>}
+        {error && <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4 dark:bg-red-900/30 dark:border-red-800/40 dark:text-red-300">{error}</div>}
 
-        <div className="bg-white rounded-lg shadow">
+        <div className="bg-white rounded-lg shadow dark:bg-graphite">
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-white/10">
+              <thead className="bg-gray-50 dark:bg-graphite-2">
                 <tr>
                   {['Cliente','Tipo','Contacto','Ciudad','Estado','Acciones'].map(h => (
-                    <th key={h} className={`px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider ${h==='Acciones'?'text-right':'text-left'}`}>{h}</th>
+                    <th key={h} className={`px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-500 ${h==='Acciones'?'text-right':'text-left'}`}>{h}</th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white divide-y divide-gray-200 dark:bg-graphite dark:divide-white/10">
                 {filteredCustomers.length === 0 ? (
-                  <tr><td colSpan="6" className="px-6 py-12 text-center text-gray-500">
+                  <tr><td colSpan="6" className="px-6 py-12 text-center text-gray-500 dark:text-gray-500">
                     {searchTerm ? 'No se encontraron clientes' : 'No hay clientes registrados'}
                   </td></tr>
                 ) : filteredCustomers.map((customer) => (
-                  <tr key={customer.id} className="hover:bg-gray-50">
+                  <tr key={customer.id} className="hover:bg-gray-50 dark:hover:bg-white/5">
                     <td className="px-6 py-4">
-                      <div className="text-sm font-medium text-gray-900">{customer.full_name}</div>
-                      {customer.business_name && <div className="text-xs text-gray-500">{customer.business_name}</div>}
-                      <div className="text-xs text-gray-500">{customer.tax_id}</div>
+                      <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{customer.full_name}</div>
+                      {customer.business_name && <div className="text-xs text-gray-500 dark:text-gray-500">{customer.business_name}</div>}
+                      <div className="text-xs text-gray-500 dark:text-gray-500">{customer.tax_id}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <Badge variant={customer.customer_type === 'company' ? 'info' : 'secondary'}>
@@ -139,10 +139,10 @@ export default function CustomersPage() {
                       </Badge>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="text-sm text-gray-900">{customer.phone || customer.mobile}</div>
-                      {customer.email && <div className="text-xs text-gray-500">{customer.email}</div>}
+                      <div className="text-sm text-gray-900 dark:text-gray-100">{customer.phone || customer.mobile}</div>
+                      {customer.email && <div className="text-xs text-gray-500 dark:text-gray-500">{customer.email}</div>}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{customer.city || '-'}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-500">{customer.city || '-'}</td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <Badge variant={customer.is_active ? 'success' : 'danger'}>
                         {customer.is_active ? 'Activo' : 'Inactivo'}
@@ -171,15 +171,15 @@ export default function CustomersPage() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de Cliente *</label>
-                <select value={formData.customer_type} onChange={set('customer_type')} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" required>
+                <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">Tipo de Cliente *</label>
+                <select value={formData.customer_type} onChange={set('customer_type')} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100" required>
                   <option value="individual">Persona Natural</option>
                   <option value="company">Empresa</option>
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Categoría</label>
-                <select value={formData.customer_category} onChange={set('customer_category')} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">Categoría</label>
+                <select value={formData.customer_category} onChange={set('customer_category')} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100">
                   <option value="">Seleccionar...</option>
                   <option value="retail">Minorista</option>
                   <option value="wholesale">Mayorista</option>
@@ -190,18 +190,18 @@ export default function CustomersPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">
                 {formData.customer_type === 'company' ? 'NIT' : 'Cédula / Documento'}
               </label>
               <div className="flex items-start gap-2">
                 <input type="text" value={formData.tax_id} onChange={set('tax_id')}
                   placeholder={formData.customer_type === 'company' ? 'Ej: 900072256 o 900072256-1' : 'Ej: 92549045'}
-                  className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500" />
+                  className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100 dark:placeholder-gray-600" />
                 {!editingCustomer && (
                   <RuesNitButton nit={formData.tax_id} tipoCliente={formData.customer_type} onResult={handleRuesResult} />
                 )}
               </div>
-              {editingCustomer && <p className="text-xs text-gray-400 mt-1">La consulta RUES solo está disponible al crear un cliente nuevo.</p>}
+              {editingCustomer && <p className="text-xs text-gray-400 mt-1 dark:text-gray-500">La consulta RUES solo está disponible al crear un cliente nuevo.</p>}
             </div>
 
             <Input label="Nombre Completo *" value={formData.full_name} onChange={set('full_name')} required />
@@ -223,28 +223,28 @@ export default function CustomersPage() {
             <Input label="Dirección" value={formData.address} onChange={set('address')} />
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Notas</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">Notas</label>
               <textarea value={formData.notes} onChange={set('notes')} rows="3"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100 dark:placeholder-gray-600"
                 placeholder="Notas adicionales sobre el cliente..." />
             </div>
 
             {editingCustomer && (
-              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200 dark:bg-graphite-2 dark:border-white/10">
                 <div>
-                  <p className="text-sm font-medium text-gray-900">Estado del cliente</p>
-                  <p className="text-xs text-gray-500 mt-0.5">
+                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Estado del cliente</p>
+                  <p className="text-xs text-gray-500 mt-0.5 dark:text-gray-500">
                     {formData.is_active ? 'El cliente está activo y puede realizar compras.' : 'El cliente está inactivo.'}
                   </p>
                 </div>
                 <button type="button" onClick={() => setFormData(prev => ({ ...prev, is_active: !prev.is_active }))}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0 ${formData.is_active ? 'bg-green-500' : 'bg-gray-300'}`}>
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0 ${formData.is_active ? 'bg-green-500' : 'bg-gray-300 dark:bg-white/10'}`}>
                   <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${formData.is_active ? 'translate-x-6' : 'translate-x-1'}`} />
                 </button>
               </div>
             )}
 
-            <div className="flex justify-end space-x-2 pt-4 border-t">
+            <div className="flex justify-end space-x-2 pt-4 border-t dark:border-white/10">
               <Button type="button" variant="secondary" onClick={handleCloseModal}>Cancelar</Button>
               <Button type="submit" variant="primary" disabled={loading}>
                 {loading ? 'Guardando...' : editingCustomer ? 'Actualizar' : 'Crear Cliente'}

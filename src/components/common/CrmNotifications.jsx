@@ -53,7 +53,7 @@ function CrmNotifications() {
     <div className="relative">
       <button
         onClick={() => setIsOpen(true)}
-        className="relative p-2 rounded-lg hover:bg-gray-100 text-gray-500"
+        className="relative p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 text-gray-500 dark:text-gray-500"
         aria-label="Notificaciones CRM"
       >
         <Bell className="w-6 h-6" />
@@ -69,12 +69,12 @@ function CrmNotifications() {
           <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
 
           <div
-            className="absolute right-0 mt-3 w-80 bg-white rounded-xl shadow-xl z-50 border border-gray-200 flex flex-col"
+            className="absolute right-0 mt-3 w-80 bg-white dark:bg-graphite rounded-xl shadow-xl z-50 border border-gray-200 dark:border-white/10 flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="px-4 py-3 border-b bg-gradient-to-r from-accent/10 to-purple-50">
-              <h3 className="text-sm font-semibold text-gray-900">Notificaciones CRM</h3>
-              <p className="text-xs text-gray-600">Lo que no se te puede pasar hoy</p>
+            <div className="px-4 py-3 border-b dark:border-white/10 bg-gradient-to-r from-accent/10 to-purple-50 dark:to-purple-900/20">
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Notificaciones CRM</h3>
+              <p className="text-xs text-gray-600 dark:text-gray-400">Lo que no se te puede pasar hoy</p>
             </div>
 
             <div className="p-2">
@@ -84,41 +84,41 @@ function CrmNotifications() {
                 </div>
               ) : total === 0 ? (
                 <div className="flex flex-col items-center justify-center py-8 px-4 text-center">
-                  <CheckCircle2 className="w-10 h-10 text-gray-200 mb-2" />
-                  <p className="text-sm font-medium text-gray-900">Al día</p>
-                  <p className="text-xs text-gray-500 mt-1">Sin seguimientos vencidos ni leads sin atender</p>
+                  <CheckCircle2 className="w-10 h-10 text-gray-200 dark:text-gray-600 mb-2" />
+                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Al día</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">Sin seguimientos vencidos ni leads sin atender</p>
                 </div>
               ) : (
                 <div className="space-y-1">
                   {summary.overdue_followups > 0 && (
                     <button
                       onClick={() => { navigate('/crm/followups'); setIsOpen(false); }}
-                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-red-50 text-left"
+                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-left"
                     >
-                      <div className="p-1.5 rounded-full bg-red-50 text-red-500 flex-shrink-0">
+                      <div className="p-1.5 rounded-full bg-red-50 dark:bg-red-900/30 text-red-500 dark:text-red-400 flex-shrink-0">
                         <AlertTriangle size={14} />
                       </div>
                       <div className="min-w-0">
-                        <p className="text-sm font-medium text-gray-900">
+                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
                           {summary.overdue_followups} seguimiento{summary.overdue_followups === 1 ? '' : 's'} vencido{summary.overdue_followups === 1 ? '' : 's'}
                         </p>
-                        <p className="text-xs text-gray-500">Ir a la bandeja de seguimiento</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-500">Ir a la bandeja de seguimiento</p>
                       </div>
                     </button>
                   )}
                   {summary.unattended_leads > 0 && (
                     <button
                       onClick={() => { navigate('/crm/pipeline'); setIsOpen(false); }}
-                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-orange-50 text-left"
+                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-orange-50 dark:hover:bg-orange-900/20 text-left"
                     >
-                      <div className="p-1.5 rounded-full bg-orange-50 text-orange-500 flex-shrink-0">
+                      <div className="p-1.5 rounded-full bg-orange-50 dark:bg-orange-900/30 text-orange-500 dark:text-orange-400 flex-shrink-0">
                         <Megaphone size={14} />
                       </div>
                       <div className="min-w-0">
-                        <p className="text-sm font-medium text-gray-900">
+                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
                           {summary.unattended_leads} lead{summary.unattended_leads === 1 ? '' : 's'} sin contactar hace 2h+
                         </p>
-                        <p className="text-xs text-gray-500">
+                        <p className="text-xs text-gray-500 dark:text-gray-500">
                           {summary.unattended_meta_leads > 0
                             ? `${summary.unattended_meta_leads} de Meta Ads — ir al pipeline`
                             : 'Ir al pipeline'}

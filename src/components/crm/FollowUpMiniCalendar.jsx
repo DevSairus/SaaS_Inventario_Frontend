@@ -32,24 +32,24 @@ export default function FollowUpMiniCalendar({ month, onMonthChange, tasksByDay,
   const dayKey = (d) => format(d, 'yyyy-MM-dd');
 
   return (
-    <div className="bg-white border border-gray-100 rounded-xl shadow-[0_1px_2px_rgba(15,15,15,0.04)] p-4">
+    <div className="bg-white border border-gray-100 rounded-xl shadow-[0_1px_2px_rgba(15,15,15,0.04)] p-4 dark:bg-graphite dark:border-white/10">
       <div className="flex items-center justify-between mb-3">
         <button type="button" onClick={() => onMonthChange(subMonths(month, 1))}
-          className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-50 transition">
+          className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-50 transition dark:text-gray-500 dark:hover:text-gray-200 dark:hover:bg-white/5">
           <ChevronLeft size={16} />
         </button>
-        <span className="text-sm font-semibold text-gray-800 capitalize">
+        <span className="text-sm font-semibold text-gray-800 capitalize dark:text-gray-200">
           {format(month, 'MMMM yyyy', { locale: es })}
         </span>
         <button type="button" onClick={() => onMonthChange(addMonths(month, 1))}
-          className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-50 transition">
+          className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-50 transition dark:text-gray-500 dark:hover:text-gray-200 dark:hover:bg-white/5">
           <ChevronRight size={16} />
         </button>
       </div>
 
       <div className="grid grid-cols-7 gap-1 mb-1">
         {WEEKDAYS.map(w => (
-          <div key={w} className="text-center text-[11px] font-medium text-gray-400 py-1">{w}</div>
+          <div key={w} className="text-center text-[11px] font-medium text-gray-400 py-1 dark:text-gray-500">{w}</div>
         ))}
       </div>
 
@@ -70,8 +70,8 @@ export default function FollowUpMiniCalendar({ month, onMonthChange, tasksByDay,
               type="button"
               onClick={() => onSelectDay(d)}
               className={`relative aspect-square flex flex-col items-center justify-center rounded-lg text-xs transition
-                ${!inMonth ? 'text-gray-300' : 'text-gray-700'}
-                ${isSelected ? 'bg-gradient-to-br from-accent to-accent-soft text-white shadow-sm shadow-accent/30 font-semibold' : 'hover:bg-gray-50'}
+                ${!inMonth ? 'text-gray-300 dark:text-gray-600' : 'text-gray-700 dark:text-gray-300'}
+                ${isSelected ? 'bg-gradient-to-br from-accent to-accent-soft text-white shadow-sm shadow-accent/30 font-semibold' : 'hover:bg-gray-50 dark:hover:bg-white/5'}
                 ${isToday && !isSelected ? 'ring-1 ring-accent/60 font-semibold' : ''}
               `}
             >

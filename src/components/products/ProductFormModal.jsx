@@ -220,7 +220,7 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
   return (
     <>
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="bg-white dark:bg-graphite rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
           {/* Header */}
           <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-4 flex items-center justify-between rounded-t-xl z-10">
             <h2 className="text-2xl font-bold">
@@ -239,13 +239,13 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Información Básica */}
               <div className="md:col-span-2">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 pb-2 border-b dark:border-white/10">
                   Información Básica
                 </h3>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   SKU <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -254,13 +254,13 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
                   value={formData.sku}
                   onChange={handleChange}
                   required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100"
                   placeholder="Ej: PROD-001"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Código de Barras
                 </label>
                 <div className="flex gap-2">
@@ -269,7 +269,7 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
                     name="barcode"
                     value={formData.barcode}
                     onChange={handleChange}
-                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100"
                     placeholder="Ej: 7501234567890"
                   />
                   <button
@@ -286,11 +286,11 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
                     </svg>
                   </button>
                 </div>
-                <p className="mt-1 text-xs text-gray-500">Escanea con cámara o pistola USB</p>
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-500">Escanea con cámara o pistola USB</p>
               </div>
 
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Nombre del Producto <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -299,13 +299,13 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
                   value={formData.name}
                   onChange={handleChange}
                   required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100"
                   placeholder="Ej: Laptop Dell Inspiron 15"
                 />
               </div>
 
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Descripción
                 </label>
                 <textarea
@@ -313,7 +313,7 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
                   value={formData.description}
                   onChange={handleChange}
                   rows="3"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100 resize-none"
                   placeholder="Descripción detallada del producto..."
                 />
               </div>
@@ -334,14 +334,14 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Categoría
                 </label>
                 <select
                   name="category_id"
                   value={formData.category_id}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100"
                 >
                   <option value="">Sin categoría</option>
                   {categories.map((category) => (
@@ -353,14 +353,14 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Unidad de Medida
                 </label>
                 <select
                   name="unit_of_measure"
                   value={formData.unit_of_measure}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100"
                 >
                   <option value="unit">Unidad</option>
                   <option value="kg">Kilogramo</option>
@@ -376,13 +376,13 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
 
               {/* Costos y Precios */}
               <div className="md:col-span-2 mt-4">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 pb-2 border-b dark:border-white/10">
                   Costos y Precios
                 </h3>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Costo Promedio
                   <span className="ml-2 text-xs text-blue-600 font-normal">Ingresa el costo SIN IVA</span>
                 </label>
@@ -394,15 +394,15 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
                   onChange={handleChange}
                   step="0.01"
                   min="0"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100"
                   placeholder="0.00"
                 />
-                <p className="mt-1 text-xs text-gray-500">Ejemplo: Si compras a $11,900 (con IVA 19%), ingresa $10,000</p>
-                <p className="mt-0.5 text-xs text-gray-400">Se actualiza automáticamente con las compras</p>
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-500">Ejemplo: Si compras a $11,900 (con IVA 19%), ingresa $10,000</p>
+                <p className="mt-0.5 text-xs text-gray-400 dark:text-gray-500">Se actualiza automáticamente con las compras</p>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Margen de Ganancia (%)
                 </label>
                 <input
@@ -413,7 +413,7 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
                   onChange={handleChange}
                   step="0.01"
                   min="0"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100"
                   placeholder="0.00"
                 />
                 {calculatedPrice && (
@@ -424,7 +424,7 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
               </div>
 
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Precio de Venta
                 </label>
                 <div className="flex gap-2">
@@ -436,7 +436,7 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
                     onChange={handleChange}
                     step="0.01"
                     min="0"
-                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100"
                     placeholder="0.00"
                   />
                   {calculatedPrice && (
@@ -458,18 +458,18 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
 
               {/* Configuración de IVA */}
               <div className="md:col-span-2 mt-4">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 pb-2 border-b dark:border-white/10">
                   Configuración de IVA / Impuestos
                 </h3>
               </div>
 
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Tipo de IVA</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Tipo de IVA</label>
                 <select
                   name="tax_percentage"
                   value={formData.tax_percentage}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100"
                 >
                   <option value="0">Exento (0%)</option>
                   <option value="5">Reducido (5%)</option>
@@ -477,7 +477,7 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
                   <option value="19">General (19%)</option>
                   <option value="21">Otro (21%)</option>
                 </select>
-                <p className="mt-1 text-xs text-gray-500">
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-500">
                   {formData.tax_percentage === 0 || formData.tax_percentage === '0'
                     ? 'Producto exento de IVA'
                     : `IVA del ${formData.tax_percentage}% aplicable según normativa`}
@@ -487,7 +487,7 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
               {formData.has_tax && parseFloat(formData.tax_percentage) > 0 && (
                 <>
                   <div>
-                    <label className="flex items-center space-x-3 p-3 bg-blue-50 rounded-lg cursor-pointer hover:bg-blue-100 transition-colors border border-blue-200">
+                    <label className="flex items-center space-x-3 p-3 bg-blue-50 dark:bg-blue-900/30 rounded-lg cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors border border-blue-200 dark:border-blue-800/40">
                       <input
                         type="checkbox"
                         name="price_includes_tax"
@@ -496,8 +496,8 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
                         className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                       />
                       <div>
-                        <span className="text-sm font-medium text-gray-900">El precio YA incluye IVA</span>
-                        <p className="text-xs text-gray-600">
+                        <span className="text-sm font-medium text-gray-900 dark:text-gray-100">El precio YA incluye IVA</span>
+                        <p className="text-xs text-gray-600 dark:text-gray-400">
                           {formData.price_includes_tax
                             ? 'El precio mostrado incluye IVA'
                             : 'El IVA se suma al precio mostrado'}
@@ -507,47 +507,47 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
                   </div>
 
                   {formData.base_price && (
-                    <div className="md:col-span-2 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-200">
-                      <div className="text-sm font-medium text-gray-900 mb-3 flex items-center gap-2">
+                    <div className="md:col-span-2 p-4 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-lg border border-blue-200 dark:border-blue-800/40">
+                      <div className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2">
                         Desglose de Precio
-                        <span className="text-xs font-normal text-gray-600">(Lo que verá el cliente)</span>
+                        <span className="text-xs font-normal text-gray-600 dark:text-gray-400">(Lo que verá el cliente)</span>
                       </div>
                       {formData.price_includes_tax ? (
                         <>
                           <div className="grid grid-cols-2 gap-2 text-sm mb-3">
-                            <div className="text-gray-600">Precio final al cliente:</div>
+                            <div className="text-gray-600 dark:text-gray-400">Precio final al cliente:</div>
                             <div className="font-bold text-blue-600">${parseFloat(formData.base_price).toFixed(2)}</div>
-                            <div className="text-gray-600">Base imponible (sin IVA):</div>
-                            <div className="font-medium text-gray-900">${(parseFloat(formData.base_price) / (1 + parseFloat(formData.tax_percentage) / 100)).toFixed(2)}</div>
-                            <div className="text-gray-600">IVA ({formData.tax_percentage}%):</div>
+                            <div className="text-gray-600 dark:text-gray-400">Base imponible (sin IVA):</div>
+                            <div className="font-medium text-gray-900 dark:text-gray-100">${(parseFloat(formData.base_price) / (1 + parseFloat(formData.tax_percentage) / 100)).toFixed(2)}</div>
+                            <div className="text-gray-600 dark:text-gray-400">IVA ({formData.tax_percentage}%):</div>
                             <div className="font-medium text-green-600">${(parseFloat(formData.base_price) - (parseFloat(formData.base_price) / (1 + parseFloat(formData.tax_percentage) / 100))).toFixed(2)}</div>
                           </div>
-                          <div className="text-xs text-gray-600 bg-white p-2 rounded border border-gray-200">
+                          <div className="text-xs text-gray-600 dark:text-gray-400 bg-white dark:bg-graphite-2 p-2 rounded border border-gray-200 dark:border-white/10">
                             El cliente pagará exactamente ${parseFloat(formData.base_price).toFixed(2)} (ya con IVA incluido)
                           </div>
                         </>
                       ) : (
                         <>
                           <div className="grid grid-cols-2 gap-2 text-sm mb-3">
-                            <div className="text-gray-600">Precio base (sin IVA):</div>
-                            <div className="font-medium text-gray-900">${parseFloat(formData.base_price).toFixed(2)}</div>
-                            <div className="text-gray-600">+ IVA ({formData.tax_percentage}%):</div>
+                            <div className="text-gray-600 dark:text-gray-400">Precio base (sin IVA):</div>
+                            <div className="font-medium text-gray-900 dark:text-gray-100">${parseFloat(formData.base_price).toFixed(2)}</div>
+                            <div className="text-gray-600 dark:text-gray-400">+ IVA ({formData.tax_percentage}%):</div>
                             <div className="font-medium text-green-600">${(parseFloat(formData.base_price) * parseFloat(formData.tax_percentage) / 100).toFixed(2)}</div>
-                            <div className="text-gray-600">= Total al cliente:</div>
+                            <div className="text-gray-600 dark:text-gray-400">= Total al cliente:</div>
                             <div className="font-bold text-blue-600">${(parseFloat(formData.base_price) * (1 + parseFloat(formData.tax_percentage) / 100)).toFixed(2)}</div>
                           </div>
-                          <div className="text-xs text-gray-600 bg-white p-2 rounded border border-gray-200">
+                          <div className="text-xs text-gray-600 dark:text-gray-400 bg-white dark:bg-graphite-2 p-2 rounded border border-gray-200 dark:border-white/10">
                             El cliente pagará ${(parseFloat(formData.base_price) * (1 + parseFloat(formData.tax_percentage) / 100)).toFixed(2)} (precio + IVA)
                           </div>
                         </>
                       )}
                       {formData.average_cost && formData.base_price && (
-                        <div className="mt-3 pt-3 border-t border-blue-300">
+                        <div className="mt-3 pt-3 border-t border-blue-300 dark:border-blue-800/40">
                           <div className="grid grid-cols-2 gap-2 text-xs">
-                            <div className="text-gray-600">Tu costo (sin IVA):</div>
-                            <div className="font-medium text-gray-700">${parseFloat(formData.average_cost).toFixed(2)}</div>
-                            <div className="text-gray-600">Tu ganancia:</div>
-                            <div className="font-bold text-green-700">${(parseFloat(formData.base_price) - parseFloat(formData.average_cost)).toFixed(2)}</div>
+                            <div className="text-gray-600 dark:text-gray-400">Tu costo (sin IVA):</div>
+                            <div className="font-medium text-gray-700 dark:text-gray-300">${parseFloat(formData.average_cost).toFixed(2)}</div>
+                            <div className="text-gray-600 dark:text-gray-400">Tu ganancia:</div>
+                            <div className="font-bold text-green-700 dark:text-green-400">${(parseFloat(formData.base_price) - parseFloat(formData.average_cost)).toFixed(2)}</div>
                           </div>
                         </div>
                       )}
@@ -558,16 +558,16 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
 
               {/* INC - Impoconsumo */}
               <div className="md:col-span-2 mt-4">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 pb-2 border-b dark:border-white/10">
                   Otros Impuestos
                 </h3>
               </div>
 
               <div className="md:col-span-2">
-                <label className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+                <label className="flex items-center justify-between p-3 bg-gray-50 dark:bg-graphite-2 rounded-lg border border-gray-200 dark:border-white/10">
                   <div>
-                    <span className="text-sm font-medium text-gray-900">INC (Impoconsumo)</span>
-                    <p className="text-xs text-gray-500">Aplica para licores, bebidas azucaradas, etc.</p>
+                    <span className="text-sm font-medium text-gray-900 dark:text-gray-100">INC (Impoconsumo)</span>
+                    <p className="text-xs text-gray-500 dark:text-gray-500">Aplica para licores, bebidas azucaradas, etc.</p>
                   </div>
                   <div className="flex items-center gap-2">
                     <input
@@ -580,9 +580,9 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
                       disabled={!formData.tax_config?.inc?.enabled}
                       min="0"
                       step="0.01"
-                      className="w-20 px-2 py-1.5 text-sm text-right border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-gray-400"
+                      className="w-20 px-2 py-1.5 text-sm text-right border border-gray-300 dark:border-white/10 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-gray-400 dark:bg-graphite dark:text-gray-100 dark:disabled:bg-white/5 dark:disabled:text-gray-600"
                     />
-                    <span className="text-xs text-gray-500">%</span>
+                    <span className="text-xs text-gray-500 dark:text-gray-500">%</span>
                     <button
                       type="button"
                       onClick={() => setFormData(prev => ({
@@ -590,7 +590,7 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
                         tax_config: { ...prev.tax_config, inc: { ...prev.tax_config?.inc, enabled: !prev.tax_config?.inc?.enabled } }
                       }))}
                       className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                        formData.tax_config?.inc?.enabled ? 'bg-blue-600' : 'bg-gray-300'
+                        formData.tax_config?.inc?.enabled ? 'bg-blue-600' : 'bg-gray-300 dark:bg-white/10'
                       }`}
                     >
                       <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
@@ -603,10 +603,10 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
 
               {/* ICA */}
               <div className="md:col-span-2">
-                <label className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+                <label className="flex items-center justify-between p-3 bg-gray-50 dark:bg-graphite-2 rounded-lg border border-gray-200 dark:border-white/10">
                   <div>
-                    <span className="text-sm font-medium text-gray-900">ICA (Industria y Comercio)</span>
-                    <p className="text-xs text-gray-500">Impuesto municipal, se expresa en milésimas (‰)</p>
+                    <span className="text-sm font-medium text-gray-900 dark:text-gray-100">ICA (Industria y Comercio)</span>
+                    <p className="text-xs text-gray-500 dark:text-gray-500">Impuesto municipal, se expresa en milésimas (‰)</p>
                   </div>
                   <div className="flex items-center gap-2">
                     <input
@@ -619,9 +619,9 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
                       disabled={!formData.tax_config?.ica?.enabled}
                       min="0"
                       step="0.01"
-                      className="w-20 px-2 py-1.5 text-sm text-right border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-gray-400"
+                      className="w-20 px-2 py-1.5 text-sm text-right border border-gray-300 dark:border-white/10 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-gray-400 dark:bg-graphite dark:text-gray-100 dark:disabled:bg-white/5 dark:disabled:text-gray-600"
                     />
-                    <span className="text-xs text-gray-500">‰</span>
+                    <span className="text-xs text-gray-500 dark:text-gray-500">‰</span>
                     <button
                       type="button"
                       onClick={() => setFormData(prev => ({
@@ -629,7 +629,7 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
                         tax_config: { ...prev.tax_config, ica: { ...prev.tax_config?.ica, enabled: !prev.tax_config?.ica?.enabled } }
                       }))}
                       className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                        formData.tax_config?.ica?.enabled ? 'bg-blue-600' : 'bg-gray-300'
+                        formData.tax_config?.ica?.enabled ? 'bg-blue-600' : 'bg-gray-300 dark:bg-white/10'
                       }`}
                     >
                       <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
@@ -642,22 +642,22 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
 
               {/* Inventario */}
               <div className="md:col-span-2 mt-4">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 pb-2 border-b dark:border-white/10">
                   Control de Inventario
                 </h3>
               </div>
 
               {/* ── BODEGA ── */}
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Bodega <span className="text-red-500">*</span>
                 </label>
                 {loadingWarehouses ? (
-                  <div className="w-full px-4 py-2 border border-gray-200 rounded-lg bg-gray-50 text-sm text-gray-400">
+                  <div className="w-full px-4 py-2 border border-gray-200 dark:border-white/10 rounded-lg bg-gray-50 dark:bg-graphite-2 text-sm text-gray-400 dark:text-gray-500">
                     Cargando bodegas...
                   </div>
                 ) : warehouses.length === 0 ? (
-                  <div className="w-full px-4 py-2 border border-yellow-200 rounded-lg bg-yellow-50 text-sm text-yellow-700">
+                  <div className="w-full px-4 py-2 border border-yellow-200 dark:border-yellow-800/40 rounded-lg bg-yellow-50 dark:bg-yellow-900/30 text-sm text-yellow-700 dark:text-yellow-300">
                     No hay bodegas configuradas. Crea una en Inventario → Bodegas.
                   </div>
                 ) : (
@@ -666,7 +666,7 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
                     value={formData.warehouse_id}
                     onChange={handleChange}
                     required={formData.product_type === 'product'}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100"
                   >
                     <option value="">Selecciona una bodega</option>
                     {warehouses.map(w => (
@@ -676,13 +676,13 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
                     ))}
                   </select>
                 )}
-                <p className="mt-1 text-xs text-gray-500">
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-500">
                   Bodega donde se registrará el stock de este producto
                 </p>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Stock Actual</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Stock Actual</label>
                 <input
                   type="number"
                   onWheel={(e) => e.target.blur()}
@@ -690,17 +690,17 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
                   value={formData.current_stock}
                   onChange={handleChange}
                   step="1"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100"
                   placeholder="0.00"
                   disabled={formData.product_type === 'service' || !!product}
                 />
                 {product && (
-                  <p className="mt-1 text-xs text-gray-500">Usa Ajustes o Compras para modificar el stock</p>
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-500">Usa Ajustes o Compras para modificar el stock</p>
                 )}
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Stock Mínimo <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -713,14 +713,14 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
                   step="1"
                   min="0"
                   required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100"
                   placeholder="0.00"
                 />
-                <p className="mt-1 text-xs text-gray-500">Genera alertas cuando se alcance este nivel</p>
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-500">Genera alertas cuando se alcance este nivel</p>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Stock Máximo</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Stock Máximo</label>
                 <input
                   type="number"
                   onWheel={(e) => e.target.blur()}
@@ -729,44 +729,44 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
                   onChange={handleChange}
                   step="1"
                   min="0"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100"
                   placeholder="0.00"
                 />
-                <p className="mt-1 text-xs text-gray-500">Opcional: para control de sobre-stock</p>
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-500">Opcional: para control de sobre-stock</p>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Punto de Reorden</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Punto de Reorden</label>
                 <input
                   type="number"
                   onWheel={(e) => e.target.blur()}
                   onChange={handleChange}
                   step="1"
                   min="0"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100"
                   placeholder="0"
                 />
               </div>
 
               {/* Tipo de ítem */}
               <div className="md:col-span-2 mt-4">
-                <h3 className="text-lg font-semibold text-gray-900 mb-3 pb-2 border-b">Tipo de ítem</h3>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3 pb-2 border-b dark:border-white/10">Tipo de ítem</h3>
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     type="button"
                     onClick={() => setFormData(prev => ({ ...prev, product_type: 'product', track_inventory: true }))}
                     className={`flex items-center gap-3 p-4 rounded-xl border-2 text-left transition-all ${
-                      formData.product_type === 'product' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'
+                      formData.product_type === 'product' ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30' : 'border-gray-200 dark:border-white/10 hover:border-gray-300'
                     }`}
                   >
                     <svg className="w-7 h-7 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10" />
                     </svg>
                     <div>
-                      <p className={`font-semibold text-sm ${formData.product_type === 'product' ? 'text-blue-700' : 'text-gray-700'}`}>
+                      <p className={`font-semibold text-sm ${formData.product_type === 'product' ? 'text-blue-700 dark:text-blue-300' : 'text-gray-700 dark:text-gray-300'}`}>
                         Producto físico
                       </p>
-                      <p className="text-xs text-gray-500">Maneja inventario y stock</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-500">Maneja inventario y stock</p>
                     </div>
                   </button>
                   <button
@@ -781,17 +781,17 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
                       average_cost: '',
                     }))}
                     className={`flex items-center gap-3 p-4 rounded-xl border-2 text-left transition-all ${
-                      formData.product_type === 'service' ? 'border-purple-500 bg-purple-50' : 'border-gray-200 hover:border-gray-300'
+                      formData.product_type === 'service' ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/30' : 'border-gray-200 dark:border-white/10 hover:border-gray-300'
                     }`}
                   >
                     <svg className="w-7 h-7 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z" />
                     </svg>
                     <div>
-                      <p className={`font-semibold text-sm ${formData.product_type === 'service' ? 'text-purple-700' : 'text-gray-700'}`}>
+                      <p className={`font-semibold text-sm ${formData.product_type === 'service' ? 'text-purple-700 dark:text-purple-300' : 'text-gray-700 dark:text-gray-300'}`}>
                         Servicio
                       </p>
-                      <p className="text-xs text-gray-500">Sin inventario, solo facturación</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-500">Sin inventario, solo facturación</p>
                     </div>
                   </button>
                 </div>
@@ -799,7 +799,7 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
 
               {/* Configuración */}
               <div className="md:col-span-2 mt-4">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b">Configuración</h3>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 pb-2 border-b dark:border-white/10">Configuración</h3>
               </div>
 
               <div className="md:col-span-2 space-y-3">

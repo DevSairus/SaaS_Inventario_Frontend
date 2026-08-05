@@ -31,21 +31,21 @@ const VEHICLE_TYPE_OPTIONS = [
 ];
 const VEHICLE_TYPE_LABELS = Object.fromEntries(VEHICLE_TYPE_OPTIONS.map(o => [o.value, o.label]));
 const STATUS_CONFIG = {
-  recibido:   { label: 'Recibido',   color: 'bg-blue-100 text-blue-700',     dot: 'bg-blue-500',   icon: Clock },
-  en_proceso: { label: 'En Proceso', color: 'bg-yellow-100 text-yellow-700', dot: 'bg-yellow-500', icon: Wrench },
-  en_espera:  { label: 'En Espera',  color: 'bg-orange-100 text-orange-700', dot: 'bg-orange-500', icon: AlertTriangle },
-  listo:      { label: 'Listo',      color: 'bg-green-100 text-green-700',   dot: 'bg-green-500',  icon: CheckCircle },
-  entregado:  { label: 'Entregado',  color: 'bg-gray-100 text-gray-600',     dot: 'bg-gray-400',   icon: CheckCircle },
-  cancelado:  { label: 'Cancelado',  color: 'bg-red-100 text-red-600',       dot: 'bg-red-400',    icon: XCircle },
+  recibido:   { label: 'Recibido',   color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',     dot: 'bg-blue-500',   icon: Clock },
+  en_proceso: { label: 'En Proceso', color: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300', dot: 'bg-yellow-500', icon: Wrench },
+  en_espera:  { label: 'En Espera',  color: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300', dot: 'bg-orange-500', icon: AlertTriangle },
+  listo:      { label: 'Listo',      color: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300',   dot: 'bg-green-500',  icon: CheckCircle },
+  entregado:  { label: 'Entregado',  color: 'bg-gray-100 text-gray-600 dark:bg-white/10 dark:text-gray-400',     dot: 'bg-gray-400',   icon: CheckCircle },
+  cancelado:  { label: 'Cancelado',  color: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-300',       dot: 'bg-red-400',    icon: XCircle },
 };
 const PAYMENT_CONFIG = {
-  paid:    { label: 'Pagado',    color: 'text-green-600' },
-  partial: { label: 'Parcial',   color: 'text-orange-500' },
-  pending: { label: 'Pendiente', color: 'text-red-500' },
+  paid:    { label: 'Pagado',    color: 'text-green-600 dark:text-green-400' },
+  partial: { label: 'Parcial',   color: 'text-orange-500 dark:text-orange-400' },
+  pending: { label: 'Pendiente', color: 'text-red-500 dark:text-red-400' },
 };
 const COP = (n) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(n || 0);
 const fmtDate = (d) => new Date(d).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' });
-const inputCls = 'w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white';
+const inputCls = 'w-full border border-gray-200 dark:border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-graphite-2 dark:text-gray-100';
 const EMPTY_VEHICLE = { plate: '', brand: '', model: '', year: '', color: '', vehicle_type: 'automovil', fuel_type: 'gasolina', engine_number: '', vin: '', soat_number: '', soat_expiry: '', tecnomecanica_number: '', tecnomecanica_expiry: '', customer_id: '', notes: '' };
 
 /* ── Modal: Crear vehículo ─────────────────────────────────────────── */
@@ -111,19 +111,19 @@ function CreateVehicleModal({ onClose, onCreated }) {
   return (
     <>
       <div className="fixed inset-0 z-[9998] bg-black/50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
+        <div className="bg-white dark:bg-graphite rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
           {/* Header */}
-          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-white/10">
             <div className="flex items-center gap-2">
               <Car size={18} className="text-blue-600" />
-              <span className="font-semibold text-gray-900">Nuevo vehículo</span>
+              <span className="font-semibold text-gray-900 dark:text-gray-100">Nuevo vehículo</span>
             </div>
             <div className="flex items-center gap-2">
               <button onClick={() => setShowRunt(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-orange-50 border border-orange-200 text-orange-600 rounded-lg hover:bg-orange-100 transition">
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-orange-50 border border-orange-200 text-orange-600 rounded-lg hover:bg-orange-100 dark:bg-orange-900/30 dark:border-orange-800/40 dark:text-orange-300 dark:hover:bg-orange-900/50 transition">
                 <Search size={12} /> Consultar RUNT
               </button>
-              <button onClick={onClose} className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg">
+              <button onClick={onClose} className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:text-gray-300 dark:hover:bg-white/10 rounded-lg">
                 <X size={18} />
               </button>
             </div>
@@ -133,19 +133,19 @@ function CreateVehicleModal({ onClose, onCreated }) {
             {/* Placa + Año */}
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs font-medium text-gray-600 block mb-1">Placa *</label>
+                <label className="text-xs font-medium text-gray-600 dark:text-gray-400 block mb-1">Placa *</label>
                 <input value={form.plate} onChange={e => setF('plate', e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
                   placeholder="ABC123" maxLength={7} className={`${inputCls} font-mono uppercase tracking-widest`} />
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-600 block mb-1">Año modelo</label>
+                <label className="text-xs font-medium text-gray-600 dark:text-gray-400 block mb-1">Año modelo</label>
                 <input value={form.year} onChange={e => setF('year', e.target.value)}
                   placeholder="2020" type="number" className={inputCls} />
               </div>
             </div>
             {/* Tipo de vehículo */}
             <div>
-              <label className="text-xs font-medium text-gray-600 block mb-1">Tipo de vehículo</label>
+              <label className="text-xs font-medium text-gray-600 dark:text-gray-400 block mb-1">Tipo de vehículo</label>
               <select value={form.vehicle_type} onChange={e => setF('vehicle_type', e.target.value)} className={inputCls}>
                 {VEHICLE_TYPE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
@@ -153,22 +153,22 @@ function CreateVehicleModal({ onClose, onCreated }) {
             {/* Marca + Línea */}
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs font-medium text-gray-600 block mb-1">Marca</label>
+                <label className="text-xs font-medium text-gray-600 dark:text-gray-400 block mb-1">Marca</label>
                 <input value={form.brand} onChange={e => setF('brand', e.target.value)} placeholder="Chevrolet" className={inputCls} />
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-600 block mb-1">Línea / Modelo</label>
+                <label className="text-xs font-medium text-gray-600 dark:text-gray-400 block mb-1">Línea / Modelo</label>
                 <input value={form.model} onChange={e => setF('model', e.target.value)} placeholder="Spark" className={inputCls} />
               </div>
             </div>
             {/* Color + Combustible */}
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs font-medium text-gray-600 block mb-1">Color</label>
+                <label className="text-xs font-medium text-gray-600 dark:text-gray-400 block mb-1">Color</label>
                 <input value={form.color} onChange={e => setF('color', e.target.value)} placeholder="Blanco" className={inputCls} />
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-600 block mb-1">Combustible</label>
+                <label className="text-xs font-medium text-gray-600 dark:text-gray-400 block mb-1">Combustible</label>
                 <select value={form.fuel_type} onChange={e => setF('fuel_type', e.target.value)} className={inputCls}>
                   {FUEL_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                 </select>
@@ -177,55 +177,55 @@ function CreateVehicleModal({ onClose, onCreated }) {
             {/* N° Motor + VIN */}
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs font-medium text-gray-600 block mb-1">N° Motor</label>
+                <label className="text-xs font-medium text-gray-600 dark:text-gray-400 block mb-1">N° Motor</label>
                 <input value={form.engine_number} onChange={e => setF('engine_number', e.target.value)}
                   placeholder="Motor serial" className={`${inputCls} font-mono`} />
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-600 block mb-1">VIN / Chasis</label>
+                <label className="text-xs font-medium text-gray-600 dark:text-gray-400 block mb-1">VIN / Chasis</label>
                 <input value={form.vin} onChange={e => setF('vin', e.target.value)} placeholder="VIN" className={`${inputCls} font-mono`} />
               </div>
             </div>
             {/* SOAT */}
-            <div className="bg-gray-50 rounded-xl p-3 space-y-2">
-              <p className="text-xs font-semibold text-gray-600">SOAT</p>
+            <div className="bg-gray-50 dark:bg-graphite-2 rounded-xl p-3 space-y-2">
+              <p className="text-xs font-semibold text-gray-600 dark:text-gray-400">SOAT</p>
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="text-xs text-gray-500 block mb-1">N° póliza</label>
+                  <label className="text-xs text-gray-500 dark:text-gray-500 block mb-1">N° póliza</label>
                   <input value={form.soat_number} onChange={e => setF('soat_number', e.target.value)} placeholder="Nro. póliza" className={inputCls} />
                 </div>
                 <div>
-                  <label className="text-xs text-gray-500 block mb-1">Vencimiento</label>
+                  <label className="text-xs text-gray-500 dark:text-gray-500 block mb-1">Vencimiento</label>
                   <input type="date" value={form.soat_expiry} onChange={e => setF('soat_expiry', e.target.value)} className={inputCls} />
                 </div>
               </div>
             </div>
             {/* Tecnomecánica */}
-            <div className="bg-gray-50 rounded-xl p-3 space-y-2">
-              <p className="text-xs font-semibold text-gray-600">Tecnomecánica</p>
+            <div className="bg-gray-50 dark:bg-graphite-2 rounded-xl p-3 space-y-2">
+              <p className="text-xs font-semibold text-gray-600 dark:text-gray-400">Tecnomecánica</p>
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="text-xs text-gray-500 block mb-1">N° certificado</label>
+                  <label className="text-xs text-gray-500 dark:text-gray-500 block mb-1">N° certificado</label>
                   <input value={form.tecnomecanica_number} onChange={e => setF('tecnomecanica_number', e.target.value)} placeholder="Nro. certificado" className={inputCls} />
                 </div>
                 <div>
-                  <label className="text-xs text-gray-500 block mb-1">Vencimiento</label>
+                  <label className="text-xs text-gray-500 dark:text-gray-500 block mb-1">Vencimiento</label>
                   <input type="date" value={form.tecnomecanica_expiry} onChange={e => setF('tecnomecanica_expiry', e.target.value)} className={inputCls} />
                 </div>
               </div>
             </div>
             {/* Propietario */}
             <div>
-              <label className="text-xs font-medium text-gray-600 block mb-1">Propietario (cliente)</label>
+              <label className="text-xs font-medium text-gray-600 dark:text-gray-400 block mb-1">Propietario (cliente)</label>
               {selCustomer ? (
-                <div className="flex items-center justify-between bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
+                <div className="flex items-center justify-between bg-blue-50 border border-blue-100 rounded-lg px-3 py-2 dark:bg-blue-900/30 dark:border-blue-800/40">
                   <div>
-                    <p className="text-sm font-medium text-blue-800">
+                    <p className="text-sm font-medium text-blue-800 dark:text-blue-300">
                       {selCustomer.business_name || `${selCustomer.first_name} ${selCustomer.last_name}`}
                     </p>
-                    {selCustomer.phone && <p className="text-xs text-blue-500">{selCustomer.phone}</p>}
+                    {selCustomer.phone && <p className="text-xs text-blue-500 dark:text-blue-400">{selCustomer.phone}</p>}
                   </div>
-                  <button onClick={() => { setF('customer_id', ''); setCustSearch(''); }} className="text-blue-400 hover:text-blue-600 p-1">
+                  <button onClick={() => { setF('customer_id', ''); setCustSearch(''); }} className="text-blue-400 hover:text-blue-600 dark:text-blue-500 dark:hover:text-blue-300 p-1">
                     <X size={14} />
                   </button>
                 </div>
@@ -234,12 +234,12 @@ function CreateVehicleModal({ onClose, onCreated }) {
                   <input value={custSearch} onChange={e => setCustSearch(e.target.value)}
                     placeholder="Buscar cliente por nombre o teléfono..." className={inputCls} />
                   {custSearch && filteredCustomers.length > 0 && (
-                    <div className="absolute z-10 top-full left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg mt-1 max-h-44 overflow-y-auto">
+                    <div className="absolute z-10 top-full left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg mt-1 max-h-44 overflow-y-auto dark:bg-graphite-2 dark:border-white/10">
                       {filteredCustomers.map(c => (
                         <button key={c.id} onClick={() => { setF('customer_id', c.id); setCustSearch(''); }}
-                          className="w-full text-left px-3 py-2 text-sm hover:bg-blue-50 transition">
-                          <p className="font-medium text-gray-800">{c.business_name || `${c.first_name} ${c.last_name}`}</p>
-                          {c.phone && <p className="text-xs text-gray-400">{c.phone}</p>}
+                          className="w-full text-left px-3 py-2 text-sm hover:bg-blue-50 dark:hover:bg-white/5 transition">
+                          <p className="font-medium text-gray-800 dark:text-gray-200">{c.business_name || `${c.first_name} ${c.last_name}`}</p>
+                          {c.phone && <p className="text-xs text-gray-400 dark:text-gray-500">{c.phone}</p>}
                         </button>
                       ))}
                     </div>
@@ -250,8 +250,8 @@ function CreateVehicleModal({ onClose, onCreated }) {
           </div>
 
           {/* Footer */}
-          <div className="border-t border-gray-100 px-5 py-4 flex gap-3 justify-end">
-            <button onClick={onClose} className="px-4 py-2 text-sm text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50 transition">
+          <div className="border-t border-gray-100 dark:border-white/10 px-5 py-4 flex gap-3 justify-end">
+            <button onClick={onClose} className="px-4 py-2 text-sm text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50 dark:text-gray-400 dark:border-white/10 dark:hover:bg-white/5 transition">
               Cancelar
             </button>
             <button onClick={handleSave} disabled={saving || !form.plate.trim()}
@@ -273,22 +273,22 @@ function CreateVehicleModal({ onClose, onCreated }) {
 function DeleteConfirm({ vehicle, onConfirm, onCancel }) {
   return (
     <div className="fixed inset-0 z-[9999] bg-black/50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4">
+      <div className="bg-white dark:bg-graphite rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4">
         <div className="flex items-start gap-3">
-          <div className="p-2.5 bg-red-50 rounded-xl flex-shrink-0">
+          <div className="p-2.5 bg-red-50 rounded-xl flex-shrink-0 dark:bg-red-900/30">
             <Trash2 size={20} className="text-red-500" />
           </div>
           <div>
-            <h3 className="font-semibold text-gray-900">Eliminar vehículo</h3>
-            <p className="text-sm text-gray-500 mt-1">
-              ¿Eliminar <span className="font-mono font-bold text-gray-800">{vehicle.plate}</span>
+            <h3 className="font-semibold text-gray-900 dark:text-gray-100">Eliminar vehículo</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              ¿Eliminar <span className="font-mono font-bold text-gray-800 dark:text-gray-200">{vehicle.plate}</span>
               {vehicle.brand ? ` — ${vehicle.brand} ${vehicle.model || ''}` : ''}?
               Esta acción no se puede deshacer.
             </p>
           </div>
         </div>
         <div className="flex gap-3 justify-end">
-          <button onClick={onCancel} className="px-4 py-2 text-sm text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50 transition">
+          <button onClick={onCancel} className="px-4 py-2 text-sm text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50 dark:text-gray-400 dark:border-white/10 dark:hover:bg-white/5 transition">
             Cancelar
           </button>
           <button onClick={onConfirm} className="px-4 py-2 text-sm font-medium bg-red-600 text-white rounded-xl hover:bg-red-700 transition">
@@ -348,8 +348,8 @@ export default function VehiclesPage() {
           <div className="flex items-center gap-3">
             <div className="p-2 bg-blue-600 rounded-xl"><Car size={22} className="text-white" /></div>
             <div>
-              <h1 className="text-xl font-bold text-gray-900">Vehículos</h1>
-              <p className="text-sm text-gray-500">{vehiclesTotal} registrados</p>
+              <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">Vehículos</h1>
+              <p className="text-sm text-gray-500 dark:text-gray-400">{vehiclesTotal} registrados</p>
             </div>
           </div>
           <button onClick={() => setShowCreate(true)}
@@ -360,78 +360,78 @@ export default function VehiclesPage() {
 
         {/* Search */}
         <div className="relative mb-4">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
           <input type="text" placeholder="Buscar por placa, marca o modelo..."
             value={search} onChange={e => { setSearch(e.target.value); setPage(1); }}
-            className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100 dark:placeholder-gray-600" />
         </div>
 
         {/* Lista */}
         {vehiclesLoading ? (
-          <div className="text-center py-16 text-gray-400">Cargando...</div>
+          <div className="text-center py-16 text-gray-400 dark:text-gray-500">Cargando...</div>
         ) : vehicles.length === 0 ? (
           <div className="text-center py-16">
-            <Car size={40} className="mx-auto text-gray-300 mb-3" />
-            <p className="text-gray-500 mb-4">No hay vehículos registrados</p>
+            <Car size={40} className="mx-auto text-gray-300 dark:text-gray-600 mb-3" />
+            <p className="text-gray-500 dark:text-gray-400 mb-4">No hay vehículos registrados</p>
             <button onClick={() => setShowCreate(true)}
               className="flex items-center gap-2 mx-auto px-4 py-2 bg-blue-600 text-white text-sm rounded-xl hover:bg-blue-700 transition">
               <Plus size={14} /> Registrar primer vehículo
             </button>
           </div>
         ) : (
-          <div className="bg-white border border-gray-100 rounded-xl overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-100">
-              <thead className="bg-gray-50">
+          <div className="bg-white border border-gray-100 rounded-xl overflow-hidden dark:bg-graphite dark:border-white/10">
+            <table className="min-w-full divide-y divide-gray-100 dark:divide-white/10">
+              <thead className="bg-gray-50 dark:bg-graphite-2">
                 <tr>
-                  <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase">Placa</th>
-                  <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase">Vehículo</th>
-                  <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase hidden sm:table-cell">Propietario</th>
-                  <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase hidden md:table-cell">Km</th>
-                  <th className="px-4 py-2.5 text-right text-xs font-semibold text-gray-500 uppercase">Acciones</th>
+                  <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase dark:text-gray-500">Placa</th>
+                  <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase dark:text-gray-500">Vehículo</th>
+                  <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase hidden sm:table-cell dark:text-gray-500">Propietario</th>
+                  <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase hidden md:table-cell dark:text-gray-500">Km</th>
+                  <th className="px-4 py-2.5 text-right text-xs font-semibold text-gray-500 uppercase dark:text-gray-500">Acciones</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-50">
+              <tbody className="divide-y divide-gray-50 dark:divide-white/5">
                 {vehicles.map(v => {
                   const owner = v.customer ? (v.customer.business_name || `${v.customer.first_name} ${v.customer.last_name}`) : '—';
                   return (
-                    <tr key={v.id} className="hover:bg-gray-50 transition">
+                    <tr key={v.id} className="hover:bg-gray-50 dark:hover:bg-white/5 transition">
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
                           {v.vehicle_type === 'motocicleta'
-                            ? <Bike size={14} className="text-gray-400 flex-shrink-0" />
-                            : <Car size={14} className="text-gray-400 flex-shrink-0" />}
-                          <span className="font-mono font-bold text-gray-900 text-sm">{v.plate}</span>
+                            ? <Bike size={14} className="text-gray-400 flex-shrink-0 dark:text-gray-500" />
+                            : <Car size={14} className="text-gray-400 flex-shrink-0 dark:text-gray-500" />}
+                          <span className="font-mono font-bold text-gray-900 text-sm dark:text-gray-100">{v.plate}</span>
                           {v.fuel_type && (
-                            <span className="text-xs text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded hidden sm:inline">
+                            <span className="text-xs text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded hidden sm:inline dark:text-gray-500 dark:bg-white/10">
                               {FUEL_LABELS[v.fuel_type]}
                             </span>
                           )}
                         </div>
                       </td>
                       <td className="px-4 py-3">
-                        <p className="text-sm font-medium text-gray-800">{v.brand} {v.model}</p>
-                        <p className="text-xs text-gray-400">{v.year}{v.color ? ` · ${v.color}` : ''}</p>
+                        <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{v.brand} {v.model}</p>
+                        <p className="text-xs text-gray-400 dark:text-gray-500">{v.year}{v.color ? ` · ${v.color}` : ''}</p>
                       </td>
                       <td className="px-4 py-3 hidden sm:table-cell">
-                        <p className="text-sm text-gray-600">{owner}</p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">{owner}</p>
                       </td>
                       <td className="px-4 py-3 hidden md:table-cell">
-                        <p className="text-sm text-gray-500">
+                        <p className="text-sm text-gray-500 dark:text-gray-500">
                           {v.current_mileage ? `${v.current_mileage.toLocaleString()} km` : '—'}
                         </p>
                       </td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex items-center justify-end gap-1.5">
                           <button onClick={() => navigate(`/workshop/vehicles/${v.id}`)}
-                            className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition" title="Editar">
+                            className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition dark:text-gray-500 dark:hover:text-gray-300 dark:hover:bg-white/10" title="Editar">
                             <PencilLine size={14} />
                           </button>
                           <button onClick={() => openHistory(v)}
-                            className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition">
+                            className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition dark:text-blue-300 dark:bg-blue-900/30 dark:hover:bg-blue-900/50">
                             <History size={12} /> Historial
                           </button>
                           <button onClick={() => setDeleteTarget(v)}
-                            className="p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition" title="Eliminar">
+                            className="p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition dark:text-gray-600 dark:hover:text-red-400 dark:hover:bg-red-900/20" title="Eliminar">
                             <Trash2 size={14} />
                           </button>
                         </div>
@@ -448,10 +448,10 @@ export default function VehiclesPage() {
         {vehiclesTotal > 25 && (
           <div className="flex justify-center gap-2 mt-6">
             <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
-              className="px-3 py-1.5 text-sm border rounded-lg disabled:opacity-40 hover:bg-gray-50">← Anterior</button>
-            <span className="px-3 py-1.5 text-sm text-gray-500">Pág. {page}</span>
+              className="px-3 py-1.5 text-sm border rounded-lg disabled:opacity-40 hover:bg-gray-50 dark:border-white/10 dark:text-gray-300 dark:hover:bg-white/5">← Anterior</button>
+            <span className="px-3 py-1.5 text-sm text-gray-500 dark:text-gray-400">Pág. {page}</span>
             <button onClick={() => setPage(p => p + 1)} disabled={page * 25 >= vehiclesTotal}
-              className="px-3 py-1.5 text-sm border rounded-lg disabled:opacity-40 hover:bg-gray-50">Siguiente →</button>
+              className="px-3 py-1.5 text-sm border rounded-lg disabled:opacity-40 hover:bg-gray-50 dark:border-white/10 dark:text-gray-300 dark:hover:bg-white/5">Siguiente →</button>
           </div>
         )}
 
@@ -462,28 +462,28 @@ export default function VehiclesPage() {
         {/* Historial */}
         {showHistory && (
           <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={closeHistory}>
-            <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl"
+            <div className="bg-white dark:bg-graphite rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl"
               onClick={e => e.stopPropagation()}>
-              <div className="p-5 border-b border-gray-100">
+              <div className="p-5 border-b border-gray-100 dark:border-white/10">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="p-2.5 bg-blue-50 rounded-xl"><Car size={20} className="text-blue-600" /></div>
+                    <div className="p-2.5 bg-blue-50 rounded-xl dark:bg-blue-900/30"><Car size={20} className="text-blue-600" /></div>
                     <div>
-                      <h3 className="font-bold text-gray-900 text-lg font-mono">{showHistory.plate}</h3>
-                      <p className="text-sm text-gray-500">{showHistory.brand} {showHistory.model} {showHistory.year}{showHistory.color ? ` · ${showHistory.color}` : ''}</p>
+                      <h3 className="font-bold text-gray-900 text-lg font-mono dark:text-gray-100">{showHistory.plate}</h3>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">{showHistory.brand} {showHistory.model} {showHistory.year}{showHistory.color ? ` · ${showHistory.color}` : ''}</p>
                     </div>
                   </div>
-                  <button onClick={closeHistory} className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition">
+                  <button onClick={closeHistory} className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition dark:text-gray-500 dark:hover:text-gray-300 dark:hover:bg-white/10">
                     <X size={18} />
                   </button>
                 </div>
                 {history && history.length > 0 && (
-                  <div className="flex gap-6 mt-4 pt-4 border-t border-gray-50">
-                    <div><p className="text-xl font-bold text-gray-900">{history.length}</p><p className="text-xs text-gray-400">visitas</p></div>
-                    <div><p className="text-xl font-bold text-gray-900">{history.filter(o => o.status === 'entregado').length}</p><p className="text-xs text-gray-400">completadas</p></div>
-                    <div><p className="text-xl font-bold text-gray-900">{COP(totalFacturado)}</p><p className="text-xs text-gray-400">facturado total</p></div>
+                  <div className="flex gap-6 mt-4 pt-4 border-t border-gray-50 dark:border-white/10">
+                    <div><p className="text-xl font-bold text-gray-900 dark:text-gray-100">{history.length}</p><p className="text-xs text-gray-400 dark:text-gray-500">visitas</p></div>
+                    <div><p className="text-xl font-bold text-gray-900 dark:text-gray-100">{history.filter(o => o.status === 'entregado').length}</p><p className="text-xs text-gray-400 dark:text-gray-500">completadas</p></div>
+                    <div><p className="text-xl font-bold text-gray-900 dark:text-gray-100">{COP(totalFacturado)}</p><p className="text-xs text-gray-400 dark:text-gray-500">facturado total</p></div>
                     {showHistory.current_mileage && (
-                      <div><p className="text-xl font-bold text-gray-900">{showHistory.current_mileage.toLocaleString()} km</p><p className="text-xs text-gray-400">km actuales</p></div>
+                      <div><p className="text-xl font-bold text-gray-900 dark:text-gray-100">{showHistory.current_mileage.toLocaleString()} km</p><p className="text-xs text-gray-400 dark:text-gray-500">km actuales</p></div>
                     )}
                   </div>
                 )}
@@ -491,15 +491,15 @@ export default function VehiclesPage() {
 
               <div className="overflow-y-auto flex-1 p-5">
                 {!history ? (
-                  <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+                  <div className="flex flex-col items-center justify-center py-12 text-gray-400 dark:text-gray-500">
                     <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-200 border-t-blue-600 mb-3" />
                     <p className="text-sm">Cargando historial...</p>
                   </div>
                 ) : history.length === 0 ? (
                   <div className="text-center py-12">
-                    <History size={36} className="mx-auto text-gray-200 mb-3" />
-                    <p className="text-gray-500 font-medium">Sin órdenes de trabajo</p>
-                    <p className="text-sm text-gray-400 mt-1">Este vehículo aún no ha ingresado al taller</p>
+                    <History size={36} className="mx-auto text-gray-200 dark:text-gray-700 mb-3" />
+                    <p className="text-gray-500 font-medium dark:text-gray-400">Sin órdenes de trabajo</p>
+                    <p className="text-sm text-gray-400 mt-1 dark:text-gray-500">Este vehículo aún no ha ingresado al taller</p>
                     <button onClick={() => { closeHistory(); navigate('/workshop/work-orders/new'); }}
                       className="mt-4 flex items-center gap-2 mx-auto px-4 py-2 bg-blue-600 text-white text-sm rounded-xl hover:bg-blue-700 transition">
                       <Plus size={14} /> Crear primera OT
@@ -507,7 +507,7 @@ export default function VehiclesPage() {
                   </div>
                 ) : (
                   <div className="relative">
-                    <div className="absolute left-[19px] top-2 bottom-2 w-px bg-gray-200" />
+                    <div className="absolute left-[19px] top-2 bottom-2 w-px bg-gray-200 dark:bg-white/10" />
                     <div className="space-y-3">
                       {history.map((order, idx) => {
                         const sc         = STATUS_CONFIG[order.status] || STATUS_CONFIG.recibido;

@@ -92,9 +92,9 @@ function ImportOpeningBalanceRowsModal({
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
-        <div className="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75" onClick={handleClose} />
+        <div className="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75 dark:bg-black/60" onClick={handleClose} />
 
-        <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full">
+        <div className="inline-block align-bottom bg-white dark:bg-graphite rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full">
           <div className="bg-gradient-to-r from-green-500 to-blue-500 px-6 py-4">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold text-white">{title}</h3>
@@ -109,9 +109,9 @@ function ImportOpeningBalanceRowsModal({
           <div className="px-6 py-4">
             {step === 1 && (
               <div className="space-y-4">
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <h4 className="font-semibold text-blue-900 mb-2">📋 Instrucciones:</h4>
-                  <ol className="text-sm text-blue-800 space-y-1 list-decimal list-inside">
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 dark:bg-blue-900/30 dark:border-blue-800/40">
+                  <h4 className="font-semibold text-blue-900 mb-2 dark:text-blue-300">📋 Instrucciones:</h4>
+                  <ol className="text-sm text-blue-800 space-y-1 list-decimal list-inside dark:text-blue-300">
                     <li>Descarga la plantilla de Excel (.xlsx)</li>
                     <li>Completa los datos — cada fila debe corresponder a un registro que ya exista en Pitbox</li>
                     <li>Guarda el archivo (mantén el formato .xlsx)</li>
@@ -129,20 +129,20 @@ function ImportOpeningBalanceRowsModal({
                   Descargar Plantilla de Excel
                 </button>
 
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-500 transition-colors">
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-500 transition-colors dark:border-white/10">
                   <input type="file" accept=".xlsx,.xls" onChange={handleFileChange} className="hidden" id="opening-balance-file-upload" />
                   <label htmlFor="opening-balance-file-upload" className="cursor-pointer">
-                    <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                     </svg>
-                    <p className="mt-2 text-sm text-gray-600">{file ? file.name : 'Haz clic para seleccionar un archivo Excel'}</p>
-                    <p className="text-xs text-gray-500 mt-1">XLSX o XLS</p>
+                    <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">{file ? file.name : 'Haz clic para seleccionar un archivo Excel'}</p>
+                    <p className="text-xs text-gray-500 mt-1 dark:text-gray-500">XLSX o XLS</p>
                   </label>
                 </div>
 
                 {file && (
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-3 flex items-center justify-between">
-                    <span className="text-sm text-green-800 font-medium">{file.name}</span>
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-3 flex items-center justify-between dark:bg-green-900/30 dark:border-green-800/40">
+                    <span className="text-sm text-green-800 font-medium dark:text-green-300">{file.name}</span>
                     <button onClick={() => setFile(null)} className="text-red-500 hover:text-red-700">
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -156,28 +156,28 @@ function ImportOpeningBalanceRowsModal({
             {step === 2 && validationResult && (
               <div className="space-y-4">
                 <div className="grid grid-cols-3 gap-4">
-                  <div className="bg-blue-50 rounded-lg p-4 text-center">
-                    <p className="text-2xl font-bold text-blue-600">{validationResult.summary.total}</p>
-                    <p className="text-xs text-blue-800">Total</p>
+                  <div className="bg-blue-50 rounded-lg p-4 text-center dark:bg-blue-900/30">
+                    <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{validationResult.summary.total}</p>
+                    <p className="text-xs text-blue-800 dark:text-blue-300">Total</p>
                   </div>
-                  <div className="bg-green-50 rounded-lg p-4 text-center">
-                    <p className="text-2xl font-bold text-green-600">{validationResult.summary.valid}</p>
-                    <p className="text-xs text-green-800">Válidos</p>
+                  <div className="bg-green-50 rounded-lg p-4 text-center dark:bg-green-900/30">
+                    <p className="text-2xl font-bold text-green-600 dark:text-green-400">{validationResult.summary.valid}</p>
+                    <p className="text-xs text-green-800 dark:text-green-300">Válidos</p>
                   </div>
-                  <div className="bg-red-50 rounded-lg p-4 text-center">
-                    <p className="text-2xl font-bold text-red-600">{validationResult.summary.invalid}</p>
-                    <p className="text-xs text-red-800">Rechazados</p>
+                  <div className="bg-red-50 rounded-lg p-4 text-center dark:bg-red-900/30">
+                    <p className="text-2xl font-bold text-red-600 dark:text-red-400">{validationResult.summary.invalid}</p>
+                    <p className="text-xs text-red-800 dark:text-red-300">Rechazados</p>
                   </div>
                 </div>
 
                 {validationResult.errors.length > 0 && (
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-4 max-h-64 overflow-y-auto">
-                    <h4 className="font-semibold text-red-900 mb-2">❌ Filas rechazadas:</h4>
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4 max-h-64 overflow-y-auto dark:bg-red-900/30 dark:border-red-800/40">
+                    <h4 className="font-semibold text-red-900 mb-2 dark:text-red-300">❌ Filas rechazadas:</h4>
                     <div className="space-y-2">
                       {validationResult.errors.map((error, index) => (
-                        <div key={index} className="bg-white rounded p-2 border border-red-200">
-                          <p className="text-sm font-medium text-red-900">Fila {error.row} — {error.identifier}</p>
-                          <ul className="text-xs text-red-700 mt-1 list-disc list-inside">
+                        <div key={index} className="bg-white rounded p-2 border border-red-200 dark:bg-graphite-2 dark:border-red-800/40">
+                          <p className="text-sm font-medium text-red-900 dark:text-red-300">Fila {error.row} — {error.identifier}</p>
+                          <ul className="text-xs text-red-700 mt-1 list-disc list-inside dark:text-red-400">
                             {error.errors.map((err, i) => <li key={i}>{err}</li>)}
                           </ul>
                         </div>
@@ -187,8 +187,8 @@ function ImportOpeningBalanceRowsModal({
                 )}
 
                 {validationResult.validRows.length > 0 && (
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                    <p className="text-green-900 font-medium">
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4 dark:bg-green-900/30 dark:border-green-800/40">
+                    <p className="text-green-900 font-medium dark:text-green-300">
                       ✅ {validationResult.validRows.length} fila(s) lista(s) para importar
                       {validationResult.errors.length > 0 ? ' (las rechazadas no se van a importar)' : ''}
                     </p>
@@ -199,18 +199,18 @@ function ImportOpeningBalanceRowsModal({
 
             {step === 3 && importResult && (
               <div className="space-y-4">
-                <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
-                  <p className="text-2xl font-bold text-green-600">{importResult.successCount} / {importResult.total}</p>
-                  <p className="text-sm text-green-800">saldos iniciales cargados y contabilizados</p>
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center dark:bg-green-900/30 dark:border-green-800/40">
+                  <p className="text-2xl font-bold text-green-600 dark:text-green-400">{importResult.successCount} / {importResult.total}</p>
+                  <p className="text-sm text-green-800 dark:text-green-300">saldos iniciales cargados y contabilizados</p>
                 </div>
                 {importResult.failedRows.length > 0 && (
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-4 max-h-64 overflow-y-auto">
-                    <h4 className="font-semibold text-red-900 mb-2">❌ No se pudieron cargar:</h4>
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4 max-h-64 overflow-y-auto dark:bg-red-900/30 dark:border-red-800/40">
+                    <h4 className="font-semibold text-red-900 mb-2 dark:text-red-300">❌ No se pudieron cargar:</h4>
                     <div className="space-y-2">
                       {importResult.failedRows.map((f, i) => (
-                        <div key={i} className="bg-white rounded p-2 border border-red-200">
-                          <p className="text-sm font-medium text-red-900">{f.label}</p>
-                          <p className="text-xs text-red-700">{f.message}</p>
+                        <div key={i} className="bg-white rounded p-2 border border-red-200 dark:bg-graphite-2 dark:border-red-800/40">
+                          <p className="text-sm font-medium text-red-900 dark:text-red-300">{f.label}</p>
+                          <p className="text-xs text-red-700 dark:text-red-400">{f.message}</p>
                         </div>
                       ))}
                     </div>
@@ -220,8 +220,8 @@ function ImportOpeningBalanceRowsModal({
             )}
           </div>
 
-          <div className="bg-gray-50 px-6 py-4 flex justify-between">
-            <button onClick={handleClose} className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100">
+          <div className="bg-gray-50 px-6 py-4 flex justify-between dark:bg-graphite-2">
+            <button onClick={handleClose} className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 dark:border-white/10 dark:text-gray-300 dark:hover:bg-white/10">
               {step === 3 ? 'Cerrar' : 'Cancelar'}
             </button>
 

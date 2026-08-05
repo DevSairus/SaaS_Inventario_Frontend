@@ -31,7 +31,7 @@ const Input = ({
         {...rest}
       />
       {helperText && !error && (
-        <p className="text-sm text-gray-500 mt-1">{helperText}</p>
+        <p className="text-sm text-gray-500 dark:text-gray-500 mt-1">{helperText}</p>
       )}
       {error && <p className="text-sm text-red-600 mt-1">{error}</p>}
     </div>

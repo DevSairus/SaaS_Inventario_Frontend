@@ -41,7 +41,7 @@ function parseViewBoxSize(viewBox) {
   return { width: parts[2] || 600, height: parts[3] || 400 };
 }
 
-const inputCls = 'w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400';
+const inputCls = 'w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400 dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100';
 
 export default function DiagramMapEditor({ entityType = 'work_order', entityId, workOrderId, vehicleType, disabled = false }) {
   const { searchProducts } = useProductsStore();
@@ -234,10 +234,10 @@ export default function DiagramMapEditor({ entityType = 'work_order', entityId, 
   };
 
   return (
-    <div className="bg-white border border-gray-100 rounded-xl p-4">
+    <div className="bg-white dark:bg-graphite border border-gray-100 dark:border-white/10 rounded-xl p-4">
       <div className="flex items-center gap-2 mb-3">
         <Layers size={15} className="text-blue-600" />
-        <h2 className="font-semibold text-sm text-gray-800">Mapa de intervención</h2>
+        <h2 className="font-semibold text-sm text-gray-800 dark:text-gray-200">Mapa de intervención</h2>
       </div>
 
       {diagnosedSystems.length > 0 && (
@@ -248,15 +248,15 @@ export default function DiagramMapEditor({ entityType = 'work_order', entityId, 
               onClick={() => openDiagnosedSystem(tpl)}
               className={`flex items-center gap-1 text-[11px] px-2 py-1 rounded-full border ${
                 template?.id === tpl.id
-                  ? 'bg-blue-50 border-blue-200 text-blue-700'
-                  : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'
+                  ? 'bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-900/30 dark:border-blue-800/40 dark:text-blue-300'
+                  : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100 dark:bg-graphite-2 dark:border-white/10 dark:text-gray-400 dark:hover:bg-white/10'
               }`}
             >
               {tpl.name} <span className="opacity-60">· {tpl.count}</span>
             </button>
           ))}
           {!disabled && (
-            <span className="flex items-center gap-1 text-[11px] px-2 py-1 rounded-full border border-dashed border-gray-200 text-gray-400">
+            <span className="flex items-center gap-1 text-[11px] px-2 py-1 rounded-full border border-dashed border-gray-200 text-gray-400 dark:border-white/10 dark:text-gray-500">
               <Plus size={11} /> otro sistema abajo
             </span>
           )}
@@ -289,19 +289,19 @@ export default function DiagramMapEditor({ entityType = 'work_order', entityId, 
       </div>
 
       {!system && (
-        <p className="text-xs text-gray-400">
+        <p className="text-xs text-gray-400 dark:text-gray-500">
           Elige un sistema para ver los diagramas disponibles para este vehículo.
         </p>
       )}
 
-      {loading && <p className="text-xs text-gray-400">Cargando diagrama...</p>}
+      {loading && <p className="text-xs text-gray-400 dark:text-gray-500">Cargando diagrama...</p>}
 
       {template && (
         <div className="space-y-3">
-          <p className="text-xs text-gray-500">{template.description}</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400">{template.description}</p>
 
           <div
-            className="relative border border-gray-100 rounded-lg bg-gray-50 p-2"
+            className="relative border border-gray-100 rounded-lg bg-gray-50 dark:border-white/10 dark:bg-graphite-2 p-2"
             style={{ aspectRatio: `${parseViewBoxSize(template.view_box).width} / ${parseViewBoxSize(template.view_box).height}` }}
           >
             <img
@@ -351,8 +351,8 @@ export default function DiagramMapEditor({ entityType = 'work_order', entityId, 
 
           {/* Formulario del punto activo */}
           {activePoint && !disabled && (
-            <div className="p-3 bg-blue-50 border border-blue-100 rounded-xl space-y-2">
-              <p className="text-xs font-semibold text-gray-700">
+            <div className="p-3 bg-blue-50 border border-blue-100 rounded-xl space-y-2 dark:bg-blue-900/30 dark:border-blue-800/40">
+              <p className="text-xs font-semibold text-gray-700 dark:text-gray-300">
                 Punto {activePoint.point_number} — {activePoint.part_name}
               </p>
 
@@ -379,7 +379,7 @@ export default function DiagramMapEditor({ entityType = 'work_order', entityId, 
               {/* Producto sugerido, opcional — permite autogenerar el ítem después */}
               <div>
                 {form.suggested_product_id ? (
-                  <div className="flex items-center justify-between bg-green-50 border border-green-200 text-green-700 px-3 py-1.5 rounded-lg text-xs">
+                  <div className="flex items-center justify-between bg-green-50 border border-green-200 text-green-700 px-3 py-1.5 rounded-lg text-xs dark:bg-green-900/30 dark:border-green-800/40 dark:text-green-300">
                     <span>✓ <strong>{form.suggested_product_name}</strong></span>
                     <button
                       onClick={() => setForm(f => ({ ...f, suggested_product_id: '', suggested_product_name: '' }))}
@@ -395,7 +395,7 @@ export default function DiagramMapEditor({ entityType = 'work_order', entityId, 
                       className={inputCls}
                     />
                     {productResults.length > 0 && (
-                      <div className="mt-1 max-h-40 overflow-y-auto border border-gray-200 rounded-lg bg-white shadow-sm divide-y divide-gray-50">
+                      <div className="mt-1 max-h-40 overflow-y-auto border border-gray-200 rounded-lg bg-white shadow-sm divide-y divide-gray-50 dark:border-white/10 dark:bg-graphite dark:divide-white/10">
                         {productResults.map(p => (
                           <button
                             key={p.id}
@@ -403,10 +403,10 @@ export default function DiagramMapEditor({ entityType = 'work_order', entityId, 
                               setForm(f => ({ ...f, suggested_product_id: p.id, suggested_product_name: p.name }));
                               setProductQuery(''); setProductResults([]);
                             }}
-                            className="w-full text-left px-3 py-2 text-xs hover:bg-blue-50"
+                            className="w-full text-left px-3 py-2 text-xs hover:bg-blue-50 dark:hover:bg-white/5"
                           >
-                            <span className="font-medium text-gray-800">{p.name}</span>
-                            {p.sku && <span className="text-gray-400 ml-2">{p.sku}</span>}
+                            <span className="font-medium text-gray-800 dark:text-gray-200">{p.name}</span>
+                            {p.sku && <span className="text-gray-400 ml-2 dark:text-gray-500">{p.sku}</span>}
                           </button>
                         ))}
                       </div>
@@ -416,7 +416,7 @@ export default function DiagramMapEditor({ entityType = 'work_order', entityId, 
               </div>
 
               <div className="flex gap-2">
-                <button onClick={() => setActivePoint(null)} className="flex-1 py-1.5 text-xs border border-gray-200 rounded-lg text-gray-500 hover:bg-gray-50">
+                <button onClick={() => setActivePoint(null)} className="flex-1 py-1.5 text-xs border border-gray-200 rounded-lg text-gray-500 hover:bg-gray-50 dark:border-white/10 dark:text-gray-400 dark:hover:bg-white/5">
                   Cancelar
                 </button>
                 <button onClick={saveMark} disabled={saving} className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-60 font-medium">
@@ -429,19 +429,19 @@ export default function DiagramMapEditor({ entityType = 'work_order', entityId, 
           {/* Lista de marcas de este diagrama */}
           {marksForTemplate.length > 0 && (
             <div className="space-y-1.5">
-              <p className="text-xs font-medium text-gray-500">Puntos marcados</p>
+              <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Puntos marcados</p>
               {marksForTemplate.map(m => {
                 const pointDef = (template.points || []).find(p => p.point_number === m.point_number);
                 return (
-                  <div key={m.id} className="flex items-center justify-between gap-2 text-xs bg-gray-50 rounded-lg px-2.5 py-1.5">
+                  <div key={m.id} className="flex items-center justify-between gap-2 text-xs bg-gray-50 rounded-lg px-2.5 py-1.5 dark:bg-graphite-2">
                     <div className="flex items-center gap-2 min-w-0">
                       <span className="w-5 h-5 rounded-full flex items-center justify-center text-white text-[10px] font-bold shrink-0"
                         style={{ backgroundColor: severityColor(m.severity) }}>
                         {m.point_number}
                       </span>
-                      <span className="truncate text-gray-700">
+                      <span className="truncate text-gray-700 dark:text-gray-300">
                         {pointDef?.part_name}
-                        {m.side && <span className="text-gray-400"> · {m.side}</span>}
+                        {m.side && <span className="text-gray-400 dark:text-gray-500"> · {m.side}</span>}
                         {m.generated_item_id && <span className="text-green-600 ml-1">· ítem generado</span>}
                       </span>
                     </div>
@@ -457,7 +457,7 @@ export default function DiagramMapEditor({ entityType = 'work_order', entityId, 
                 <button
                   onClick={generateItems}
                   disabled={generating}
-                  className="w-full mt-1 flex items-center justify-center gap-1.5 py-1.5 text-xs bg-indigo-50 text-indigo-700 rounded-lg hover:bg-indigo-100 font-medium disabled:opacity-60"
+                  className="w-full mt-1 flex items-center justify-center gap-1.5 py-1.5 text-xs bg-indigo-50 text-indigo-700 rounded-lg hover:bg-indigo-100 font-medium disabled:opacity-60 dark:bg-indigo-900/30 dark:text-indigo-300 dark:hover:bg-indigo-900/50"
                 >
                   <Wand2 size={13} /> {generating ? 'Generando...' : 'Generar ítems desde el diagrama'}
                 </button>
@@ -466,7 +466,7 @@ export default function DiagramMapEditor({ entityType = 'work_order', entityId, 
           )}
 
           {!disabled && (
-            <p className="text-[11px] text-gray-400 flex items-center gap-1">
+            <p className="text-[11px] text-gray-400 dark:text-gray-500 flex items-center gap-1">
               <Plus size={11} /> Haz clic sobre un punto numerado del diagrama para marcarlo.
             </p>
           )}

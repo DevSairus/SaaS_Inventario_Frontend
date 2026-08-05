@@ -64,10 +64,10 @@ const SuperAdminSubscriptionsList = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
             Suscripciones Activas
           </h1>
-          <p className="text-gray-600 mt-1">
+          <p className="text-gray-600 mt-1 dark:text-gray-400">
             Gestiona las suscripciones de todos los tenants
           </p>
         </div>
@@ -77,40 +77,40 @@ const SuperAdminSubscriptionsList = () => {
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <p className="text-red-800">{error}</p>
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 dark:bg-red-900/30 dark:border-red-800/40">
+          <p className="text-red-800 dark:text-red-300">{error}</p>
         </div>
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <div className="text-center">
-            <p className="text-sm text-gray-600">Total</p>
-            <p className="text-3xl font-bold text-gray-900">
+            <p className="text-sm text-gray-600 dark:text-gray-400">Total</p>
+            <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">
               {subscriptions.length}
             </p>
           </div>
         </Card>
         <Card>
           <div className="text-center">
-            <p className="text-sm text-gray-600">Activas</p>
-            <p className="text-3xl font-bold text-green-600">
+            <p className="text-sm text-gray-600 dark:text-gray-400">Activas</p>
+            <p className="text-3xl font-bold text-green-600 dark:text-green-400">
               {subscriptions.filter((s) => s.status === 'active').length}
             </p>
           </div>
         </Card>
         <Card>
           <div className="text-center">
-            <p className="text-sm text-gray-600">En Trial</p>
-            <p className="text-3xl font-bold text-orange-600">
+            <p className="text-sm text-gray-600 dark:text-gray-400">En Trial</p>
+            <p className="text-3xl font-bold text-orange-600 dark:text-orange-400">
               {subscriptions.filter((s) => s.status === 'trial').length}
             </p>
           </div>
         </Card>
         <Card>
           <div className="text-center">
-            <p className="text-sm text-gray-600">Vencidas</p>
-            <p className="text-3xl font-bold text-red-600">
+            <p className="text-sm text-gray-600 dark:text-gray-400">Vencidas</p>
+            <p className="text-3xl font-bold text-red-600 dark:text-red-400">
               {subscriptions.filter((s) => s.status === 'past_due').length}
             </p>
           </div>
@@ -121,26 +121,26 @@ const SuperAdminSubscriptionsList = () => {
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-gray-200">
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
+              <tr className="border-b border-gray-200 dark:border-white/10">
+                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">
                   Tenant
                 </th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
+                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">
                   Plan
                 </th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
+                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">
                   Estado
                 </th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
+                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">
                   Ciclo
                 </th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
+                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">
                   Monto
                 </th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
+                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">
                   Próxima Renovación
                 </th>
-                <th className="px-4 py-3 text-right text-sm font-semibold text-gray-900">
+                <th className="px-4 py-3 text-right text-sm font-semibold text-gray-900 dark:text-gray-100">
                   Acciones
                 </th>
               </tr>
@@ -150,7 +150,7 @@ const SuperAdminSubscriptionsList = () => {
                 <tr>
                   <td
                     colSpan="7"
-                    className="px-4 py-8 text-center text-gray-500"
+                    className="px-4 py-8 text-center text-gray-500 dark:text-gray-500"
                   >
                     No hay suscripciones registradas
                   </td>
@@ -159,18 +159,18 @@ const SuperAdminSubscriptionsList = () => {
                 subscriptions.map((sub) => (
                   <tr
                     key={sub.id}
-                    className="border-b border-gray-100 hover:bg-gray-50"
+                    className="border-b border-gray-100 hover:bg-gray-50 dark:border-white/10 dark:hover:bg-white/5"
                   >
                     <td className="px-4 py-3">
-                      <div className="font-medium text-gray-900">
+                      <div className="font-medium text-gray-900 dark:text-gray-100">
                         {sub.tenant?.company_name || 'N/A'}
                       </div>
-                      <div className="text-sm text-gray-500">
+                      <div className="text-sm text-gray-500 dark:text-gray-500">
                         {sub.tenant?.email || ''}
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      <span className="font-medium text-gray-900">
+                      <span className="font-medium text-gray-900 dark:text-gray-100">
                         {sub.plan?.name || 'N/A'}
                       </span>
                     </td>
@@ -179,13 +179,13 @@ const SuperAdminSubscriptionsList = () => {
                         {getStatusLabel(sub.status)}
                       </Badge>
                     </td>
-                    <td className="px-4 py-3 text-gray-600">
+                    <td className="px-4 py-3 text-gray-600 dark:text-gray-400">
                       {sub.billing_cycle === 'monthly' ? 'Mensual' : 'Anual'}
                     </td>
-                    <td className="px-4 py-3 text-gray-900">
+                    <td className="px-4 py-3 text-gray-900 dark:text-gray-100">
                       ${sub.amount?.toLocaleString('es-CO')} COP
                     </td>
-                    <td className="px-4 py-3 text-gray-600">
+                    <td className="px-4 py-3 text-gray-600 dark:text-gray-400">
                       {sub.next_billing_date
                         ? new Date(sub.next_billing_date).toLocaleDateString(
                             'es-ES'

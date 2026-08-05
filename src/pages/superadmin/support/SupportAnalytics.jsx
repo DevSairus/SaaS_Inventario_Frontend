@@ -54,28 +54,28 @@ export default function SupportAnalytics() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-indigo-100 rounded-lg">
-            <BarChart3 className="w-6 h-6 text-indigo-600" />
+          <div className="p-2 bg-indigo-100 rounded-lg dark:bg-indigo-900/30">
+            <BarChart3 className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Estadísticas de Soporte</h1>
-            <p className="text-sm text-gray-500">Métricas y rendimiento del módulo de soporte</p>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Estadísticas de Soporte</h1>
+            <p className="text-sm text-gray-500 dark:text-gray-500">Métricas y rendimiento del módulo de soporte</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Calendar className="w-4 h-4 text-gray-400" />
+          <Calendar className="w-4 h-4 text-gray-400 dark:text-gray-500" />
           <input
             type="date"
             value={dateRange.start}
             onChange={(e) => setDateRange((p) => ({ ...p, start: e.target.value }))}
-            className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm"
+            className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100"
           />
-          <span className="text-gray-400">—</span>
+          <span className="text-gray-400 dark:text-gray-500">—</span>
           <input
             type="date"
             value={dateRange.end}
             onChange={(e) => setDateRange((p) => ({ ...p, end: e.target.value }))}
-            className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm"
+            className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100"
           />
         </div>
       </div>
@@ -109,8 +109,8 @@ export default function SupportAnalytics() {
       {/* Charts Row 1 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         {/* Monthly tickets */}
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <h3 className="font-semibold text-gray-800 mb-4">Tickets por mes</h3>
+        <div className="bg-white rounded-xl border border-gray-200 p-5 dark:bg-graphite dark:border-white/10">
+          <h3 className="font-semibold text-gray-800 mb-4 dark:text-gray-200">Tickets por mes</h3>
           {monthly.length > 0 ? (
             <ResponsiveContainer width="100%" height={250}>
               <LineChart data={monthly}>
@@ -122,13 +122,13 @@ export default function SupportAnalytics() {
               </LineChart>
             </ResponsiveContainer>
           ) : (
-            <p className="text-center text-gray-400 text-sm py-10">Sin datos</p>
+            <p className="text-center text-gray-400 text-sm py-10 dark:text-gray-500">Sin datos</p>
           )}
         </div>
 
         {/* By Status */}
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <h3 className="font-semibold text-gray-800 mb-4">Por estado</h3>
+        <div className="bg-white rounded-xl border border-gray-200 p-5 dark:bg-graphite dark:border-white/10">
+          <h3 className="font-semibold text-gray-800 mb-4 dark:text-gray-200">Por estado</h3>
           {by_status.length > 0 ? (
             <ResponsiveContainer width="100%" height={250}>
               <PieChart>
@@ -143,7 +143,7 @@ export default function SupportAnalytics() {
               </PieChart>
             </ResponsiveContainer>
           ) : (
-            <p className="text-center text-gray-400 text-sm py-10">Sin datos</p>
+            <p className="text-center text-gray-400 text-sm py-10 dark:text-gray-500">Sin datos</p>
           )}
         </div>
       </div>
@@ -151,8 +151,8 @@ export default function SupportAnalytics() {
       {/* Charts Row 2 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         {/* By Category */}
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <h3 className="font-semibold text-gray-800 mb-4">Por categoría</h3>
+        <div className="bg-white rounded-xl border border-gray-200 p-5 dark:bg-graphite dark:border-white/10">
+          <h3 className="font-semibold text-gray-800 mb-4 dark:text-gray-200">Por categoría</h3>
           {by_category.length > 0 ? (
             <ResponsiveContainer width="100%" height={250}>
               <BarChart data={by_category} layout="vertical">
@@ -164,13 +164,13 @@ export default function SupportAnalytics() {
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <p className="text-center text-gray-400 text-sm py-10">Sin datos</p>
+            <p className="text-center text-gray-400 text-sm py-10 dark:text-gray-500">Sin datos</p>
           )}
         </div>
 
         {/* By Priority */}
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <h3 className="font-semibold text-gray-800 mb-4">Por prioridad</h3>
+        <div className="bg-white rounded-xl border border-gray-200 p-5 dark:bg-graphite dark:border-white/10">
+          <h3 className="font-semibold text-gray-800 mb-4 dark:text-gray-200">Por prioridad</h3>
           {by_priority.length > 0 ? (
             <ResponsiveContainer width="100%" height={250}>
               <BarChart data={by_priority.map((p) => ({ ...p, name: PRIORITY_LABELS[p.priority] || p.priority }))}>
@@ -184,19 +184,19 @@ export default function SupportAnalytics() {
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <p className="text-center text-gray-400 text-sm py-10">Sin datos</p>
+            <p className="text-center text-gray-400 text-sm py-10 dark:text-gray-500">Sin datos</p>
           )}
         </div>
       </div>
 
       {/* Top Tenants */}
       {by_tenant.length > 0 && (
-        <div className="bg-white rounded-xl border border-gray-200 p-5 mb-8">
-          <h3 className="font-semibold text-gray-800 mb-4">Top tenants por volumen de tickets</h3>
+        <div className="bg-white rounded-xl border border-gray-200 p-5 mb-8 dark:bg-graphite dark:border-white/10">
+          <h3 className="font-semibold text-gray-800 mb-4 dark:text-gray-200">Top tenants por volumen de tickets</h3>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-gray-500 border-b">
+                <tr className="text-left text-gray-500 border-b dark:text-gray-500 dark:border-white/10">
                   <th className="pb-2 font-medium">#</th>
                   <th className="pb-2 font-medium">Tenant</th>
                   <th className="pb-2 font-medium text-right">Tickets</th>
@@ -204,11 +204,11 @@ export default function SupportAnalytics() {
               </thead>
               <tbody>
                 {by_tenant.map((t, i) => (
-                  <tr key={t.tenant_id} className="border-b last:border-b-0">
-                    <td className="py-2 text-gray-400">{i + 1}</td>
-                    <td className="py-2 font-medium text-gray-800">{t.tenant?.company_name || '—'}</td>
+                  <tr key={t.tenant_id} className="border-b last:border-b-0 dark:border-white/10">
+                    <td className="py-2 text-gray-400 dark:text-gray-500">{i + 1}</td>
+                    <td className="py-2 font-medium text-gray-800 dark:text-gray-200">{t.tenant?.company_name || '—'}</td>
                     <td className="py-2 text-right">
-                      <span className="px-2 py-0.5 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">
+                      <span className="px-2 py-0.5 bg-blue-100 text-blue-800 rounded-full text-xs font-medium dark:bg-blue-900/30 dark:text-blue-300">
                         {t.count}
                       </span>
                     </td>
@@ -222,12 +222,12 @@ export default function SupportAnalytics() {
 
       {/* FAQ Effectiveness */}
       {faq.length > 0 && (
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <h3 className="font-semibold text-gray-800 mb-4">Efectividad de FAQ</h3>
+        <div className="bg-white rounded-xl border border-gray-200 p-5 dark:bg-graphite dark:border-white/10">
+          <h3 className="font-semibold text-gray-800 mb-4 dark:text-gray-200">Efectividad de FAQ</h3>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-gray-500 border-b">
+                <tr className="text-left text-gray-500 border-b dark:text-gray-500 dark:border-white/10">
                   <th className="pb-2 font-medium">Artículo</th>
                   <th className="pb-2 font-medium text-center">
                     <span className="inline-flex items-center gap-1"><ThumbsUp className="w-3 h-3" /> Útil</span>
@@ -243,19 +243,19 @@ export default function SupportAnalytics() {
                   const total = (a.helpful_count || 0) + (a.not_helpful_count || 0);
                   const pct = total > 0 ? Math.round(((a.helpful_count || 0) / total) * 100) : null;
                   return (
-                    <tr key={a.id} className="border-b last:border-b-0">
-                      <td className="py-2 text-gray-800 max-w-xs truncate">{a.question}</td>
-                      <td className="py-2 text-center text-green-600">{a.helpful_count || 0}</td>
-                      <td className="py-2 text-center text-red-500">{a.not_helpful_count || 0}</td>
+                    <tr key={a.id} className="border-b last:border-b-0 dark:border-white/10">
+                      <td className="py-2 text-gray-800 max-w-xs truncate dark:text-gray-200">{a.question}</td>
+                      <td className="py-2 text-center text-green-600 dark:text-green-400">{a.helpful_count || 0}</td>
+                      <td className="py-2 text-center text-red-500 dark:text-red-400">{a.not_helpful_count || 0}</td>
                       <td className="py-2 text-center">
                         {pct != null ? (
                           <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                            pct >= 70 ? 'bg-green-100 text-green-700' : pct >= 40 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'
+                            pct >= 70 ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' : pct >= 40 ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
                           }`}>
                             {pct}%
                           </span>
                         ) : (
-                          <span className="text-gray-400 text-xs">Sin datos</span>
+                          <span className="text-gray-400 text-xs dark:text-gray-500">Sin datos</span>
                         )}
                       </td>
                     </tr>
@@ -272,20 +272,20 @@ export default function SupportAnalytics() {
 
 function KpiCard({ icon: Icon, label, value, subtitle, color }) {
   const bgColors = {
-    blue: 'bg-blue-100 text-blue-600',
-    yellow: 'bg-yellow-100 text-yellow-600',
-    green: 'bg-green-100 text-green-600',
-    purple: 'bg-purple-100 text-purple-600',
-    orange: 'bg-orange-100 text-orange-600',
+    blue: 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400',
+    yellow: 'bg-yellow-100 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400',
+    green: 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400',
+    purple: 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400',
+    orange: 'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400',
   };
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-4">
+    <div className="bg-white rounded-xl border border-gray-200 p-4 dark:bg-graphite dark:border-white/10">
       <div className={`w-8 h-8 rounded-lg flex items-center justify-center mb-2 ${bgColors[color] || bgColors.blue}`}>
         <Icon className="w-4 h-4" />
       </div>
-      <p className="text-xs text-gray-500">{label}</p>
-      <p className="text-xl font-bold text-gray-900">{value}</p>
-      {subtitle && <p className="text-[10px] text-gray-400">{subtitle}</p>}
+      <p className="text-xs text-gray-500 dark:text-gray-500">{label}</p>
+      <p className="text-xl font-bold text-gray-900 dark:text-gray-100">{value}</p>
+      {subtitle && <p className="text-[10px] text-gray-400 dark:text-gray-500">{subtitle}</p>}
     </div>
   );
 }

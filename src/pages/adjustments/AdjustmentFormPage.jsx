@@ -252,16 +252,16 @@ const AdjustmentFormPage = () => {
         {/* Header */}
         <div className="mb-6 flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-800">
+            <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100">
               {isEditMode ? 'Editar Ajuste de Inventario' : 'Nuevo Ajuste de Inventario'}
             </h1>
-            <p className="text-gray-600 mt-2">
+            <p className="text-gray-600 mt-2 dark:text-gray-400">
               {isEditMode ? 'Modifica los datos del ajuste' : 'Crea un nuevo ajuste de entrada o salida'}
             </p>
           </div>
           <button
             onClick={() => navigate('/adjustments')}
-            className="text-gray-600 hover:text-gray-800"
+            className="text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -271,19 +271,19 @@ const AdjustmentFormPage = () => {
 
         <form onSubmit={handleSubmit}>
           {/* Información General */}
-          <div className="bg-white rounded-lg shadow mb-6 p-6">
-            <h2 className="text-xl font-semibold text-gray-800 mb-4">Información General</h2>
-            
+          <div className="bg-white rounded-lg shadow mb-6 p-6 dark:bg-graphite">
+            <h2 className="text-xl font-semibold text-gray-800 mb-4 dark:text-gray-100">Información General</h2>
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">
                   Tipo de Ajuste <span className="text-red-500">*</span>
                 </label>
                 <select
                   name="adjustment_type"
                   value={formData.adjustment_type}
                   onChange={handleFormChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100"
                   required
                 >
                   <option value="entrada">Entrada (Aumentar Stock)</option>
@@ -292,14 +292,14 @@ const AdjustmentFormPage = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">
                   Razón del Ajuste <span className="text-red-500">*</span>
                 </label>
                 <select
                   name="reason"
                   value={formData.reason}
                   onChange={handleFormChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100"
                   required
                 >
                   <option value="">Seleccione una razón</option>
@@ -321,7 +321,7 @@ const AdjustmentFormPage = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">
                   Fecha del Ajuste <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -329,14 +329,14 @@ const AdjustmentFormPage = () => {
                   name="adjustment_date"
                   value={formData.adjustment_date}
                   onChange={handleFormChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100"
                   required
                 />
               </div>
             </div>
 
             <div className="mt-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">
                 Notas
               </label>
               <textarea
@@ -344,19 +344,19 @@ const AdjustmentFormPage = () => {
                 value={formData.notes}
                 onChange={handleFormChange}
                 rows="3"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100 dark:placeholder-gray-600"
                 placeholder="Detalles adicionales sobre el ajuste..."
               />
             </div>
           </div>
 
           {/* Agregar Producto */}
-          <div className="bg-white rounded-lg shadow mb-6 p-6">
-            <h2 className="text-xl font-semibold text-gray-800 mb-4">Agregar Productos</h2>
-            
+          <div className="bg-white rounded-lg shadow mb-6 p-6 dark:bg-graphite">
+            <h2 className="text-xl font-semibold text-gray-800 mb-4 dark:text-gray-100">Agregar Productos</h2>
+
             <div className="grid grid-cols-1 md:grid-cols-6 gap-4 items-end">
               <div className="md:col-span-2 relative product-search-container">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">
                   Producto
                 </label>
                 <div className="relative">
@@ -366,13 +366,13 @@ const AdjustmentFormPage = () => {
                     onChange={handleProductSearch}
                     onFocus={() => setShowProductDropdown(true)}
                     placeholder="Buscar por SKU o nombre..."
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100 dark:placeholder-gray-600"
                   />
                   {currentItem.product_id && (
                     <button
                       type="button"
                       onClick={clearProductSelection}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
                     >
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -380,15 +380,15 @@ const AdjustmentFormPage = () => {
                     </button>
                   )}
                 </div>
-                
+
                 {showProductDropdown && (
-                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto dark:bg-graphite-2 dark:border-white/10">
                     {productSearch.trim() === '' ? (
-                      <div className="px-4 py-3 text-gray-400 text-sm">
+                      <div className="px-4 py-3 text-gray-400 text-sm dark:text-gray-600">
                         Escribe al menos 2 caracteres para buscar...
                       </div>
                     ) : filteredProducts.length === 0 ? (
-                      <div className="px-4 py-3 text-gray-500 text-sm">
+                      <div className="px-4 py-3 text-gray-500 text-sm dark:text-gray-500">
                         No se encontraron productos
                       </div>
                     ) : (
@@ -398,10 +398,10 @@ const AdjustmentFormPage = () => {
                             key={product.id}
                             type="button"
                             onClick={() => selectProduct(product)}
-                            className="w-full px-4 py-2 text-left hover:bg-blue-50 border-b border-gray-100 last:border-b-0"
+                            className="w-full px-4 py-2 text-left hover:bg-blue-50 border-b border-gray-100 last:border-b-0 dark:hover:bg-blue-900/30 dark:border-white/10"
                           >
-                            <div className="font-medium text-gray-900">{product.name}</div>
-                            <div className="text-sm text-gray-500">
+                            <div className="font-medium text-gray-900 dark:text-gray-100">{product.name}</div>
+                            <div className="text-sm text-gray-500 dark:text-gray-500">
                               SKU: {product.sku} | Stock: {product.current_stock}
                             </div>
                           </button>
@@ -413,7 +413,7 @@ const AdjustmentFormPage = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">
                   Cantidad
                 </label>
                 <input
@@ -422,12 +422,12 @@ const AdjustmentFormPage = () => {
                   value={currentItem.quantity}
                   onChange={handleItemChange}
                   {...INPUT_CONFIG.quantity}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">
                   Costo Unitario
                 </label>
                 <input
@@ -436,7 +436,7 @@ const AdjustmentFormPage = () => {
                   value={currentItem.unit_cost}
                   onChange={handleItemChange}
                   {...INPUT_CONFIG.price}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100"
                 />
               </div>
 
@@ -457,32 +457,32 @@ const AdjustmentFormPage = () => {
 
           {/* Lista de Productos */}
           {items.length > 0 && (
-            <div className="bg-white rounded-lg shadow mb-6 overflow-hidden">
-              <div className="p-4 bg-gray-50 border-b border-gray-200">
-                <h2 className="text-xl font-semibold text-gray-800">Productos Agregados</h2>
+            <div className="bg-white rounded-lg shadow mb-6 overflow-hidden dark:bg-graphite">
+              <div className="p-4 bg-gray-50 border-b border-gray-200 dark:bg-graphite-2 dark:border-white/10">
+                <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100">Productos Agregados</h2>
               </div>
-              
+
               <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
+                <table className="min-w-full divide-y divide-gray-200 dark:divide-white/10">
+                  <thead className="bg-gray-50 dark:bg-graphite-2">
                     <tr>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Producto</th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Cantidad</th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Costo Unit.</th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase dark:text-gray-500">Producto</th>
+                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase dark:text-gray-500">Cantidad</th>
+                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase dark:text-gray-500">Costo Unit.</th>
+                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase dark:text-gray-500">Total</th>
                       <th className="px-4 py-3"></th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
+                  <tbody className="bg-white divide-y divide-gray-200 dark:bg-graphite dark:divide-white/10">
                     {items.map((item, index) => (
                       <tr key={index}>
                         <td className="px-4 py-3">
-                          <div className="text-sm font-medium text-gray-900">{item.product_name}</div>
-                          <div className="text-sm text-gray-500">{item.product_sku}</div>
+                          <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{item.product_name}</div>
+                          <div className="text-sm text-gray-500 dark:text-gray-500">{item.product_sku}</div>
                         </td>
-                        <td className="px-4 py-3 text-right text-sm text-gray-900">{item.quantity}</td>
-                        <td className="px-4 py-3 text-right text-sm text-gray-900">${formatCurrency(item.unit_cost)}</td>
-                        <td className="px-4 py-3 text-right text-sm font-bold text-gray-900">
+                        <td className="px-4 py-3 text-right text-sm text-gray-900 dark:text-gray-100">{item.quantity}</td>
+                        <td className="px-4 py-3 text-right text-sm text-gray-900 dark:text-gray-100">${formatCurrency(item.unit_cost)}</td>
+                        <td className="px-4 py-3 text-right text-sm font-bold text-gray-900 dark:text-gray-100">
                           ${formatCurrency(item.total_cost)}
                         </td>
                         <td className="px-4 py-3 text-right">
@@ -499,10 +499,10 @@ const AdjustmentFormPage = () => {
                       </tr>
                     ))}
                   </tbody>
-                  <tfoot className="bg-gray-50">
+                  <tfoot className="bg-gray-50 dark:bg-graphite-2">
                     <tr>
-                      <td className="px-4 py-3 text-sm font-semibold text-gray-900">TOTALES</td>
-                      <td className="px-4 py-3 text-right text-sm font-semibold text-gray-900">{totals.totalQuantity}</td>
+                      <td className="px-4 py-3 text-sm font-semibold text-gray-900 dark:text-gray-100">TOTALES</td>
+                      <td className="px-4 py-3 text-right text-sm font-semibold text-gray-900 dark:text-gray-100">{totals.totalQuantity}</td>
                       <td className="px-4 py-3"></td>
                       <td className="px-4 py-3 text-right text-sm font-bold text-blue-600">
                         ${formatCurrency(totals.totalCost)}
@@ -520,7 +520,7 @@ const AdjustmentFormPage = () => {
             <button
               type="button"
               onClick={() => navigate('/adjustments')}
-              className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+              className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors dark:border-white/10 dark:text-gray-300 dark:hover:bg-white/5"
               disabled={isLoading}
             >
               Cancelar

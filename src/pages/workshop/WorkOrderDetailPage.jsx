@@ -32,19 +32,19 @@ const STATUS_TRANSITIONS = {
   cancelado:  [],
 };
 const STATUS_CONFIG = {
-  recibido:   { label: 'Recibido',    color: 'bg-blue-100 text-blue-700',     icon: Clock },
-  en_proceso: { label: 'En Proceso',  color: 'bg-yellow-100 text-yellow-700', icon: Wrench },
-  en_espera:  { label: 'En Espera',   color: 'bg-orange-100 text-orange-700', icon: AlertTriangle },
-  listo:      { label: 'Listo',       color: 'bg-green-100 text-green-700',   icon: CheckCircle },
-  entregado:  { label: 'Entregado',   color: 'bg-gray-100 text-gray-600',     icon: CheckCircle },
-  cancelado:  { label: 'Cancelado',   color: 'bg-red-100 text-red-600',       icon: AlertTriangle },
+  recibido:   { label: 'Recibido',    color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',     icon: Clock },
+  en_proceso: { label: 'En Proceso',  color: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300', icon: Wrench },
+  en_espera:  { label: 'En Espera',   color: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300', icon: AlertTriangle },
+  listo:      { label: 'Listo',       color: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300',   icon: CheckCircle },
+  entregado:  { label: 'Entregado',   color: 'bg-gray-100 text-gray-600 dark:bg-white/10 dark:text-gray-400',     icon: CheckCircle },
+  cancelado:  { label: 'Cancelado',   color: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-300',       icon: AlertTriangle },
 };
 
 const COP = (n) =>
   new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(n || 0);
 
 const inputCls =
-  'w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white';
+  'w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100 dark:placeholder-gray-600';
 
 export default function WorkOrderDetailPage() {
   const { id } = useParams();
@@ -350,6 +350,28 @@ export default function WorkOrderDetailPage() {
 
   const setCL = (key, val) => setChecklist(p => ({ ...p, [key]: val }));
 
+  // ── Control de calidad (previo a la entrega) ──────────────────────
+  const [savingQC, setSavingQC] = useState(false);
+  const QC_ITEMS = [
+    { key: 'limpieza_final',       label: 'Limpieza final' },
+    { key: 'torques_finales',      label: 'Torques finales' },
+    { key: 'entrega_repuestos',    label: 'Entrega de repuestos' },
+  ];
+  const toggleQC = async (key) => {
+    const current = !!(order.quality_checklist || {})[key];
+    const next = { ...(order.quality_checklist || {}), [key]: !current };
+    setSavingQC(true);
+    patchCurrentOrder({ quality_checklist: next }); // optimista
+    try {
+      await workOrdersApiOffline.update(id, { quality_checklist: { [key]: !current } }, order?.updated_at);
+    } catch (e) {
+      patchCurrentOrder({ quality_checklist: order.quality_checklist }); // revertir
+      toast.error(e?.response?.data?.message || 'No se pudo guardar el control de calidad');
+    } finally {
+      setSavingQC(false);
+    }
+  };
+
   // ── Estado técnico ────────────────────────────────────────────
   const [technicians,      setTechnicians]      = useState([]);
   const [editingTech,      setEditingTech]      = useState(false);
@@ -415,7 +437,7 @@ export default function WorkOrderDetailPage() {
   if (orderLoading) {
     return (
       <Layout>
-        <div className="p-10 text-center text-gray-400">Cargando orden...</div>
+        <div className="p-10 text-center text-gray-400 dark:text-gray-500">Cargando orden...</div>
       </Layout>
     );
   }
@@ -423,8 +445,8 @@ export default function WorkOrderDetailPage() {
     return (
       <Layout>
         <div className="p-10 text-center">
-          <p className="text-gray-500 mb-4">Orden no encontrada</p>
-          <button onClick={() => navigate('/workshop/work-orders')} className="text-blue-600 underline text-sm">
+          <p className="text-gray-500 dark:text-gray-400 mb-4">Orden no encontrada</p>
+          <button onClick={() => navigate('/workshop/work-orders')} className="text-blue-600 dark:text-blue-400 underline text-sm">
             Volver al listado
           </button>
         </div>
@@ -445,22 +467,22 @@ export default function WorkOrderDetailPage() {
         <div className="flex items-start justify-between gap-3 mb-6 flex-wrap">
           <div className="flex items-center gap-3">
             <button onClick={() => navigate('/workshop/work-orders')}
-              className="p-2 hover:bg-gray-100 rounded-lg transition">
+              className="p-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition">
               <ArrowLeft size={18} />
             </button>
             <div>
               <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-xl font-bold text-gray-900">{order.order_number}</h1>
+                <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">{order.order_number}</h1>
                 <span className={`flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${sc.color}`}>
                   <StatusIcon size={11} /> {sc.label}
                 </span>
                 {order.settled_at && (
-                  <span className="flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">
+                  <span className="flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
                     <DollarSign size={11} /> Comisión liquidada
                   </span>
                 )}
               </div>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-gray-500 dark:text-gray-400">
                 Ingresado: {new Date(order.received_at).toLocaleDateString('es-CO')}
                 {order.promised_at && ` · Entrega: ${new Date(order.promised_at).toLocaleDateString('es-CO')}`}
               </p>
@@ -481,7 +503,7 @@ export default function WorkOrderDetailPage() {
                 }
                 changeStatus(id, s);
               }}
-                className="px-3 py-1.5 text-xs font-medium border border-gray-200 rounded-lg hover:bg-gray-50 transition">
+                className="px-3 py-1.5 text-xs font-medium border border-gray-200 dark:border-white/10 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-white/5 transition">
                 → {STATUS_CONFIG[s].label}
               </button>
             ))}
@@ -494,7 +516,7 @@ export default function WorkOrderDetailPage() {
                     : `¿Cancelar la OT ${order.order_number}?\n\nEsta acción no se puede deshacer.`;
                   if (window.confirm(msg)) changeStatus(id, 'cancelado');
                 }}
-                className="px-3 py-1.5 text-xs font-medium text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition">
+                className="px-3 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800/40 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition">
                 Cancelar OT
               </button>
             )}
@@ -507,27 +529,27 @@ export default function WorkOrderDetailPage() {
             )}
             {order.sale_id && (
               <button onClick={() => navigate(`/sales/${order.sale_id}`)}
-                className="px-4 py-1.5 text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200 rounded-lg hover:bg-blue-100 flex items-center gap-1.5 transition">
+                className="px-4 py-1.5 text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200 rounded-lg hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800/40 dark:hover:bg-blue-900/50 flex items-center gap-1.5 transition">
                 <FileText size={13} /> Ver Remisión {order.sale?.sale_number}
               </button>
             )}
 
             {/* ── Separador ── */}
-            <div className="w-px h-6 bg-gray-200 mx-1" />
+            <div className="w-px h-6 bg-gray-200 dark:bg-white/10 mx-1" />
 
             {/* ── Botones PDF ── */}
             <button onClick={openChecklist}
-              className="px-3 py-1.5 text-xs font-medium text-purple-700 bg-purple-50 border border-purple-200 rounded-lg hover:bg-purple-100 flex items-center gap-1.5 transition"
+              className="px-3 py-1.5 text-xs font-medium text-purple-700 bg-purple-50 border border-purple-200 rounded-lg hover:bg-purple-100 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-800/40 dark:hover:bg-purple-900/50 flex items-center gap-1.5 transition"
               title="Inventario de ingreso">
               <ClipboardList size={13} /> Inventario
             </button>
             <button onClick={() => openPDF('intake')}
-              className="px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 flex items-center gap-1.5 transition"
+              className="px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 dark:bg-graphite-2 dark:text-gray-300 dark:border-white/10 dark:hover:bg-white/10 flex items-center gap-1.5 transition"
               title="Imprimir orden de ingreso">
               <Printer size={13} /> Ingreso
             </button>
             <button onClick={() => openPDF('workorder')}
-              className="px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 flex items-center gap-1.5 transition"
+              className="px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800/40 dark:hover:bg-blue-900/50 flex items-center gap-1.5 transition"
               title="Imprimir OT completa">
               <Download size={13} /> OT
             </button>
@@ -540,24 +562,24 @@ export default function WorkOrderDetailPage() {
           <div className="lg:col-span-2 space-y-4">
 
             {/* Vehículo */}
-            <div className="bg-white border border-gray-100 rounded-xl p-4">
+            <div className="bg-white dark:bg-graphite border border-gray-100 dark:border-white/10 rounded-xl p-4">
               <div className="flex items-center gap-2 mb-3">
                 <Car size={15} className="text-blue-600" />
-                <h2 className="font-semibold text-sm text-gray-800">Vehículo</h2>
+                <h2 className="font-semibold text-sm text-gray-800 dark:text-gray-200">Vehículo</h2>
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
-                <div><span className="text-gray-400 text-xs block">Placa</span>
+                <div><span className="text-gray-400 dark:text-gray-500 text-xs block">Placa</span>
                   <p className="font-mono font-bold text-gray-900">{order.vehicle?.plate}</p></div>
-                <div><span className="text-gray-400 text-xs block">Marca / Modelo</span>
+                <div><span className="text-gray-400 dark:text-gray-500 text-xs block">Marca / Modelo</span>
                   <p className="font-medium">{order.vehicle?.brand} {order.vehicle?.model}</p></div>
-                <div><span className="text-gray-400 text-xs block">Año</span>
+                <div><span className="text-gray-400 dark:text-gray-500 text-xs block">Año</span>
                   <p className="font-medium">{order.vehicle?.year || '—'}</p></div>
-                <div><span className="text-gray-400 text-xs block">Color</span>
+                <div><span className="text-gray-400 dark:text-gray-500 text-xs block">Color</span>
                   <p className="font-medium">{order.vehicle?.color || '—'}</p></div>
-                <div><span className="text-gray-400 text-xs block">Km entrada</span>
+                <div><span className="text-gray-400 dark:text-gray-500 text-xs block">Km entrada</span>
                   <p className="font-medium">{order.mileage_in?.toLocaleString() || '—'}</p></div>
                 <div>
-                  <span className="text-gray-400 text-xs block">Km salida</span>
+                  <span className="text-gray-400 dark:text-gray-500 text-xs block">Km salida</span>
                   {editingMileageOut ? (
                     <div className="flex items-center gap-1.5 mt-0.5">
                       <input
@@ -573,7 +595,7 @@ export default function WorkOrderDetailPage() {
                         {savingMileageOut ? '...' : '✓'}
                       </button>
                       <button onClick={() => setEditingMileageOut(false)}
-                        className="text-xs text-gray-400 hover:text-gray-600">✕</button>
+                        className="text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300">✕</button>
                     </div>
                   ) : (
                     <div className="flex items-center gap-2">
@@ -592,27 +614,27 @@ export default function WorkOrderDetailPage() {
             </div>
 
             {/* Trabajo */}
-            <div className="bg-white border border-gray-100 rounded-xl p-4">
+            <div className="bg-white dark:bg-graphite border border-gray-100 dark:border-white/10 rounded-xl p-4">
               <div className="flex items-center gap-2 mb-3">
                 <Wrench size={15} className="text-blue-600" />
-                <h2 className="font-semibold text-sm text-gray-800">Trabajo</h2>
+                <h2 className="font-semibold text-sm text-gray-800 dark:text-gray-200">Trabajo</h2>
               </div>
               <div className="space-y-3 text-sm">
                 {order.problem_description && (
                   <div>
-                    <span className="text-xs text-gray-400 block mb-1">Problema reportado</span>
+                    <span className="text-xs text-gray-400 dark:text-gray-500 block mb-1">Problema reportado</span>
                     <p className="text-gray-700 bg-gray-50 rounded-lg p-2">{order.problem_description}</p>
                   </div>
                 )}
                 {order.diagnosis && (
                   <div>
-                    <span className="text-xs text-gray-400 block mb-1">Diagnóstico</span>
+                    <span className="text-xs text-gray-400 dark:text-gray-500 block mb-1">Diagnóstico</span>
                     <p className="text-gray-700 bg-gray-50 rounded-lg p-2">{order.diagnosis}</p>
                   </div>
                 )}
                 {order.work_performed && (
                   <div>
-                    <span className="text-xs text-gray-400 block mb-1">Trabajo realizado</span>
+                    <span className="text-xs text-gray-400 dark:text-gray-500 block mb-1">Trabajo realizado</span>
                     <p className="text-gray-700 bg-gray-50 rounded-lg p-2">{order.work_performed}</p>
                   </div>
                 )}
@@ -630,11 +652,11 @@ export default function WorkOrderDetailPage() {
             />
 
             {/* Repuestos & Servicios */}
-            <div className="bg-white border border-gray-100 rounded-xl p-4">
+            <div className="bg-white dark:bg-graphite border border-gray-100 dark:border-white/10 rounded-xl p-4">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
                   <Package size={15} className="text-blue-600" />
-                  <h2 className="font-semibold text-sm text-gray-800">Repuestos & Servicios</h2>
+                  <h2 className="font-semibold text-sm text-gray-800 dark:text-gray-200">Repuestos & Servicios</h2>
                 </div>
                 {!isClosed && (
                   <button
@@ -888,7 +910,7 @@ export default function WorkOrderDetailPage() {
                                 ? 'Línea libre'
                                 : item.item_type}
                           </span>
-                          <span className="text-sm font-medium text-gray-800 truncate">
+                          <span className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">
                             {item.product_name || item.product?.name}
                           </span>
                           {item.approval_status === 'pendiente' && (
@@ -978,10 +1000,10 @@ export default function WorkOrderDetailPage() {
               if (pendingUnsent.length === 0 && quoteRequests.length === 0) return null;
 
               return (
-                <div className="bg-white border border-gray-100 rounded-xl p-4">
+                <div className="bg-white dark:bg-graphite border border-gray-100 dark:border-white/10 rounded-xl p-4">
                   <div className="flex items-center gap-2 mb-3">
                     <FileText size={15} className="text-amber-600" />
-                    <h2 className="font-semibold text-sm text-gray-800">Cotizaciones</h2>
+                    <h2 className="font-semibold text-sm text-gray-800 dark:text-gray-200">Cotizaciones</h2>
                   </div>
 
                   {pendingUnsent.length > 0 && (
@@ -1070,11 +1092,11 @@ export default function WorkOrderDetailPage() {
               const galleryRef = phase === 'in' ? photoInGalleryRef : photoOutGalleryRef;
               const label      = phase === 'in' ? 'Fotos de Ingreso' : 'Fotos de Salida';
               return (
-                <div key={phase} className="bg-white border border-gray-100 rounded-xl p-4">
+                <div key={phase} className="bg-white dark:bg-graphite border border-gray-100 dark:border-white/10 rounded-xl p-4">
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
                       <Camera size={15} className="text-blue-600" />
-                      <h2 className="font-semibold text-sm text-gray-800">{label}</h2>
+                      <h2 className="font-semibold text-sm text-gray-800 dark:text-gray-200">{label}</h2>
                       <span className="text-xs text-gray-400">{photos?.length || 0} archivo(s)</span>
                     </div>
                     {!isClosed && (
@@ -1149,10 +1171,10 @@ export default function WorkOrderDetailPage() {
           <div className="space-y-4">
 
             {/* Cliente */}
-            <div className="bg-white border border-gray-100 rounded-xl p-4">
+            <div className="bg-white dark:bg-graphite border border-gray-100 dark:border-white/10 rounded-xl p-4">
               <div className="flex items-center gap-2 mb-3">
                 <User size={15} className="text-blue-600" />
-                <h2 className="font-semibold text-sm text-gray-800">Cliente</h2>
+                <h2 className="font-semibold text-sm text-gray-800 dark:text-gray-200">Cliente</h2>
               </div>
               {order.customer ? (
                 <div className="text-sm">
@@ -1166,11 +1188,11 @@ export default function WorkOrderDetailPage() {
             </div>
 
             {/* Técnico */}
-            <div className="bg-white border border-gray-100 rounded-xl p-4">
+            <div className="bg-white dark:bg-graphite border border-gray-100 dark:border-white/10 rounded-xl p-4">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
                   <Wrench size={15} className="text-blue-600" />
-                  <h2 className="font-semibold text-sm text-gray-800">Técnico</h2>
+                  <h2 className="font-semibold text-sm text-gray-800 dark:text-gray-200">Técnico</h2>
                 </div>
                 {!isClosed && !editingTech && (
                   <button
@@ -1194,7 +1216,7 @@ export default function WorkOrderDetailPage() {
                     onClear={() => setSelectedTechId('')}
                     filterFn={(t, q) => `${t.first_name} ${t.last_name}`.toLowerCase().includes(q.toLowerCase())}
                     renderItem={t => (
-                      <span className="font-medium text-gray-800">{t.first_name} {t.last_name}</span>
+                      <span className="font-medium text-gray-800 dark:text-gray-200">{t.first_name} {t.last_name}</span>
                     )}
                   />
                   <div className="flex gap-2">
@@ -1216,11 +1238,11 @@ export default function WorkOrderDetailPage() {
             </div>
 
             {/* Bodega */}
-            <div className="bg-white border border-gray-100 rounded-xl p-4">
+            <div className="bg-white dark:bg-graphite border border-gray-100 dark:border-white/10 rounded-xl p-4">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
                   <Package size={15} className="text-blue-600" />
-                  <h2 className="font-semibold text-sm text-gray-800">Bodega de repuestos</h2>
+                  <h2 className="font-semibold text-sm text-gray-800 dark:text-gray-200">Bodega de repuestos</h2>
                 </div>
                 {!isClosed && !editingWarehouse && (
                   <button
@@ -1243,7 +1265,7 @@ export default function WorkOrderDetailPage() {
                     onSelect={w => setSelectedWarehouseId(w.id)}
                     onClear={() => setSelectedWarehouseId('')}
                     filterFn={(w, q) => w.name.toLowerCase().includes(q.toLowerCase())}
-                    renderItem={w => <span className="font-medium text-gray-800">{w.name}</span>}
+                    renderItem={w => <span className="font-medium text-gray-800 dark:text-gray-200">{w.name}</span>}
                   />
                   <div className="flex gap-2">
                     <button onClick={() => setEditingWarehouse(false)}
@@ -1270,9 +1292,9 @@ export default function WorkOrderDetailPage() {
 
             {/* Notas */}
             {order.notes && (
-              <div className="bg-white border border-gray-100 rounded-xl p-4">
-                <h2 className="font-semibold text-sm text-gray-800 mb-2">Notas</h2>
-                <p className="text-sm text-gray-600">{order.notes}</p>
+              <div className="bg-white dark:bg-graphite border border-gray-100 dark:border-white/10 rounded-xl p-4">
+                <h2 className="font-semibold text-sm text-gray-800 dark:text-gray-200 mb-2">Notas</h2>
+                <p className="text-sm text-gray-600 dark:text-gray-400">{order.notes}</p>
               </div>
             )}
 
@@ -1292,12 +1314,37 @@ export default function WorkOrderDetailPage() {
               </div>
             )}
 
+            {/* ── Control de calidad (previo a la entrega) ── */}
+            <div className="bg-white dark:bg-graphite border border-gray-100 dark:border-white/10 rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <CheckCircle size={15} className="text-green-600" />
+                <h2 className="font-semibold text-sm text-gray-800 dark:text-gray-200">Control de calidad</h2>
+              </div>
+              <div className="space-y-2">
+                {QC_ITEMS.map(({ key, label }) => {
+                  const checked = !!(order.quality_checklist || {})[key];
+                  const disabled = savingQC || ['entregado', 'cancelado'].includes(order.status);
+                  return (
+                    <label key={key}
+                      className={`flex items-center justify-between text-sm rounded-lg px-3 py-2 border ${
+                        checked ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-100'
+                      } ${disabled ? 'opacity-60' : 'cursor-pointer hover:bg-gray-100'}`}>
+                      <span className="text-gray-700">{label}</span>
+                      <input type="checkbox" checked={checked} disabled={disabled}
+                        onChange={() => toggleQC(key)}
+                        className="w-4 h-4 accent-green-600" />
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+
             {/* ── Inventario de ingreso (resumen) ── */}
-            <div className="bg-white border border-gray-100 rounded-xl p-4">
+            <div className="bg-white dark:bg-graphite border border-gray-100 dark:border-white/10 rounded-xl p-4">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
                   <ClipboardList size={15} className="text-purple-600" />
-                  <h2 className="font-semibold text-sm text-gray-800">Inventario ingreso</h2>
+                  <h2 className="font-semibold text-sm text-gray-800 dark:text-gray-200">Inventario ingreso</h2>
                 </div>
                 <button onClick={openChecklist}
                   className="text-xs text-purple-600 font-medium hover:underline">
@@ -1309,7 +1356,7 @@ export default function WorkOrderDetailPage() {
                   {typeof order.checklist_in.fuel_level === 'number' && (
                     <div className="flex items-center justify-between text-xs">
                       <span className="text-gray-500">⛽ Combustible</span>
-                      <span className="font-medium text-gray-800">
+                      <span className="font-medium text-gray-800 dark:text-gray-200">
                         {['Vacío','1/4','1/2','3/4','Lleno'][order.checklist_in.fuel_level]}
                       </span>
                     </div>

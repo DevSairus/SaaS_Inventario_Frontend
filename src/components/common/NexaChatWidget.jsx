@@ -37,7 +37,7 @@ function ToolBadges({ toolCalls }) {
       {toolCalls.map((c, i) => (
         <span
           key={i}
-          className="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-500 border border-gray-200"
+          className="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-white/10 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-white/10"
         >
           {TOOL_LABELS[c.tool_name] || c.tool_name}
         </span>
@@ -59,6 +59,7 @@ export default function NexaChatWidget() {
   const { isOpen, toggleOpen, closeWidget, messages, sending, sendMessage, resetConversation, fetchPendingCount, pendingProposalsCount } = useNexaStore();
   const enabledModules = useTenantStore((s) => s.enabledModules);
   const [input, setInput] = useState('');
+  const [showSuggestBubble, setShowSuggestBubble] = useState(false);
   const scrollRef = useRef(null);
 
   // enabledModules === null: config del tenant aún no cargó, no mostrar todavía
@@ -70,6 +71,26 @@ export default function NexaChatWidget() {
     if (allowed) fetchPendingCount();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allowed]);
+
+  // Bocadillo sugerido "Habla con Nexa…" anclado al botón — una sola vez por
+  // sesión de navegador, solo si el widget está cerrado y el usuario tiene acceso.
+  useEffect(() => {
+    if (!allowed || isOpen) return;
+    if (sessionStorage.getItem('nexa_suggest_shown')) return;
+    const showTimer = setTimeout(() => {
+      sessionStorage.setItem('nexa_suggest_shown', '1');
+      setShowSuggestBubble(true);
+    }, 4000);
+    return () => clearTimeout(showTimer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allowed]);
+
+  // Auto-ocultar el bocadillo después de un rato para que no quede pegado
+  useEffect(() => {
+    if (!showSuggestBubble) return;
+    const hideTimer = setTimeout(() => setShowSuggestBubble(false), 8000);
+    return () => clearTimeout(hideTimer);
+  }, [showSuggestBubble]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -90,23 +111,38 @@ export default function NexaChatWidget() {
     <>
       {/* Botón flotante */}
       {!isOpen && (
-        <button
-          onClick={toggleOpen}
-          className="fixed bottom-5 right-5 z-40 w-14 h-14 rounded-2xl shadow-lg shadow-black/20 flex items-center justify-center hover:scale-105 active:scale-95 transition-transform overflow-hidden"
-          aria-label="Abrir NEXA"
-        >
-          <NexaIcon size={56} rounded={false} animated />
-          {pendingProposalsCount > 0 && (
-            <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-white text-[10px] font-bold flex items-center justify-center border-2 border-white">
-              {pendingProposalsCount}
-            </span>
+        <div className="fixed bottom-5 right-5 z-40 flex flex-col items-end gap-2">
+          {showSuggestBubble && (
+            <div className="relative bg-white dark:bg-graphite text-gray-800 dark:text-gray-200 text-xs font-medium px-3 py-2 rounded-xl shadow-lg border border-gray-200 dark:border-white/10 max-w-[180px] transition-opacity duration-300">
+              👋 Habla con Nexa…
+              <button
+                onClick={(e) => { e.stopPropagation(); setShowSuggestBubble(false); }}
+                className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-gray-300 dark:bg-graphite-3 text-white text-[9px] flex items-center justify-center hover:bg-gray-400 dark:hover:bg-white/20"
+                aria-label="Cerrar sugerencia"
+              >
+                ✕
+              </button>
+              <div className="absolute -bottom-1.5 right-5 w-3 h-3 bg-white dark:bg-graphite border-r border-b border-gray-200 dark:border-white/10 rotate-45" />
+            </div>
           )}
-        </button>
+          <button
+            onClick={() => { toggleOpen(); setShowSuggestBubble(false); }}
+            className="w-14 h-14 rounded-full shadow-lg shadow-black/20 flex items-center justify-center hover:scale-105 active:scale-95 transition-transform overflow-hidden"
+            aria-label="Abrir NEXA"
+          >
+            <NexaIcon size={56} animated />
+            {pendingProposalsCount > 0 && (
+              <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-white text-[10px] font-bold flex items-center justify-center border-2 border-white">
+                {pendingProposalsCount}
+              </span>
+            )}
+          </button>
+        </div>
       )}
 
       {/* Panel de chat */}
       {isOpen && (
-        <div className="fixed bottom-5 right-5 z-40 w-[360px] max-w-[calc(100vw-2.5rem)] h-[520px] max-h-[calc(100vh-2.5rem)] bg-white rounded-2xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden">
+        <div className="fixed bottom-5 right-5 z-40 w-[360px] max-w-[calc(100vw-2.5rem)] h-[520px] max-h-[calc(100vh-2.5rem)] bg-white dark:bg-graphite rounded-2xl shadow-2xl border border-gray-200 dark:border-white/10 flex flex-col overflow-hidden">
           {/* Header */}
           <div className="flex items-center justify-between px-4 h-14 bg-[#111116] text-white shrink-0">
             <div className="flex items-center gap-2.5">
@@ -135,7 +171,7 @@ export default function NexaChatWidget() {
           </div>
 
           {/* Mensajes */}
-          <div ref={scrollRef} className="flex-1 overflow-y-auto px-3 py-3 space-y-2.5 bg-gray-50">
+          <div ref={scrollRef} className="flex-1 overflow-y-auto px-3 py-3 space-y-2.5 bg-gray-50 dark:bg-ink">
             {messages.map((m, i) => (
               <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div
@@ -143,8 +179,8 @@ export default function NexaChatWidget() {
                     m.role === 'user'
                       ? 'bg-[#CF3A0B] text-white rounded-br-sm'
                       : m.isError
-                      ? 'bg-red-50 text-red-700 border border-red-200 rounded-bl-sm'
-                      : 'bg-white text-gray-800 border border-gray-200 rounded-bl-sm'
+                      ? 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800/40 rounded-bl-sm'
+                      : 'bg-white dark:bg-graphite-2 text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-white/10 rounded-bl-sm'
                   }`}
                 >
                   {m.content}
@@ -154,17 +190,17 @@ export default function NexaChatWidget() {
             ))}
             {sending && (
               <div className="flex justify-start">
-                <div className="bg-white border border-gray-200 rounded-2xl rounded-bl-sm px-3 py-2 flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-gray-400 animate-bounce [animation-delay:-0.3s]" />
-                  <span className="w-1.5 h-1.5 rounded-full bg-gray-400 animate-bounce [animation-delay:-0.15s]" />
-                  <span className="w-1.5 h-1.5 rounded-full bg-gray-400 animate-bounce" />
+                <div className="bg-white dark:bg-graphite-2 border border-gray-200 dark:border-white/10 rounded-2xl rounded-bl-sm px-3 py-2 flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-gray-400 dark:bg-gray-500 animate-bounce [animation-delay:-0.3s]" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-gray-400 dark:bg-gray-500 animate-bounce [animation-delay:-0.15s]" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-gray-400 dark:bg-gray-500 animate-bounce" />
                 </div>
               </div>
             )}
           </div>
 
           {/* Input */}
-          <form onSubmit={handleSend} className="p-2.5 border-t border-gray-200 bg-white flex items-end gap-2 shrink-0">
+          <form onSubmit={handleSend} className="p-2.5 border-t border-gray-200 dark:border-white/10 bg-white dark:bg-graphite flex items-end gap-2 shrink-0">
             <textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
@@ -176,7 +212,7 @@ export default function NexaChatWidget() {
               }}
               placeholder="Pregúntale algo a NEXA…"
               rows={1}
-              className="flex-1 resize-none rounded-xl border border-gray-300 px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-[#CF3A0B]/30 focus:border-[#CF3A0B] max-h-24"
+              className="flex-1 resize-none rounded-xl border border-gray-300 dark:border-white/10 px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-[#CF3A0B]/30 focus:border-[#CF3A0B] max-h-24 bg-white dark:bg-graphite-2 dark:text-gray-100 dark:placeholder-gray-600"
             />
             <button
               type="submit"

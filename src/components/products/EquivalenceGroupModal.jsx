@@ -104,12 +104,12 @@ export default function EquivalenceGroupModal({ productId, onClose }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="fixed inset-0 bg-black/50" onClick={onClose} />
-      <div className="relative bg-white rounded-xl shadow-xl w-full max-w-lg mx-4 max-h-[80vh] flex flex-col">
+      <div className="relative bg-white dark:bg-graphite rounded-xl shadow-xl w-full max-w-lg mx-4 max-h-[80vh] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900">Agregar Equivalencia</h3>
-          <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded-lg transition-colors">
-            <X className="w-5 h-5 text-gray-500" />
+        <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-white/10">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Agregar Equivalencia</h3>
+          <button onClick={onClose} className="p-1 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition-colors">
+            <X className="w-5 h-5 text-gray-500 dark:text-gray-500" />
           </button>
         </div>
 
@@ -117,30 +117,30 @@ export default function EquivalenceGroupModal({ productId, onClose }) {
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {mode === 'choose' && (
             <div className="space-y-3">
-              <p className="text-sm text-gray-600">¿Qué deseas hacer?</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">¿Qué deseas hacer?</p>
               <button
                 onClick={() => setMode('new')}
-                className="w-full flex items-center gap-3 p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-colors text-left"
+                className="w-full flex items-center gap-3 p-4 border border-gray-200 dark:border-white/10 rounded-lg hover:border-blue-300 hover:bg-blue-50 dark:hover:bg-white/5 transition-colors text-left"
               >
-                <div className="p-2 bg-blue-100 rounded-lg">
+                <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
                   <Plus className="w-5 h-5 text-blue-600" />
                 </div>
                 <div>
-                  <p className="font-medium text-gray-900">Crear grupo nuevo</p>
-                  <p className="text-xs text-gray-500">Crea un nuevo grupo de equivalencia con este producto</p>
+                  <p className="font-medium text-gray-900 dark:text-gray-100">Crear grupo nuevo</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-500">Crea un nuevo grupo de equivalencia con este producto</p>
                 </div>
               </button>
               {groups.length > 0 && (
                 <button
                   onClick={() => setMode('existing')}
-                  className="w-full flex items-center gap-3 p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-colors text-left"
+                  className="w-full flex items-center gap-3 p-4 border border-gray-200 dark:border-white/10 rounded-lg hover:border-blue-300 hover:bg-blue-50 dark:hover:bg-white/5 transition-colors text-left"
                 >
-                  <div className="p-2 bg-green-100 rounded-lg">
+                  <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
                     <Users className="w-5 h-5 text-green-600" />
                   </div>
                   <div>
-                    <p className="font-medium text-gray-900">Agregar a grupo existente</p>
-                    <p className="text-xs text-gray-500">Agrega este producto a un grupo que ya existe</p>
+                    <p className="font-medium text-gray-900 dark:text-gray-100">Agregar a grupo existente</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-500">Agrega este producto a un grupo que ya existe</p>
                   </div>
                 </button>
               )}
@@ -153,24 +153,24 @@ export default function EquivalenceGroupModal({ productId, onClose }) {
                 ← Volver
               </button>
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" />
                 <input
                   type="text"
                   value={groupSearch}
                   onChange={(e) => setGroupSearch(e.target.value)}
                   placeholder="Buscar grupo por nombre..."
-                  className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full pl-10 pr-4 py-2 border border-gray-200 dark:border-white/10 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-graphite-2 dark:text-gray-100 dark:placeholder-gray-600"
                   autoFocus
                 />
               </div>
 
               {/* Rol selector */}
               <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-600">Rol:</span>
+                <span className="text-sm text-gray-600 dark:text-gray-400">Rol:</span>
                 <select
                   value={role}
                   onChange={(e) => setRole(e.target.value)}
-                  className="text-sm border border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="text-sm border border-gray-200 dark:border-white/10 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-graphite-2 dark:text-gray-100"
                 >
                   <option value="equivalente">Equivalente</option>
                   <option value="referencia">Referencia</option>
@@ -189,11 +189,11 @@ export default function EquivalenceGroupModal({ productId, onClose }) {
                     key={group.id}
                     onClick={() => handleSelectGroup(group)}
                     disabled={submitting}
-                    className="w-full flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-colors text-left disabled:opacity-50"
+                    className="w-full flex items-center justify-between p-3 border border-gray-200 dark:border-white/10 rounded-lg hover:border-blue-300 hover:bg-blue-50 dark:hover:bg-white/5 transition-colors text-left disabled:opacity-50"
                   >
                     <div>
-                      <p className="font-medium text-gray-900">{group.name}</p>
-                      <p className="text-xs text-gray-500">
+                      <p className="font-medium text-gray-900 dark:text-gray-100">{group.name}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-500">
                         {group.member_count} miembro{group.member_count !== 1 ? 's' : ''}
                         {group.members_preview?.length > 0 && (
                           <> · {group.members_preview.map(m => m.sku).join(', ')}</>
@@ -204,7 +204,7 @@ export default function EquivalenceGroupModal({ productId, onClose }) {
                   </button>
                 ))}
                 {!isSearching && groupSearch && searchResults.length === 0 && (
-                  <p className="text-sm text-gray-400 text-center py-4">No se encontraron grupos</p>
+                  <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-4">No se encontraron grupos</p>
                 )}
               </div>
             </div>
@@ -216,40 +216,40 @@ export default function EquivalenceGroupModal({ productId, onClose }) {
                 ← Volver
               </button>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Nombre del grupo *</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nombre del grupo *</label>
                 <input
                   type="text"
                   value={groupName}
                   onChange={(e) => setGroupName(e.target.value)}
                   placeholder="Ej: Pastilla freno del. Aveo/Spark 2008-2015"
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-200 dark:border-white/10 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-graphite-2 dark:text-gray-100 dark:placeholder-gray-600"
                   autoFocus
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Notas (opcional)</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Notas (opcional)</label>
                 <textarea
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   placeholder="Observaciones sobre este grupo de equivalencia..."
                   rows={2}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                  className="w-full px-3 py-2 border border-gray-200 dark:border-white/10 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none dark:bg-graphite-2 dark:text-gray-100 dark:placeholder-gray-600"
                 />
               </div>
 
               {/* Buscar y agregar otros productos */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Agregar otros productos equivalentes (opcional)
                 </label>
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" />
                   <input
                     type="text"
                     value={productSearch}
                     onChange={(e) => setProductSearch(e.target.value)}
                     placeholder="Buscar producto por nombre o SKU..."
-                    className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full pl-10 pr-4 py-2 border border-gray-200 dark:border-white/10 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-graphite-2 dark:text-gray-100 dark:placeholder-gray-600"
                   />
                 </div>
 
@@ -260,7 +260,7 @@ export default function EquivalenceGroupModal({ productId, onClose }) {
                 )}
 
                 {productResults.length > 0 && (
-                  <div className="mt-2 max-h-40 overflow-y-auto space-y-1 border border-gray-100 rounded-lg p-2">
+                  <div className="mt-2 max-h-40 overflow-y-auto space-y-1 border border-gray-100 dark:border-white/10 rounded-lg p-2">
                     {productResults.map((p) => {
                       const isSelected = selectedProducts.find(sp => sp.id === p.id);
                       return (
@@ -268,16 +268,16 @@ export default function EquivalenceGroupModal({ productId, onClose }) {
                           key={p.id}
                           onClick={() => toggleProductSelection(p)}
                           className={`w-full flex items-center gap-3 p-2 rounded-lg text-left transition-colors ${
-                            isSelected ? 'bg-blue-50 border border-blue-200' : 'hover:bg-gray-50 border border-transparent'
+                            isSelected ? 'bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800/40' : 'hover:bg-gray-50 dark:hover:bg-white/5 border border-transparent'
                           }`}
                         >
-                          <Package className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                          <Package className="w-4 h-4 text-gray-400 dark:text-gray-500 flex-shrink-0" />
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-gray-900 truncate">{p.name}</p>
-                            <p className="text-xs text-gray-500">{p.sku} · Stock: {p.current_stock}</p>
+                            <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{p.name}</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-500">{p.sku} · Stock: {p.current_stock}</p>
                           </div>
                           {isSelected && (
-                            <span className="text-xs text-blue-600 font-medium">Seleccionado</span>
+                            <span className="text-xs text-blue-600 dark:text-blue-300 font-medium">Seleccionado</span>
                           )}
                         </button>
                       );
@@ -289,10 +289,10 @@ export default function EquivalenceGroupModal({ productId, onClose }) {
               {/* Productos seleccionados */}
               {selectedProducts.length > 0 && (
                 <div className="space-y-1">
-                  <p className="text-xs font-medium text-gray-500 uppercase">Productos a agregar:</p>
+                  <p className="text-xs font-medium text-gray-500 dark:text-gray-500 uppercase">Productos a agregar:</p>
                   {selectedProducts.map((p) => (
-                    <div key={p.id} className="flex items-center justify-between bg-blue-50 rounded-lg px-3 py-2">
-                      <span className="text-sm text-blue-900">{p.name} ({p.sku})</span>
+                    <div key={p.id} className="flex items-center justify-between bg-blue-50 dark:bg-blue-900/30 rounded-lg px-3 py-2">
+                      <span className="text-sm text-blue-900 dark:text-blue-300">{p.name} ({p.sku})</span>
                       <button
                         onClick={() => toggleProductSelection(p)}
                         className="text-blue-600 hover:text-blue-800"
@@ -309,10 +309,10 @@ export default function EquivalenceGroupModal({ productId, onClose }) {
 
         {/* Footer */}
         {mode === 'new' && (
-          <div className="p-4 border-t border-gray-200 flex justify-end gap-2">
+          <div className="p-4 border-t border-gray-200 dark:border-white/10 flex justify-end gap-2">
             <button
               onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+              className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-white/5 rounded-lg hover:bg-gray-200 dark:hover:bg-white/10"
             >
               Cancelar
             </button>

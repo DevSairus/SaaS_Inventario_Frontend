@@ -109,7 +109,7 @@ const AnnouncementsModal = () => {
         />
 
         {/* Modal */}
-        <div className="relative bg-white rounded-2xl shadow-2xl max-w-2xl w-full overflow-hidden transform transition-all">
+        <div className="relative bg-white dark:bg-graphite rounded-2xl shadow-2xl max-w-2xl w-full overflow-hidden transform transition-all">
           {/* Header con gradiente */}
           <div className={`p-8 text-center ${getColorClasses()}`}>
             <div className="flex justify-center mb-4">
@@ -128,14 +128,14 @@ const AnnouncementsModal = () => {
           {/* Content */}
           <div className="p-8">
             <div className="prose prose-lg max-w-none">
-              <p className="text-gray-700 text-lg leading-relaxed whitespace-pre-wrap">
+              <p className="text-gray-700 dark:text-gray-300 text-lg leading-relaxed whitespace-pre-wrap">
                 {currentAnnouncement.content}
               </p>
             </div>
 
             {/* Footer con contador y botones */}
-            <div className="mt-8 flex items-center justify-between border-t pt-6">
-              <div className="text-sm text-gray-500">
+            <div className="mt-8 flex items-center justify-between border-t dark:border-white/10 pt-6">
+              <div className="text-sm text-gray-500 dark:text-gray-500">
                 {currentIndex + 1} de {pendingAnnouncements.length} novedades
               </div>
 
@@ -143,7 +143,7 @@ const AnnouncementsModal = () => {
                 {currentIndex > 0 && (
                   <button
                     onClick={handlePrevious}
-                    className="px-4 py-2 text-gray-600 hover:text-gray-900 font-medium transition-colors"
+                    className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 font-medium transition-colors"
                   >
                     Anterior
                   </button>
@@ -191,7 +191,7 @@ const AnnouncementsModal = () => {
                         ? 'w-8 bg-blue-500'
                         : index < currentIndex
                         ? 'w-2 bg-green-400'
-                        : 'w-2 bg-gray-300'
+                        : 'w-2 bg-gray-300 dark:bg-white/10'
                     }`}
                   />
                 ))}

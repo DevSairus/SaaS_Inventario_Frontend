@@ -22,7 +22,7 @@ const PageHeader = ({
       secondary: 'bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800',
       blue: 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800',
       red: 'bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800',
-      gray: 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+      gray: 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 dark:bg-graphite dark:text-gray-300 dark:border-white/10 dark:hover:bg-white/5'
     };
     
     return variants[variant] || variants.primary;
@@ -32,7 +32,7 @@ const PageHeader = ({
     <div className="mb-8">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-4xl font-bold text-gray-900 flex items-center gap-3">
+          <h1 className="text-4xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-3">
             {Icon && (
               <div className={`p-3 bg-gradient-to-br ${gradient} rounded-2xl shadow-lg`}>
                 <Icon className="w-8 h-8 text-white" />
@@ -41,7 +41,7 @@ const PageHeader = ({
             {title}
           </h1>
           {subtitle && (
-            <p className="text-gray-600 mt-2 text-lg">
+            <p className="text-gray-600 dark:text-gray-400 mt-2 text-lg">
               {subtitle}
             </p>
           )}

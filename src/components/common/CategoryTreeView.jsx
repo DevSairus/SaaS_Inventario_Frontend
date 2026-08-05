@@ -39,7 +39,7 @@ function CategoryTreeView({ categories, onEdit, onDelete, onToggleActive }) {
       <div>
         {/* Nodo principal */}
         <div
-          className={`flex items-center gap-3 py-3 px-4 hover:bg-purple-50 transition-colors rounded-lg ${
+          className={`flex items-center gap-3 py-3 px-4 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors rounded-lg ${
             level > 0 ? 'ml-' + (level * 8) : ''
           }`}
           style={{ marginLeft: `${level * 32}px` }}
@@ -48,10 +48,10 @@ function CategoryTreeView({ categories, onEdit, onDelete, onToggleActive }) {
           {hasChildren && (
             <button
               onClick={() => toggleExpand(category.id)}
-              className="p-1 hover:bg-purple-100 rounded transition-colors"
+              className="p-1 hover:bg-purple-100 dark:hover:bg-purple-900/30 rounded transition-colors"
             >
               <svg
-                className={`w-4 h-4 text-gray-600 transition-transform ${
+                className={`w-4 h-4 text-gray-600 dark:text-gray-400 transition-transform ${
                   isExpanded ? 'rotate-90' : ''
                 }`}
                 fill="none"
@@ -73,7 +73,7 @@ function CategoryTreeView({ categories, onEdit, onDelete, onToggleActive }) {
             {hasChildren ? (
               <svg
                 className={`w-5 h-5 ${
-                  isExpanded ? 'text-purple-600' : 'text-gray-400'
+                  isExpanded ? 'text-purple-600 dark:text-purple-400' : 'text-gray-400 dark:text-gray-500'
                 }`}
                 fill="currentColor"
                 viewBox="0 0 20 20"
@@ -82,7 +82,7 @@ function CategoryTreeView({ categories, onEdit, onDelete, onToggleActive }) {
               </svg>
             ) : (
               <svg
-                className="w-5 h-5 text-gray-400"
+                className="w-5 h-5 text-gray-400 dark:text-gray-500"
                 fill="currentColor"
                 viewBox="0 0 20 20"
               >
@@ -98,22 +98,22 @@ function CategoryTreeView({ categories, onEdit, onDelete, onToggleActive }) {
           {/* Nombre y descripción */}
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              <span className="font-semibold text-gray-900 truncate">
+              <span className="font-semibold text-gray-900 dark:text-gray-100 truncate">
                 {category.name}
               </span>
               {!category.is_active && (
-                <span className="px-2 py-0.5 text-xs bg-gray-100 text-gray-600 rounded-full">
+                <span className="px-2 py-0.5 text-xs bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-400 rounded-full">
                   Inactiva
                 </span>
               )}
               {hasChildren && (
-                <span className="px-2 py-0.5 text-xs bg-purple-100 text-purple-600 rounded-full">
+                <span className="px-2 py-0.5 text-xs bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-300 rounded-full">
                   {category.children.length} sub
                 </span>
               )}
             </div>
             {category.description && (
-              <p className="text-xs text-gray-500 truncate mt-0.5">
+              <p className="text-xs text-gray-500 dark:text-gray-500 truncate mt-0.5">
                 {category.description}
               </p>
             )}
@@ -123,7 +123,7 @@ function CategoryTreeView({ categories, onEdit, onDelete, onToggleActive }) {
           <div className="flex items-center gap-1">
             <button
               onClick={() => onEdit(category)}
-              className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+              className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
               title="Editar"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -140,8 +140,8 @@ function CategoryTreeView({ categories, onEdit, onDelete, onToggleActive }) {
               onClick={() => onToggleActive(category)}
               className={`p-2 rounded-lg transition-colors ${
                 category.is_active
-                  ? 'text-orange-600 hover:bg-orange-50'
-                  : 'text-green-600 hover:bg-green-50'
+                  ? 'text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/20'
+                  : 'text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20'
               }`}
               title={category.is_active ? 'Desactivar' : 'Activar'}
             >
@@ -168,7 +168,7 @@ function CategoryTreeView({ categories, onEdit, onDelete, onToggleActive }) {
 
             <button
               onClick={() => onDelete(category)}
-              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+              className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
               title="Eliminar"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -196,20 +196,20 @@ function CategoryTreeView({ categories, onEdit, onDelete, onToggleActive }) {
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-      <div className="p-6 border-b bg-gradient-to-r from-purple-50 to-pink-50">
+    <div className="bg-white dark:bg-graphite rounded-xl shadow-lg overflow-hidden">
+      <div className="p-6 border-b dark:border-white/10 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-bold text-gray-900">Vista de Árbol</h3>
+          <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Vista de Árbol</h3>
           <div className="flex gap-2">
             <button
               onClick={() => setExpandedIds(new Set(categories.map(c => c.id)))}
-              className="px-3 py-1.5 text-sm text-purple-600 hover:bg-purple-100 rounded-lg transition-colors"
+              className="px-3 py-1.5 text-sm text-purple-600 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/30 rounded-lg transition-colors"
             >
               Expandir Todo
             </button>
             <button
               onClick={() => setExpandedIds(new Set())}
-              className="px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              className="px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition-colors"
             >
               Colapsar Todo
             </button>
@@ -219,9 +219,9 @@ function CategoryTreeView({ categories, onEdit, onDelete, onToggleActive }) {
 
       <div className="p-4">
         {tree.length === 0 ? (
-          <div className="text-center py-12 text-gray-500">
+          <div className="text-center py-12 text-gray-500 dark:text-gray-500">
             <svg
-              className="mx-auto h-12 w-12 text-gray-400 mb-3"
+              className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500 mb-3"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"

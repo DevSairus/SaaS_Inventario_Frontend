@@ -61,7 +61,7 @@ function PayableAlerts() {
       {/* Botón */}
       <button
         onClick={() => setIsOpen(true)}
-        className="relative p-2 rounded-lg hover:bg-gray-100 text-gray-500"
+        className="relative p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 text-gray-500 dark:text-gray-400"
         aria-label="Alertas de cuentas por pagar"
       >
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -82,43 +82,43 @@ function PayableAlerts() {
           <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
 
           <div
-            className="absolute right-0 mt-3 w-96 bg-white rounded-xl shadow-xl z-50 border border-gray-200 flex flex-col max-h-[32rem]"
+            className="absolute right-0 mt-3 w-96 bg-white dark:bg-graphite rounded-xl shadow-xl z-50 border border-gray-200 dark:border-white/10 flex flex-col max-h-[32rem]"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="px-4 py-3 border-b bg-gradient-to-r from-orange-50 to-red-50">
-              <h3 className="text-sm font-semibold text-gray-900">
+            <div className="px-4 py-3 border-b dark:border-white/10 bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-900/20 dark:to-red-900/20">
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
                 Cuentas por pagar próximas a vencer ({alerts.length})
               </h3>
-              <p className="text-xs text-gray-600">
+              <p className="text-xs text-gray-600 dark:text-gray-400">
                 Ordenadas por urgencia
               </p>
             </div>
 
             {/* Lista */}
-            <div className="overflow-y-auto flex-1 divide-y">
+            <div className="overflow-y-auto flex-1 divide-y dark:divide-white/10">
               {isLoading ? (
                 <div className="flex items-center justify-center py-8">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-                  <span className="ml-3 text-sm text-gray-600">Cargando alertas...</span>
+                  <span className="ml-3 text-sm text-gray-600 dark:text-gray-400">Cargando alertas...</span>
                 </div>
               ) : alerts.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-8 px-4 text-center">
-                  <svg className="w-16 h-16 text-gray-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-16 h-16 text-gray-300 dark:text-gray-600 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  <p className="text-sm font-medium text-gray-900">¡Todo al día!</p>
-                  <p className="text-xs text-gray-500 mt-1">No hay cuentas por pagar próximas a vencer</p>
+                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100">¡Todo al día!</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">No hay cuentas por pagar próximas a vencer</p>
                 </div>
               ) : (
                 alerts.map(alert => (
-                  <div key={alert.id} className="px-4 py-3 hover:bg-gray-50">
+                  <div key={alert.id} className="px-4 py-3 hover:bg-gray-50 dark:hover:bg-white/5">
                     <div className="flex justify-between items-start">
                       <div className="min-w-0">
-                        <p className="text-sm font-medium text-gray-900 truncate">
+                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
                           {alert.purchase?.supplier?.name || 'Proveedor sin nombre'}
                         </p>
-                        <p className="text-xs text-gray-500">
+                        <p className="text-xs text-gray-500 dark:text-gray-500">
                           Compra: {alert.purchase?.purchase_number || '-'}
                           {alert.purchase?.invoice_number ? ` · Fact: ${alert.purchase.invoice_number}` : ''}
                         </p>
@@ -126,7 +126,7 @@ function PayableAlerts() {
 
                       <span
                         className={`text-xs font-semibold whitespace-nowrap ml-2 ${
-                          alert.alert_type === 'overdue' ? 'text-red-600' : 'text-orange-600'
+                          alert.alert_type === 'overdue' ? 'text-red-600 dark:text-red-400' : 'text-orange-600 dark:text-orange-400'
                         }`}
                       >
                         {alert.alert_type === 'overdue' ? 'VENCIDA' : 'PRÓXIMA A VENCER'}
@@ -134,14 +134,14 @@ function PayableAlerts() {
                     </div>
 
                     <div className="flex justify-between mt-2 text-xs">
-                      <span className="text-gray-600">
+                      <span className="text-gray-600 dark:text-gray-400">
                         Saldo: {formatMoney(alert.balance)}
                       </span>
-                      <span className={alert.alert_type === 'overdue' ? 'text-red-600 font-medium' : 'text-orange-600 font-medium'}>
+                      <span className={alert.alert_type === 'overdue' ? 'text-red-600 dark:text-red-400 font-medium' : 'text-orange-600 dark:text-orange-400 font-medium'}>
                         {getDueLabel(alert)}
                       </span>
                     </div>
-                    <div className="mt-1 text-xs text-gray-400">
+                    <div className="mt-1 text-xs text-gray-400 dark:text-gray-500">
                       Vence: {formatDate(alert.due_date)}
                     </div>
                   </div>
@@ -150,7 +150,7 @@ function PayableAlerts() {
             </div>
 
             {/* Footer */}
-            <div className="px-4 py-3 border-t bg-gray-50">
+            <div className="px-4 py-3 border-t dark:border-white/10 bg-gray-50 dark:bg-graphite-2">
               <button
                 onClick={() => {
                   navigate('/payable-alerts');

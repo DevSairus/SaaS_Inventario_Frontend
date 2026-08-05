@@ -25,27 +25,27 @@ const ConfirmDialog = ({
 
       {/* Dialog */}
       <div className="flex min-h-full items-center justify-center p-4">
-        <div className="relative bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+        <div className="relative bg-white dark:bg-graphite rounded-lg shadow-xl max-w-md w-full p-6">
           {/* Close button */}
           <button
             onClick={onCancel}
-            className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+            className="absolute top-4 right-4 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
           >
             <X className="w-5 h-5" />
           </button>
 
           {/* Icon */}
-          <div className="flex items-center justify-center w-12 h-12 mx-auto bg-red-100 rounded-full mb-4">
-            <AlertTriangle className="w-6 h-6 text-red-600" />
+          <div className="flex items-center justify-center w-12 h-12 mx-auto bg-red-100 dark:bg-red-900/30 rounded-full mb-4">
+            <AlertTriangle className="w-6 h-6 text-red-600 dark:text-red-400" />
           </div>
 
           {/* Title */}
-          <h3 className="text-lg font-semibold text-gray-900 text-center mb-2">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 text-center mb-2">
             {title}
           </h3>
 
           {/* Message */}
-          <p className="text-sm text-gray-600 text-center mb-6">{message}</p>
+          <p className="text-sm text-gray-600 dark:text-gray-400 text-center mb-6">{message}</p>
 
           {/* Actions */}
           <div className="flex gap-3">

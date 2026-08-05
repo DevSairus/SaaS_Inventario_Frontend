@@ -92,8 +92,8 @@ const TransfersPage = () => {
         {/* Header */}
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Transferencias entre Bodegas</h1>
-            <p className="text-gray-600 mt-1">Gestiona el movimiento de productos entre ubicaciones</p>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Transferencias entre Bodegas</h1>
+            <p className="text-gray-600 mt-1 dark:text-gray-400">Gestiona el movimiento de productos entre ubicaciones</p>
           </div>
           <button
             onClick={() => navigate('/inventory/transfers/new')}

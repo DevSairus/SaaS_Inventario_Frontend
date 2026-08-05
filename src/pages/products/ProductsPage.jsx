@@ -321,9 +321,9 @@ function ProductsPage() {
   const getStockBadgeColor = (current, min) => {
     const stock = parseFloat(current);
     const minStock = parseFloat(min);
-    if (stock === 0) return 'bg-red-100 text-red-800';
-    if (stock <= minStock) return 'bg-orange-100 text-orange-800';
-    return 'bg-green-100 text-green-800';
+    if (stock === 0) return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300';
+    if (stock <= minStock) return 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300';
+    return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300';
   };
 
   return (
@@ -332,13 +332,13 @@ function ProductsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Productos</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Gestiona el catálogo de productos y control de inventario</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">Productos</h1>
+          <p className="text-sm text-gray-500 mt-0.5 dark:text-gray-500">Gestiona el catálogo de productos y control de inventario</p>
         </div>
         <div className="flex gap-2 flex-wrap">
           <button
             onClick={() => setIsImportModalOpen(true)}
-            className="inline-flex items-center gap-2 px-4 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 shadow-sm"
+            className="inline-flex items-center gap-2 px-4 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 shadow-sm dark:border-white/10 dark:text-gray-300 dark:bg-graphite-2 dark:hover:bg-white/10"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
@@ -347,7 +347,7 @@ function ProductsPage() {
           </button>
           <button
             onClick={handleExport}
-            className="inline-flex items-center gap-2 px-4 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 shadow-sm"
+            className="inline-flex items-center gap-2 px-4 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 shadow-sm dark:border-white/10 dark:text-gray-300 dark:bg-graphite-2 dark:hover:bg-white/10"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -372,58 +372,58 @@ function ProductsPage() {
         {/* Stats Cards */}
         {stats && (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-white rounded-xl shadow-md hover:shadow-xl transition-shadow p-6 border-l-4 border-blue-500">
+            <div className="bg-white rounded-xl shadow-md hover:shadow-xl transition-shadow p-6 border-l-4 border-blue-500 dark:bg-graphite">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Total Productos</p>
-                  <p className="text-3xl font-bold text-gray-900 mt-2">{stats.total_products || 0}</p>
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Productos</p>
+                  <p className="text-3xl font-bold text-gray-900 mt-2 dark:text-gray-100">{stats.total_products || 0}</p>
                 </div>
-                <div className="w-14 h-14 bg-blue-100 rounded-full flex items-center justify-center">
-                  <svg className="w-8 h-8 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                <div className="w-14 h-14 bg-blue-100 rounded-full flex items-center justify-center dark:bg-blue-900/30">
+                  <svg className="w-8 h-8 text-blue-600 dark:text-blue-300" fill="currentColor" viewBox="0 0 20 20">
                     <path d="M3 1a1 1 0 000 2h1.22l.305 1.222a.997.997 0 00.01.042l1.358 5.43-.893.892C3.74 11.846 4.632 14 6.414 14H15a1 1 0 000-2H6.414l1-1H14a1 1 0 00.894-.553l3-6A1 1 0 0017 3H6.28l-.31-1.243A1 1 0 005 1H3zM16 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM6.5 18a1.5 1.5 0 100-3 1.5 1.5 0 000 3z" />
                   </svg>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white rounded-xl shadow-md hover:shadow-xl transition-shadow p-6 border-l-4 border-orange-500">
+            <div className="bg-white rounded-xl shadow-md hover:shadow-xl transition-shadow p-6 border-l-4 border-orange-500 dark:bg-graphite">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Stock Bajo</p>
-                  <p className="text-3xl font-bold text-orange-600 mt-2">{stats.low_stock_products || 0}</p>
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Stock Bajo</p>
+                  <p className="text-3xl font-bold text-orange-600 mt-2 dark:text-orange-400">{stats.low_stock_products || 0}</p>
                 </div>
-                <div className="w-14 h-14 bg-orange-100 rounded-full flex items-center justify-center">
-                  <svg className="w-8 h-8 text-orange-600" fill="currentColor" viewBox="0 0 20 20">
+                <div className="w-14 h-14 bg-orange-100 rounded-full flex items-center justify-center dark:bg-orange-900/30">
+                  <svg className="w-8 h-8 text-orange-600 dark:text-orange-300" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                   </svg>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white rounded-xl shadow-md hover:shadow-xl transition-shadow p-6 border-l-4 border-red-500">
+            <div className="bg-white rounded-xl shadow-md hover:shadow-xl transition-shadow p-6 border-l-4 border-red-500 dark:bg-graphite">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Sin Stock</p>
-                  <p className="text-3xl font-bold text-red-600 mt-2">{stats.out_of_stock_products || 0}</p>
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Sin Stock</p>
+                  <p className="text-3xl font-bold text-red-600 mt-2 dark:text-red-400">{stats.out_of_stock_products || 0}</p>
                 </div>
-                <div className="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center">
-                  <svg className="w-8 h-8 text-red-600" fill="currentColor" viewBox="0 0 20 20">
+                <div className="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center dark:bg-red-900/30">
+                  <svg className="w-8 h-8 text-red-600 dark:text-red-300" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M13.477 14.89A6 6 0 015.11 6.524l8.367 8.368zm1.414-1.414L6.524 5.11a6 6 0 018.367 8.367zM18 10a8 8 0 11-16 0 8 8 0 0116 0z" clipRule="evenodd" />
                   </svg>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white rounded-xl shadow-md hover:shadow-xl transition-shadow p-6 border-l-4 border-green-500">
+            <div className="bg-white rounded-xl shadow-md hover:shadow-xl transition-shadow p-6 border-l-4 border-green-500 dark:bg-graphite">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Valor Total</p>
-                  <p className="text-2xl font-bold text-green-600 mt-2">
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Valor Total</p>
+                  <p className="text-2xl font-bold text-green-600 mt-2 dark:text-green-400">
                     {formatCurrency(stats.total_inventory_value)}
                   </p>
                 </div>
-                <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center">
-                  <svg className="w-8 h-8 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center dark:bg-green-900/30">
+                  <svg className="w-8 h-8 text-green-600 dark:text-green-300" fill="currentColor" viewBox="0 0 20 20">
                     <path d="M8.433 7.418c.155-.103.346-.196.567-.267v1.698a2.305 2.305 0 01-.567-.267C8.07 8.34 8 8.114 8 8c0-.114.07-.34.433-.582zM11 12.849v-1.698c.22.071.412.164.567.267.364.243.433.468.433.582 0 .114-.07.34-.433.582a2.305 2.305 0 01-.567.267z" />
                     <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a1 1 0 10-2 0v.092a4.535 4.535 0 00-1.676.662C6.602 6.234 6 7.009 6 8c0 .99.602 1.765 1.324 2.246.48.32 1.054.545 1.676.662v1.941c-.391-.127-.68-.317-.843-.504a1 1 0 10-1.51 1.31c.562.649 1.413 1.076 2.353 1.253V15a1 1 0 102 0v-.092a4.535 4.535 0 001.676-.662C13.398 13.766 14 12.991 14 12c0-.99-.602-1.765-1.324-2.246A4.535 4.535 0 0011 9.092V7.151c.391.127.68.317.843.504a1 1 0 101.511-1.31c-.563-.649-1.413-1.076-2.354-1.253V5z" clipRule="evenodd" />
                   </svg>
@@ -434,20 +434,20 @@ function ProductsPage() {
         )}
 
         {/* Filters */}
-        <div className="bg-white rounded-xl shadow-md p-6 mb-6">
+        <div className="bg-white rounded-xl shadow-md p-6 mb-6 dark:bg-graphite">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             {/* Search */}
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Buscar</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">Buscar</label>
               <div className="relative">
                 <input
                   type="text"
                   value={searchInput}
                   onChange={(e) => setSearchInput(e.target.value)}
                   placeholder="Buscar por nombre, SKU o código de barras..."
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100 dark:placeholder-gray-600"
                 />
-                <svg className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="absolute left-3 top-2.5 h-5 w-5 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
               </div>
@@ -455,11 +455,11 @@ function ProductsPage() {
 
             {/* Category Filter */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Categoría</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">Categoría</label>
               <select
                 value={filters.category_id}
                 onChange={(e) => setFilters({ category_id: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100"
               >
                 <option value="">Todas las categorías</option>
                 {categories.map((category) => (
@@ -472,11 +472,11 @@ function ProductsPage() {
 
             {/* Status Filter */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Estado</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">Estado</label>
               <select
                 value={filters.is_active}
                 onChange={(e) => setFilters({ is_active: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100"
               >
                 <option value="true">Activos</option>
                 <option value="false">Inactivos</option>
@@ -495,8 +495,8 @@ function ProductsPage() {
                 }}
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                   showVehicleFilter
-                    ? 'bg-blue-100 text-blue-700 border border-blue-300'
-                    : 'bg-gray-100 text-gray-600 border border-gray-300 hover:bg-gray-200'
+                    ? 'bg-blue-100 text-blue-700 border border-blue-300 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800/40'
+                    : 'bg-gray-100 text-gray-600 border border-gray-300 hover:bg-gray-200 dark:bg-white/5 dark:text-gray-400 dark:border-white/10 dark:hover:bg-white/10'
                 }`}
               >
                 <Car className="w-4 h-4" />
@@ -507,10 +507,10 @@ function ProductsPage() {
 
           {/* Vehicle Filter Fields */}
           {showVehicleFilter && (
-            <div className="mt-3 pt-3 border-t border-gray-200">
+            <div className="mt-3 pt-3 border-t border-gray-200 dark:border-white/10">
               <div className="grid grid-cols-3 gap-3">
                 <div className="relative">
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Marca</label>
+                  <label className="block text-xs font-medium text-gray-600 mb-1 dark:text-gray-400">Marca</label>
                   <input
                     type="text"
                     value={vehicleFilter.brand}
@@ -521,10 +521,10 @@ function ProductsPage() {
                     onFocus={() => setShowBrandDropdown(true)}
                     onBlur={() => setTimeout(() => setShowBrandDropdown(false), 200)}
                     placeholder="Chevrolet"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100 dark:placeholder-gray-600"
                   />
                   {showBrandDropdown && brandSuggestions.length > 0 && (
-                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-32 overflow-y-auto">
+                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-32 overflow-y-auto dark:bg-graphite-2 dark:border-white/10">
                       {brandSuggestions.map(b => (
                         <button
                           key={b}
@@ -533,7 +533,7 @@ function ProductsPage() {
                             setVehicleFilter(p => ({ ...p, brand: b }));
                             setShowBrandDropdown(false);
                           }}
-                          className="w-full text-left px-3 py-1.5 text-sm hover:bg-blue-50"
+                          className="w-full text-left px-3 py-1.5 text-sm hover:bg-blue-50 dark:text-gray-100 dark:hover:bg-white/10"
                         >
                           {b}
                         </button>
@@ -542,7 +542,7 @@ function ProductsPage() {
                   )}
                 </div>
                 <div className="relative">
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Línea</label>
+                  <label className="block text-xs font-medium text-gray-600 mb-1 dark:text-gray-400">Línea</label>
                   <input
                     type="text"
                     value={vehicleFilter.line}
@@ -553,10 +553,10 @@ function ProductsPage() {
                     onFocus={() => setShowLineDropdown(true)}
                     onBlur={() => setTimeout(() => setShowLineDropdown(false), 200)}
                     placeholder="Aveo"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100 dark:placeholder-gray-600"
                   />
                   {showLineDropdown && lineSuggestions.length > 0 && (
-                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-32 overflow-y-auto">
+                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-32 overflow-y-auto dark:bg-graphite-2 dark:border-white/10">
                       {lineSuggestions.map(l => (
                         <button
                           key={l}
@@ -565,7 +565,7 @@ function ProductsPage() {
                             setVehicleFilter(p => ({ ...p, line: l }));
                             setShowLineDropdown(false);
                           }}
-                          className="w-full text-left px-3 py-1.5 text-sm hover:bg-blue-50"
+                          className="w-full text-left px-3 py-1.5 text-sm hover:bg-blue-50 dark:text-gray-100 dark:hover:bg-white/10"
                         >
                           {l}
                         </button>
@@ -574,18 +574,18 @@ function ProductsPage() {
                   )}
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Año</label>
+                  <label className="block text-xs font-medium text-gray-600 mb-1 dark:text-gray-400">Año</label>
                   <input
                     type="number"
                     value={vehicleFilter.year}
                     onChange={(e) => setVehicleFilter(p => ({ ...p, year: e.target.value }))}
                     placeholder="2015"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100 dark:placeholder-gray-600"
                   />
                 </div>
               </div>
               {vehicleFilter.brand && vehicleFilter.line && (
-                <p className="text-xs text-blue-600 mt-2">
+                <p className="text-xs text-blue-600 mt-2 dark:text-blue-400">
                   Mostrando productos que aplican a: {vehicleFilter.brand} {vehicleFilter.line} {vehicleFilter.year ? `${vehicleFilter.year}` : '(todos los años)'}
                 </p>
               )}
@@ -594,18 +594,18 @@ function ProductsPage() {
         </div>
 
         {/* Products Table */}
-        <div className="bg-white rounded-xl shadow-md overflow-hidden">
+        <div className="bg-white rounded-xl shadow-md overflow-hidden dark:bg-graphite">
           {isLoading ? (
             <div className="text-center py-12">
               <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-              <p className="mt-4 text-gray-600">Cargando productos...</p>
+              <p className="mt-4 text-gray-600 dark:text-gray-400">Cargando productos...</p>
             </div>
           ) : products.length === 0 ? (
             <div className="text-center py-12">
-              <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
               </svg>
-              <p className="mt-4 text-gray-600">No hay productos para mostrar</p>
+              <p className="mt-4 text-gray-600 dark:text-gray-400">No hay productos para mostrar</p>
               <button
                 onClick={handleCreate}
                 className="mt-4 text-blue-600 hover:text-blue-700 font-medium"
@@ -616,53 +616,53 @@ function ProductsPage() {
           ) : (
             <>
               <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
+                <table className="min-w-full divide-y divide-gray-200 dark:divide-white/10">
+                  <thead className="bg-gray-50 dark:bg-graphite-2">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-500">
                         Producto
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-500">
                         SKU / Código
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-500">
                         Categoría
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-500">
                         Stock
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-500">
                         Precio
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-500">
                         Estado
                       </th>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-500">
                         Acciones
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
+                  <tbody className="bg-white divide-y divide-gray-200 dark:bg-graphite dark:divide-white/10">
                     {products.map((product) => (
-                      <tr key={product.id} className="hover:bg-gray-50 transition-colors">
+                      <tr key={product.id} className="hover:bg-gray-50 transition-colors dark:hover:bg-white/5">
                         <td className="px-6 py-4">
                           <div>
-                            <div className="text-sm font-medium text-gray-900">{product.name}</div>
+                            <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{product.name}</div>
                             {product.description && (
-                              <div className="text-sm text-gray-500 truncate max-w-xs">
+                              <div className="text-sm text-gray-500 truncate max-w-xs dark:text-gray-500">
                                 {product.description}
                               </div>
                             )}
                           </div>
                         </td>
                         <td className="px-6 py-4">
-                          <div className="text-sm text-gray-900">{product.sku}</div>
+                          <div className="text-sm text-gray-900 dark:text-gray-100">{product.sku}</div>
                           {product.barcode && (
-                            <div className="text-xs text-gray-500">{product.barcode}</div>
+                            <div className="text-xs text-gray-500 dark:text-gray-500">{product.barcode}</div>
                           )}
                         </td>
                         <td className="px-6 py-4">
-                          <div className="text-sm text-gray-900">
+                          <div className="text-sm text-gray-900 dark:text-gray-100">
                             {product.category?.name || 'Sin categoría'}
                           </div>
                         </td>
@@ -675,17 +675,17 @@ function ProductsPage() {
                             {parseFloat(product.current_stock)} {product.unit}
                           </span>
                           {product.track_inventory && (
-                            <div className="text-xs text-gray-500 mt-1">
+                            <div className="text-xs text-gray-500 mt-1 dark:text-gray-500">
                               Mín: {parseFloat(product.min_stock)} {product.unit}
                             </div>
                           )}
                         </td>
                         <td className="px-6 py-4">
-                          <div className="text-sm font-medium text-gray-900">
+                          <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
                             {formatCurrency(product.base_price)}
                           </div>
                           {product.average_cost > 0 && (
-                            <div className="text-xs text-gray-500">
+                            <div className="text-xs text-gray-500 dark:text-gray-500">
                               Costo: {formatCurrency(product.average_cost)}
                             </div>
                           )}
@@ -693,8 +693,8 @@ function ProductsPage() {
                         <td className="px-6 py-4">
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                             product.is_active
-                              ? 'bg-green-100 text-green-800'
-                              : 'bg-gray-100 text-gray-800'
+                              ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+                              : 'bg-gray-100 text-gray-800 dark:bg-white/10 dark:text-gray-300'
                           }`}>
                             {product.is_active ? 'Activo' : 'Inactivo'}
                           </span>
@@ -704,7 +704,7 @@ function ProductsPage() {
                             {/* Ver detalle */}
                             <button
                               onClick={() => navigate(`/products/${product.id}`)}
-                              className="text-gray-500 hover:text-blue-600"
+                              className="text-gray-500 hover:text-blue-600 dark:text-gray-500 dark:hover:text-blue-400"
                               title="Ver detalle"
                             >
                               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -715,7 +715,7 @@ function ProductsPage() {
                             {/* Imprimir etiqueta */}
                             <button
                               onClick={() => setBarcodePrintProduct(product)}
-                              className="text-gray-500 hover:text-gray-800"
+                              className="text-gray-500 hover:text-gray-800 dark:text-gray-500 dark:hover:text-gray-300"
                               title="Imprimir etiqueta de código de barras"
                             >
                               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -724,7 +724,7 @@ function ProductsPage() {
                             </button>
                             <button
                               onClick={() => handleEdit(product)}
-                              className="text-blue-600 hover:text-blue-900"
+                              className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
                               title="Editar"
                             >
                               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -734,7 +734,7 @@ function ProductsPage() {
                             {product.is_active ? (
                               <button
                                 onClick={() => handleDeactivate(product.id, product.name)}
-                                className="text-orange-600 hover:text-orange-900"
+                                className="text-orange-600 hover:text-orange-900 dark:text-orange-400 dark:hover:text-orange-300"
                                 title="Desactivar"
                               >
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -744,7 +744,7 @@ function ProductsPage() {
                             ) : (
                               <button
                                 onClick={() => handleDelete(product.id, product.name)}
-                                className="text-red-600 hover:text-red-900"
+                                className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
                                 title="Eliminar permanentemente"
                               >
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

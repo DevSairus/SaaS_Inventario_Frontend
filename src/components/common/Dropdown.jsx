@@ -100,7 +100,7 @@ const Dropdown = ({ trigger, items, align = 'right' }) => {
       {isOpen && isPositioned && (
         <div
           ref={dropdownRef}
-          className="fixed z-[9999] w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 animate-in fade-in-0 zoom-in-95 duration-100"
+          className="fixed z-[9999] w-56 rounded-md shadow-lg bg-white dark:bg-graphite ring-1 ring-black dark:ring-white/10 ring-opacity-5 animate-in fade-in-0 zoom-in-95 duration-100"
           style={{
             top: `${position.top}px`,
             left: `${position.left}px`,
@@ -116,8 +116,8 @@ const Dropdown = ({ trigger, items, align = 'right' }) => {
                 </>
               );
 
-              const className = `flex items-center w-full px-4 py-2 text-sm text-left hover:bg-gray-100 transition-colors ${
-                item.className || 'text-gray-700'
+              const className = `flex items-center w-full px-4 py-2 text-sm text-left hover:bg-gray-100 dark:hover:bg-white/10 transition-colors ${
+                item.className || 'text-gray-700 dark:text-gray-300'
               }`;
 
               if (item.to) {

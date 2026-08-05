@@ -13,10 +13,10 @@ const ActionButton = memo(function ActionButton({ action, item }) {
   if (action.show && !action.show(item)) return null;
   const ActionIcon = action.icon;
   const variants = {
-    view: 'text-blue-600 hover:bg-blue-50',
-    edit: 'text-green-600 hover:bg-green-50',
-    delete: 'text-red-600 hover:bg-red-50',
-    default: 'text-gray-600 hover:bg-gray-50',
+    view: 'text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30',
+    edit: 'text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30',
+    delete: 'text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30',
+    default: 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5',
   };
   const className = variants[action.variant] || variants.default;
 
@@ -41,7 +41,7 @@ const TableRow = memo(function TableRow({ item, columns, actions, onRowClick, ho
 
   return (
     <tr
-      className={`${hover ? 'hover:bg-gray-50' : ''} transition-colors duration-150 ${onRowClick ? 'cursor-pointer' : ''}`}
+      className={`${hover ? 'hover:bg-gray-50 dark:hover:bg-white/5' : ''} transition-colors duration-150 ${onRowClick ? 'cursor-pointer' : ''}`}
       onClick={handleClick}
     >
       {columns.map((column) => (
@@ -50,7 +50,7 @@ const TableRow = memo(function TableRow({ item, columns, actions, onRowClick, ho
           className={`px-6 py-4 whitespace-nowrap text-${column.align || 'left'}`}
         >
           {column.render ? column.render(item) : (
-            <div className="text-sm text-gray-900">
+            <div className="text-sm text-gray-900 dark:text-gray-100">
               {item[column.key]}
             </div>
           )}
@@ -89,7 +89,7 @@ const DataTable = ({
 
   if (isLoading) {
     return (
-      <div className="bg-white rounded-2xl shadow-md border border-gray-100 overflow-hidden">
+      <div className="bg-white dark:bg-graphite rounded-2xl shadow-md border border-gray-100 dark:border-white/10 overflow-hidden">
         <div className="flex items-center justify-center h-96">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
         </div>
@@ -99,38 +99,38 @@ const DataTable = ({
 
   if (!data || data.length === 0) {
     return (
-      <div className="bg-white rounded-2xl shadow-md border border-gray-100 overflow-hidden">
-        <div className="flex flex-col items-center justify-center h-96 text-gray-500">
-          {EmptyIcon && <EmptyIcon className="w-16 h-16 mb-4 text-gray-300" />}
+      <div className="bg-white dark:bg-graphite rounded-2xl shadow-md border border-gray-100 dark:border-white/10 overflow-hidden">
+        <div className="flex flex-col items-center justify-center h-96 text-gray-500 dark:text-gray-500">
+          {EmptyIcon && <EmptyIcon className="w-16 h-16 mb-4 text-gray-300 dark:text-gray-600" />}
           <p className="text-xl font-medium">{emptyMessage}</p>
-          {emptySubtitle && <p className="text-sm text-gray-400 mt-2">{emptySubtitle}</p>}
+          {emptySubtitle && <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">{emptySubtitle}</p>}
         </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-white rounded-2xl shadow-md border border-gray-100 overflow-hidden">
+    <div className="bg-white dark:bg-graphite rounded-2xl shadow-md border border-gray-100 dark:border-white/10 overflow-hidden">
       <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+        <table className="min-w-full divide-y divide-gray-200 dark:divide-white/10">
+          <thead className="bg-gray-50 dark:bg-graphite-2">
             <tr>
               {memoizedColumns.map((column) => (
                 <th
                   key={column.key}
-                  className={`px-6 py-4 text-${column.align || 'left'} text-xs font-semibold text-gray-700 uppercase tracking-wider ${column.width ? `w-${column.width}` : ''}`}
+                  className={`px-6 py-4 text-${column.align || 'left'} text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider ${column.width ? `w-${column.width}` : ''}`}
                 >
                   {column.label}
                 </th>
               ))}
               {memoizedActions.length > 0 && (
-                <th className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                <th className="px-6 py-4 text-right text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
                   Acciones
                 </th>
               )}
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody className="bg-white dark:bg-graphite divide-y divide-gray-200 dark:divide-white/10">
             {data.map((item, index) => (
               <TableRow
                 key={getRowKey ? getRowKey(item, index) : (item.id ?? index)}

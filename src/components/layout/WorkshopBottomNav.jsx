@@ -15,7 +15,7 @@ const ITEMS = [
 function WorkshopBottomNav() {
   return (
     <nav
-      className="fixed bottom-0 inset-x-0 z-40 bg-white border-t border-gray-200 flex items-stretch"
+      className="fixed bottom-0 inset-x-0 z-40 bg-white border-t border-gray-200 flex items-stretch dark:bg-graphite dark:border-white/10"
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
       {ITEMS.map(({ label, to, icon: Icon }) => (
@@ -24,7 +24,7 @@ function WorkshopBottomNav() {
           to={to}
           className={({ isActive }) =>
             `flex-1 flex flex-col items-center justify-center gap-1 py-2.5 text-xs font-medium ${
-              isActive ? 'text-primary-600' : 'text-gray-500'
+              isActive ? 'text-primary-600' : 'text-gray-500 dark:text-gray-400'
             }`
           }
         >

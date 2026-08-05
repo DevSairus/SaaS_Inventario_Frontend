@@ -151,8 +151,8 @@ const AnnouncementsManagement = () => {
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Gestión de Anuncios</h1>
-            <p className="mt-1 text-sm text-gray-500">Administra las novedades y actualizaciones del sistema</p>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Gestión de Anuncios</h1>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-500">Administra las novedades y actualizaciones del sistema</p>
           </div>
           <button
             onClick={handleCreate}
@@ -170,15 +170,15 @@ const AnnouncementsManagement = () => {
       {isLoading ? (
         <div className="text-center py-12">
           <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-          <p className="mt-4 text-gray-600">Cargando anuncios...</p>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">Cargando anuncios...</p>
         </div>
       ) : announcements.length === 0 ? (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
-          <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="bg-white dark:bg-graphite rounded-xl shadow-sm border border-gray-200 dark:border-white/10 p-12 text-center">
+          <svg className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
           </svg>
-          <h3 className="mt-4 text-lg font-medium text-gray-900">No hay anuncios</h3>
-          <p className="mt-2 text-sm text-gray-500">Comienza creando tu primer anuncio para los usuarios.</p>
+          <h3 className="mt-4 text-lg font-medium text-gray-900 dark:text-gray-100">No hay anuncios</h3>
+          <p className="mt-2 text-sm text-gray-500 dark:text-gray-500">Comienza creando tu primer anuncio para los usuarios.</p>
           <button
             onClick={handleCreate}
             className="mt-4 px-4 py-2 text-indigo-600 hover:text-indigo-700 font-medium"
@@ -191,37 +191,37 @@ const AnnouncementsManagement = () => {
           {announcements.map((announcement) => (
             <div
               key={announcement.id}
-              className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow"
+              className="bg-white dark:bg-graphite rounded-xl shadow-sm border border-gray-200 dark:border-white/10 p-6 hover:shadow-md transition-shadow"
             >
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
-                    <h3 className="text-lg font-semibold text-gray-900">{announcement.title}</h3>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{announcement.title}</h3>
                     {announcement.version && (
-                      <span className="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-600 rounded">
+                      <span className="px-2 py-1 text-xs font-medium bg-gray-100 dark:bg-graphite-2 text-gray-600 dark:text-gray-400 rounded">
                         {announcement.version}
                       </span>
                     )}
                   </div>
-                  
-                  <p className="text-sm text-gray-600 mb-4 line-clamp-2">{announcement.content}</p>
-                  
+
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 line-clamp-2">{announcement.content}</p>
+
                   <div className="flex flex-wrap items-center gap-3">
                     <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium ${getTypeColor(announcement.type)}`}>
                       {announcement.type}
                     </span>
-                    
+
                     <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium ${getPriorityColor(announcement.priority)}`}>
                       {announcement.priority}
                     </span>
-                    
-                    <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-700">
-                      {announcement.target_audience === 'all' ? 'Todos' : 
+
+                    <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-gray-100 dark:bg-graphite-2 text-gray-700 dark:text-gray-300">
+                      {announcement.target_audience === 'all' ? 'Todos' :
                        announcement.target_audience === 'tenants' ? 'Tenants' : 'SuperAdmin'}
                     </span>
-                    
+
                     <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium ${
-                      announcement.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                      announcement.is_active ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300' : 'bg-gray-100 dark:bg-graphite-2 text-gray-800 dark:text-gray-300'
                     }`}>
                       {announcement.is_active ? 'Activo' : 'Inactivo'}
                     </span>

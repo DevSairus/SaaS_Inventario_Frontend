@@ -149,10 +149,10 @@ function DashboardPage() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="min-w-0">
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 truncate">
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 truncate dark:text-gray-100">
               ¡Bienvenido, {user?.first_name || user?.name}! 👋
             </h1>
-            <p className="text-xs sm:text-sm text-gray-500 mt-0.5">
+            <p className="text-xs sm:text-sm text-gray-500 mt-0.5 dark:text-gray-500">
               {now.toLocaleDateString('es-CO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
               {' · '}
               {now.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}
@@ -164,7 +164,7 @@ function DashboardPage() {
                 key={p}
                 onClick={() => changePeriod(p)}
                 className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                  period === p ? 'bg-indigo-600 text-white shadow-sm' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+                  period === p ? 'bg-indigo-600 text-white shadow-sm' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 dark:bg-graphite dark:text-gray-400 dark:border-white/10 dark:hover:bg-white/5'
                 }`}
               >
                 {p}d
@@ -178,12 +178,12 @@ function DashboardPage() {
           <div className="space-y-2">
             {alerts.map((alert, i) => (
               <div key={i} className={`p-3 rounded-lg border-l-4 flex items-start gap-3 ${
-                alert.type === 'error' ? 'bg-red-50 border-red-500' : 'bg-yellow-50 border-yellow-500'
+                alert.type === 'error' ? 'bg-red-50 border-red-500 dark:bg-red-900/30' : 'bg-yellow-50 border-yellow-500 dark:bg-yellow-900/30'
               }`}>
-                <span className="flex-shrink-0">{alert.type === 'error' ? <ExclamationCircleIcon className="w-5 h-5 text-red-500" /> : <ExclamationTriangleIcon className="w-5 h-5 text-yellow-500" />}</span>
+                <span className="flex-shrink-0">{alert.type === 'error' ? <ExclamationCircleIcon className="w-5 h-5 text-red-500 dark:text-red-400" /> : <ExclamationTriangleIcon className="w-5 h-5 text-yellow-500 dark:text-yellow-400" />}</span>
                 <div className="min-w-0">
-                  <p className="font-semibold text-gray-900 text-sm">{alert.title}</p>
-                  <p className="text-xs text-gray-600 mt-0.5 break-words">{alert.message}</p>
+                  <p className="font-semibold text-gray-900 text-sm dark:text-gray-100">{alert.title}</p>
+                  <p className="text-xs text-gray-600 mt-0.5 break-words dark:text-gray-400">{alert.message}</p>
                 </div>
               </div>
             ))}
@@ -219,13 +219,13 @@ function DashboardPage() {
 
         {/* Gráficas */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <div className="bg-white rounded-xl p-4 sm:p-5 shadow-sm border border-gray-100">
+          <div className="bg-white rounded-xl p-4 sm:p-5 shadow-sm border border-gray-100 dark:bg-graphite dark:border-white/10">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm sm:text-base font-semibold text-gray-800 flex items-center gap-2"><ChartBarIcon className="w-4 h-4 text-gray-500" /> Ingresos vs Ganancia</h3>
-              <span className="text-xs text-gray-400">Últimos {period}d</span>
+              <h3 className="text-sm sm:text-base font-semibold text-gray-800 flex items-center gap-2 dark:text-gray-100"><ChartBarIcon className="w-4 h-4 text-gray-500 dark:text-gray-500" /> Ingresos vs Ganancia</h3>
+              <span className="text-xs text-gray-400 dark:text-gray-600">Últimos {period}d</span>
             </div>
             {chartData.length === 0 ? (
-              <div className="h-52 flex items-center justify-center text-gray-400 text-sm">Sin datos</div>
+              <div className="h-52 flex items-center justify-center text-gray-400 text-sm dark:text-gray-600">Sin datos</div>
             ) : (
               <ResponsiveContainer width="100%" height={220}>
                 <AreaChart data={chartData}>
@@ -254,13 +254,13 @@ function DashboardPage() {
             )}
           </div>
 
-          <div className="bg-white rounded-xl p-4 sm:p-5 shadow-sm border border-gray-100">
+          <div className="bg-white rounded-xl p-4 sm:p-5 shadow-sm border border-gray-100 dark:bg-graphite dark:border-white/10">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm sm:text-base font-semibold text-gray-800">🏆 Top 5 Productos</h3>
-              <button onClick={() => navigate('/reports')} className="text-xs text-indigo-600 hover:underline">Reportes →</button>
+              <h3 className="text-sm sm:text-base font-semibold text-gray-800 dark:text-gray-100">🏆 Top 5 Productos</h3>
+              <button onClick={() => navigate('/reports')} className="text-xs text-indigo-600 hover:underline dark:text-indigo-400">Reportes →</button>
             </div>
             {topProducts.length === 0 ? (
-              <div className="h-52 flex items-center justify-center text-gray-400 text-sm">Sin ventas</div>
+              <div className="h-52 flex items-center justify-center text-gray-400 text-sm dark:text-gray-600">Sin ventas</div>
             ) : (
               <ResponsiveContainer width="100%" height={220}>
                 <BarChart data={topProducts} layout="vertical">
@@ -277,10 +277,10 @@ function DashboardPage() {
         </div>
 
         {/* ── Taller ── */}
-        <div className="bg-white rounded-xl p-4 sm:p-5 shadow-sm border border-gray-100">
+        <div className="bg-white rounded-xl p-4 sm:p-5 shadow-sm border border-gray-100 dark:bg-graphite dark:border-white/10">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm sm:text-base font-semibold text-gray-800 flex items-center gap-2"><WrenchScrewdriverIcon className="w-4 h-4 text-gray-500" /> Taller — Estado actual</h3>
-            <button onClick={() => navigate('/workshop/work-orders')} className="text-xs text-indigo-600 hover:underline">
+            <h3 className="text-sm sm:text-base font-semibold text-gray-800 flex items-center gap-2 dark:text-gray-100"><WrenchScrewdriverIcon className="w-4 h-4 text-gray-500 dark:text-gray-500" /> Taller — Estado actual</h3>
+            <button onClick={() => navigate('/workshop/work-orders')} className="text-xs text-indigo-600 hover:underline dark:text-indigo-400">
               Ver todas →
             </button>
           </div>
@@ -293,58 +293,58 @@ function DashboardPage() {
             <div className="space-y-4">
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 <div onClick={() => navigate('/workshop/work-orders')}
-                  className="bg-blue-50 border border-blue-100 rounded-xl p-3 cursor-pointer hover:shadow-sm transition">
-                  <p className="text-2xl font-bold text-blue-700">{workshopStats.active}</p>
-                  <p className="text-xs text-blue-500 mt-0.5">OT activas</p>
+                  className="bg-blue-50 border border-blue-100 rounded-xl p-3 cursor-pointer hover:shadow-sm transition dark:bg-blue-900/30 dark:border-blue-800/40">
+                  <p className="text-2xl font-bold text-blue-700 dark:text-blue-300">{workshopStats.active}</p>
+                  <p className="text-xs text-blue-500 mt-0.5 dark:text-blue-400">OT activas</p>
                 </div>
                 <div onClick={() => navigate('/workshop/work-orders?status=listo')}
                   className={`rounded-xl p-3 border cursor-pointer hover:shadow-sm transition ${
-                    workshopStats.pendingBilling > 0 ? 'bg-amber-50 border-amber-200' : 'bg-gray-50 border-gray-100'
+                    workshopStats.pendingBilling > 0 ? 'bg-amber-50 border-amber-200 dark:bg-amber-900/30 dark:border-amber-800/40' : 'bg-gray-50 border-gray-100 dark:bg-graphite-2 dark:border-white/10'
                   }`}>
-                  <p className={`text-2xl font-bold ${workshopStats.pendingBilling > 0 ? 'text-amber-700' : 'text-gray-500'}`}>
+                  <p className={`text-2xl font-bold ${workshopStats.pendingBilling > 0 ? 'text-amber-700 dark:text-amber-300' : 'text-gray-500 dark:text-gray-500'}`}>
                     {workshopStats.pendingBilling}
                   </p>
-                  <p className={`text-xs mt-0.5 ${workshopStats.pendingBilling > 0 ? 'text-amber-500' : 'text-gray-400'}`}>
+                  <p className={`text-xs mt-0.5 ${workshopStats.pendingBilling > 0 ? 'text-amber-500 dark:text-amber-400' : 'text-gray-400 dark:text-gray-600'}`}>
                     Listas sin facturar
                   </p>
                 </div>
-                <div className="bg-green-50 border border-green-100 rounded-xl p-3">
-                  <p className="text-2xl font-bold text-green-700">{workshopStats.completedThisMonth}</p>
-                  <p className="text-xs text-green-500 mt-0.5">Entregadas este mes</p>
+                <div className="bg-green-50 border border-green-100 rounded-xl p-3 dark:bg-green-900/30 dark:border-green-800/40">
+                  <p className="text-2xl font-bold text-green-700 dark:text-green-300">{workshopStats.completedThisMonth}</p>
+                  <p className="text-xs text-green-500 mt-0.5 dark:text-green-400">Entregadas este mes</p>
                 </div>
-                <div className="bg-purple-50 border border-purple-100 rounded-xl p-3">
-                  <p className="text-lg font-bold text-purple-700">{fmtCompact(workshopStats.laborRevenue)}</p>
-                  <p className="text-xs text-purple-500 mt-0.5">Mano de obra (mes)</p>
+                <div className="bg-purple-50 border border-purple-100 rounded-xl p-3 dark:bg-purple-900/30 dark:border-purple-800/40">
+                  <p className="text-lg font-bold text-purple-700 dark:text-purple-300">{fmtCompact(workshopStats.laborRevenue)}</p>
+                  <p className="text-xs text-purple-500 mt-0.5 dark:text-purple-400">Mano de obra (mes)</p>
                 </div>
-                <div className="bg-teal-50 border border-teal-100 rounded-xl p-3">
-                  <p className="text-lg font-bold text-teal-700">{fmtCompact(workshopStats.partsRevenue)}</p>
-                  <p className="text-xs text-teal-500 mt-0.5">Repuestos (mes)</p>
+                <div className="bg-teal-50 border border-teal-100 rounded-xl p-3 dark:bg-teal-900/30 dark:border-teal-800/40">
+                  <p className="text-lg font-bold text-teal-700 dark:text-teal-300">{fmtCompact(workshopStats.partsRevenue)}</p>
+                  <p className="text-xs text-teal-500 mt-0.5 dark:text-teal-400">Repuestos (mes)</p>
                 </div>
-                <div className="bg-gray-50 border border-gray-100 rounded-xl p-3">
-                  <p className="text-2xl font-bold text-gray-700">{workshopStats.avgResolutionDays}<span className="text-sm font-normal text-gray-400 ml-1">días</span></p>
-                  <p className="text-xs text-gray-500 mt-0.5">Tiempo prom. resolución</p>
+                <div className="bg-gray-50 border border-gray-100 rounded-xl p-3 dark:bg-graphite-2 dark:border-white/10">
+                  <p className="text-2xl font-bold text-gray-700 dark:text-gray-300">{workshopStats.avgResolutionDays}<span className="text-sm font-normal text-gray-400 ml-1 dark:text-gray-600">días</span></p>
+                  <p className="text-xs text-gray-500 mt-0.5 dark:text-gray-500">Tiempo prom. resolución</p>
                 </div>
               </div>
 
               {workshopStats.recentOrders?.length > 0 && (
                 <div>
-                  <p className="text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wide">Últimas órdenes</p>
-                  <div className="divide-y divide-gray-50">
+                  <p className="text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wide dark:text-gray-500">Últimas órdenes</p>
+                  <div className="divide-y divide-gray-50 dark:divide-white/10">
                     {workshopStats.recentOrders.slice(0, 4).map(order => {
                       const sc = OT_STATUS[order.status];
                       return (
                         <div
                           key={order.id}
                           onClick={() => navigate(`/workshop/work-orders/${order.id}`)}
-                          className="flex items-center justify-between py-2 px-1 hover:bg-gray-50 rounded-lg cursor-pointer transition"
+                          className="flex items-center justify-between py-2 px-1 hover:bg-gray-50 rounded-lg cursor-pointer transition dark:hover:bg-white/5"
                         >
                           <div className="flex items-center gap-3 min-w-0">
-                            <span className="font-mono text-xs font-bold text-gray-700 bg-gray-100 px-2 py-0.5 rounded flex-shrink-0">
+                            <span className="font-mono text-xs font-bold text-gray-700 bg-gray-100 px-2 py-0.5 rounded flex-shrink-0 dark:text-gray-300 dark:bg-white/10">
                               {order.vehicle?.plate || '—'}
                             </span>
                             <div className="min-w-0">
-                              <p className="text-xs font-medium text-gray-800 truncate">{order.order_number}</p>
-                              <p className="text-xs text-gray-400 truncate">
+                              <p className="text-xs font-medium text-gray-800 truncate dark:text-gray-200">{order.order_number}</p>
+                              <p className="text-xs text-gray-400 truncate dark:text-gray-600">
                                 {order.customer ? (order.customer.business_name || `${order.customer.first_name} ${order.customer.last_name}`) : 'Sin cliente'}
                                 {order.technician && ` · ${order.technician.first_name}`}
                               </p>
@@ -352,7 +352,7 @@ function DashboardPage() {
                           </div>
                           <div className="flex items-center gap-2 flex-shrink-0">
                             {sc && <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${sc.bg} ${sc.text}`}>{sc.label}</span>}
-                            <span className="text-xs font-semibold text-gray-700">{fmtCompact(order.total_amount)}</span>
+                            <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">{fmtCompact(order.total_amount)}</span>
                           </div>
                         </div>
                       );
@@ -362,9 +362,9 @@ function DashboardPage() {
               )}
             </div>
           ) : (
-            <div className="text-center py-8 text-gray-400">
+            <div className="text-center py-8 text-gray-400 dark:text-gray-600">
               <p className="text-sm">Sin datos del taller</p>
-              <button onClick={() => navigate('/workshop/work-orders/new')} className="mt-2 text-xs text-blue-600 hover:underline">
+              <button onClick={() => navigate('/workshop/work-orders/new')} className="mt-2 text-xs text-blue-600 hover:underline dark:text-blue-400">
                 Crear primera OT →
               </button>
             </div>
@@ -373,23 +373,23 @@ function DashboardPage() {
 
         {/* ── Cartera ── */}
         {receivableStats && (
-          <div className="bg-white rounded-xl p-4 sm:p-5 shadow-sm border border-gray-100">
+          <div className="bg-white rounded-xl p-4 sm:p-5 shadow-sm border border-gray-100 dark:bg-graphite dark:border-white/10">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm sm:text-base font-semibold text-gray-800">Cartera por cobrar</h3>
-              <button onClick={() => navigate('/accounts-receivable')} className="text-xs text-indigo-600 hover:underline">
+              <h3 className="text-sm sm:text-base font-semibold text-gray-800 dark:text-gray-100">Cartera por cobrar</h3>
+              <button onClick={() => navigate('/accounts-receivable')} className="text-xs text-indigo-600 hover:underline dark:text-indigo-400">
                 Ver cartera →
               </button>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {[
-                { label: 'Total pendiente', value: fmtCompact(receivableStats.total_receivable || receivableStats.total_pending || receivableStats.totalPending || 0), color: 'text-red-600', bg: 'bg-red-50 border-red-100' },
-                { label: 'Facturas abiertas', value: fmtNum(receivableStats.total_invoices || receivableStats.pending_count || receivableStats.pendingCount || 0), color: 'text-orange-600', bg: 'bg-orange-50 border-orange-100' },
-                { label: 'Clientes con saldo', value: fmtNum(receivableStats.total_customers || 0), color: 'text-green-600', bg: 'bg-green-50 border-green-100' },
-                { label: 'Vencido', value: fmtCompact(receivableStats.total_overdue || receivableStats.overdue || receivableStats.totalOverdue || 0), color: 'text-rose-700', bg: 'bg-rose-50 border-rose-100' },
+                { label: 'Total pendiente', value: fmtCompact(receivableStats.total_receivable || receivableStats.total_pending || receivableStats.totalPending || 0), color: 'text-red-600 dark:text-red-400', bg: 'bg-red-50 border-red-100 dark:bg-red-900/30 dark:border-red-800/40' },
+                { label: 'Facturas abiertas', value: fmtNum(receivableStats.total_invoices || receivableStats.pending_count || receivableStats.pendingCount || 0), color: 'text-orange-600 dark:text-orange-400', bg: 'bg-orange-50 border-orange-100 dark:bg-orange-900/30 dark:border-orange-800/40' },
+                { label: 'Clientes con saldo', value: fmtNum(receivableStats.total_customers || 0), color: 'text-green-600 dark:text-green-400', bg: 'bg-green-50 border-green-100 dark:bg-green-900/30 dark:border-green-800/40' },
+                { label: 'Vencido', value: fmtCompact(receivableStats.total_overdue || receivableStats.overdue || receivableStats.totalOverdue || 0), color: 'text-rose-700 dark:text-rose-400', bg: 'bg-rose-50 border-rose-100 dark:bg-rose-900/30 dark:border-rose-800/40' },
               ].map(({ label, value, color, bg }) => (
                 <div key={label} className={`rounded-xl p-3 border ${bg}`}>
                   <p className={`text-xl font-bold ${color}`}>{value}</p>
-                  <p className="text-xs text-gray-500 mt-0.5">{label}</p>
+                  <p className="text-xs text-gray-500 mt-0.5 dark:text-gray-500">{label}</p>
                 </div>
               ))}
             </div>
@@ -397,8 +397,8 @@ function DashboardPage() {
         )}
 
         {/* Accesos rápidos */}
-        <div className="bg-white rounded-xl p-4 sm:p-5 shadow-sm border border-gray-100">
-          <h3 className="text-sm sm:text-base font-semibold text-gray-800 mb-4 flex items-center gap-2"><BoltIcon className="w-4 h-4 text-gray-500" /> Accesos Rápidos</h3>
+        <div className="bg-white rounded-xl p-4 sm:p-5 shadow-sm border border-gray-100 dark:bg-graphite dark:border-white/10">
+          <h3 className="text-sm sm:text-base font-semibold text-gray-800 mb-4 flex items-center gap-2 dark:text-gray-100"><BoltIcon className="w-4 h-4 text-gray-500 dark:text-gray-500" /> Accesos Rápidos</h3>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
             {[
               { icon: <ShoppingCartIcon className="w-7 h-7" />, label: 'Nueva Venta',   path: '/sales/new',               bg: 'bg-blue-50   hover:bg-blue-100',   text: 'text-blue-900'   },
@@ -411,7 +411,7 @@ function DashboardPage() {
               <button
                 key={path}
                 onClick={() => navigate(path)}
-                className={`p-3 sm:p-4 ${bg} border border-gray-100 rounded-xl hover:shadow-md transition-all text-center group`}
+                className={`p-3 sm:p-4 ${bg} border border-gray-100 dark:border-white/10 rounded-xl hover:shadow-md transition-all text-center group`}
               >
                 <div className={`flex justify-center mb-1.5 group-hover:scale-110 transition-transform ${text}`}>{icon}</div>
                 <div className={`text-xs sm:text-sm font-semibold ${text}`}>{label}</div>
@@ -422,14 +422,14 @@ function DashboardPage() {
 
         {/* Stock bajo */}
         {inventoryKPI.low_stock_count > 0 && (
-          <div className="bg-white rounded-xl p-4 sm:p-5 shadow-sm border border-yellow-200">
+          <div className="bg-white rounded-xl p-4 sm:p-5 shadow-sm border border-yellow-200 dark:bg-graphite dark:border-yellow-800/40">
             <div className="flex items-center justify-between flex-wrap gap-2">
-              <h3 className="text-sm sm:text-base font-semibold text-gray-800 flex items-center gap-2"><ExclamationTriangleIcon className="w-4 h-4 text-yellow-500" /> Productos con Stock Bajo</h3>
-              <span className="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-semibold">
+              <h3 className="text-sm sm:text-base font-semibold text-gray-800 flex items-center gap-2 dark:text-gray-100"><ExclamationTriangleIcon className="w-4 h-4 text-yellow-500 dark:text-yellow-400" /> Productos con Stock Bajo</h3>
+              <span className="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-semibold dark:bg-yellow-900/30 dark:text-yellow-300">
                 {inventoryKPI.low_stock_count} productos
               </span>
             </div>
-            <button onClick={() => navigate('/products?filter=low_stock')} className="mt-2 text-indigo-600 hover:text-indigo-700 text-sm font-medium">
+            <button onClick={() => navigate('/products?filter=low_stock')} className="mt-2 text-indigo-600 hover:text-indigo-700 text-sm font-medium dark:text-indigo-400 dark:hover:text-indigo-300">
               Ver productos →
             </button>
           </div>

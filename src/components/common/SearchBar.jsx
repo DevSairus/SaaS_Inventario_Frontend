@@ -24,7 +24,7 @@ function SearchBar({ onSearch, placeholder = "Buscar...", delay = 300 }) {
     <div className="relative">
       <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
         <svg 
-          className="w-5 h-5 text-gray-400" 
+          className="w-5 h-5 text-gray-400 dark:text-gray-500"
           fill="none" 
           stroke="currentColor" 
           viewBox="0 0 24 24"
@@ -43,13 +43,13 @@ function SearchBar({ onSearch, placeholder = "Buscar...", delay = 300 }) {
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}
         placeholder={placeholder}
-        className="w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-200 focus:border-purple-500 transition-all"
+        className="w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-200 focus:border-purple-500 transition-all dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100 dark:placeholder-gray-600 dark:focus:ring-purple-900/40"
       />
 
       {searchTerm && (
         <button
           onClick={handleClear}
-          className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600"
+          className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-400"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

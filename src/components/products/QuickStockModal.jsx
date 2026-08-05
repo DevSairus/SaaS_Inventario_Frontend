@@ -102,20 +102,20 @@ export default function QuickStockModal({ product, user, onClose, onSuccess }) {
       {/* Overlay */}
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
 
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
+      <div className="relative bg-white dark:bg-graphite rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
 
         {/* Header */}
-        <div className="px-6 py-4 border-b border-gray-100 flex items-start gap-3">
-          <div className="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center shrink-0 mt-0.5">
-            <Package size={18} className="text-blue-600" />
+        <div className="px-6 py-4 border-b border-gray-100 dark:border-white/10 flex items-start gap-3">
+          <div className="w-9 h-9 rounded-lg bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center shrink-0 mt-0.5">
+            <Package size={18} className="text-blue-600 dark:text-blue-300" />
           </div>
           <div className="flex-1 min-w-0">
-            <h2 className="text-base font-semibold text-gray-900">Ajuste rápido de stock</h2>
-            <p className="text-sm text-gray-500 truncate">{product.name}</p>
+            <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">Ajuste rápido de stock</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-500 truncate">{product.name}</p>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+            className="p-1.5 rounded-lg text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
               <path d="M18 6L6 18M6 6l12 12" />
@@ -126,15 +126,15 @@ export default function QuickStockModal({ product, user, onClose, onSuccess }) {
         <div className="px-6 py-4 space-y-4 max-h-[70vh] overflow-y-auto">
 
           {/* Stock actual + proyección */}
-          <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+          <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-graphite-2 rounded-xl">
             <div className="text-center flex-1">
-              <p className="text-xs text-gray-500 mb-0.5">Stock actual</p>
-              <p className="text-xl font-bold text-gray-900">{currentStock} <span className="text-sm font-normal text-gray-500">{product.unit}</span></p>
+              <p className="text-xs text-gray-500 dark:text-gray-500 mb-0.5">Stock actual</p>
+              <p className="text-xl font-bold text-gray-900 dark:text-gray-100">{currentStock} <span className="text-sm font-normal text-gray-500 dark:text-gray-500">{product.unit}</span></p>
             </div>
-            <div className="text-gray-300 text-xl">→</div>
+            <div className="text-gray-300 dark:text-gray-600 text-xl">→</div>
             <div className="text-center flex-1">
-              <p className="text-xs text-gray-500 mb-0.5">Stock resultante</p>
-              <p className={`text-xl font-bold ${projectedStock < 0 ? 'text-red-600' : projectedStock === 0 ? 'text-orange-500' : 'text-green-600'}`}>
+              <p className="text-xs text-gray-500 dark:text-gray-500 mb-0.5">Stock resultante</p>
+              <p className={`text-xl font-bold ${projectedStock < 0 ? 'text-red-600 dark:text-red-400' : projectedStock === 0 ? 'text-orange-500 dark:text-orange-400' : 'text-green-600 dark:text-green-400'}`}>
                 {qty > 0 ? projectedStock : '—'} {qty > 0 && <span className="text-sm font-normal">{product.unit}</span>}
               </p>
             </div>
@@ -142,15 +142,15 @@ export default function QuickStockModal({ product, user, onClose, onSuccess }) {
 
           {/* Tipo de ajuste */}
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-2">Tipo de ajuste *</label>
+            <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">Tipo de ajuste *</label>
             <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
                 onClick={() => handleTypeChange('entrada')}
                 className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl border-2 text-sm font-medium transition-all ${
                   type === 'entrada'
-                    ? 'border-green-500 bg-green-50 text-green-700'
-                    : 'border-gray-200 text-gray-500 hover:border-gray-300'
+                    ? 'border-green-500 bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300 dark:border-green-700'
+                    : 'border-gray-200 dark:border-white/10 text-gray-500 dark:text-gray-500 hover:border-gray-300 dark:hover:border-white/20'
                 }`}
               >
                 <ArrowUpCircle size={16} /> Entrada (+)
@@ -160,8 +160,8 @@ export default function QuickStockModal({ product, user, onClose, onSuccess }) {
                 onClick={() => handleTypeChange('salida')}
                 className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl border-2 text-sm font-medium transition-all ${
                   type === 'salida'
-                    ? 'border-red-500 bg-red-50 text-red-700'
-                    : 'border-gray-200 text-gray-500 hover:border-gray-300'
+                    ? 'border-red-500 bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300 dark:border-red-700'
+                    : 'border-gray-200 dark:border-white/10 text-gray-500 dark:text-gray-500 hover:border-gray-300 dark:hover:border-white/20'
                 }`}
               >
                 <ArrowDownCircle size={16} /> Salida (−)
@@ -172,7 +172,7 @@ export default function QuickStockModal({ product, user, onClose, onSuccess }) {
           {/* Cantidad */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Cantidad *</label>
+              <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Cantidad *</label>
               <input
                 type="number"
                 min="0.01"
@@ -180,15 +180,15 @@ export default function QuickStockModal({ product, user, onClose, onSuccess }) {
                 value={quantity}
                 onChange={e => setQuantity(e.target.value)}
                 placeholder="0"
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full border border-gray-200 dark:border-white/10 dark:bg-graphite-2 dark:text-gray-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 autoFocus
               />
               {type === 'salida' && qty > 0 && projectedStock < 0 && !product.allow_negative_stock && (
-                <p className="text-xs text-red-500 mt-1">Insuficiente stock disponible</p>
+                <p className="text-xs text-red-500 dark:text-red-400 mt-1">Insuficiente stock disponible</p>
               )}
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">
+              <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
                 <span className="flex items-center gap-1"><FileText size={11} /> N° Factura / Documento</span>
               </label>
               <input
@@ -196,18 +196,18 @@ export default function QuickStockModal({ product, user, onClose, onSuccess }) {
                 value={invoice}
                 onChange={e => setInvoice(e.target.value)}
                 placeholder="FAC-0001, REM-0012…"
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full border border-gray-200 dark:border-white/10 dark:bg-graphite-2 dark:text-gray-100 dark:placeholder-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
           </div>
 
           {/* Motivo */}
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Motivo *</label>
+            <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Motivo *</label>
             <select
               value={reason}
               onChange={e => setReason(e.target.value)}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+              className="w-full border border-gray-200 dark:border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-graphite-2 dark:text-gray-100"
             >
               {reasons.map(r => (
                 <option key={r.value} value={r.value}>{r.label}</option>
@@ -217,35 +217,35 @@ export default function QuickStockModal({ product, user, onClose, onSuccess }) {
 
           {/* Notas opcionales */}
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Notas adicionales <span className="text-gray-400">(opcional)</span></label>
+            <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Notas adicionales <span className="text-gray-400 dark:text-gray-500">(opcional)</span></label>
             <textarea
               value={notes}
               onChange={e => setNotes(e.target.value)}
               rows={2}
               placeholder="Observaciones del ajuste…"
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+              className="w-full border border-gray-200 dark:border-white/10 dark:bg-graphite-2 dark:text-gray-100 dark:placeholder-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
             />
           </div>
 
           {/* Responsable */}
-          <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-xl">
-            <User size={14} className="text-gray-400 shrink-0" />
+          <div className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-graphite-2 rounded-xl">
+            <User size={14} className="text-gray-400 dark:text-gray-500 shrink-0" />
             <div>
-              <p className="text-xs text-gray-500">Responsable del ajuste</p>
-              <p className="text-sm font-medium text-gray-800">{userName}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-500">Responsable del ajuste</p>
+              <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{userName}</p>
             </div>
-            <span className="ml-auto text-xs text-gray-400 bg-white border border-gray-200 px-2 py-0.5 rounded-full capitalize">
+            <span className="ml-auto text-xs text-gray-400 dark:text-gray-500 bg-white dark:bg-graphite-3 border border-gray-200 dark:border-white/10 px-2 py-0.5 rounded-full capitalize">
               {user?.role ?? 'usuario'}
             </span>
           </div>
 
           {/* Advertencia + checkbox */}
-          <div className="border border-amber-200 bg-amber-50 rounded-xl p-3 space-y-2">
+          <div className="border border-amber-200 dark:border-amber-800/40 bg-amber-50 dark:bg-amber-900/30 rounded-xl p-3 space-y-2">
             <div className="flex items-start gap-2">
-              <AlertTriangle size={15} className="text-amber-600 shrink-0 mt-0.5" />
-              <p className="text-xs font-semibold text-amber-800">Acción irreversible — lee antes de confirmar</p>
+              <AlertTriangle size={15} className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+              <p className="text-xs font-semibold text-amber-800 dark:text-amber-300">Acción irreversible — lee antes de confirmar</p>
             </div>
-            <ul className="text-xs text-amber-700 space-y-0.5 pl-5 list-disc">
+            <ul className="text-xs text-amber-700 dark:text-amber-300 space-y-0.5 pl-5 list-disc">
               <li>Modifica el stock inmediatamente en el kardex</li>
               <li>Afecta el valor total del inventario y las estadísticas</li>
               <li>Queda registrado con tu usuario, IP y fecha exacta</li>
@@ -258,7 +258,7 @@ export default function QuickStockModal({ product, user, onClose, onSuccess }) {
                 onChange={e => setAccepted(e.target.checked)}
                 className="mt-0.5 accent-amber-600 shrink-0"
               />
-              <span className="text-xs text-amber-800 font-medium leading-snug">
+              <span className="text-xs text-amber-800 dark:text-amber-300 font-medium leading-snug">
                 Entiendo el impacto de esta acción y me hago responsable de la información suministrada.
               </span>
             </label>
@@ -267,12 +267,12 @@ export default function QuickStockModal({ product, user, onClose, onSuccess }) {
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-gray-100 flex gap-3">
+        <div className="px-6 py-4 border-t border-gray-100 dark:border-white/10 flex gap-3">
           <button
             type="button"
             onClick={onClose}
             disabled={saving}
-            className="flex-1 border border-gray-200 text-gray-600 py-2.5 rounded-xl text-sm font-medium hover:bg-gray-50 transition disabled:opacity-50"
+            className="flex-1 border border-gray-200 dark:border-white/10 text-gray-600 dark:text-gray-400 py-2.5 rounded-xl text-sm font-medium hover:bg-gray-50 dark:hover:bg-white/5 transition disabled:opacity-50"
           >
             Cancelar
           </button>

@@ -250,21 +250,21 @@ export default function BarcodePrintModal({ isOpen, onClose, product, onBarcodeG
 
   return (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl w-full max-w-xl shadow-2xl flex flex-col max-h-[90vh]">
+      <div className="bg-white dark:bg-graphite rounded-2xl w-full max-w-xl shadow-2xl flex flex-col max-h-[90vh]">
 
         {/* Header fijo */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 shrink-0">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-white/10 shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-blue-100 rounded-xl flex items-center justify-center">
-              <Package size={18} className="text-blue-600" />
+            <div className="w-9 h-9 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center">
+              <Package size={18} className="text-blue-600 dark:text-blue-300" />
             </div>
             <div>
-              <h2 className="font-bold text-gray-900 text-sm">Imprimir etiquetas</h2>
-              <p className="text-xs text-gray-500 truncate max-w-[240px]">{product.name}</p>
+              <h2 className="font-bold text-gray-900 dark:text-gray-100 text-sm">Imprimir etiquetas</h2>
+              <p className="text-xs text-gray-500 dark:text-gray-500 truncate max-w-[240px]">{product.name}</p>
             </div>
           </div>
-          <button onClick={handleClose} className="p-1.5 hover:bg-gray-100 rounded-lg">
-            <X size={18} className="text-gray-500" />
+          <button onClick={handleClose} className="p-1.5 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg">
+            <X size={18} className="text-gray-500 dark:text-gray-400" />
           </button>
         </div>
 
@@ -277,7 +277,7 @@ export default function BarcodePrintModal({ isOpen, onClose, product, onBarcodeG
 
               {/* Tamaño */}
               <div>
-                <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">
+                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide mb-2">
                   Tamaño de etiqueta
                 </label>
                 <div className="grid grid-cols-2 gap-1.5">
@@ -287,8 +287,8 @@ export default function BarcodePrintModal({ isOpen, onClose, product, onBarcodeG
                       onClick={() => setSelectedSize(size)}
                       className={`px-3 py-2 rounded-lg border text-xs font-medium transition ${
                         selectedSize.id === size.id
-                          ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-sm'
-                          : 'border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50'
+                          ? 'border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700 shadow-sm'
+                          : 'border-gray-200 dark:border-white/10 text-gray-600 dark:text-gray-400 hover:border-gray-300 hover:bg-gray-50 dark:hover:bg-white/5'
                       }`}
                     >
                       {size.label}
@@ -299,34 +299,34 @@ export default function BarcodePrintModal({ isOpen, onClose, product, onBarcodeG
 
               {/* Cantidad */}
               <div>
-                <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">
+                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide mb-2">
                   Cantidad de etiquetas
                 </label>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => setQuantity(q => Math.max(1, q - 1))}
-                    className="w-9 h-9 rounded-lg border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-50 font-bold text-lg"
+                    className="w-9 h-9 rounded-lg border border-gray-200 dark:border-white/10 flex items-center justify-center text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5 font-bold text-lg"
                   >−</button>
                   <input
                     type="number"
                     min="1" max="200"
                     value={quantity}
                     onChange={e => setQuantity(Math.max(1, Math.min(200, parseInt(e.target.value) || 1)))}
-                    className="w-16 text-center border border-gray-200 rounded-lg py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    className="w-16 text-center border border-gray-200 dark:border-white/10 dark:bg-graphite-2 dark:text-gray-100 rounded-lg py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-400"
                   />
                   <button
                     onClick={() => setQuantity(q => Math.min(200, q + 1))}
-                    className="w-9 h-9 rounded-lg border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-50 font-bold text-lg"
+                    className="w-9 h-9 rounded-lg border border-gray-200 dark:border-white/10 flex items-center justify-center text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5 font-bold text-lg"
                   >+</button>
                 </div>
               </div>
 
               {/* Contenido */}
               <div>
-                <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">
+                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide mb-2">
                   Contenido de la etiqueta
                 </label>
-                <div className="space-y-2 bg-gray-50 rounded-xl p-3">
+                <div className="space-y-2 bg-gray-50 dark:bg-graphite-2 rounded-xl p-3">
                   {[
                     { value: showName, set: setShowName, label: 'Nombre del producto' },
                     { value: showSku,  set: setShowSku,  label: 'SKU / Referencia'    },
@@ -338,7 +338,7 @@ export default function BarcodePrintModal({ isOpen, onClose, product, onBarcodeG
                         onChange={e => set(e.target.checked)}
                         className="w-4 h-4 rounded text-blue-600 accent-blue-600"
                       />
-                      <span className="text-sm text-gray-700">{label}</span>
+                      <span className="text-sm text-gray-700 dark:text-gray-300">{label}</span>
                     </label>
                   ))}
                 </div>
@@ -346,10 +346,10 @@ export default function BarcodePrintModal({ isOpen, onClose, product, onBarcodeG
 
               {/* Generar código si no tiene */}
               {!hasBarcode && (
-                <div className="rounded-xl border border-orange-200 bg-orange-50 p-3 space-y-2">
+                <div className="rounded-xl border border-orange-200 dark:border-orange-800/40 bg-orange-50 dark:bg-orange-900/30 p-3 space-y-2">
                   <div className="flex gap-2 items-start">
-                    <AlertCircle size={14} className="text-orange-500 shrink-0 mt-0.5" />
-                    <p className="text-xs text-orange-700 leading-relaxed">
+                    <AlertCircle size={14} className="text-orange-500 dark:text-orange-400 shrink-0 mt-0.5" />
+                    <p className="text-xs text-orange-700 dark:text-orange-300 leading-relaxed">
                       Este producto <strong>no tiene código de barras</strong>. Genera uno automáticamente (EAN-13) y se guardará en el producto.
                     </p>
                   </div>
@@ -362,7 +362,7 @@ export default function BarcodePrintModal({ isOpen, onClose, product, onBarcodeG
                     {generating ? 'Generando...' : 'Generar y guardar código de barras'}
                   </button>
                   {generateStatus === 'error' && (
-                    <p className="text-xs text-red-600 flex items-center gap-1">
+                    <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1">
                       <AlertCircle size={11} /> {generateMessage}
                     </p>
                   )}
@@ -370,16 +370,16 @@ export default function BarcodePrintModal({ isOpen, onClose, product, onBarcodeG
               )}
 
               {generateStatus === 'success' && (
-                <div className="flex gap-2 items-center bg-green-50 border border-green-200 rounded-xl p-3">
-                  <CheckCircle size={14} className="text-green-600 shrink-0" />
-                  <p className="text-xs text-green-700">{generateMessage}</p>
+                <div className="flex gap-2 items-center bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800/40 rounded-xl p-3">
+                  <CheckCircle size={14} className="text-green-600 dark:text-green-400 shrink-0" />
+                  <p className="text-xs text-green-700 dark:text-green-300">{generateMessage}</p>
                 </div>
               )}
 
               {/* Tip */}
-              <div className="flex gap-2 bg-amber-50 border border-amber-200 rounded-xl p-3">
-                <Info size={14} className="text-amber-600 shrink-0 mt-0.5" />
-                <p className="text-xs text-amber-700 leading-relaxed">
+              <div className="flex gap-2 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800/40 rounded-xl p-3">
+                <Info size={14} className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                <p className="text-xs text-amber-700 dark:text-amber-300 leading-relaxed">
                   Configura el tamaño de papel en tu impresora <strong>antes de imprimir</strong> para que coincida con las etiquetas.
                 </p>
               </div>
@@ -387,10 +387,10 @@ export default function BarcodePrintModal({ isOpen, onClose, product, onBarcodeG
 
             {/* Columna derecha — Vista previa */}
             <div>
-              <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">
+              <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide mb-2">
                 Vista previa
               </label>
-              <div className="bg-gray-100 rounded-xl p-5 flex flex-col items-center justify-center gap-3 min-h-[200px]">
+              <div className="bg-gray-100 dark:bg-graphite-2 rounded-xl p-5 flex flex-col items-center justify-center gap-3 min-h-[200px]">
                 <LabelPreview
                   barcode={currentBarcode}
                   product={product}
@@ -398,7 +398,7 @@ export default function BarcodePrintModal({ isOpen, onClose, product, onBarcodeG
                   showName={showName}
                   showSku={showSku}
                 />
-                <p className="text-xs text-gray-400">
+                <p className="text-xs text-gray-400 dark:text-gray-500">
                   {hasBarcode ? `Código: ${currentBarcode}` : 'Sin código de barras asignado'}
                 </p>
               </div>
@@ -406,13 +406,13 @@ export default function BarcodePrintModal({ isOpen, onClose, product, onBarcodeG
               {/* Info del producto */}
               <div className="mt-3 space-y-1">
                 <div className="flex justify-between text-xs">
-                  <span className="text-gray-500">SKU:</span>
-                  <span className="font-medium text-gray-800">{product.sku}</span>
+                  <span className="text-gray-500 dark:text-gray-500">SKU:</span>
+                  <span className="font-medium text-gray-800 dark:text-gray-200">{product.sku}</span>
                 </div>
                 {currentBarcode && (
                   <div className="flex justify-between text-xs">
-                    <span className="text-gray-500">Cód. barras:</span>
-                    <span className="font-medium text-gray-800">{currentBarcode}</span>
+                    <span className="text-gray-500 dark:text-gray-500">Cód. barras:</span>
+                    <span className="font-medium text-gray-800 dark:text-gray-200">{currentBarcode}</span>
                   </div>
                 )}
               </div>
@@ -422,10 +422,10 @@ export default function BarcodePrintModal({ isOpen, onClose, product, onBarcodeG
         </div>
 
         {/* Footer fijo */}
-        <div className="flex gap-3 px-5 py-4 border-t border-gray-100 bg-gray-50 shrink-0">
+        <div className="flex gap-3 px-5 py-4 border-t border-gray-100 dark:border-white/10 bg-gray-50 dark:bg-graphite-2 shrink-0">
           <button
             onClick={handleClose}
-            className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-white transition bg-white"
+            className="flex-1 py-2.5 border border-gray-200 dark:border-white/10 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-white dark:hover:bg-graphite-3 transition bg-white dark:bg-graphite"
           >
             Cancelar
           </button>

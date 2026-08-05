@@ -90,9 +90,9 @@ const TenantDetail = () => {
   if (error) {
     return (
       <div className="text-center py-12">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-md mx-auto">
-          <h3 className="text-lg font-semibold text-red-900 mb-2">Error</h3>
-          <p className="text-red-700 mb-4">{error}</p>
+        <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800/40 rounded-lg p-6 max-w-md mx-auto">
+          <h3 className="text-lg font-semibold text-red-900 dark:text-red-300 mb-2">Error</h3>
+          <p className="text-red-700 dark:text-red-300 mb-4">{error}</p>
           <Button
             onClick={() => navigate('/superadmin/tenants')}
             variant="outline"
@@ -107,11 +107,11 @@ const TenantDetail = () => {
   if (!tenant) {
     return (
       <div className="text-center py-12">
-        <div className="bg-orange-50 border border-orange-200 rounded-lg p-6 max-w-md mx-auto">
-          <h3 className="text-lg font-semibold text-orange-900 mb-2">
+        <div className="bg-orange-50 dark:bg-orange-900/30 border border-orange-200 dark:border-orange-800/40 rounded-lg p-6 max-w-md mx-auto">
+          <h3 className="text-lg font-semibold text-orange-900 dark:text-orange-300 mb-2">
             Empresa no encontrada
           </h3>
-          <p className="text-orange-700 mb-4">ID: {id}</p>
+          <p className="text-orange-700 dark:text-orange-300 mb-4">ID: {id}</p>
           <Button
             onClick={() => navigate('/superadmin/tenants')}
             variant="outline"
@@ -150,10 +150,10 @@ const TenantDetail = () => {
 
         <div className="flex items-start justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
               {tenant.company_name}
             </h1>
-            <p className="text-gray-600 mt-1">{tenant.email}</p>
+            <p className="text-gray-600 dark:text-gray-400 mt-1">{tenant.email}</p>
           </div>
           <div className="flex items-center gap-3">
             <Badge color={tenant.is_active ? 'green' : 'red'}>
@@ -198,58 +198,58 @@ const TenantDetail = () => {
         <Card title="Información General">
           <div className="space-y-3">
             <div className="flex items-center gap-3">
-              <Building className="w-5 h-5 text-gray-400" />
+              <Building className="w-5 h-5 text-gray-400 dark:text-gray-500" />
               <div>
-                <p className="text-sm text-gray-600">Razón Social</p>
-                <p className="font-medium text-gray-900">
+                <p className="text-sm text-gray-600 dark:text-gray-400">Razón Social</p>
+                <p className="font-medium text-gray-900 dark:text-gray-100">
                   {tenant.business_name || 'N/A'}
                 </p>
               </div>
             </div>
 
             <div className="flex items-center gap-3">
-              <FileText className="w-5 h-5 text-gray-400" />
+              <FileText className="w-5 h-5 text-gray-400 dark:text-gray-500" />
               <div>
-                <p className="text-sm text-gray-600">NIT</p>
-                <p className="font-medium text-gray-900">
+                <p className="text-sm text-gray-600 dark:text-gray-400">NIT</p>
+                <p className="font-medium text-gray-900 dark:text-gray-100">
                   {tenant.tax_id || 'N/A'}
                 </p>
               </div>
             </div>
 
             <div className="flex items-center gap-3">
-              <Mail className="w-5 h-5 text-gray-400" />
+              <Mail className="w-5 h-5 text-gray-400 dark:text-gray-500" />
               <div>
-                <p className="text-sm text-gray-600">Email</p>
-                <p className="font-medium text-gray-900">{tenant.email}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Email</p>
+                <p className="font-medium text-gray-900 dark:text-gray-100">{tenant.email}</p>
               </div>
             </div>
 
             <div className="flex items-center gap-3">
-              <Phone className="w-5 h-5 text-gray-400" />
+              <Phone className="w-5 h-5 text-gray-400 dark:text-gray-500" />
               <div>
-                <p className="text-sm text-gray-600">Teléfono</p>
-                <p className="font-medium text-gray-900">
+                <p className="text-sm text-gray-600 dark:text-gray-400">Teléfono</p>
+                <p className="font-medium text-gray-900 dark:text-gray-100">
                   {tenant.phone || 'N/A'}
                 </p>
               </div>
             </div>
 
             <div className="flex items-center gap-3">
-              <MapPin className="w-5 h-5 text-gray-400" />
+              <MapPin className="w-5 h-5 text-gray-400 dark:text-gray-500" />
               <div>
-                <p className="text-sm text-gray-600">Dirección</p>
-                <p className="font-medium text-gray-900">
+                <p className="text-sm text-gray-600 dark:text-gray-400">Dirección</p>
+                <p className="font-medium text-gray-900 dark:text-gray-100">
                   {tenant.address || 'N/A'}
                 </p>
               </div>
             </div>
 
             <div className="flex items-center gap-3">
-              <Calendar className="w-5 h-5 text-gray-400" />
+              <Calendar className="w-5 h-5 text-gray-400 dark:text-gray-500" />
               <div>
-                <p className="text-sm text-gray-600">Creado</p>
-                <p className="font-medium text-gray-900">
+                <p className="text-sm text-gray-600 dark:text-gray-400">Creado</p>
+                <p className="font-medium text-gray-900 dark:text-gray-100">
                   {new Date(tenant.created_at).toLocaleDateString('es-ES')}
                 </p>
               </div>
@@ -261,26 +261,26 @@ const TenantDetail = () => {
         <Card title="Plan y Suscripción">
           <div className="space-y-4">
             {/* Información del Plan */}
-            <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
+            <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg border border-blue-200 dark:border-blue-800/40">
               <div className="flex items-center justify-between mb-3">
-                <span className="text-sm font-medium text-gray-700">Plan Actual</span>
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Plan Actual</span>
                 <Badge color="blue" size="lg">
                   {tenant.subscription_plan?.name || tenant.plan?.toUpperCase() || 'FREE'}
                 </Badge>
               </div>
 
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-gray-700">Estado Suscripción</span>
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Estado Suscripción</span>
                 <Badge color={getStatusColor(tenant.subscription_status)}>
                   {tenant.subscription_status?.toUpperCase() || 'TRIAL'}
                 </Badge>
               </div>
 
-              <div className="mt-3 pt-3 border-t border-blue-200">
-                <span className="text-sm font-medium text-gray-700 block mb-2">Módulos habilitados</span>
+              <div className="mt-3 pt-3 border-t border-blue-200 dark:border-blue-800/40">
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-2">Módulos habilitados</span>
                 <div className="flex flex-wrap gap-1">
                   {(tenant.effective_modules || []).length === 0 && (
-                    <span className="text-sm text-gray-400">Sin módulos habilitados</span>
+                    <span className="text-sm text-gray-400 dark:text-gray-500">Sin módulos habilitados</span>
                   )}
                   {(tenant.effective_modules || []).map((key) => (
                     <Badge key={key} color="green">
@@ -292,25 +292,25 @@ const TenantDetail = () => {
 
               {/* Mostrar información de la suscripción si existe */}
               {tenant.subscription && (
-                <div className="mt-4 pt-4 border-t border-blue-200">
+                <div className="mt-4 pt-4 border-t border-blue-200 dark:border-blue-800/40">
                   <div className="grid grid-cols-2 gap-3 text-sm">
                     <div>
-                      <p className="text-gray-600">Ciclo de Facturación</p>
-                      <p className="font-medium text-gray-900">
+                      <p className="text-gray-600 dark:text-gray-400">Ciclo de Facturación</p>
+                      <p className="font-medium text-gray-900 dark:text-gray-100">
                         {tenant.subscription.billing_cycle === 'monthly' ? 'Mensual' : 'Anual'}
                       </p>
                     </div>
                     <div>
-                      <p className="text-gray-600">Monto</p>
-                      <p className="font-medium text-gray-900">
+                      <p className="text-gray-600 dark:text-gray-400">Monto</p>
+                      <p className="font-medium text-gray-900 dark:text-gray-100">
                         ${Number(tenant.subscription.amount).toLocaleString('es-CO')} COP
                       </p>
                     </div>
                     {tenant.subscription.next_billing_date && (
                       <>
                         <div>
-                          <p className="text-gray-600">Próximo Cobro</p>
-                          <p className="font-medium text-gray-900">
+                          <p className="text-gray-600 dark:text-gray-400">Próximo Cobro</p>
+                          <p className="font-medium text-gray-900 dark:text-gray-100">
                             {new Date(tenant.subscription.next_billing_date).toLocaleDateString('es-ES')}
                           </p>
                         </div>
@@ -323,10 +323,10 @@ const TenantDetail = () => {
 
             {/* Trial Info */}
             {tenant.trial_ends_at && (
-              <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+              <div className="p-3 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800/40 rounded-lg">
                 <div className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-amber-600" />
-                  <p className="text-sm text-amber-800">
+                  <Calendar className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                  <p className="text-sm text-amber-800 dark:text-amber-300">
                     <strong>Trial termina:</strong>{' '}
                     {new Date(tenant.trial_ends_at).toLocaleDateString('es-ES', {
                       year: 'numeric',
@@ -339,23 +339,23 @@ const TenantDetail = () => {
             )}
 
             {/* Límites del Plan */}
-            <div className="pt-4 border-t space-y-3">
-              <p className="text-sm font-medium text-gray-700 mb-3">Límites del Plan</p>
-              
+            <div className="pt-4 border-t dark:border-white/10 space-y-3">
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Límites del Plan</p>
+
               <div className="space-y-2">
                 {/* Usuarios */}
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Usuarios</span>
+                  <span className="text-sm text-gray-600 dark:text-gray-400">Usuarios</span>
                   <div className="flex items-center gap-2">
-                    <div className="w-32 bg-gray-200 rounded-full h-2">
-                      <div 
+                    <div className="w-32 bg-gray-200 dark:bg-white/10 rounded-full h-2">
+                      <div
                         className="bg-blue-600 h-2 rounded-full transition-all"
-                        style={{ 
-                          width: `${Math.min(100, ((stats?.totalUsers || 0) / (tenant.max_users || 1)) * 100)}%` 
+                        style={{
+                          width: `${Math.min(100, ((stats?.totalUsers || 0) / (tenant.max_users || 1)) * 100)}%`
                         }}
                       ></div>
                     </div>
-                    <span className="font-medium text-gray-900 text-sm w-20 text-right">
+                    <span className="font-medium text-gray-900 dark:text-gray-100 text-sm w-20 text-right">
                       {stats?.totalUsers || 0} / {tenant.max_users || 'N/A'}
                     </span>
                   </div>
@@ -363,17 +363,17 @@ const TenantDetail = () => {
 
                 {/* Facturas */}
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Facturas/Mes</span>
+                  <span className="text-sm text-gray-600 dark:text-gray-400">Facturas/Mes</span>
                   <div className="flex items-center gap-2">
-                    <div className="w-32 bg-gray-200 rounded-full h-2">
-                      <div 
+                    <div className="w-32 bg-gray-200 dark:bg-white/10 rounded-full h-2">
+                      <div
                         className="bg-green-600 h-2 rounded-full transition-all"
-                        style={{ 
-                          width: `${Math.min(100, ((stats?.totalInvoices || 0) / (tenant.max_invoices_per_month || 1)) * 100)}%` 
+                        style={{
+                          width: `${Math.min(100, ((stats?.totalInvoices || 0) / (tenant.max_invoices_per_month || 1)) * 100)}%`
                         }}
                       ></div>
                     </div>
-                    <span className="font-medium text-gray-900 text-sm w-20 text-right">
+                    <span className="font-medium text-gray-900 dark:text-gray-100 text-sm w-20 text-right">
                       {stats?.totalInvoices || 0} / {tenant.max_invoices_per_month || 'N/A'}
                     </span>
                   </div>
@@ -381,9 +381,9 @@ const TenantDetail = () => {
 
                 {/* Sedes */}
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Sedes</span>
+                  <span className="text-sm text-gray-600 dark:text-gray-400">Sedes</span>
                   <div className="flex items-center gap-2">
-                    <div className="w-32 bg-gray-200 rounded-full h-2">
+                    <div className="w-32 bg-gray-200 dark:bg-white/10 rounded-full h-2">
                       <div
                         className="bg-purple-600 h-2 rounded-full transition-all"
                         style={{
@@ -393,14 +393,14 @@ const TenantDetail = () => {
                         }}
                       ></div>
                     </div>
-                    <span className="font-medium text-gray-900 text-sm w-20 text-right">
+                    <span className="font-medium text-gray-900 dark:text-gray-100 text-sm w-20 text-right">
                       {stats?.totalBranches || 0} / {tenant.max_branches === -1 ? '∞' : (tenant.max_branches ?? 'N/A')}
                     </span>
                   </div>
                 </div>
 
                 {tenant.allow_extra_branches && tenant.max_branches !== -1 && (stats?.totalBranches || 0) > tenant.max_branches && (
-                  <div className="p-2.5 bg-purple-50 border border-purple-200 rounded-lg text-xs text-purple-800">
+                  <div className="p-2.5 bg-purple-50 dark:bg-purple-900/30 border border-purple-200 dark:border-purple-800/40 rounded-lg text-xs text-purple-800 dark:text-purple-300">
                     {(stats.totalBranches - tenant.max_branches)} sede(s) adicional(es) ×{' '}
                     ${Number(tenant.extra_branch_price || 0).toLocaleString('es-CO')} ={' '}
                     <strong>${((stats.totalBranches - tenant.max_branches) * (tenant.extra_branch_price || 0)).toLocaleString('es-CO')} sugerido este período</strong>
@@ -415,24 +415,24 @@ const TenantDetail = () => {
       {/* Usuarios */}
       <Card title="Usuarios Recientes">
         {users.length === 0 ? (
-          <p className="text-gray-600 text-center py-8">No hay usuarios</p>
+          <p className="text-gray-600 dark:text-gray-400 text-center py-8">No hay usuarios</p>
         ) : (
           <>
             <div className="space-y-3">
               {users.map((user) => (
                 <div
                   key={user.id}
-                  className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50"
+                  className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-white/5"
                 >
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center">
                       <Users className="w-5 h-5 text-primary-600" />
                     </div>
                     <div>
-                      <p className="font-medium text-gray-900">
+                      <p className="font-medium text-gray-900 dark:text-gray-100">
                         {user.first_name} {user.last_name}
                       </p>
-                      <p className="text-sm text-gray-500">{user.email}</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-500">{user.email}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">

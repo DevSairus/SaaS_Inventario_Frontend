@@ -120,8 +120,8 @@ const TenantsList = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Empresas</h1>
-          <p className="text-gray-600">Gestión de tenants de la plataforma</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Empresas</h1>
+          <p className="text-gray-600 dark:text-gray-400">Gestión de tenants de la plataforma</p>
         </div>
         <Link to="/superadmin/tenants/new">
           <Button variant="primary" icon={Plus}>
@@ -135,7 +135,7 @@ const TenantsList = () => {
         <div className="space-y-4">
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 w-5 h-5" />
               <input
                 type="text"
                 placeholder="Buscar por nombre, email..."
@@ -154,7 +154,7 @@ const TenantsList = () => {
           </div>
 
           {showFilters && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t dark:border-white/10">
               <div>
                 <label className="label">Plan</label>
                 <select
@@ -210,54 +210,54 @@ const TenantsList = () => {
       <Card>
         {tenants.length === 0 ? (
           <div className="text-center py-12">
-            <Building2 className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-600">No se encontraron empresas</p>
-            <p className="text-sm text-gray-500 mt-2">
+            <Building2 className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+            <p className="text-gray-600 dark:text-gray-400">No se encontraron empresas</p>
+            <p className="text-sm text-gray-500 dark:text-gray-500 mt-2">
               Total en base de datos: {tenantsPagination.totalItems}
             </p>
           </div>
         ) : (
           <>
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-white/10">
+                <thead className="bg-gray-50 dark:bg-graphite-2">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-500 uppercase tracking-wider">
                       Empresa
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-500 uppercase tracking-wider">
                       Plan
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-500 uppercase tracking-wider">
                       Suscripción
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-500 uppercase tracking-wider">
                       Usuarios
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-500 uppercase tracking-wider">
                       Estado
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-500 uppercase tracking-wider">
                       Creado
                     </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-500 uppercase tracking-wider">
                       Acciones
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="bg-white dark:bg-graphite divide-y divide-gray-200 dark:divide-white/10">
                   {tenants.map((tenant) => (
-                    <tr key={tenant.id} className="hover:bg-gray-50">
+                    <tr key={tenant.id} className="hover:bg-gray-50 dark:hover:bg-white/5">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           <div className="flex-shrink-0 h-10 w-10 bg-primary-100 rounded-lg flex items-center justify-center">
                             <Building2 className="w-5 h-5 text-primary-600" />
                           </div>
                           <div className="ml-4">
-                            <div className="text-sm font-medium text-gray-900">
+                            <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
                               {tenant.company_name}
                             </div>
-                            <div className="text-sm text-gray-500">
+                            <div className="text-sm text-gray-500 dark:text-gray-500">
                               {tenant.email}
                             </div>
                           </div>
@@ -274,7 +274,7 @@ const TenantsList = () => {
                         </Badge>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center text-sm text-gray-500">
+                        <div className="flex items-center text-sm text-gray-500 dark:text-gray-500">
                           <Users className="w-4 h-4 mr-1" />
                           {tenant.userCount || 0}
                         </div>
@@ -284,14 +284,14 @@ const TenantsList = () => {
                           {tenant.is_active ? 'Activo' : 'Inactivo'}
                         </Badge>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-500">
                         {new Date(tenant.created_at).toLocaleDateString()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <Dropdown
                           trigger={
-                            <button className="p-2 hover:bg-gray-100 rounded-lg">
-                              <MoreVertical className="w-5 h-5 text-gray-400" />
+                            <button className="p-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg">
+                              <MoreVertical className="w-5 h-5 text-gray-400 dark:text-gray-500" />
                             </button>
                           }
                           items={[

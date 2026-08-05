@@ -93,8 +93,8 @@ const Analytics = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Analytics</h1>
-          <p className="text-gray-600">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Analytics</h1>
+          <p className="text-gray-600 dark:text-gray-400">
             Métricas y análisis del rendimiento del SaaS
           </p>
         </div>
@@ -102,7 +102,7 @@ const Analytics = () => {
         {/* Filtro de Fechas */}
         <div className="flex items-center gap-3">
           <div>
-            <label className="text-xs text-gray-600">Desde</label>
+            <label className="text-xs text-gray-600 dark:text-gray-400">Desde</label>
             <input
               type="date"
               value={dateRange.start_date}
@@ -116,7 +116,7 @@ const Analytics = () => {
             />
           </div>
           <div>
-            <label className="text-xs text-gray-600">Hasta</label>
+            <label className="text-xs text-gray-600 dark:text-gray-400">Hasta</label>
             <input
               type="date"
               value={dateRange.end_date}
@@ -135,18 +135,18 @@ const Analytics = () => {
         <Card>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600 mb-1">
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
                 MRR (Ingresos Mensuales)
               </p>
-              <p className="text-2xl font-bold text-gray-900">
+              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                 {formatCurrency(dashboardOverview.mrr || 0)}
               </p>
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
                 ARR: {formatCurrency(dashboardOverview.arr || 0)}
               </p>
             </div>
-            <div className="p-3 bg-green-100 rounded-lg">
-              <DollarSign className="w-6 h-6 text-green-600" />
+            <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-lg">
+              <DollarSign className="w-6 h-6 text-green-600 dark:text-green-400" />
             </div>
           </div>
         </Card>
@@ -154,16 +154,16 @@ const Analytics = () => {
         <Card>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600 mb-1">Total Empresas</p>
-              <p className="text-2xl font-bold text-gray-900">
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Total Empresas</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                 {dashboardOverview.totalTenants || 0}
               </p>
               <p className="text-xs text-green-600 mt-1">
                 +{dashboardOverview.newTenantsThisMonth || 0} este mes
               </p>
             </div>
-            <div className="p-3 bg-blue-100 rounded-lg">
-              <Users className="w-6 h-6 text-blue-600" />
+            <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+              <Users className="w-6 h-6 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
         </Card>
@@ -171,14 +171,14 @@ const Analytics = () => {
         <Card>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600 mb-1">Crecimiento</p>
-              <p className="text-2xl font-bold text-gray-900">
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Crecimiento</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                 {dashboardOverview.growth || 0}%
               </p>
-              <p className="text-xs text-gray-500 mt-1">vs mes anterior</p>
+              <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">vs mes anterior</p>
             </div>
-            <div className="p-3 bg-purple-100 rounded-lg">
-              <TrendingUp className="w-6 h-6 text-purple-600" />
+            <div className="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+              <TrendingUp className="w-6 h-6 text-purple-600 dark:text-purple-400" />
             </div>
           </div>
         </Card>
@@ -186,14 +186,14 @@ const Analytics = () => {
         <Card>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600 mb-1">Churn Rate</p>
-              <p className="text-2xl font-bold text-gray-900">
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Churn Rate</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                 {dashboardOverview.churnRate || 0}%
               </p>
-              <p className="text-xs text-gray-500 mt-1">cancelaciones</p>
+              <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">cancelaciones</p>
             </div>
-            <div className="p-3 bg-orange-100 rounded-lg">
-              <BarChart3 className="w-6 h-6 text-orange-600" />
+            <div className="p-3 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
+              <BarChart3 className="w-6 h-6 text-orange-600 dark:text-orange-400" />
             </div>
           </div>
         </Card>
@@ -204,14 +204,14 @@ const Analytics = () => {
         <Card>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600 mb-1">Tenants suspendidos por impago</p>
-              <p className="text-2xl font-bold text-gray-900">
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Tenants suspendidos por impago</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                 {overview.tenantsSuspendidos ?? 0}
               </p>
-              <p className="text-xs text-gray-500 mt-1">se reactivan solos al pagar</p>
+              <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">se reactivan solos al pagar</p>
             </div>
-            <div className="p-3 bg-red-100 rounded-lg">
-              <AlertTriangle className="w-6 h-6 text-red-600" />
+            <div className="p-3 bg-red-100 dark:bg-red-900/30 rounded-lg">
+              <AlertTriangle className="w-6 h-6 text-red-600 dark:text-red-400" />
             </div>
           </div>
         </Card>
@@ -219,14 +219,14 @@ const Analytics = () => {
         <Card>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600 mb-1">En margen de gracia</p>
-              <p className="text-2xl font-bold text-gray-900">
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">En margen de gracia</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                 {overview.tenantsPorVencer ?? 0}
               </p>
-              <p className="text-xs text-gray-500 mt-1">vencidos, aún no suspendidos</p>
+              <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">vencidos, aún no suspendidos</p>
             </div>
-            <div className="p-3 bg-amber-100 rounded-lg">
-              <Clock className="w-6 h-6 text-amber-600" />
+            <div className="p-3 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
+              <Clock className="w-6 h-6 text-amber-600 dark:text-amber-400" />
             </div>
           </div>
         </Card>
@@ -259,11 +259,11 @@ const Analytics = () => {
           <span className="flex items-center gap-2">
             Ingresos por Mes
             {overview.revenueIsEstimate ? (
-              <span className="text-xs font-normal px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
+              <span className="text-xs font-normal px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300">
                 Estimado (conecta NCF para ver plata real)
               </span>
             ) : (
-              <span className="text-xs font-normal px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
+              <span className="text-xs font-normal px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300">
                 Real (Núcleo NCF)
               </span>
             )}
@@ -312,34 +312,34 @@ const Analytics = () => {
         {/* Tasa de Conversión */}
         <Card title="Métricas de Conversión">
           <div className="space-y-4">
-            <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg">
+            <div className="flex items-center justify-between p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
               <div>
-                <p className="text-sm text-gray-600">Tasa de Conversión</p>
-                <p className="text-2xl font-bold text-blue-600">
+                <p className="text-sm text-gray-600 dark:text-gray-400">Tasa de Conversión</p>
+                <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
                   {tenants.conversionRate || 0}%
                 </p>
               </div>
               <div className="text-right">
-                <p className="text-sm text-gray-600">Trial → Active</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Trial → Active</p>
               </div>
             </div>
 
             <div className="grid grid-cols-3 gap-3">
-              <div className="text-center p-3 bg-orange-50 rounded-lg">
-                <p className="text-xs text-gray-600">Trial</p>
-                <p className="text-xl font-bold text-orange-600">
+              <div className="text-center p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
+                <p className="text-xs text-gray-600 dark:text-gray-400">Trial</p>
+                <p className="text-xl font-bold text-orange-600 dark:text-orange-400">
                   {dashboardOverview.trialTenants || 0}
                 </p>
               </div>
-              <div className="text-center p-3 bg-green-50 rounded-lg">
-                <p className="text-xs text-gray-600">Activos</p>
-                <p className="text-xl font-bold text-green-600">
+              <div className="text-center p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                <p className="text-xs text-gray-600 dark:text-gray-400">Activos</p>
+                <p className="text-xl font-bold text-green-600 dark:text-green-400">
                   {dashboardOverview.activeTenants || 0}
                 </p>
               </div>
-              <div className="text-center p-3 bg-red-50 rounded-lg">
-                <p className="text-xs text-gray-600">Suspendidos</p>
-                <p className="text-xl font-bold text-red-600">
+              <div className="text-center p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
+                <p className="text-xs text-gray-600 dark:text-gray-400">Suspendidos</p>
+                <p className="text-xl font-bold text-red-600 dark:text-red-400">
                   {dashboardOverview.suspendedTenants || 0}
                 </p>
               </div>
@@ -351,40 +351,40 @@ const Analytics = () => {
       {/* Top Tenants */}
       <Card title="Top 10 Empresas por Facturación">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+          <table className="min-w-full divide-y divide-gray-200 dark:divide-white/10">
+            <thead className="bg-gray-50 dark:bg-graphite-2">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-500 uppercase">
                   #
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-500 uppercase">
                   Empresa
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-500 uppercase">
                   Plan
                 </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-500 uppercase">
                   Ingresos Totales
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-white dark:bg-graphite divide-y divide-gray-200 dark:divide-white/10">
               {topTenants.map((tenant, index) => (
-                <tr key={tenant.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                <tr key={tenant.id} className="hover:bg-gray-50 dark:hover:bg-white/5">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
                     {index + 1}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">
+                    <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
                       {tenant.company_name}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                    <span className="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300">
                       {tenant.plan.toUpperCase()}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium text-gray-900">
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium text-gray-900 dark:text-gray-100">
                     {formatCurrency(tenant.total_revenue)}
                   </td>
                 </tr>

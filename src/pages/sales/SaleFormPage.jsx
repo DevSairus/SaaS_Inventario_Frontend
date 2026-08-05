@@ -5,6 +5,7 @@ import useSalesStore from '../../store/salesStore';
 import useBranchStore from '../../store/branchStore';
 import useTenantStore from '../../store/tenantStore';
 import DiagramMapEditor from '../../components/workshop/DiagramMapEditor';
+import { brandsForType } from '../../constants/vehicleBrands';
 import useCustomersStore from '../../store/customersStore';
 import useProductsStore from '../../store/productsStore';
 import { warehousesService } from '../../api/warehouses';
@@ -112,6 +113,14 @@ function SaleFormPage() {
     mileage: '',
     technician_id: '',
   });
+
+  const [showBrandDropdown, setShowBrandDropdown] = useState(false);
+  const brandSuggestions = useMemo(() => {
+    const options = brandsForType(formData.vehicle_type);
+    const q = formData.vehicle_brand.trim().toLowerCase();
+    if (!q) return options;
+    return options.filter(b => b.toLowerCase().includes(q));
+  }, [formData.vehicle_type, formData.vehicle_brand]);
 
   const [showQuickCustomer, setShowQuickCustomer] = useState(false);
   const [quickCustomer, setQuickCustomer] = useState({
@@ -868,16 +877,44 @@ function SaleFormPage() {
 
                 {/* Marca / Línea / Año del vehículo */}
                 <div className="grid grid-cols-3 gap-3 mt-3">
-                  <div>
+                  <div className="relative">
                     <label className="block text-xs font-medium text-gray-600 mb-1">Marca</label>
                     <input
                       type="text"
                       name="vehicle_brand"
                       value={formData.vehicle_brand}
                       onChange={handleInputChange}
+                      onFocus={() => setShowBrandDropdown(true)}
+                      onBlur={() => setTimeout(() => setShowBrandDropdown(false), 200)}
+                      autoComplete="off"
                       className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-sm"
                       placeholder="Chevrolet"
                     />
+                    {showBrandDropdown && brandSuggestions.length > 0 && (
+                      <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-40 overflow-y-auto">
+                        {brandSuggestions.map(b => (
+                          <button
+                            key={b}
+                            type="button"
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              setFormData(prev => ({ ...prev, vehicle_brand: b }));
+                              setShowBrandDropdown(false);
+                            }}
+                            className="w-full text-left px-3 py-1.5 text-sm hover:bg-blue-50"
+                          >
+                            {b}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    {showBrandDropdown && formData.vehicle_brand.trim() && brandSuggestions.length === 0 && (
+                      <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg px-3 py-2">
+                        <p className="text-xs text-gray-400">
+                          Sin sugerencias — puedes escribir la marca directamente
+                        </p>
+                      </div>
+                    )}
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">Línea</label>

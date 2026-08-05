@@ -30,27 +30,27 @@ const fmtDateTime = d => d ? new Date(d).toLocaleDateString('es-CO', { day: '2-d
 const daysBetween = d => Math.ceil((new Date(d) - new Date()) / 86400000);
 
 const SALE_STATUS = {
-  draft:     { label: 'Borrador',   cls: 'bg-gray-100 text-gray-600' },
-  pending:   { label: 'Pendiente',  cls: 'bg-yellow-100 text-yellow-700' },
-  completed: { label: 'Completada', cls: 'bg-green-100 text-green-700' },
-  cancelled: { label: 'Cancelada',  cls: 'bg-red-100 text-red-600' },
+  draft:     { label: 'Borrador',   cls: 'bg-gray-100 text-gray-600 dark:bg-white/5 dark:text-gray-500' },
+  pending:   { label: 'Pendiente',  cls: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300' },
+  completed: { label: 'Completada', cls: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' },
+  cancelled: { label: 'Cancelada',  cls: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-300' },
 };
 
 const OT_STATUS = {
-  recibido:   { label: 'Recibido',   cls: 'bg-blue-100 text-blue-700' },
-  en_proceso: { label: 'En Proceso', cls: 'bg-yellow-100 text-yellow-700' },
-  en_espera:  { label: 'En Espera',  cls: 'bg-orange-100 text-orange-700' },
-  listo:      { label: 'Listo',      cls: 'bg-green-100 text-green-700' },
-  entregado:  { label: 'Entregado',  cls: 'bg-gray-100 text-gray-600' },
-  cancelado:  { label: 'Cancelado',  cls: 'bg-red-100 text-red-600' },
+  recibido:   { label: 'Recibido',   cls: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' },
+  en_proceso: { label: 'En Proceso', cls: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300' },
+  en_espera:  { label: 'En Espera',  cls: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300' },
+  listo:      { label: 'Listo',      cls: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' },
+  entregado:  { label: 'Entregado',  cls: 'bg-gray-100 text-gray-600 dark:bg-white/5 dark:text-gray-500' },
+  cancelado:  { label: 'Cancelado',  cls: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-300' },
 };
 
 const LIFECYCLE = {
-  prospecto: { label: 'Prospecto', cls: 'bg-blue-100 text-blue-700' },
-  activo:    { label: 'Activo',    cls: 'bg-green-100 text-green-700' },
-  en_riesgo: { label: 'En riesgo', cls: 'bg-amber-100 text-amber-700' },
-  inactivo:  { label: 'Inactivo',  cls: 'bg-gray-100 text-gray-500' },
-  perdido:   { label: 'Perdido',   cls: 'bg-red-100 text-red-600' },
+  prospecto: { label: 'Prospecto', cls: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' },
+  activo:    { label: 'Activo',    cls: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' },
+  en_riesgo: { label: 'En riesgo', cls: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' },
+  inactivo:  { label: 'Inactivo',  cls: 'bg-gray-100 text-gray-500 dark:bg-white/5 dark:text-gray-500' },
+  perdido:   { label: 'Perdido',   cls: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-300' },
 };
 
 const INTERACTION_TYPE = {
@@ -278,13 +278,13 @@ export default function CustomerDetailPage() {
         {/* Header */}
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-3">
-            <button onClick={() => navigate('/customers')} className="p-2 hover:bg-gray-100 rounded-lg">
+            <button onClick={() => navigate('/customers')} className="p-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg">
               <ArrowLeft size={18} />
             </button>
             <div>
               <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-xl font-bold text-gray-900">{displayName}</h1>
-                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${customer.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>
+                <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">{displayName}</h1>
+                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${customer.is_active ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' : 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-300'}`}>
                   {customer.is_active ? 'Activo' : 'Inactivo'}
                 </span>
                 {lifecycle && (
@@ -298,7 +298,7 @@ export default function CustomerDetailPage() {
                   </span>
                 )}
               </div>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-gray-500 dark:text-gray-500">
                 {customer.customer_type === 'company' ? 'Empresa' : 'Persona natural'}
                 {customer.tax_id && ` · CC/NIT: ${customer.tax_id}`}
                 {hasCrm && customer.owner && ` · Asesor: ${customer.owner.first_name} ${customer.owner.last_name}`}
@@ -308,7 +308,7 @@ export default function CustomerDetailPage() {
           <div className="flex items-center gap-2">
             {hasCrm && canAssign && (
               <button onClick={openAssign}
-                className="flex items-center gap-2 px-4 py-2 border border-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition">
+                className="flex items-center gap-2 px-4 py-2 border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-white/5 transition">
                 <UserCheck className="h-4 w-4" /> Cuenta asignada
               </button>
             )}

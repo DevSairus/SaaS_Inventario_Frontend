@@ -26,7 +26,7 @@ export default function CrmSubNav({ badges = {} }) {
   const items = ITEMS.filter(item => !item.roles || item.roles.includes(user?.role));
 
   return (
-    <nav className="flex items-center gap-1 p-1 bg-white border border-gray-100 shadow-sm rounded-xl w-fit overflow-x-auto max-w-full">
+    <nav className="flex items-center gap-1 p-1 bg-white border border-gray-100 shadow-sm rounded-xl w-fit overflow-x-auto max-w-full dark:bg-graphite dark:border-white/10">
       {items.map(({ to, label, icon: Icon, key }) => (
         <NavLink
           key={key}
@@ -35,14 +35,14 @@ export default function CrmSubNav({ badges = {} }) {
             `relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-all duration-150 ${
               isActive
                 ? 'bg-gradient-to-br from-accent to-accent-soft text-white shadow-sm shadow-accent/30'
-                : 'text-gray-500 hover:text-gray-800 hover:bg-gray-50'
+                : 'text-gray-500 hover:text-gray-800 hover:bg-gray-50 dark:text-gray-400 dark:hover:text-gray-100 dark:hover:bg-white/5'
             }`
           }
         >
           <Icon size={15} />
           {label}
           {badges[key] > 0 && (
-            <span className="min-w-[18px] h-[18px] px-1 flex items-center justify-center text-[10px] font-bold text-white bg-red-500 rounded-full ring-2 ring-white">
+            <span className="min-w-[18px] h-[18px] px-1 flex items-center justify-center text-[10px] font-bold text-white bg-red-500 rounded-full ring-2 ring-white dark:ring-graphite">
               {badges[key]}
             </span>
           )}

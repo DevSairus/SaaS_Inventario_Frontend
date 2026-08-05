@@ -16,18 +16,18 @@ const FilterBar = ({
   filters = []
 }) => {
   return (
-    <div className="bg-white rounded-2xl shadow-md border border-gray-100 p-6 mb-6">
+    <div className="bg-white dark:bg-graphite rounded-2xl shadow-md border border-gray-100 dark:border-white/10 p-6 mb-6">
       <div className={`grid grid-cols-1 ${filters.length > 0 ? `md:grid-cols-${Math.min(filters.length + 1, 4)}` : ''} gap-4`}>
         {/* Búsqueda */}
         {onSearchChange && (
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-gray-500" />
             <input
               type="text"
               placeholder={searchPlaceholder}
               value={searchValue}
               onChange={(e) => onSearchChange(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+              className="w-full pl-10 pr-4 py-3 border border-gray-200 dark:border-white/10 dark:bg-graphite-2 dark:text-gray-100 dark:placeholder-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
             />
           </div>
         )}
@@ -39,11 +39,11 @@ const FilterBar = ({
           if (filter.type === 'select') {
             return (
               <div key={index} className="relative">
-                <FilterIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <FilterIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-gray-500" />
                 <select
                   value={filter.value || ''}
                   onChange={(e) => filter.onChange(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all appearance-none bg-white"
+                  className="w-full pl-10 pr-4 py-3 border border-gray-200 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all appearance-none bg-white dark:bg-graphite-2 dark:text-gray-100"
                 >
                   <option value="">{filter.placeholder || 'Todos'}</option>
                   {filter.options?.map((option) => (
@@ -59,12 +59,12 @@ const FilterBar = ({
           if (filter.type === 'date') {
             return (
               <div key={index} className="relative">
-                <FilterIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <FilterIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-gray-500" />
                 <input
                   type="date"
                   value={filter.value || ''}
                   onChange={(e) => filter.onChange(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+                  className="w-full pl-10 pr-4 py-3 border border-gray-200 dark:border-white/10 dark:bg-graphite-2 dark:text-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
                   placeholder={filter.placeholder}
                 />
               </div>
@@ -74,13 +74,13 @@ const FilterBar = ({
           if (filter.type === 'text') {
             return (
               <div key={index} className="relative">
-                <FilterIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <FilterIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-gray-500" />
                 <input
                   type="text"
                   value={filter.value || ''}
                   onChange={(e) => filter.onChange(e.target.value)}
                   placeholder={filter.placeholder}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+                  className="w-full pl-10 pr-4 py-3 border border-gray-200 dark:border-white/10 dark:bg-graphite-2 dark:text-gray-100 dark:placeholder-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
                 />
               </div>
             );

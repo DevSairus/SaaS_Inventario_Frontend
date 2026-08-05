@@ -202,10 +202,10 @@ const TenantForm = () => {
         >
           Volver
         </Button>
-        <h1 className="text-2xl font-bold text-gray-900">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
           {isEdit ? 'Editar Empresa' : 'Nueva Empresa'}
         </h1>
-        <p className="text-gray-600 mt-1">
+        <p className="text-gray-600 dark:text-gray-400 mt-1">
           {isEdit
             ? 'Actualiza la información de la empresa'
             : 'Crea una nueva empresa en el sistema'}
@@ -241,7 +241,7 @@ const TenantForm = () => {
                   disabled={isEdit}
                   required
                 />
-                <p className="text-sm text-gray-500 mt-1">
+                <p className="text-sm text-gray-500 dark:text-gray-500 mt-1">
                   {isEdit
                     ? 'El slug no puede ser modificado después de la creación'
                     : 'Se genera automáticamente desde el nombre'}
@@ -332,15 +332,15 @@ const TenantForm = () => {
           <Card title="Módulos">
             {selectedPlan && (
               <div className="mb-4">
-                <p className="text-sm text-gray-600 mb-2">
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
                   Módulos incluidos en el plan "{selectedPlan.name}" (no editables aquí — se administran desde Gestión de Planes):
                 </p>
                 <div className="flex flex-wrap gap-1">
                   {(selectedPlan.modules || []).length === 0 && (
-                    <span className="text-sm text-gray-400">Este plan no trae módulos configurados</span>
+                    <span className="text-sm text-gray-400 dark:text-gray-500">Este plan no trae módulos configurados</span>
                   )}
                   {(selectedPlan.modules || []).map((key) => (
-                    <span key={key} className="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-700">
+                    <span key={key} className="px-2 py-1 text-xs rounded-full bg-gray-100 dark:bg-graphite-2 text-gray-700 dark:text-gray-300">
                       {modulesCatalog.find((m) => m.key === key)?.label || key}
                     </span>
                   ))}
@@ -353,7 +353,7 @@ const TenantForm = () => {
                 <label className="label">Agregar módulos a este tenant (add-on)</label>
                 <div className="space-y-1">
                   {modulesCatalog.filter((m) => !m.reserved).map((mod) => (
-                    <label key={mod.key} className="flex items-center gap-2 text-sm text-gray-700">
+                    <label key={mod.key} className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
                       <input
                         type="checkbox"
                         checked={formData.modules_enabled.includes(mod.key)}
@@ -369,7 +369,7 @@ const TenantForm = () => {
                 <label className="label">Quitar módulos del plan a este tenant</label>
                 <div className="space-y-1">
                   {modulesCatalog.filter((m) => !m.reserved).map((mod) => (
-                    <label key={mod.key} className="flex items-center gap-2 text-sm text-gray-700">
+                    <label key={mod.key} className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
                       <input
                         type="checkbox"
                         checked={formData.modules_disabled.includes(mod.key)}
@@ -377,7 +377,7 @@ const TenantForm = () => {
                       />
                       {mod.label}
                       {mod.dependsOn?.length > 0 && (
-                        <span className="text-xs text-gray-400">
+                        <span className="text-xs text-gray-400 dark:text-gray-500">
                           (depende de {mod.dependsOn.map((d) => modulesCatalog.find((m) => m.key === d)?.label || d).join(', ')})
                         </span>
                       )}
@@ -387,14 +387,14 @@ const TenantForm = () => {
               </div>
             </div>
 
-            <div className="mt-4 pt-4 border-t">
-              <p className="text-sm font-medium text-gray-700 mb-1">Módulos efectivos para este tenant:</p>
+            <div className="mt-4 pt-4 border-t dark:border-white/10">
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Módulos efectivos para este tenant:</p>
               <div className="flex flex-wrap gap-1">
                 {effectiveModules.size === 0 && (
-                  <span className="text-sm text-gray-400">Sin módulos habilitados</span>
+                  <span className="text-sm text-gray-400 dark:text-gray-500">Sin módulos habilitados</span>
                 )}
                 {[...effectiveModules].map((key) => (
-                  <span key={key} className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">
+                  <span key={key} className="px-2 py-1 text-xs rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300">
                     {modulesCatalog.find((m) => m.key === key)?.label || key}
                   </span>
                 ))}
@@ -406,7 +406,7 @@ const TenantForm = () => {
           {!isEdit && (
             <Card title="Usuario Administrador">
               <div className="space-y-4">
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-gray-600 dark:text-gray-400">
                   Crea el usuario administrador para esta empresa
                 </p>
 
