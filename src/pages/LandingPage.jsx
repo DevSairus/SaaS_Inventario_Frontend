@@ -829,16 +829,20 @@ function TallerSpotlight({ onCta }) {
       padding: 'clamp(4rem,8vw,7rem) clamp(1.5rem,5vw,4rem)',
       borderBottom: '1px solid rgba(255,255,255,0.06)',
     }}>
-      {/* Marca de agua — vehículos en filigrana, decorativo, no interactivo */}
+      {/* Fondo — foto real de carro + moto en taller, con degradado propio
+          oscuro a claro (izq. a der.) que ya deja el lado del texto legible */}
       <div aria-hidden="true" style={{
         position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none', zIndex: 0,
       }}>
-        <Ico d={icons.car} size={340} color="#FFFFFF" strokeWidth={0.7}
-          style={{ position: 'absolute', top: '-6%', right: '-4%', opacity: 0.05, transform: 'rotate(-8deg)' }} />
-        <Ico d={icons.motorcycle} size={220} color="#FFFFFF" strokeWidth={0.7}
-          style={{ position: 'absolute', bottom: '-8%', left: '-3%', opacity: 0.05, transform: 'rotate(6deg)' }} />
-        <Ico d={icons.wrench} size={140} color="#FFFFFF" strokeWidth={0.7}
-          style={{ position: 'absolute', top: '38%', left: '46%', opacity: 0.035, transform: 'rotate(18deg)' }} />
+        <img src="/assets/landing/taller-bg.webp" alt="" style={{
+          position: 'absolute', inset: 0, width: '100%', height: '100%',
+          objectFit: 'cover', objectPosition: 'center', opacity: 0.5,
+        }} />
+        {/* Refuerzo de contraste sobre la mitad izquierda (columna de texto) */}
+        <div style={{
+          position: 'absolute', inset: 0,
+          background: `linear-gradient(90deg, ${C.ink} 0%, rgba(11,12,16,0.75) 32%, rgba(11,12,16,0.15) 62%, transparent 78%)`,
+        }} />
       </div>
 
       <div ref={ref} style={{ maxWidth: 1240, margin: '0 auto', position: 'relative', zIndex: 1 }}>
