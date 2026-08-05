@@ -117,7 +117,7 @@ function SaleFormPage() {
   const [showBrandDropdown, setShowBrandDropdown] = useState(false);
   const brandSuggestions = useMemo(() => {
     const options = brandsForType(formData.vehicle_type);
-    const q = formData.vehicle_brand.trim().toLowerCase();
+    const q = (formData.vehicle_brand ?? '').trim().toLowerCase();
     if (!q) return options;
     return options.filter(b => b.toLowerCase().includes(q));
   }, [formData.vehicle_type, formData.vehicle_brand]);
@@ -333,6 +333,9 @@ function SaleFormPage() {
         notes: currentSale.notes || '',
         vehicle_plate: currentSale.vehicle_plate || '',
         vehicle_type: currentSale.vehicle_type || '',
+        vehicle_brand: currentSale.vehicle_brand || '',
+        vehicle_model: currentSale.vehicle_model || '',
+        vehicle_year: currentSale.vehicle_year || '',
         mileage: currentSale.mileage || '',
         technician_id: currentSale.technician_id || '',
       });
@@ -908,7 +911,7 @@ function SaleFormPage() {
                         ))}
                       </div>
                     )}
-                    {showBrandDropdown && formData.vehicle_brand.trim() && brandSuggestions.length === 0 && (
+                    {showBrandDropdown && formData.vehicle_brand?.trim() && brandSuggestions.length === 0 && (
                       <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg px-3 py-2">
                         <p className="text-xs text-gray-400">
                           Sin sugerencias — puedes escribir la marca directamente
