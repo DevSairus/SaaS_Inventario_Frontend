@@ -108,6 +108,7 @@ export default function WorkOrderDetailPage() {
 
   const [sendingQuote, setSendingQuote] = useState(false);
   const [applyingQuoteId, setApplyingQuoteId] = useState(null);
+  const [showApprovedItems, setShowApprovedItems] = useState(false);
 
   const handleSendQuoteRequest = async () => {
     const win = window.open('', '_blank');
@@ -1079,6 +1080,66 @@ export default function WorkOrderDetailPage() {
                           </div>
                         );
                       })}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* Ítems aprobados por el cliente */}
+            {(() => {
+              const quoteMap = Object.fromEntries((order.quote_requests || []).map(q => [q.id, q]));
+              const approvedItems = (order.items || []).filter(
+                i => i.quote_request_id && i.approval_status === 'aprobado'
+              );
+              if (approvedItems.length === 0) return null;
+              const totalApproved = approvedItems.reduce((sum, i) => sum + parseFloat(i.total || 0), 0);
+
+              return (
+                <div className="bg-white dark:bg-graphite border border-gray-100 dark:border-white/10 rounded-xl p-4">
+                  <button
+                    onClick={() => setShowApprovedItems(v => !v)}
+                    className="w-full flex items-center justify-between"
+                  >
+                    <div className="flex items-center gap-2">
+                      <CheckCircle size={15} className="text-green-600" />
+                      <h2 className="font-semibold text-sm text-gray-800 dark:text-gray-200">
+                        Ítems aprobados por el cliente ({approvedItems.length})
+                      </h2>
+                    </div>
+                    <span className="text-xs text-blue-600 font-medium">
+                      {showApprovedItems ? 'Ocultar ▲' : 'Mostrar ▼'}
+                    </span>
+                  </button>
+
+                  {showApprovedItems && (
+                    <div className="mt-3 divide-y divide-gray-50">
+                      {approvedItems.map(i => {
+                        const q = quoteMap[i.quote_request_id];
+                        return (
+                          <div key={i.id} className="flex items-center justify-between py-2 gap-2">
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">
+                                {i.product_name || i.product?.name}
+                              </p>
+                              <p className="text-xs text-gray-400 mt-0.5">
+                                {i.quantity} × {COP(i.unit_price)}
+                                {q?.approved_by_name && (
+                                  <span className="ml-2 text-green-600">
+                                    · Aprobado por {q.approved_by_name}
+                                    {q.responded_at && ` (${new Date(q.responded_at).toLocaleDateString('es-CO')})`}
+                                  </span>
+                                )}
+                              </p>
+                            </div>
+                            <span className="text-sm font-semibold text-gray-900 flex-shrink-0">{COP(i.total)}</span>
+                          </div>
+                        );
+                      })}
+                      <div className="flex justify-between pt-2 text-sm font-bold text-gray-900">
+                        <span>Total aprobado</span>
+                        <span>{COP(totalApproved)}</span>
+                      </div>
                     </div>
                   )}
                 </div>

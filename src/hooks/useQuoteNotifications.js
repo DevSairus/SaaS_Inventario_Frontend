@@ -7,6 +7,11 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 const SOCKET_URL = API_URL.replace(/\/api\/?$/, '');
 
 let socket = null;
+// La campana de notificaciones (QuoteNotificationsBell) necesita enterarse
+// del mismo evento para refrescar su bandeja al instante sin esperar al
+// polling — pero el socket es un singleton de módulo, así que exponemos una
+// suscripción en vez de que cada consumidor abra su propia conexión.
+const listeners = new Set();
 
 function ensureSocket(token) {
   if (!token) return null;
@@ -31,6 +36,7 @@ function ensureSocket(token) {
     toast(`${label} — OT ${data.order_number || ''} (${data.approved_by_name || 'cliente'})`, {
       duration: 6000,
     });
+    listeners.forEach(cb => { try { cb(data); } catch { /* no romper a los demás suscriptores */ } });
   });
 
   return socket;
@@ -42,4 +48,12 @@ export function useQuoteNotifications() {
   useEffect(() => {
     if (isAuthenticated && token) ensureSocket(token);
   }, [token, isAuthenticated]);
+}
+
+// Se suscribe al evento 'quote:approved' del socket ya conectado por
+// useQuoteNotifications (Layout lo monta siempre). Devuelve función para
+// desuscribirse.
+export function subscribeQuoteApproved(callback) {
+  listeners.add(callback);
+  return () => listeners.delete(callback);
 }

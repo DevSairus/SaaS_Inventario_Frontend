@@ -35,6 +35,9 @@ export const workOrdersApi = {
   // Cotización con aprobación del cliente
   sendQuoteRequest: (id) => axios.post(`/workshop/work-orders/${id}/quote-requests`),
   applyApprovedItems: (id, quoteRequestId) => axios.post(`/workshop/work-orders/${id}/quote-requests/${quoteRequestId}/apply`),
+  // Notificaciones de cotizaciones respondidas por el cliente
+  getPendingQuoteNotifications: () => axios.get('/workshop/work-orders/quote-notifications/pending'),
+  markQuoteNotificationSeen: (quoteRequestId) => axios.post(`/workshop/work-orders/quote-notifications/${quoteRequestId}/seen`),
 };
 
 // ── Commission Settlements ────────────────────────────────
