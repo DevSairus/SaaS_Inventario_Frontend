@@ -838,12 +838,21 @@ function TallerSpotlight({ onCta }) {
           position: 'absolute', inset: 0, width: '100%', height: '100%',
           objectFit: 'cover', objectPosition: 'center', opacity: 0.5,
         }} />
-        {/* Refuerzo de contraste sobre la mitad izquierda (columna de texto) */}
-        <div style={{
+        {/* Refuerzo de contraste: en escritorio (columnas lado a lado) oscurece
+            la izquierda; en móvil (columnas apiladas) oscurece abajo, dejando
+            la foto visible arriba para que no "desaparezca" */}
+        <div className="pb-taller-scrim" style={{
           position: 'absolute', inset: 0,
           background: `linear-gradient(90deg, ${C.ink} 0%, rgba(11,12,16,0.75) 32%, rgba(11,12,16,0.15) 62%, transparent 78%)`,
         }} />
       </div>
+      <style>{`
+        @media (max-width: 800px) {
+          #taller .pb-taller-scrim {
+            background: linear-gradient(180deg, rgba(11,12,16,0.2) 0%, rgba(11,12,16,0.75) 55%, ${C.ink} 85%) !important;
+          }
+        }
+      `}</style>
 
       <div ref={ref} style={{ maxWidth: 1240, margin: '0 auto', position: 'relative', zIndex: 1 }}>
         <div style={{
