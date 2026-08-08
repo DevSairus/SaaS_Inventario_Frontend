@@ -1,6 +1,7 @@
 // frontend/src/components/sales/ConfirmSaleWithPaymentModal.jsx
 import { useState, useEffect } from 'react';
 import { XMarkIcon, CreditCardIcon, BanknotesIcon, DevicePhoneMobileIcon, CalendarDaysIcon, ClockIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
+import NumericInput from '../inputs/NumericInput';
 
 const CREDIT_DAYS_OPTIONS = [15, 30, 60, 90];
 
@@ -50,8 +51,15 @@ const ConfirmSaleWithPaymentModal = ({
   onConfirm,
   saleTotal,
   currentDocType,
+  // Con el módulo CRM activo, cotizar deja de ser una opción al confirmar
+  // una venta desde acá -- la cotización nace en su propio formulario
+  // dentro de CRM (ver PipelinePage.jsx / SaleFormPage en modo CRM). Se
+  // deja pasar igual si la venta YA es una cotización (currentDocType),
+  // para no dejar sin opción visible una venta que ya nació así.
+  hideQuoteOption = false,
   loading = false,
 }) => {
+  const docTypes = DOC_TYPES.filter(t => t.value !== 'cotizacion' || !hideQuoteOption || currentDocType === 'cotizacion');
   const [docType, setDocType]           = useState(currentDocType || 'remision');
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [paidAmount, setPaidAmount]       = useState(saleTotal);
@@ -184,8 +192,8 @@ const ConfirmSaleWithPaymentModal = ({
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Tipo de documento
                 </label>
-                <div className="grid grid-cols-3 gap-2">
-                  {DOC_TYPES.map(({ value, icon, label, desc, color, activeColor, badge }) => (
+                <div className={`grid gap-2 ${docTypes.length === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
+                  {docTypes.map(({ value, icon, label, desc, color, activeColor, badge }) => (
                     <button
                       key={value}
                       type="button"
@@ -258,13 +266,10 @@ const ConfirmSaleWithPaymentModal = ({
                         </select>
                         <div className="relative w-36 flex-shrink-0">
                           <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-medium">$</span>
-                          <input
-                            type="number"
+                          <NumericInput
                             value={row.amount}
                             onChange={(e) => updateMixedRow(index, 'amount', e.target.value)}
                             placeholder="0"
-                            min="1"
-                            step="any"
                             className="w-full pl-6 pr-2 py-1.5 border border-gray-200 rounded-lg text-sm font-medium text-right focus:ring-2 focus:ring-purple-400 focus:border-transparent"
                           />
                         </div>
@@ -334,9 +339,9 @@ const ConfirmSaleWithPaymentModal = ({
                   <label className="block text-sm font-medium text-gray-700 mb-2">Abono inicial</label>
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">$</span>
-                    <input type="number" value={paidAmount} onChange={(e) => setPaidAmount(e.target.value)}
+                    <NumericInput value={paidAmount} onChange={(e) => setPaidAmount(e.target.value)}
                       className="w-full pl-8 pr-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-lg font-medium"
-                      min="1" max={saleTotal - 1} step="any" required />
+                      required />
                   </div>
                   {pendingAmount > 0 && (
                     <p className="mt-1.5 text-sm text-orange-600 font-medium">
@@ -357,13 +362,10 @@ const ConfirmSaleWithPaymentModal = ({
                     <label className="block text-xs font-medium text-emerald-700 mb-2">Monto recibido del cliente</label>
                     <div className="relative">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-600 font-bold">$</span>
-                      <input
-                        type="number"
+                      <NumericInput
                         value={cashReceived}
                         onChange={(e) => setCashReceived(e.target.value)}
                         placeholder={amountToPay.toLocaleString('es-CO')}
-                        min={amountToPay}
-                        step="any"
                         className={`w-full pl-8 pr-4 py-3 border-2 rounded-lg text-lg font-bold focus:outline-none focus:ring-2 transition-all ${
                           cashChange !== null && !cashChangePositive
                             ? 'border-red-400 bg-red-50 focus:ring-red-300'

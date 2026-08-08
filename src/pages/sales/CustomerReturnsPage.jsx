@@ -4,7 +4,7 @@ import { ArrowLeft, Search, Plus, Trash2 } from 'lucide-react';
 import Layout from '../../components/layout/Layout';
 import useCustomerReturnsStore from '../../store/customerReturnsStore';
 import api from '../../api/axios';
-import { formatCurrency, toInteger, toNumber, INPUT_CONFIG } from '../../utils/numberUtils';
+import { formatCurrency, toInteger, toNumber, INPUT_CONFIG } from '../../utils/formatters';
 import toast from 'react-hot-toast';
 
 const CustomerReturnFormPage = () => {
@@ -177,7 +177,7 @@ const CustomerReturnFormPage = () => {
                         <p className="text-sm text-gray-600">{sale.customer_name}</p>
                       </div>
                       <div className="text-right">
-                        <p className="font-medium">${formatCurrency(sale.total_amount)}</p>
+                        <p className="font-medium">{formatCurrency(sale.total_amount)}</p>
                         <p className="text-sm text-gray-600">
                           {new Date(sale.sale_date).toLocaleDateString()}
                         </p>
@@ -314,10 +314,10 @@ const CustomerReturnFormPage = () => {
                           </select>
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-900">
-                          ${formatCurrency(item.unit_price)}
+                          {formatCurrency(item.unit_price)}
                         </td>
                         <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                          ${formatCurrency(item.quantity_to_return * item.unit_price)}
+                          {formatCurrency(item.quantity_to_return * item.unit_price)}
                         </td>
                       </tr>
                     ))}
@@ -329,7 +329,7 @@ const CustomerReturnFormPage = () => {
               <div className="mt-4 flex justify-end">
                 <div className="bg-gray-50 p-4 rounded-lg">
                   <p className="text-lg font-semibold">
-                    Total a Devolver: $
+                    Total a Devolver:{' '}
                     {formatCurrency(
                       formData.items.reduce((sum, item) => 
                         sum + (toInteger(item.quantity_to_return, 0) * toInteger(item.unit_price, 0)), 0

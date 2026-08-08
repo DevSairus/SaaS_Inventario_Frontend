@@ -24,6 +24,7 @@ const I = {
   headset:   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="w-[17px] h-[17px] shrink-0"><path d="M3 18v-6a9 9 0 0118 0v6"/><path d="M21 19a2 2 0 01-2 2h-1a2 2 0 01-2-2v-3a2 2 0 012-2h3zM3 19a2 2 0 002 2h1a2 2 0 002-2v-3a2 2 0 00-2-2H3z"/></svg>,
   nexa:      <NexaIcon size={17} className="rounded-[4px] shrink-0" />,
   target:    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="w-[17px] h-[17px] shrink-0"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.3" fill="currentColor" stroke="none"/></svg>,
+  car:       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="w-[17px] h-[17px] shrink-0"><path d="M5 11l1.5-4.5A2 2 0 018.4 5h7.2a2 2 0 011.9 1.5L19 11"/><rect x="3" y="11" width="18" height="6" rx="1.5"/><circle cx="7.5" cy="17.5" r="1.5"/><circle cx="16.5" cy="17.5" r="1.5"/></svg>,
 };
 
 const NAV = [
@@ -50,6 +51,18 @@ const NAV = [
     ],
   },
   {
+    id: "ensambladora", label: "Ensambladora", icon: "car", module: "ensambladora",
+    children: [
+      { label: "Consultar vehículo", path: "/ensambladora/buscar" },
+      { label: "Cotizar", path: "/ensambladora/cotizar" },
+      { label: "Revisiones pendientes", path: "/ensambladora/revisiones" },
+      { label: "Liquidaciones", path: "/ensambladora/liquidaciones" },
+      { label: "Garantías", path: "/ensambladora/garantias" },
+      { label: "Técnicos y asesores", path: "/ensambladora/tecnicos" },
+      { label: "Sincronización", path: "/ensambladora/sync" },
+    ],
+  },
+  {
     id: "sales", label: "Ventas", icon: "cart", module: "sales",
     children: [
       { label: "Nueva Venta",      path: "/sales/new" },
@@ -61,6 +74,7 @@ const NAV = [
     id: "crm", label: "CRM", icon: "target", module: "crm",
     children: [
       { label: "Pipeline",           path: "/crm/pipeline" },
+      { label: "Nueva cotización",   path: "/crm/quotes/new" },
       { label: "Seguimientos",       path: "/crm/followups" },
       { label: "Dashboard CRM",      path: "/crm/dashboard" },
       { label: "Integración Meta",   path: "/crm/settings/meta", module: "crm_meta_leads" },

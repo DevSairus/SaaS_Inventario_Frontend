@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAdjustmentsStore } from '../../store/adjustmentsStore';
 import Layout from '../../components/layout/Layout';
 import toast from 'react-hot-toast';
+import { formatCurrency } from '../../utils/formatters';
 
 const AdjustmentDetailPage = () => {
   const { id } = useParams();
@@ -41,14 +42,6 @@ const AdjustmentDetailPage = () => {
         toast.error(useAdjustmentsStore.getState().error || 'Error al cancelar el ajuste');
       }
     }
-  };
-
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('es-CO', {
-      style: 'currency',
-      currency: 'COP',
-      minimumFractionDigits: 0
-    }).format(amount);
   };
 
   const getStatusBadge = (status) => {

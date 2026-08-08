@@ -3,6 +3,7 @@ import { useMovementsStore } from '../../store/movementsStore';
 import useProductsStore from '../../store/productsStore';
 import useBranchStore from '../../store/branchStore';
 import Layout from '../../components/layout/Layout';
+import { formatCurrency } from '../../utils/formatters';
 
 const MovementsPage = () => {
   const {
@@ -60,14 +61,6 @@ const MovementsPage = () => {
     setShowKardex(false);
     setSelectedProduct(null);
     clearKardex();
-  };
-
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('es-CO', {
-      style: 'currency',
-      currency: 'COP',
-      minimumFractionDigits: 0
-    }).format(amount);
   };
 
   const formatMovementDate = (value) => {

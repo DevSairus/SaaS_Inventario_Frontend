@@ -4,6 +4,7 @@ import { ArrowLeft, AlertTriangle } from 'lucide-react';
 import Layout from '../../components/layout/Layout';
 import useTransfersStore from '../../store/transfersStore';
 import toast from 'react-hot-toast';
+import { formatNumber } from '../../utils/formatters';
 
 const TransferReceivePage = () => {
   const { id } = useParams();
@@ -206,7 +207,7 @@ const TransferReceivePage = () => {
                           {item.product?.sku}
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-600">
-                          {parseFloat(item.quantity_sent).toFixed(2)}
+                          {formatNumber(parseFloat(item.quantity_sent), 2)}
                         </td>
                         <td className="px-4 py-3">
                           <input
@@ -235,7 +236,7 @@ const TransferReceivePage = () => {
                             <span className={`text-sm font-medium ${
                               difference > 0 ? 'text-green-600' : 'text-red-600'
                             }`}>
-                              {difference > 0 ? '+' : ''}{difference.toFixed(2)}
+                              {difference > 0 ? '+' : ''}{formatNumber(difference, 2)}
                             </span>
                           ) : (
                             <span className="text-sm text-gray-400">-</span>
@@ -253,13 +254,13 @@ const TransferReceivePage = () => {
               <div className="bg-gray-50 p-4 rounded-lg">
                 <p className="text-sm text-gray-600">Total Enviado</p>
                 <p className="text-lg font-semibold text-gray-900">
-                  {items.reduce((sum, item) => sum + parseFloat(item.quantity_sent), 0).toFixed(2)}
+                  {formatNumber(items.reduce((sum, item) => sum + parseFloat(item.quantity_sent), 0), 2)}
                 </p>
               </div>
               <div className="bg-blue-50 p-4 rounded-lg">
                 <p className="text-sm text-blue-600">Total Recibido</p>
                 <p className="text-lg font-semibold text-blue-900">
-                  {items.reduce((sum, item) => sum + parseFloat(item.quantity_received), 0).toFixed(2)}
+                  {formatNumber(items.reduce((sum, item) => sum + parseFloat(item.quantity_received), 0), 2)}
                 </p>
               </div>
               <div className={`p-4 rounded-lg ${hasDiscrepancies ? 'bg-amber-50' : 'bg-green-50'}`}>
@@ -267,10 +268,11 @@ const TransferReceivePage = () => {
                   Diferencia Total
                 </p>
                 <p className={`text-lg font-semibold ${hasDiscrepancies ? 'text-amber-900' : 'text-green-900'}`}>
-                  {(
+                  {formatNumber(
                     items.reduce((sum, item) => sum + parseFloat(item.quantity_received), 0) -
-                    items.reduce((sum, item) => sum + parseFloat(item.quantity_sent), 0)
-                  ).toFixed(2)}
+                    items.reduce((sum, item) => sum + parseFloat(item.quantity_sent), 0),
+                    2
+                  )}
                 </p>
               </div>
             </div>

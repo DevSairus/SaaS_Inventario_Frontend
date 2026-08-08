@@ -3,12 +3,13 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useAdjustmentsStore } from '../../store/adjustmentsStore';
 import useProductsStore from '../../store/productsStore';
 import Layout from '../../components/layout/Layout';
-import { 
-  formatCurrency, 
-  toInteger, 
-  toNumber, 
-  INPUT_CONFIG 
-} from '../../utils/numberUtils';
+import NumericInput from '../../components/inputs/NumericInput';
+import {
+  formatCurrency,
+  toInteger,
+  toNumber,
+  INPUT_CONFIG
+} from '../../utils/formatters';
 import toast from 'react-hot-toast';
 
 const AdjustmentFormPage = () => {
@@ -430,12 +431,10 @@ const AdjustmentFormPage = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">
                   Costo Unitario
                 </label>
-                <input
-                  type="number"
+                <NumericInput
                   name="unit_cost"
                   value={currentItem.unit_cost}
                   onChange={handleItemChange}
-                  {...INPUT_CONFIG.price}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100"
                 />
               </div>
@@ -481,9 +480,9 @@ const AdjustmentFormPage = () => {
                           <div className="text-sm text-gray-500 dark:text-gray-500">{item.product_sku}</div>
                         </td>
                         <td className="px-4 py-3 text-right text-sm text-gray-900 dark:text-gray-100">{item.quantity}</td>
-                        <td className="px-4 py-3 text-right text-sm text-gray-900 dark:text-gray-100">${formatCurrency(item.unit_cost)}</td>
+                        <td className="px-4 py-3 text-right text-sm text-gray-900 dark:text-gray-100">{formatCurrency(item.unit_cost)}</td>
                         <td className="px-4 py-3 text-right text-sm font-bold text-gray-900 dark:text-gray-100">
-                          ${formatCurrency(item.total_cost)}
+                          {formatCurrency(item.total_cost)}
                         </td>
                         <td className="px-4 py-3 text-right">
                           <button
@@ -505,7 +504,7 @@ const AdjustmentFormPage = () => {
                       <td className="px-4 py-3 text-right text-sm font-semibold text-gray-900 dark:text-gray-100">{totals.totalQuantity}</td>
                       <td className="px-4 py-3"></td>
                       <td className="px-4 py-3 text-right text-sm font-bold text-blue-600">
-                        ${formatCurrency(totals.totalCost)}
+                        {formatCurrency(totals.totalCost)}
                       </td>
                       <td className="px-4 py-3"></td>
                     </tr>

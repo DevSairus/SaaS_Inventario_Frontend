@@ -5,6 +5,8 @@ import useBranchStore from '../../store/branchStore';
 import Layout from '../../components/layout/Layout';
 import toast from 'react-hot-toast';
 import { PlusIcon, XMarkIcon, CheckIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { formatCurrency } from '../../utils/formatters';
+import NumericInput from '../../components/inputs/NumericInput';
 
 const STATUS_STYLES = {
   draft: 'bg-yellow-100 text-yellow-800',
@@ -17,8 +19,6 @@ const toLocalDateString = (date) => {
   const d = date instanceof Date ? date : new Date(date);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
-
-const formatCurrency = (v) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(v || 0);
 
 const emptyLine = () => ({ account_id: '', debit: '', credit: '', description: '' });
 
@@ -297,8 +297,8 @@ const JournalEntriesPage = () => {
                         <option value="">Seleccionar cuenta...</option>
                         {accounts.map((a) => <option key={a.id} value={a.id}>{a.code} - {a.name}</option>)}
                       </select>
-                      <input type="number" step="0.01" placeholder="Débito" value={line.debit} onChange={(e) => updateLine(idx, 'debit', e.target.value)} className="w-28 px-2 py-1.5 border border-gray-300 rounded-lg text-sm" />
-                      <input type="number" step="0.01" placeholder="Crédito" value={line.credit} onChange={(e) => updateLine(idx, 'credit', e.target.value)} className="w-28 px-2 py-1.5 border border-gray-300 rounded-lg text-sm" />
+                      <NumericInput placeholder="Débito" value={line.debit} onChange={(e) => updateLine(idx, 'debit', e.target.value)} className="w-28 px-2 py-1.5 border border-gray-300 rounded-lg text-sm" />
+                      <NumericInput placeholder="Crédito" value={line.credit} onChange={(e) => updateLine(idx, 'credit', e.target.value)} className="w-28 px-2 py-1.5 border border-gray-300 rounded-lg text-sm" />
                       <button type="button" onClick={() => removeLine(idx)} className="text-gray-400 hover:text-red-600"><TrashIcon className="w-4 h-4" /></button>
                     </div>
                   ))}

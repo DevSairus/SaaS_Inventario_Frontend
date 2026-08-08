@@ -128,6 +128,12 @@ const SuperAdminSidebar = ({ isOpen, toggleSidebar }) => {
       icon: Facebook,
     },
 
+    {
+      name: 'Conexión Ensambladora',
+      href: '/superadmin/ensambladora-config',
+      icon: Link2,
+    },
+
     // ✅ NUEVO: Anuncios
     {
       name: 'Anuncios',

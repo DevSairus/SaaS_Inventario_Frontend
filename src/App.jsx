@@ -4,6 +4,7 @@ import LoginPage from './pages/auth/LoginPage';
 import LandingPage from './pages/LandingPage';
 import ResetPasswordPage from './pages/auth/ResetPasswordPage';
 import WorkOrderPublicPage from './pages/workshop/WorkOrderPublicPage';
+import SeguimientoPublicoPage from './pages/ensambladora/SeguimientoPublicoPage';
 import Loading from './components/common/Loading';
 import DashboardPage from './pages/dashboard/DashboardPage';
 import ProductsPage from './pages/products/ProductsPage';
@@ -45,6 +46,28 @@ const WorkOrderDetailPage = lazy(() => import('./pages/workshop/WorkOrderDetailP
 const VehiclesPage = lazy(() => import('./pages/workshop/VehiclesPage'));
 const VehicleDetailPage = lazy(() => import('./pages/workshop/VehicleDetailPage'));
 const ScannerPage = lazy(() => import('./pages/workshop/ScannerPage'));
+// Módulo Ensambladora (Fase 1 — consulta de vehículos vs el Core)
+const VinSearchPage = lazy(() => import('./pages/ensambladora/VinSearchPage'));
+const VehiculoDetailPage = lazy(() => import('./pages/ensambladora/VehiculoDetailPage'));
+const VentaFormPage = lazy(() => import('./pages/ensambladora/VentaFormPage'));
+const AlistamientoFormPage = lazy(() => import('./pages/ensambladora/AlistamientoFormPage'));
+const EntregaFormPage = lazy(() => import('./pages/ensambladora/EntregaFormPage'));
+// Fase 4 — garantías
+const GarantiaFormPage = lazy(() => import('./pages/ensambladora/GarantiaFormPage'));
+const GarantiaReenviarPage = lazy(() => import('./pages/ensambladora/GarantiaReenviarPage'));
+// Fase 3 — revisiones periódicas
+const AgendaRevisionesPage = lazy(() => import('./pages/ensambladora/AgendaRevisionesPage'));
+const RevisionFormPage = lazy(() => import('./pages/ensambladora/RevisionFormPage'));
+// Fase 5 — tarifario y liquidaciones
+const LiquidacionesPage = lazy(() => import('./pages/ensambladora/LiquidacionesPage'));
+const GarantiasPage = lazy(() => import('./pages/ensambladora/GarantiasPage'));
+const LiquidacionDetailPage = lazy(() => import('./pages/ensambladora/LiquidacionDetailPage'));
+// Fase 7 — técnicos/asesores
+const TecnicosPage = lazy(() => import('./pages/ensambladora/TecnicosPage'));
+// Cotización de moto no vendida
+const CotizarPage = lazy(() => import('./pages/ensambladora/CotizarPage'));
+// Fase 8 — panel de monitoreo de sincronización
+const SyncMonitorPage = lazy(() => import('./pages/ensambladora/SyncMonitorPage'));
 import TechnicianProductivityPage from './pages/workshop/productivity/TechnicianProductivityPage';
 import CommissionSettlementsPage from './pages/workshop/commissions/CommissionSettlementsPage';
 import CommissionSettlementDetailPage from './pages/workshop/commissions/CommissionSettlementDetailPage';
@@ -98,6 +121,7 @@ import SubscriptionManagement from './pages/superadmin/SubscriptionManagement';
 import SuperAdminMercadoPagoConfig from './pages/superadmin/SuperAdminMercadoPagoConfig';
 import SuperAdminNcfConfig from './pages/superadmin/SuperAdminNcfConfig';
 import SuperAdminMetaConfig from './pages/superadmin/SuperAdminMetaConfig';
+import SuperAdminEnsambladoraConfig from './pages/superadmin/SuperAdminEnsambladoraConfig';
 import TenantMigrationStatus from './pages/superadmin/TenantMigrationStatus';
 import AnnouncementsManagement from './pages/superadmin/AnnouncementsManagement';
 import AnnouncementsModal from './components/common/AnnouncementsModal';
@@ -211,6 +235,7 @@ function App() {
         <Route path="/login"          element={<LoginPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/ot/:token"      element={<WorkOrderPublicPage />} />
+        <Route path="/ensambladora/seguimiento/:tipo/:token" element={<SeguimientoPublicoPage />} />
         <Route path="/sin-sede"       element={<NoBranchAssignedPage />} />
 
         {/* ─── Super Admin ─────────────────────────────────── */}
@@ -233,6 +258,7 @@ function App() {
           <Route path="mercadopago-config"  element={<SuperAdminMercadoPagoConfig />} />
           <Route path="ncf-config"          element={<SuperAdminNcfConfig />} />
           <Route path="meta-config"         element={<SuperAdminMetaConfig />} />
+          <Route path="ensambladora-config" element={<SuperAdminEnsambladoraConfig />} />
           <Route path="tenant-migration"    element={<TenantMigrationStatus />} />
           <Route path="announcements"       element={<AnnouncementsManagement />} />
           <Route path="analytics"           element={<Analytics />} />
@@ -303,6 +329,21 @@ function App() {
         <Route path="workshop/vehicles"                element={<TenantRoute module="workshop"><Suspense fallback={<Loading fullScreen />}><VehiclesPage /></Suspense></TenantRoute>} />
         <Route path="workshop/vehicles/:id"            element={<TenantRoute module="workshop"><Suspense fallback={<Loading fullScreen />}><VehicleDetailPage /></Suspense></TenantRoute>} />
         <Route path="workshop/scan"                    element={<TenantRoute module="workshop"><Suspense fallback={<Loading fullScreen />}><ScannerPage /></Suspense></TenantRoute>} />
+        <Route path="ensambladora/buscar"              element={<TenantRoute module="ensambladora"><Suspense fallback={<Loading fullScreen />}><VinSearchPage /></Suspense></TenantRoute>} />
+        <Route path="ensambladora/vehiculos/:vin"      element={<TenantRoute module="ensambladora"><Suspense fallback={<Loading fullScreen />}><VehiculoDetailPage /></Suspense></TenantRoute>} />
+        <Route path="ensambladora/vehiculos/:vin/venta"        element={<TenantRoute module="ensambladora"><Suspense fallback={<Loading fullScreen />}><VentaFormPage /></Suspense></TenantRoute>} />
+        <Route path="ensambladora/vehiculos/:vin/alistamiento" element={<TenantRoute module="ensambladora"><Suspense fallback={<Loading fullScreen />}><AlistamientoFormPage /></Suspense></TenantRoute>} />
+        <Route path="ensambladora/vehiculos/:vin/entrega"      element={<TenantRoute module="ensambladora"><Suspense fallback={<Loading fullScreen />}><EntregaFormPage /></Suspense></TenantRoute>} />
+        <Route path="ensambladora/vehiculos/:vin/garantia"     element={<TenantRoute module="ensambladora"><Suspense fallback={<Loading fullScreen />}><GarantiaFormPage /></Suspense></TenantRoute>} />
+        <Route path="ensambladora/garantias/:localId/reenviar" element={<TenantRoute module="ensambladora"><Suspense fallback={<Loading fullScreen />}><GarantiaReenviarPage /></Suspense></TenantRoute>} />
+        <Route path="ensambladora/revisiones"                  element={<TenantRoute module="ensambladora"><Suspense fallback={<Loading fullScreen />}><AgendaRevisionesPage /></Suspense></TenantRoute>} />
+        <Route path="ensambladora/vehiculos/:vin/revision"     element={<TenantRoute module="ensambladora"><Suspense fallback={<Loading fullScreen />}><RevisionFormPage /></Suspense></TenantRoute>} />
+        <Route path="ensambladora/liquidaciones"                element={<TenantRoute module="ensambladora"><Suspense fallback={<Loading fullScreen />}><LiquidacionesPage /></Suspense></TenantRoute>} />
+        <Route path="ensambladora/liquidaciones/:id"            element={<TenantRoute module="ensambladora"><Suspense fallback={<Loading fullScreen />}><LiquidacionDetailPage /></Suspense></TenantRoute>} />
+        <Route path="ensambladora/garantias"                    element={<TenantRoute module="ensambladora"><Suspense fallback={<Loading fullScreen />}><GarantiasPage /></Suspense></TenantRoute>} />
+        <Route path="ensambladora/tecnicos"                     element={<TenantRoute module="ensambladora"><Suspense fallback={<Loading fullScreen />}><TecnicosPage /></Suspense></TenantRoute>} />
+        <Route path="ensambladora/cotizar"                      element={<TenantRoute module="ensambladora"><Suspense fallback={<Loading fullScreen />}><CotizarPage /></Suspense></TenantRoute>} />
+        <Route path="ensambladora/sync"                         element={<TenantRoute module="ensambladora"><Suspense fallback={<Loading fullScreen />}><SyncMonitorPage /></Suspense></TenantRoute>} />
         <Route path="workshop/productivity"            element={<TenantRoute module="workshop"><TechnicianProductivityPage /></TenantRoute>} />
         <Route path="workshop/commission-settlements"  element={<TenantRoute module="workshop"><CommissionSettlementsPage /></TenantRoute>} />
         <Route path="workshop/commission-settlements/:id" element={<TenantRoute module="workshop"><CommissionSettlementDetailPage /></TenantRoute>} />
@@ -322,6 +363,10 @@ function App() {
         <Route path="customers/:id" element={<TenantRoute module="sales"><CustomerDetailPage /></TenantRoute>} />
 
         {/* CRM — pipeline, seguimiento y dashboard */}
+        {/* Cotizar es un formulario propio del CRM, no una opción dentro de
+            Ventas (ver SaleFormPage: isCrmQuoteMode) -- reusa el mismo
+            componente que /sales/new para no duplicar ~800 líneas. */}
+        <Route path="crm/quotes/new" element={<TenantRoute module="crm"><SaleFormPage /></TenantRoute>} />
         <Route path="crm/pipeline"  element={<TenantRoute module="crm"><PipelinePage /></TenantRoute>} />
         <Route path="crm/followups" element={<TenantRoute module="crm"><FollowUpsPage /></TenantRoute>} />
         <Route path="crm/dashboard" element={<TenantRoute module="crm"><CrmDashboardPage /></TenantRoute>} />

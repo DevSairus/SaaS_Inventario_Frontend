@@ -4,13 +4,14 @@ import { usePurchasesStore } from '../../store/purchasesStore';
 import { useSuppliersStore } from '../../store/suppliersStore';
 import useProductsStore from '../../store/productsStore';
 import Layout from '../../components/layout/Layout';
-import { 
-  formatCurrency, 
-  toInteger, 
-  toNumber, 
+import NumericInput from '../../components/inputs/NumericInput';
+import {
+  formatCurrency,
+  toInteger,
+  toNumber,
   calculateItemTotals,
-  INPUT_CONFIG 
-} from '../../utils/numberUtils';
+  INPUT_CONFIG
+} from '../../utils/formatters';
 import toast from 'react-hot-toast';
 
 const PurchaseFormPage = () => {
@@ -609,12 +610,10 @@ const PurchaseFormPage = () => {
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Costo Unitario
               </label>
-              <input
-                type="number"
+              <NumericInput
                 name="unit_cost"
                 value={currentItem.unit_cost}
                 onChange={handleItemChange}
-                {...INPUT_CONFIG.price}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
@@ -691,14 +690,14 @@ const PurchaseFormPage = () => {
                         <div className="text-sm text-gray-500">{item.product_sku}</div>
                       </td>
                       <td className="px-4 py-3 text-right text-sm text-gray-900">{item.quantity}</td>
-                      <td className="px-4 py-3 text-right text-sm text-gray-900">${formatCurrency(item.unit_cost)}</td>
+                      <td className="px-4 py-3 text-right text-sm text-gray-900">{formatCurrency(item.unit_cost)}</td>
                       <td className="px-4 py-3 text-right text-sm text-gray-900">{item.tax_rate}%</td>
                       <td className="px-4 py-3 text-right text-sm text-gray-900">{item.discount_percentage}%</td>
                       <td className="px-4 py-3 text-right text-sm font-medium text-gray-900">
-                        ${formatCurrency(item.subtotal)}
+                        {formatCurrency(item.subtotal)}
                       </td>
                       <td className="px-4 py-3 text-right text-sm font-bold text-gray-900">
-                        ${formatCurrency(item.total)}
+                        {formatCurrency(item.total)}
                       </td>
                       <td className="px-4 py-3 text-right">
                         <button
@@ -730,12 +729,10 @@ const PurchaseFormPage = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Descuento Global
                     </label>
-                    <input
-                      type="number"
+                    <NumericInput
                       name="discount_amount"
                       value={formData.discount_amount}
                       onChange={handleFormChange}
-                      {...INPUT_CONFIG.price}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                   </div>
@@ -743,12 +740,10 @@ const PurchaseFormPage = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Costo de Envío
                     </label>
-                    <input
-                      type="number"
+                    <NumericInput
                       name="shipping_cost"
                       value={formData.shipping_cost}
                       onChange={handleFormChange}
-                      {...INPUT_CONFIG.price}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                   </div>
@@ -760,24 +755,24 @@ const PurchaseFormPage = () => {
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Subtotal:</span>
-                    <span className="font-medium">${formatCurrency(totals.subtotal)}</span>
+                    <span className="font-medium">{formatCurrency(totals.subtotal)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">IVA:</span>
-                    <span className="font-medium">${formatCurrency(totals.taxAmount)}</span>
+                    <span className="font-medium">{formatCurrency(totals.taxAmount)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Descuento:</span>
-                    <span className="font-medium text-red-600">-${formatCurrency(formData.discount_amount)}</span>
+                    <span className="font-medium text-red-600">-{formatCurrency(formData.discount_amount)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Envío:</span>
-                    <span className="font-medium">${formatCurrency(formData.shipping_cost)}</span>
+                    <span className="font-medium">{formatCurrency(formData.shipping_cost)}</span>
                   </div>
                   <div className="border-t pt-2 mt-2">
                     <div className="flex justify-between">
                       <span className="text-lg font-bold text-gray-900">Total:</span>
-                      <span className="text-lg font-bold text-blue-600">${formatCurrency(totals.total)}</span>
+                      <span className="text-lg font-bold text-blue-600">{formatCurrency(totals.total)}</span>
                     </div>
                   </div>
                 </div>

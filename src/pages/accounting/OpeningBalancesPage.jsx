@@ -18,6 +18,8 @@ import {
 import ImportOpeningBalanceRowsModal from '../../components/accounting/ImportOpeningBalanceRowsModal';
 import ImportOpeningInventoryModal from '../../components/accounting/ImportOpeningInventoryModal';
 import Layout from '../../components/layout/Layout';
+import { formatCurrency } from '../../utils/formatters';
+import NumericInput from '../../components/inputs/NumericInput';
 
 const TABS = [
   { key: 'receivable', label: 'Cartera' },
@@ -25,9 +27,6 @@ const TABS = [
   { key: 'account', label: 'Caja / Bancos' },
   { key: 'inventory', label: 'Inventario' },
 ];
-
-const formatCurrency = (value) =>
-  new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(value || 0);
 
 // Lista simple de saldos ya cargados (cartera/CxP), con acción de anular —
 // compartida entre las pestañas Cartera y CxP.
@@ -305,8 +304,7 @@ const OpeningBalancesPage = () => {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Monto</label>
-                <input
-                  type="number" min="0" step="0.01"
+                <NumericInput
                   value={accountForm.amount}
                   onChange={(e) => setAccountForm((f) => ({ ...f, amount: e.target.value }))}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"

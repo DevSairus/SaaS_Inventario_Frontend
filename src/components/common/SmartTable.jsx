@@ -5,7 +5,7 @@ import {
   formatPercentage, 
   formatInteger,
   formatStock 
-} from '../../utils/numberFormat';
+} from '../../utils/formatters';
 
 /**
  * Tabla inteligente que formatea automáticamente según el tipo de columna

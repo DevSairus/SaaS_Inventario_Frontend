@@ -4,6 +4,7 @@ import { X, AlertTriangle, ChevronRight, ChevronLeft, Check, FileText, Minus, Pl
 import { formatCurrency } from '../../utils/formatters';
 import dianAPI from '../../api/dian';
 import toast from 'react-hot-toast';
+import NumericInput from '../inputs/NumericInput';
 
 const REASONS = {
   credit: [
@@ -316,9 +317,9 @@ export default function CreditDebitNoteModal({ isOpen, onClose, sale, onSuccess,
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Monto</label>
                     <div className="relative">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-500 font-medium">$</span>
-                      <input type="number" value={amount} onChange={e => setAmount(e.target.value)}
+                      <NumericInput value={amount} onChange={e => setAmount(e.target.value)}
                         className="w-full pl-8 pr-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent text-lg font-medium dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100"
-                        min="1" max={sale.total_amount} step="any" placeholder="0" />
+                        placeholder="0" />
                     </div>
                     {parseFloat(amount) > parseFloat(sale.total_amount) && (
                       <p className="mt-1 text-xs text-red-600 dark:text-red-400">El monto no puede exceder el total de la factura</p>

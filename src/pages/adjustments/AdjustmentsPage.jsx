@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAdjustmentsStore } from '../../store/adjustmentsStore';
 import Layout from '../../components/layout/Layout';
 import toast from 'react-hot-toast';
+import { formatCurrency } from '../../utils/formatters';
 
 const AdjustmentsPage = () => {
   const navigate = useNavigate();
@@ -89,14 +90,6 @@ const AdjustmentsPage = () => {
         {labels[type]}
       </span>
     );
-  };
-
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('es-CO', {
-      style: 'currency',
-      currency: 'COP',
-      minimumFractionDigits: 0
-    }).format(amount);
   };
 
   return (

@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import Modal from '../../components/common/Modal';
 import Input from '../../components/common/Input';
+import NumericInput from '../../components/inputs/NumericInput';
 import Button from '../../components/common/Button';
 import CustomerSearchInput from '../../components/common/CustomerSearchInput';
 import toast from 'react-hot-toast';
@@ -61,14 +62,17 @@ function celebrateWin() {
 }
 
 // C.2 — "Oportunidad → cotización en un clic": arma la URL hacia el
-// formulario de Ventas con lo que ya sabemos de la oportunidad, para que
-// el asesor no tenga que volver a escribir cliente ni valor estimado.
-// El backend (sales.controller.create) lee opportunity_id + document_type
-// para vincular quote_sale_id y mover la etapa a 'cotizado' automáticamente.
+// formulario de cotización del CRM con lo que ya sabemos de la oportunidad,
+// para que el asesor no tenga que volver a escribir cliente ni valor
+// estimado. El backend (sales.controller.create) lee opportunity_id +
+// document_type para vincular quote_sale_id y mover la etapa a 'cotizado'
+// automáticamente. /crm/quotes/new monta el mismo SaleFormPage que usa
+// Ventas, pero fuera del flujo de Ventas (ver isCrmQuoteMode ahí) -- con
+// CRM activo, cotizar ya no es una opción dentro de Ventas.
 function buildQuoteUrl(opp) {
   const params = new URLSearchParams({ opportunity_id: opp.id, customer_id: opp.customer_id });
   if (opp.expected_value > 0) params.set('expected_value', opp.expected_value);
-  return `/sales/new?${params.toString()}`;
+  return `/crm/quotes/new?${params.toString()}`;
 }
 
 // C.3 — "Oportunidad → OT en un clic": mismo patrón que C.2, para tenants
@@ -194,7 +198,7 @@ function OpportunityCard({ opp, accentColor, onOpen, onQuote, onWorkOrder, hasWo
           type="button"
           draggable={false}
           onClick={e => { e.stopPropagation(); onQuote(); }}
-          title="Generar cotización en Ventas y vincularla a esta oportunidad"
+          title="Generar cotización y vincularla a esta oportunidad"
           className="mt-2 w-full flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md text-[11px] font-medium text-accent bg-accent/[0.06] border border-accent/15 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity hover:bg-accent/[0.12]"
         >
           <FileText size={11} /> Generar cotización
@@ -896,7 +900,7 @@ export default function PipelinePage() {
                           {canQuote(opp, stageTypeByKey) && (
                             <button type="button"
                               onClick={e => { e.stopPropagation(); navigate(buildQuoteUrl(opp)); }}
-                              title="Generar cotización en Ventas y vincularla a esta oportunidad"
+                              title="Generar cotización y vincularla a esta oportunidad"
                               className="p-1.5 bg-accent/[0.08] text-accent rounded-full hover:bg-accent/[0.15] inline-flex">
                               <FileText size={12} />
                             </button>
@@ -981,8 +985,11 @@ export default function PipelinePage() {
             </select>
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <Input label="Valor estimado" type="number" value={form.expected_value}
-              onChange={e => setForm(f => ({ ...f, expected_value: e.target.value }))} />
+            <div className="w-full">
+              <label className="label">Valor estimado</label>
+              <NumericInput className="input" value={form.expected_value}
+                onChange={e => setForm(f => ({ ...f, expected_value: e.target.value }))} />
+            </div>
             <Input label="Cierre esperado" type="date" value={form.expected_close_date}
               onChange={e => setForm(f => ({ ...f, expected_close_date: e.target.value }))} />
           </div>

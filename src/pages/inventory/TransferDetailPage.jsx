@@ -4,6 +4,7 @@ import { ArrowLeft, Send, CheckCircle, Package, Calendar, Warehouse } from 'luci
 import Layout from '../../components/layout/Layout';
 import axios from 'axios';
 import toast from 'react-hot-toast';
+import { formatNumber } from '../../utils/formatters';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -250,10 +251,10 @@ const TransferDetailPage = () => {
                     {item.quantity_received || '-'}
                   </td>
                   <td className="px-6 py-4 text-right text-sm text-gray-900">
-                    ${parseFloat(item.unit_cost).toFixed(2)}
+                    ${formatNumber(parseFloat(item.unit_cost), 2)}
                   </td>
                   <td className="px-6 py-4 text-right text-sm font-medium text-gray-900">
-                    ${(parseFloat(item.quantity_sent) * parseFloat(item.unit_cost)).toFixed(2)}
+                    ${formatNumber(parseFloat(item.quantity_sent) * parseFloat(item.unit_cost), 2)}
                   </td>
                 </tr>
               ))}
@@ -264,9 +265,9 @@ const TransferDetailPage = () => {
                   Total:
                 </td>
                 <td className="px-6 py-4 text-right text-lg font-bold text-blue-600">
-                  ${transfer.items?.reduce((sum, item) => 
+                  ${formatNumber(transfer.items?.reduce((sum, item) =>
                     sum + (parseFloat(item.quantity_sent) * parseFloat(item.unit_cost)), 0
-                  ).toFixed(2)}
+                  ), 2)}
                 </td>
               </tr>
             </tfoot>

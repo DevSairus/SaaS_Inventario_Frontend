@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import { cashSessionsAPI } from '../../api/cashSessions';
 import { formatCurrency, toLocalDateString } from '../../utils/formatters';
+import NumericInput from '../../components/inputs/NumericInput';
 import useBranchStore from '../../store/branchStore';
 import Layout from '../../components/layout/Layout';
 import {
@@ -340,10 +341,7 @@ const CashSessionsPage = () => {
               <p className="text-xs text-gray-500 mb-4">{activeBranch?.name} · {toLocalDateString()}</p>
 
               <label className="block text-sm font-medium text-gray-700 mb-1">Base de apertura (efectivo)</label>
-              <input
-                type="number"
-                min="0"
-                step="0.01"
+              <NumericInput
                 autoFocus
                 value={openingAmount}
                 onChange={e => setOpeningAmount(e.target.value)}
@@ -400,9 +398,7 @@ const CashSessionsPage = () => {
                         <div key={m.key} className="grid grid-cols-3 gap-2 items-center bg-gray-50 rounded-lg px-3 py-2">
                           <span className="text-sm font-medium text-gray-700">{m.label}</span>
                           <span className="text-sm text-gray-600 text-right">{formatCurrency(expected)}</span>
-                          <input
-                            type="number"
-                            step="0.01"
+                          <NumericInput
                             value={countedVal}
                             onChange={e => setCounted(c => ({ ...c, [m.key]: e.target.value }))}
                             className="w-full px-2 py-1 border border-gray-300 rounded text-sm text-right"

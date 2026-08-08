@@ -4,6 +4,7 @@ import { ClipboardList, Search, Eye, CheckCircle, XCircle, Plus } from 'lucide-r
 import Layout from '../../components/layout/Layout';
 import useInternalConsumptionsStore from '../../store/internalConsumptionsStore';
 import toast from 'react-hot-toast';
+import { formatNumber } from '../../utils/formatters';
 
 const InternalConsumptionsPage = () => {
   const navigate = useNavigate();
@@ -202,7 +203,7 @@ const InternalConsumptionsPage = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">
-                        ${parseFloat(consumption.total_cost).toFixed(2)}
+                        ${formatNumber(parseFloat(consumption.total_cost), 2)}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">

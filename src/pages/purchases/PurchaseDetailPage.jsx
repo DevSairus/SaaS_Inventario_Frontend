@@ -5,6 +5,7 @@ import useProductsStore from '../../store/productsStore';
 import Layout from '../../components/layout/Layout';
 import ConfirmPurchaseWithPaymentModal from '../../components/purchases/ConfirmPurchaseWithPaymentModal';
 import toast from 'react-hot-toast';
+import { formatCurrency } from '../../utils/formatters';
 
 const PurchaseDetailPage = () => {
   const { id } = useParams();
@@ -107,14 +108,6 @@ const PurchaseDetailPage = () => {
         {config.label}
       </span>
     );
-  };
-
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('es-CO', {
-      style: 'currency',
-      currency: 'COP',
-      minimumFractionDigits: 0
-    }).format(amount);
   };
 
   const formatDate = (dateString) => {

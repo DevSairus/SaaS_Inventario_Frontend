@@ -9,6 +9,7 @@ import {
   FileText, Hash, Fuel, Gauge, Palette,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import NumericInput from '../../components/inputs/NumericInput';
 
 // ── helpers ──────────────────────────────────────────────────────────
 const COP = n => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(n || 0);
@@ -402,7 +403,7 @@ export default function VehicleDetailPage() {
                 </div>
                 <div>
                   <label className="block text-xs text-gray-500 mb-1">Kilometraje actual</label>
-                  <input type="number" value={form.current_mileage} placeholder="85000" className={inputCls}
+                  <NumericInput value={form.current_mileage} placeholder="85000" className={inputCls}
                     onChange={e => setF('current_mileage', e.target.value)} />
                 </div>
               </div>

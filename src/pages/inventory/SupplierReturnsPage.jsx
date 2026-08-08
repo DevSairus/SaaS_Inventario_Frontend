@@ -4,6 +4,7 @@ import { Package, Search, Eye, CheckCircle, XCircle, Plus } from 'lucide-react';
 import Layout from '../../components/layout/Layout';
 import api from '../../api/axios';
 import toast from 'react-hot-toast';
+import { formatNumber } from '../../utils/formatters';
 
 const SupplierReturnsPage = () => {
   const navigate = useNavigate();
@@ -183,7 +184,7 @@ const SupplierReturnsPage = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">
-                        ${parseFloat(ret.total_amount).toFixed(2)}
+                        ${formatNumber(parseFloat(ret.total_amount), 2)}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">

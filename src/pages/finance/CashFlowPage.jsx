@@ -13,6 +13,7 @@ import {
   ExclamationTriangleIcon,
   ClockIcon
 } from '@heroicons/react/24/outline';
+import { formatCurrency } from '../../utils/formatters';
 
 const CashFlowPage = () => {
   const [loading, setLoading] = useState(true);
@@ -113,9 +114,6 @@ const CashFlowPage = () => {
       setDownloadingExcel(false);
     }
   };
-
-  const formatCurrency = (value) =>
-    new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(value || 0);
 
   const formatDate = (date) => {
     if (!date) return '—';

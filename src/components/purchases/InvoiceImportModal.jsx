@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { X, Upload, FileText, CheckCircle, AlertCircle, Package, Trash2, Truck, Search, Link2, Sparkles } from 'lucide-react';
 import api from '../../api/axios';
 import { productsAPI } from '../../api/products';
+import NumericInput from '../inputs/NumericInput';
 
 const fmt = (val) => parseFloat(val || 0).toLocaleString('es-CO');
 
@@ -492,7 +493,7 @@ const InvoiceImportModal = ({ isOpen, onClose, onSuccess }) => {
                   </div>
                   <div className="flex items-center gap-1 flex-shrink-0">
                     <span className="text-gray-400 dark:text-gray-500 text-sm">$</span>
-                    <input type="number" min="0" value={shippingCost} onChange={e => setShippingCost(e.target.value)}
+                    <NumericInput value={shippingCost} onChange={e => setShippingCost(e.target.value)}
                       placeholder="0"
                       className="w-32 px-3 py-2 text-right border border-gray-300 dark:border-white/10 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 bg-white dark:bg-graphite-2 dark:text-gray-100" />
                   </div>
@@ -511,7 +512,7 @@ const InvoiceImportModal = ({ isOpen, onClose, onSuccess }) => {
                   </div>
                   <div className="flex items-center gap-1 flex-shrink-0">
                     <span className="text-gray-400 dark:text-gray-500 text-sm">$</span>
-                    <input type="number" min="0" value={discountAmount} onChange={e => setDiscountAmount(e.target.value)}
+                    <NumericInput value={discountAmount} onChange={e => setDiscountAmount(e.target.value)}
                       placeholder="0"
                       className="w-32 px-3 py-2 text-right border border-gray-300 dark:border-white/10 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 bg-white dark:bg-graphite-2 dark:text-gray-100" />
                   </div>

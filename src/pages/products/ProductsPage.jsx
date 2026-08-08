@@ -9,6 +9,7 @@ import BarcodePrintModal from '../../components/products/BarcodePrintModal';
 import QuickStockModal from '../../components/products/QuickStockModal';
 import Layout from '../../components/layout/Layout';
 import { exportProductsToExcel } from '../../utils/excelExport';
+import { formatCurrency } from '../../utils/formatters';
 import { vehicleApplicationsAPI } from '../../api/vehicleApplications';
 import toast from 'react-hot-toast';
 import { Car, X } from 'lucide-react';
@@ -308,14 +309,6 @@ function ProductsPage() {
     } catch (error) {
       toast.error('Error al importar productos: ' + error.message);
     }
-  };
-
-  const formatCurrency = (value) => {
-    return new Intl.NumberFormat('es-CO', {
-      style: 'currency',
-      currency: 'COP',
-      minimumFractionDigits: 0
-    }).format(value || 0);
   };
 
   const getStockBadgeColor = (current, min) => {

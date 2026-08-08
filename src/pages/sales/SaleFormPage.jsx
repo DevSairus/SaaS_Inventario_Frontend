@@ -1,6 +1,6 @@
 // frontend/src/pages/sales/SaleFormPage.jsx
 import { useState, useEffect, useMemo } from 'react';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams, useLocation } from 'react-router-dom';
 import useSalesStore from '../../store/salesStore';
 import useBranchStore from '../../store/branchStore';
 import useTenantStore from '../../store/tenantStore';
@@ -11,6 +11,7 @@ import useProductsStore from '../../store/productsStore';
 import { warehousesService } from '../../api/warehouses';
 import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
+import NumericInput from '../../components/inputs/NumericInput';
 import Card from '../../components/common/Card';
 import Modal from '../../components/common/Modal';
 import Layout from '../../components/layout/Layout';
@@ -39,7 +40,7 @@ import {
   toInteger, 
   toNumber, 
   INPUT_CONFIG 
-} from '../../utils/numberUtils';
+} from '../../utils/formatters';
 import toast from 'react-hot-toast';
 import ProductImageViewer from '../../components/products/ProductImageViewer';
 import {
@@ -54,6 +55,7 @@ import {
 function SaleFormPage() {
   const navigate = useNavigate();
   const { id } = useParams();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   // CRM — "Oportunidad → cotización en un clic" (Fase C.2): si llegamos
   // acá desde el botón "Generar cotización" del Pipeline, traemos el
@@ -63,6 +65,14 @@ function SaleFormPage() {
   const opportunityId = searchParams.get('opportunity_id');
   const opportunityCustomerId = searchParams.get('customer_id');
   const opportunityExpectedValue = searchParams.get('expected_value');
+  // Con CRM activo, este mismo formulario se monta también en
+  // /crm/quotes/new (ver App.jsx) para que cotizar sea un formulario propio
+  // del CRM y no una opción dentro del flujo normal de Ventas -- ver
+  // ConfirmSaleWithPaymentModal (hideQuoteOption) para la otra mitad del
+  // cambio. Reusamos el mismo componente en vez de duplicarlo: en este modo
+  // la venta nace directo como 'cotizacion', con o sin oportunidad de origen.
+  const isCrmQuoteRoute = location.pathname.startsWith('/crm/quotes');
+  const isCrmQuoteMode = isCrmQuoteRoute || Boolean(opportunityId);
   const { createSale, updateSale, fetchSaleById, currentSale, loading } = useSalesStore();
   const { features, enabledModules, fetchFeatures } = useTenantStore();
   // true = ocultar IVA en remisiones (el store aplica este default si no está configurado)
@@ -574,15 +584,14 @@ function SaleFormPage() {
       };
 
       // El document_type NO se envía al crear — se elige al confirmar la
-      // venta. Excepción: si venimos de "Generar cotización" en el Pipeline,
-      // el backend necesita ver document_type='cotizacion' + opportunity_id
-      // en este mismo request para vincular quote_sale_id y mover la etapa a
-      // 'cotizado' (no persiste el tipo en la Sale — eso sigue pasando al
-      // confirmar — es solo la señal que activa el vínculo con el CRM).
+      // venta. Excepción: en modo cotización de CRM (con o sin oportunidad
+      // de origen) nace directo como 'cotizacion' -- si además viene de una
+      // oportunidad, el backend necesita opportunity_id en este mismo
+      // request para vincular quote_sale_id y mover la etapa a 'cotizado'.
       if (!isEditMode) {
-        if (opportunityId) {
+        if (isCrmQuoteMode) {
           saleData.document_type = 'cotizacion';
-          saleData.opportunity_id = opportunityId;
+          if (opportunityId) saleData.opportunity_id = opportunityId;
         } else {
           delete saleData.document_type;
         }
@@ -601,6 +610,8 @@ function SaleFormPage() {
         const result = await createSale(saleData);
         if (opportunityId) {
           toast.success('Cotización creada y vinculada a la oportunidad');
+        } else if (isCrmQuoteMode) {
+          toast.success('Cotización creada exitosamente');
         } else {
           const docLabel = docType === 'factura' ? 'Factura' : docType === 'cotizacion' ? 'Cotización' : 'Remisión';
           toast.success(`${docLabel} creada exitosamente`);
@@ -621,26 +632,34 @@ function SaleFormPage() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
             <button
-              onClick={() => navigate('/sales')}
+              onClick={() => navigate(isCrmQuoteRoute ? '/crm/pipeline' : '/sales')}
               className="p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
             >
               <ArrowLeft className="w-5 h-5 text-gray-600" />
             </button>
             <div className="min-w-0">
               <h1 className="text-xl sm:text-2xl font-bold text-gray-900 truncate">
-                {isEditMode ? 'Editar Venta' : opportunityId ? 'Cotización desde el Pipeline' : 'Nueva Venta'}
+                {isEditMode
+                  ? 'Editar Venta'
+                  : opportunityId
+                    ? 'Cotización desde el Pipeline'
+                    : isCrmQuoteMode
+                      ? 'Nueva Cotización'
+                      : 'Nueva Venta'}
               </h1>
               <p className="text-xs sm:text-sm text-gray-500 mt-0.5">
                 {isEditMode
                   ? 'Modifica los datos de la venta'
                   : opportunityId
                     ? 'Se vinculará automáticamente a la oportunidad al guardar'
-                    : 'Crea una nueva venta, factura o cotización'}
+                    : isCrmQuoteMode
+                      ? 'Se guardará como cotización -- queda visible en Ventas para facturarla o convertirla luego'
+                      : 'Crea una nueva venta, factura o cotización'}
               </p>
             </div>
           </div>
           <div className="flex gap-2 flex-shrink-0">
-            <Button type="button" variant="outline" onClick={() => navigate('/sales')}>
+            <Button type="button" variant="outline" onClick={() => navigate(isCrmQuoteRoute ? '/crm/pipeline' : '/sales')}>
               Cancelar
             </Button>
             <Button
@@ -692,7 +711,13 @@ function SaleFormPage() {
                     >
                       <option value="remision">Remisión</option>
                       <option value="factura">Factura</option>
-                      <option value="cotizacion">Cotización</option>
+                      {/* Con CRM activo, cotizar es un formulario propio del CRM
+                          (ver isCrmQuoteMode más arriba) -- se deja la opción
+                          solo si esta venta YA es una cotización, para no
+                          dejar una edición sin poder guardar su tipo actual. */}
+                      {(!enabledModules?.includes('crm') || currentSale?.document_type === 'cotizacion') && (
+                        <option value="cotizacion">Cotización</option>
+                      )}
                     </select>
                   </div>
                   )}
@@ -952,15 +977,12 @@ function SaleFormPage() {
                     Kilometraje
                     <span className="text-gray-400 text-xs ml-2">(Opcional)</span>
                   </label>
-                  <input
-                    type="number"
+                  <NumericInput
                     name="mileage"
                     value={formData.mileage}
                     onChange={handleInputChange}
                     className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                    placeholder="Ej: 85000"
-                    min="0"
-                    max="9999999"
+                    placeholder="Ej: 85.000"
                   />
                   <p className="text-xs text-gray-500 mt-1">
                     Kilometraje del vehículo al momento del servicio
@@ -1275,12 +1297,10 @@ function SaleFormPage() {
                               />
                             </td>
                             <td className="py-4 px-4">
-                              <Input
-                                type="number"
-                                {...INPUT_CONFIG.price}
+                              <NumericInput
                                 value={item.unit_price}
                                 onChange={(e) => handleItemChange(index, 'unit_price', e.target.value)}
-                                className="text-right w-full"
+                                className="text-right w-full input"
                               />
                             </td>
                             <td className="py-4 px-4">
@@ -1317,7 +1337,7 @@ function SaleFormPage() {
                             )}
                             <td className="py-4 px-4 text-right">
                               <span className="font-semibold text-gray-900">
-                                ${formatCurrency(item.total)}
+                                {formatCurrency(item.total)}
                               </span>
                             </td>
                             {technicians.length > 0 && (
@@ -1387,7 +1407,7 @@ function SaleFormPage() {
                             <div className="flex justify-between text-sm text-red-600">
                               <span>Descuento:</span>
                               <span className="font-medium">
-                                -${formatCurrency(totals.discount)}
+                                -{formatCurrency(totals.discount)}
                               </span>
                             </div>
                           )}
@@ -1395,7 +1415,7 @@ function SaleFormPage() {
                             <div className="flex justify-between items-center">
                               <span className="text-lg font-bold text-gray-900">TOTAL:</span>
                               <span className="text-2xl font-bold text-blue-600">
-                                ${formatCurrency(totals.total)}
+                                {formatCurrency(totals.total)}
                               </span>
                             </div>
                           </div>
@@ -1406,7 +1426,7 @@ function SaleFormPage() {
                           <div className="flex justify-between text-sm text-gray-600">
                             <span>Subtotal:</span>
                             <span className="font-medium text-gray-900">
-                              ${formatCurrency(totals.subtotal)}
+                              {formatCurrency(totals.subtotal)}
                             </span>
                           </div>
 
@@ -1414,7 +1434,7 @@ function SaleFormPage() {
                             <div className="flex justify-between text-sm text-red-600">
                               <span>Descuento:</span>
                               <span className="font-medium">
-                                -${formatCurrency(totals.discount)}
+                                -{formatCurrency(totals.discount)}
                               </span>
                             </div>
                           )}
@@ -1422,7 +1442,7 @@ function SaleFormPage() {
                           <div className="flex justify-between text-sm text-gray-600">
                             <span>IVA:</span>
                             <span className="font-medium text-gray-900">
-                              ${formatCurrency(totals.tax)}
+                              {formatCurrency(totals.tax)}
                             </span>
                           </div>
 
@@ -1430,7 +1450,7 @@ function SaleFormPage() {
                             <div className="flex justify-between items-center">
                               <span className="text-lg font-bold text-gray-900">TOTAL:</span>
                               <span className="text-2xl font-bold text-blue-600">
-                                ${formatCurrency(totals.total)}
+                                {formatCurrency(totals.total)}
                               </span>
                             </div>
                           </div>
@@ -1549,7 +1569,7 @@ function SaleFormPage() {
                       </div>
                       <div className="text-right ml-2 shrink-0 flex flex-col items-end gap-1">
                         <p className="font-semibold text-lg text-blue-600">
-                          ${formatCurrency(product.base_price || 0)}
+                          {formatCurrency(product.base_price || 0)}
                         </p>
                         {product.price_includes_tax && (
                           <p className="text-xs text-blue-600">

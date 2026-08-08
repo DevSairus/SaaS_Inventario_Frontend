@@ -5,12 +5,12 @@ import useBranchStore from '../../store/branchStore';
 import Layout from '../../components/layout/Layout';
 import toast from 'react-hot-toast';
 import { DocumentArrowDownIcon, TableCellsIcon } from '@heroicons/react/24/outline';
+import { formatCurrency } from '../../utils/formatters';
 
 const toLocalDateString = (date) => {
   const d = date instanceof Date ? date : new Date(date);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
-const formatCurrency = (v) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(v || 0);
 
 const TABS = [
   { id: 'trial-balance', label: 'Balance de Comprobación' },

@@ -4,6 +4,7 @@ import { ArrowLeft, CheckCircle, XCircle, Package, Calendar, User, FileText } fr
 import Layout from '../../components/layout/Layout';
 import useCustomerReturnsStore from '../../store/customerReturnsStore';
 import toast from 'react-hot-toast';
+import { formatNumber } from '../../utils/formatters';
 
 const CustomerReturnDetailPage = () => {
   const { id } = useParams();
@@ -229,20 +230,20 @@ const CustomerReturnDetailPage = () => {
             <div className="space-y-2">
               <div className="flex justify-between">
                 <p className="text-sm text-gray-600">Subtotal</p>
-                <p className="font-medium">${parseFloat(customerReturn.subtotal || 0).toFixed(2)}</p>
+                <p className="font-medium">${formatNumber(parseFloat(customerReturn.subtotal || 0), 2)}</p>
               </div>
               {customerReturn.discount_amount > 0 && (
                 <div className="flex justify-between">
                   <p className="text-sm text-gray-600">Descuento</p>
                   <p className="font-medium text-red-600">
-                    -${parseFloat(customerReturn.discount_amount).toFixed(2)}
+                    -${formatNumber(parseFloat(customerReturn.discount_amount), 2)}
                   </p>
                 </div>
               )}
               <div className="flex justify-between pt-2 border-t">
                 <p className="text-base font-semibold">Total</p>
                 <p className="text-xl font-bold text-blue-600">
-                  ${parseFloat(customerReturn.total_amount).toFixed(2)}
+                  ${formatNumber(parseFloat(customerReturn.total_amount), 2)}
                 </p>
               </div>
             </div>
@@ -292,10 +293,10 @@ const CustomerReturnDetailPage = () => {
                     {item.quantity}
                   </td>
                   <td className="px-6 py-4 text-right text-sm text-gray-900">
-                    ${parseFloat(item.unit_price).toFixed(2)}
+                    ${formatNumber(parseFloat(item.unit_price), 2)}
                   </td>
                   <td className="px-6 py-4 text-right text-sm font-medium text-gray-900">
-                    ${parseFloat(item.subtotal).toFixed(2)}
+                    ${formatNumber(parseFloat(item.subtotal), 2)}
                   </td>
                   <td className="px-6 py-4 text-center">
                     {getDestinationBadge(item.destination)}

@@ -4,6 +4,7 @@ import { ArrowLeft, Search } from 'lucide-react';
 import Layout from '../../components/layout/Layout';
 import api from '../../api/axios';
 import toast from 'react-hot-toast';
+import { formatNumber } from '../../utils/formatters';
 
 const SupplierReturnFormPage = () => {
   const navigate = useNavigate();
@@ -170,7 +171,7 @@ const SupplierReturnFormPage = () => {
                         <p className="text-sm text-gray-600">{purchase.supplier?.name}</p>
                       </div>
                       <div className="text-right">
-                        <p className="font-medium">${parseFloat(purchase.total_amount).toFixed(2)}</p>
+                        <p className="font-medium">${formatNumber(parseFloat(purchase.total_amount), 2)}</p>
                         <p className="text-sm text-gray-600">
                           {new Date(purchase.purchase_date + 'T12:00:00').toLocaleDateString()}
                         </p>
@@ -295,10 +296,10 @@ const SupplierReturnFormPage = () => {
                           />
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-900">
-                          ${parseFloat(item.unit_cost).toFixed(2)}
+                          ${formatNumber(parseFloat(item.unit_cost), 2)}
                         </td>
                         <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                          ${(item.quantity_to_return * item.unit_cost).toFixed(2)}
+                          ${formatNumber(item.quantity_to_return * item.unit_cost, 2)}
                         </td>
                       </tr>
                     ))}
@@ -310,9 +311,8 @@ const SupplierReturnFormPage = () => {
                 <div className="bg-gray-50 p-4 rounded-lg">
                   <p className="text-lg font-semibold">
                     Total a Devolver: $
-                    {formData.items
-                      .reduce((sum, item) => sum + (item.quantity_to_return * item.unit_cost), 0)
-                      .toFixed(2)}
+                    {formatNumber(formData.items
+                      .reduce((sum, item) => sum + (item.quantity_to_return * item.unit_cost), 0), 2)}
                   </p>
                 </div>
               </div>

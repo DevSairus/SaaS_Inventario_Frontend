@@ -12,6 +12,8 @@ import {
   ArrowPathIcon,
   FunnelIcon
 } from '@heroicons/react/24/outline';
+import { formatCurrency } from '../../utils/formatters';
+import NumericInput from '../../components/inputs/NumericInput';
 
 const AccountsPayablePage = () => {
   const [loading, setLoading] = useState(true);
@@ -70,14 +72,6 @@ const AccountsPayablePage = () => {
     } catch (error) {
       toast.error(error?.response?.data?.message || 'Error al registrar el pago');
     }
-  };
-
-  const formatCurrency = (value) => {
-    return new Intl.NumberFormat('es-CO', {
-      style: 'currency',
-      currency: 'COP',
-      minimumFractionDigits: 0
-    }).format(value || 0);
   };
 
   const formatDate = (date) => {
@@ -306,8 +300,7 @@ const AccountsPayablePage = () => {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Monto a pagar</label>
-              <input
-                type="number"
+              <NumericInput
                 value={paymentAmount}
                 onChange={e => setPaymentAmount(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg"

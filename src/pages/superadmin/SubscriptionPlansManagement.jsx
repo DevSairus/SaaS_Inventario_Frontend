@@ -6,6 +6,7 @@ import Card from '@components/common/Card';
 import Button from '@components/common/Button';
 import Badge from '@components/common/Badge';
 import Loading from '@components/common/Loading';
+import NumericInput from '@components/inputs/NumericInput';
 
 const SubscriptionPlansManagement = () => {
   const [plans, setPlans] = useState([]);
@@ -300,8 +301,7 @@ const SubscriptionPlansManagement = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="label">Precio Mensual (COP)</label>
-                    <input
-                      type="number"
+                    <NumericInput
                       className="input"
                       value={formData.monthly_price}
                       onChange={(e) =>
@@ -315,8 +315,7 @@ const SubscriptionPlansManagement = () => {
                   </div>
                   <div>
                     <label className="label">Precio Anual (COP)</label>
-                    <input
-                      type="number"
+                    <NumericInput
                       className="input"
                       value={formData.yearly_price}
                       onChange={(e) =>
@@ -396,8 +395,7 @@ const SubscriptionPlansManagement = () => {
                   </div>
                   <div>
                     <label className="label">Precio sede adicional (COP/mes)</label>
-                    <input
-                      type="number"
+                    <NumericInput
                       className="input"
                       value={formData.extra_branch_price}
                       disabled={!formData.allow_extra_branches}

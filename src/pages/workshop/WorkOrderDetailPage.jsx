@@ -19,6 +19,7 @@ import toast from 'react-hot-toast';
 import { ClipboardDocumentListIcon, DocumentTextIcon } from '@heroicons/react/24/outline';
 import ProductImageViewer from '../../components/products/ProductImageViewer';
 import DiagramMapEditor from '../../components/workshop/DiagramMapEditor';
+import NumericInput from '../../components/inputs/NumericInput';
 
 const STATUS_FLOW = ['recibido', 'en_proceso', 'en_espera', 'listo', 'entregado'];
 
@@ -583,8 +584,7 @@ export default function WorkOrderDetailPage() {
                   <span className="text-gray-400 dark:text-gray-500 text-xs block">Km salida</span>
                   {editingMileageOut ? (
                     <div className="flex items-center gap-1.5 mt-0.5">
-                      <input
-                        type="number"
+                      <NumericInput
                         value={mileageOutVal}
                         onChange={e => setMileageOutVal(e.target.value)}
                         placeholder="Ej: 87500"
@@ -820,7 +820,7 @@ export default function WorkOrderDetailPage() {
                     </div>
                     <div className="col-span-2">
                       <label className="text-xs text-gray-500 mb-0.5 block">Precio unitario</label>
-                      <input type="number" min="0" value={newItem.unit_price}
+                      <NumericInput value={newItem.unit_price}
                         onChange={e => setNewItem(p => ({ ...p, unit_price: e.target.value }))}
                         className={inputCls} />
                     </div>

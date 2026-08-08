@@ -5,6 +5,7 @@ import Layout from '../../components/layout/Layout';
 import useInternalConsumptionsStore from '../../store/internalConsumptionsStore';
 import api from '../../api/axios';
 import toast from 'react-hot-toast';
+import { formatNumber } from '../../utils/formatters';
 
 const InternalConsumptionFormPage = () => {
   const navigate = useNavigate();
@@ -335,10 +336,10 @@ const InternalConsumptionFormPage = () => {
                           />
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-900">
-                          ${item.unit_cost.toFixed(2)}
+                          ${formatNumber(item.unit_cost, 2)}
                         </td>
                         <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                          ${(item.quantity * item.unit_cost).toFixed(2)}
+                          ${formatNumber(item.quantity * item.unit_cost, 2)}
                         </td>
                         <td className="px-4 py-3">
                           <input
@@ -369,7 +370,7 @@ const InternalConsumptionFormPage = () => {
               <div className="mt-4 flex justify-end">
                 <div className="bg-gray-50 p-4 rounded-lg">
                   <p className="text-lg font-semibold">
-                    Costo Total: ${calculateTotal().toFixed(2)}
+                    Costo Total: ${formatNumber(calculateTotal(), 2)}
                   </p>
                 </div>
               </div>
@@ -456,7 +457,7 @@ const InternalConsumptionFormPage = () => {
                         <div className="text-right">
                           <p className="text-sm font-medium text-green-600">Stock: {product.available_stock}</p>
                           <p className="text-sm text-gray-600">
-                            Costo: ${parseFloat(product.average_cost || product.unit_cost || 0).toFixed(2)}
+                            Costo: ${formatNumber(parseFloat(product.average_cost || product.unit_cost || 0), 2)}
                           </p>
                         </div>
                       </div>

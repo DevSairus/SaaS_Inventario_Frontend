@@ -5,6 +5,7 @@ import Layout from '../../components/layout/Layout';
 import useCustomerReturnsStore from '../../store/customerReturnsStore';
 import api from '../../api/axios';
 import toast from 'react-hot-toast';
+import { formatNumber } from '../../utils/formatters';
 
 const CustomerReturnFormPage = () => {
   const navigate = useNavigate();
@@ -176,7 +177,7 @@ const CustomerReturnFormPage = () => {
                         <p className="text-sm text-gray-600 dark:text-gray-400">{sale.customer_name}</p>
                       </div>
                       <div className="text-right">
-                        <p className="font-medium text-gray-900 dark:text-gray-100">${parseFloat(sale.total_amount).toFixed(2)}</p>
+                        <p className="font-medium text-gray-900 dark:text-gray-100">${formatNumber(parseFloat(sale.total_amount), 2)}</p>
                         <p className="text-sm text-gray-600 dark:text-gray-400">
                           {new Date(sale.sale_date + 'T12:00:00').toLocaleDateString()}
                         </p>
@@ -313,10 +314,10 @@ const CustomerReturnFormPage = () => {
                           </select>
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100">
-                          ${parseFloat(item.unit_price).toFixed(2)}
+                          ${formatNumber(parseFloat(item.unit_price), 2)}
                         </td>
                         <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-gray-100">
-                          ${(item.quantity_to_return * item.unit_price).toFixed(2)}
+                          ${formatNumber(item.quantity_to_return * item.unit_price, 2)}
                         </td>
                       </tr>
                     ))}
@@ -329,9 +330,8 @@ const CustomerReturnFormPage = () => {
                 <div className="bg-gray-50 dark:bg-graphite-2 p-4 rounded-lg">
                   <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                     Total a Devolver: $
-                    {formData.items
-                      .reduce((sum, item) => sum + (item.quantity_to_return * item.unit_price), 0)
-                      .toFixed(2)}
+                    {formatNumber(formData.items
+                      .reduce((sum, item) => sum + (item.quantity_to_return * item.unit_price), 0), 2)}
                   </p>
                 </div>
               </div>

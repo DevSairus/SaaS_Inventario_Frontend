@@ -4,6 +4,7 @@ import { ArrowLeft, CheckCircle, XCircle, Package, Calendar, Warehouse } from 'l
 import Layout from '../../components/layout/Layout';
 import axios from 'axios';
 import toast from 'react-hot-toast';
+import { formatNumber } from '../../utils/formatters';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -207,7 +208,7 @@ const InternalConsumptionDetailPage = () => {
               <h2 className="text-lg font-semibold">Costo Total</h2>
             </div>
             <div className="text-3xl font-bold text-blue-600">
-              ${parseFloat(consumption.total_cost || 0).toFixed(2)}
+              ${formatNumber(parseFloat(consumption.total_cost || 0), 2)}
             </div>
           </div>
         </div>
@@ -252,10 +253,10 @@ const InternalConsumptionDetailPage = () => {
                     {item.quantity}
                   </td>
                   <td className="px-6 py-4 text-right text-sm text-gray-900">
-                    ${parseFloat(item.unit_cost).toFixed(2)}
+                    ${formatNumber(parseFloat(item.unit_cost), 2)}
                   </td>
                   <td className="px-6 py-4 text-right text-sm font-medium text-gray-900">
-                    ${parseFloat(item.total_cost).toFixed(2)}
+                    ${formatNumber(parseFloat(item.total_cost), 2)}
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-500">
                     {item.notes || '-'}

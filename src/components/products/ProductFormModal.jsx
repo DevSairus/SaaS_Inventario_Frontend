@@ -4,6 +4,7 @@ import useProductsStore from '../../store/productsStore';
 import useCategoriesStore from '../../store/categoriesStore';
 import BarcodeScanner from '../common/BarcodeScanner';
 import { warehousesService } from '../../api/warehouses';
+import { formatNumber } from '../../utils/formatters';
 import ProductImageUpload from './ProductImageUpload';
 import { productsAPI } from '../../api/products';
 
@@ -451,7 +452,7 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
                 </div>
                 {calculatedPrice && formData.base_price && parseFloat(formData.base_price) !== parseFloat(calculatedPrice) && (
                   <p className="mt-1 text-xs text-amber-600">
-                    Diferencia con precio sugerido: ${(parseFloat(formData.base_price) - parseFloat(calculatedPrice)).toFixed(2)}
+                    Diferencia con precio sugerido: ${formatNumber(parseFloat(formData.base_price) - parseFloat(calculatedPrice), 2)}
                   </p>
                 )}
               </div>
@@ -516,28 +517,28 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
                         <>
                           <div className="grid grid-cols-2 gap-2 text-sm mb-3">
                             <div className="text-gray-600 dark:text-gray-400">Precio final al cliente:</div>
-                            <div className="font-bold text-blue-600">${parseFloat(formData.base_price).toFixed(2)}</div>
+                            <div className="font-bold text-blue-600">${formatNumber(parseFloat(formData.base_price), 2)}</div>
                             <div className="text-gray-600 dark:text-gray-400">Base imponible (sin IVA):</div>
-                            <div className="font-medium text-gray-900 dark:text-gray-100">${(parseFloat(formData.base_price) / (1 + parseFloat(formData.tax_percentage) / 100)).toFixed(2)}</div>
+                            <div className="font-medium text-gray-900 dark:text-gray-100">${formatNumber(parseFloat(formData.base_price) / (1 + parseFloat(formData.tax_percentage) / 100), 2)}</div>
                             <div className="text-gray-600 dark:text-gray-400">IVA ({formData.tax_percentage}%):</div>
-                            <div className="font-medium text-green-600">${(parseFloat(formData.base_price) - (parseFloat(formData.base_price) / (1 + parseFloat(formData.tax_percentage) / 100))).toFixed(2)}</div>
+                            <div className="font-medium text-green-600">${formatNumber(parseFloat(formData.base_price) - (parseFloat(formData.base_price) / (1 + parseFloat(formData.tax_percentage) / 100)), 2)}</div>
                           </div>
                           <div className="text-xs text-gray-600 dark:text-gray-400 bg-white dark:bg-graphite-2 p-2 rounded border border-gray-200 dark:border-white/10">
-                            El cliente pagará exactamente ${parseFloat(formData.base_price).toFixed(2)} (ya con IVA incluido)
+                            El cliente pagará exactamente ${formatNumber(parseFloat(formData.base_price), 2)} (ya con IVA incluido)
                           </div>
                         </>
                       ) : (
                         <>
                           <div className="grid grid-cols-2 gap-2 text-sm mb-3">
                             <div className="text-gray-600 dark:text-gray-400">Precio base (sin IVA):</div>
-                            <div className="font-medium text-gray-900 dark:text-gray-100">${parseFloat(formData.base_price).toFixed(2)}</div>
+                            <div className="font-medium text-gray-900 dark:text-gray-100">${formatNumber(parseFloat(formData.base_price), 2)}</div>
                             <div className="text-gray-600 dark:text-gray-400">+ IVA ({formData.tax_percentage}%):</div>
-                            <div className="font-medium text-green-600">${(parseFloat(formData.base_price) * parseFloat(formData.tax_percentage) / 100).toFixed(2)}</div>
+                            <div className="font-medium text-green-600">${formatNumber(parseFloat(formData.base_price) * parseFloat(formData.tax_percentage) / 100, 2)}</div>
                             <div className="text-gray-600 dark:text-gray-400">= Total al cliente:</div>
-                            <div className="font-bold text-blue-600">${(parseFloat(formData.base_price) * (1 + parseFloat(formData.tax_percentage) / 100)).toFixed(2)}</div>
+                            <div className="font-bold text-blue-600">${formatNumber(parseFloat(formData.base_price) * (1 + parseFloat(formData.tax_percentage) / 100), 2)}</div>
                           </div>
                           <div className="text-xs text-gray-600 dark:text-gray-400 bg-white dark:bg-graphite-2 p-2 rounded border border-gray-200 dark:border-white/10">
-                            El cliente pagará ${(parseFloat(formData.base_price) * (1 + parseFloat(formData.tax_percentage) / 100)).toFixed(2)} (precio + IVA)
+                            El cliente pagará ${formatNumber(parseFloat(formData.base_price) * (1 + parseFloat(formData.tax_percentage) / 100), 2)} (precio + IVA)
                           </div>
                         </>
                       )}
@@ -545,9 +546,9 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
                         <div className="mt-3 pt-3 border-t border-blue-300 dark:border-blue-800/40">
                           <div className="grid grid-cols-2 gap-2 text-xs">
                             <div className="text-gray-600 dark:text-gray-400">Tu costo (sin IVA):</div>
-                            <div className="font-medium text-gray-700 dark:text-gray-300">${parseFloat(formData.average_cost).toFixed(2)}</div>
+                            <div className="font-medium text-gray-700 dark:text-gray-300">${formatNumber(parseFloat(formData.average_cost), 2)}</div>
                             <div className="text-gray-600 dark:text-gray-400">Tu ganancia:</div>
-                            <div className="font-bold text-green-700 dark:text-green-400">${(parseFloat(formData.base_price) - parseFloat(formData.average_cost)).toFixed(2)}</div>
+                            <div className="font-bold text-green-700 dark:text-green-400">${formatNumber(parseFloat(formData.base_price) - parseFloat(formData.average_cost), 2)}</div>
                           </div>
                         </div>
                       )}

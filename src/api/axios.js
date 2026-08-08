@@ -63,6 +63,21 @@ api.interceptors.request.use(
 let isRefreshing = false;
 let pendingQueue = [];
 
+// Suscripción vencida/suspendida/cancelada (o tenant desactivado): el
+// backend ya bloquea el login para estos casos (auth.controller.js), pero
+// una sesión YA ABIERTA sigue con JWT válido hasta por 24h -- si el estado
+// cambia mientras el usuario sigue adentro, cada endpoint de tenant
+// (tenantMiddleware) empieza a devolver este mismo código en simultáneo
+// (el dashboard dispara varios GET en paralelo), así que sin esta guarda
+// se dispararían N toasts y N redirecciones idénticas de una sola vez.
+const SUBSCRIPTION_BLOCKED_CODES = new Set([
+  'TRIAL_EXPIRED',
+  'SUBSCRIPTION_SUSPENDED',
+  'SUBSCRIPTION_CANCELLED',
+  'TENANT_INACTIVE',
+]);
+let subscriptionBlockHandled = false;
+
 function processQueue(error, token = null) {
   pendingQueue.forEach(({ resolve, reject }) => {
     if (error) reject(error);
@@ -147,6 +162,20 @@ api.interceptors.response.use(
       // se limpia para forzar la resolución automática de una sede permitida.
       setStoredBranchId(null);
       toast.error('No tienes acceso a la sede seleccionada. Se reinició tu sede activa.');
+      return Promise.reject(error);
+    }
+
+    // Va ANTES del 403 genérico de abajo -- SUBSCRIPTION_CANCELLED/
+    // TENANT_INACTIVE viajan con status 403 y si no, caerían en el mensaje
+    // genérico de "no tienes permisos", que es engañoso: el problema no es
+    // de permisos, es que la cuenta ya no tiene acceso.
+    if ((status === 402 || status === 403) && SUBSCRIPTION_BLOCKED_CODES.has(errorCode)) {
+      if (!subscriptionBlockHandled) {
+        subscriptionBlockHandled = true;
+        const mensaje = error.response?.data?.message || 'Tu cuenta no tiene acceso activo. Contacta a soporte.';
+        toast.error(mensaje, { duration: 10000 });
+        redirectToLogin();
+      }
       return Promise.reject(error);
     }
 

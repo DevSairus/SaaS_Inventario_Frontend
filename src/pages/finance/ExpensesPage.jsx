@@ -10,6 +10,8 @@ import {
   TrashIcon,
   BanknotesIcon
 } from '@heroicons/react/24/outline';
+import { formatCurrency } from '../../utils/formatters';
+import NumericInput from '../../components/inputs/NumericInput';
 
 const emptyForm = {
   category: 'otro',
@@ -100,9 +102,6 @@ const ExpensesPage = () => {
       toast.error(error?.response?.data?.message || 'Error registrando el pago');
     }
   };
-
-  const formatCurrency = (value) =>
-    new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(value || 0);
 
   const formatDate = (date) => {
     if (!date) return '—';
@@ -288,8 +287,7 @@ const ExpensesPage = () => {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Monto</label>
-                <input
-                  type="number"
+                <NumericInput
                   value={form.total_amount}
                   onChange={e => setForm(f => ({ ...f, total_amount: e.target.value }))}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg"
@@ -381,8 +379,7 @@ const ExpensesPage = () => {
             <div className="text-sm text-gray-500">{selectedExpense.description}</div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Monto a pagar</label>
-              <input
-                type="number"
+              <NumericInput
                 value={paymentAmount}
                 onChange={e => setPaymentAmount(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg"

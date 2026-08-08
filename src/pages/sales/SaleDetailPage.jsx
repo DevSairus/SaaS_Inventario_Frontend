@@ -856,6 +856,8 @@ export default function SaleDetailPage() {
             onClose={() => setShowConfirmWithPayment(false)}
             onConfirm={handleConfirmWithPayment}
             saleTotal={Math.max(0, (sale?.total_amount || 0) - (sale?.paid_amount || 0))}
+            currentDocType={sale?.document_type}
+            hideQuoteOption={enabledModules?.includes('crm')}
             loading={confirmingPayment}
           />
 

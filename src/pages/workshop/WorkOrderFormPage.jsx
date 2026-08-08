@@ -11,6 +11,7 @@ import { ArrowLeft, Save, Car, User, Wrench, Plus, X, Search, Loader, ScanLine }
 import toast from 'react-hot-toast';
 import { ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 import RuntConsultaModal from '../../components/workshop/RuntConsultaModal';
+import NumericInput from '../../components/inputs/NumericInput';
 
 const inputCls = "w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white";
 
@@ -453,7 +454,7 @@ export default function WorkOrderFormPage() {
 
             <div className="grid grid-cols-2 gap-3 mt-3">
               <Field label="Kilometraje de ingreso *">
-                <input type="number" value={form.mileage_in} placeholder="85000" className={`${inputCls} ${!form.mileage_in ? 'border-amber-300' : ''}`}
+                <NumericInput value={form.mileage_in} placeholder="85000" className={`${inputCls} ${!form.mileage_in ? 'border-amber-300' : ''}`}
                   onChange={e => setForm(f => ({ ...f, mileage_in: e.target.value }))} />
               </Field>
             </div>
