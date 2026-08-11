@@ -19,7 +19,11 @@ function AppointmentNotificationsBell() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const enabledModules = useTenantStore((s) => s.enabledModules);
-  const hasWorkshop = enabledModules === null || enabledModules.includes('workshop');
+  // null mientras carga el config del tenant no debe tratarse como "con
+  // acceso" -- este componente dispara el fetch apenas hasWorkshop es true,
+  // así que asumir acceso antes de tiempo dispara un 403 para tenants sin
+  // el módulo Taller (ver mismo fix en CrmNotifications.jsx).
+  const hasWorkshop = enabledModules !== null && enabledModules.includes('workshop');
 
   const fetchPending = useCallback(async () => {
     if (!hasWorkshop) return;

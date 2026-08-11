@@ -19,7 +19,12 @@ function CrmNotifications() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const enabledModules = useTenantStore((s) => s.enabledModules);
-  const hasCrm = enabledModules === null || enabledModules.includes('crm');
+  // A diferencia de TenantRoute (App.jsx), acá null no debe tratarse como
+  // "con acceso": este componente dispara el fetch apenas hasCrm es true,
+  // así que asumir acceso mientras carga el config del tenant dispara la
+  // llamada antes de tiempo -- si el tenant no tiene CRM, el backend
+  // responde 403 en cada carga de página.
+  const hasCrm = enabledModules !== null && enabledModules.includes('crm');
 
   const fetchSummary = useCallback(async () => {
     setLoading(true);
