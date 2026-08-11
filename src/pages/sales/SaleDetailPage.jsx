@@ -510,11 +510,17 @@ export default function SaleDetailPage() {
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                      {sale.items?.map((item) => (
-                        <tr key={item.id}>
+                      {sale.items?.map((item) => {
+                        const rejected = item.approval_status === 'rechazado';
+                        return (
+                        <tr key={item.id} className={rejected ? 'opacity-50' : ''}>
                           <td className="px-4 py-3">
-                            <div className="text-sm font-medium text-gray-900">{item.product_name}</div>
-                            {item.item_type === 'free_line' ? (
+                            <div className={`text-sm font-medium text-gray-900 ${rejected ? 'line-through' : ''}`}>{item.product_name}</div>
+                            {rejected ? (
+                              <span className="inline-flex items-center gap-1 text-xs font-semibold text-red-600 bg-red-50 px-2 py-0.5 rounded-full mt-0.5">
+                                Rechazado por el cliente
+                              </span>
+                            ) : item.item_type === 'free_line' ? (
                               <span className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full mt-0.5">
                                 <PencilIcon className="w-3 h-3" /> Línea libre · No mueve inventario
                               </span>
@@ -532,7 +538,8 @@ export default function SaleDetailPage() {
                           )}
                           <td className="px-4 py-3 text-right text-sm font-semibold">{formatCurrency(item.total)}</td>
                         </tr>
-                      ))}
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>

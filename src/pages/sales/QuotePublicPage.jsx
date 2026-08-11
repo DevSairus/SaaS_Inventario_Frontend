@@ -18,17 +18,26 @@ const STATUS_CONFIG = {
   borrador:  { label: 'Borrador',  color: '#6b7280', bg: '#f9fafb' },
   enviada:   { label: 'Enviada',   color: '#2563eb', bg: '#eff6ff' },
   aprobada:  { label: 'Aprobada',  color: '#16a34a', bg: '#ecfdf5' },
+  parcial:   { label: 'Parcial',   color: '#9333ea', bg: '#faf5ff' },
   rechazada: { label: 'Rechazada', color: '#dc2626', bg: '#fef2f2' },
   vencida:   { label: 'Vencida',   color: '#d97706', bg: '#fffbeb' },
 };
 
-function ApprovalForm({ token, onResponded }) {
+// El cliente aprueba/rechaza cada ítem por separado (mismo patrón que
+// QuoteApprovalSection en WorkOrderPublicPage.jsx) — mezclar aprobados y
+// rechazados deja la cotización en 'parcial'.
+function ApprovalForm({ token, items, onResponded }) {
+  const [checks, setChecks] = useState(() =>
+    Object.fromEntries(items.map(i => [i.id, true]))
+  );
   const [name, setName] = useState('');
   const [document_, setDocument] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
 
-  const respond = async (approved) => {
+  const toggle = (itemId) => setChecks(prev => ({ ...prev, [itemId]: !prev[itemId] }));
+
+  const handleSubmit = async () => {
     setError(null);
     if (!name.trim() || !document_.trim()) {
       setError('Nombre y documento son requeridos.');
@@ -36,8 +45,9 @@ function ApprovalForm({ token, onResponded }) {
     }
     setSubmitting(true);
     try {
+      const approvals = items.map(i => ({ item_id: i.id, approved: !!checks[i.id] }));
       await api.post(`/public/sales/${token}/respond`, {
-        approved,
+        approvals,
         approved_by_name: name.trim(),
         approved_by_document: document_.trim(),
       });
@@ -49,47 +59,63 @@ function ApprovalForm({ token, onResponded }) {
     }
   };
 
+  const total = items.reduce((s, i) => s + (checks[i.id] ? parseFloat(i.total || 0) : 0), 0);
+
   return (
     <div className="bg-white dark:bg-graphite rounded-2xl shadow-sm overflow-hidden border-2 border-blue-500">
       <div className="bg-blue-50 px-5 py-3">
         <h3 className="text-sm font-bold text-blue-700">Tu decisión sobre esta cotización</h3>
-        <p className="text-xs text-gray-500 dark:text-gray-500 mt-0.5">Ingresa tus datos y elige aprobar o rechazar.</p>
+        <p className="text-xs text-gray-500 dark:text-gray-500 mt-0.5">Revisa cada ítem y marca los que apruebas antes de enviar tu decisión.</p>
       </div>
-      <div className="p-5 space-y-2">
-        <input
-          type="text"
-          placeholder="Nombre completo"
-          value={name}
-          onChange={e => setName(e.target.value)}
-          className="w-full border border-gray-200 dark:border-white/10 dark:bg-graphite-2 dark:text-gray-100 dark:placeholder-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-        <input
-          type="text"
-          placeholder="Documento de identidad (cédula)"
-          value={document_}
-          onChange={e => setDocument(e.target.value)}
-          className="w-full border border-gray-200 dark:border-white/10 dark:bg-graphite-2 dark:text-gray-100 dark:placeholder-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-        {error && <p className="text-xs text-red-500 dark:text-red-400">{error}</p>}
-        <div className="flex gap-2 pt-2">
-          <button
-            onClick={() => respond(false)}
-            disabled={submitting}
-            className="flex-1 border border-red-300 text-red-600 text-sm font-semibold rounded-lg py-2.5 disabled:opacity-60 hover:bg-red-50 transition"
-          >
-            Rechazar
-          </button>
-          <button
-            onClick={() => respond(true)}
-            disabled={submitting}
-            className="flex-1 bg-green-600 text-white text-sm font-semibold rounded-lg py-2.5 disabled:opacity-60 hover:bg-green-700 transition"
-          >
-            {submitting ? 'Enviando...' : 'Aprobar'}
-          </button>
+      <div className="p-5 space-y-3">
+        {items.map(item => (
+          <label key={item.id} className="flex items-start gap-3 p-3 rounded-xl bg-gray-50 dark:bg-graphite-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={!!checks[item.id]}
+              onChange={() => toggle(item.id)}
+              className="mt-0.5 w-4 h-4 rounded border-gray-300 dark:border-white/10"
+            />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{item.product_name}</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500">{item.quantity} × {COP(item.unit_price)}</p>
+            </div>
+            <span className="text-sm font-semibold text-gray-900 dark:text-gray-100 shrink-0">{COP(item.total)}</span>
+          </label>
+        ))}
+
+        <div className="flex justify-between text-sm font-bold text-gray-900 dark:text-gray-100 pt-2 border-t border-gray-100 dark:border-white/10">
+          <span>Total aprobado</span>
+          <span>{COP(total)}</span>
         </div>
-        <p className="text-xs text-gray-400 dark:text-gray-500 text-center pt-1">
-          Tu respuesta queda registrada de forma definitiva y no se puede modificar después.
-        </p>
+
+        <div className="pt-2 space-y-2">
+          <input
+            type="text"
+            placeholder="Nombre completo"
+            value={name}
+            onChange={e => setName(e.target.value)}
+            className="w-full border border-gray-200 dark:border-white/10 dark:bg-graphite-2 dark:text-gray-100 dark:placeholder-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          <input
+            type="text"
+            placeholder="Documento de identidad (cédula)"
+            value={document_}
+            onChange={e => setDocument(e.target.value)}
+            className="w-full border border-gray-200 dark:border-white/10 dark:bg-graphite-2 dark:text-gray-100 dark:placeholder-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          {error && <p className="text-xs text-red-500 dark:text-red-400">{error}</p>}
+          <button
+            onClick={handleSubmit}
+            disabled={submitting}
+            className="w-full bg-blue-600 text-white text-sm font-semibold rounded-lg py-2.5 disabled:opacity-60 hover:bg-blue-700 transition"
+          >
+            {submitting ? 'Enviando...' : 'Enviar mi decisión'}
+          </button>
+          <p className="text-xs text-gray-400 dark:text-gray-500 text-center pt-1">
+            Tu respuesta queda registrada de forma definitiva y no se puede modificar después.
+          </p>
+        </div>
       </div>
     </div>
   );
@@ -169,10 +195,10 @@ export default function QuotePublicPage() {
         </div>
 
         {quote.quote_status === 'enviada' && (
-          <ApprovalForm token={token} onResponded={fetchQuote} />
+          <ApprovalForm token={token} items={quote.items || []} onResponded={fetchQuote} />
         )}
 
-        {['aprobada', 'rechazada'].includes(quote.quote_status) && (
+        {['aprobada', 'parcial', 'rechazada'].includes(quote.quote_status) && (
           <div className="bg-white dark:bg-graphite rounded-2xl shadow-sm p-5 text-center">
             <p className="text-sm font-semibold" style={{ color: statusCfg.color }}>
               Cotización {statusCfg.label.toLowerCase()} por {quote.quote_approved_by_name} el {fmt(quote.quote_responded_at)}
@@ -190,7 +216,14 @@ export default function QuotePublicPage() {
                     <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{item.product_name}</p>
                     <p className="text-xs text-gray-400 dark:text-gray-500">{item.quantity} × {COP(item.unit_price)}</p>
                   </div>
-                  <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 shrink-0">{COP(item.total)}</p>
+                  <div className="text-right shrink-0">
+                    <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{COP(item.total)}</p>
+                    {quote.quote_status !== 'enviada' && item.approval_status && item.approval_status !== 'pendiente' && (
+                      <p className={`text-xs font-medium ${item.approval_status === 'aprobado' ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
+                        {item.approval_status === 'aprobado' ? 'Aprobado' : 'Rechazado'}
+                      </p>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>

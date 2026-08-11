@@ -11,9 +11,9 @@ import { PlusIcon, MagnifyingGlassIcon, FunnelIcon } from '@heroicons/react/24/o
 // Estado propio de las cotizaciones -- independiente del status genérico de
 // venta (draft/pending/completed/cancelled). Se actualiza a 'enviada' al
 // compartir por WhatsApp, y a 'aprobada'/'rechazada' cuando el cliente
-// responde desde el link público (/public/quote/:token). 'parcial' solo
-// aplica a cotizaciones de Taller (algunos ítems aprobados, otros rechazados
-// dentro de la misma ronda).
+// responde desde el link público (/public/quote/:token). 'parcial' aplica
+// tanto a cotizaciones de Taller como de Venta: el cliente aprobó algunos
+// ítems y rechazó otros dentro de la misma cotización.
 const QUOTE_STATUS_LABELS = {
   borrador: { label: 'Borrador', cls: 'bg-gray-100 text-gray-700 dark:bg-white/10 dark:text-gray-300' },
   enviada:  { label: 'Enviada',  cls: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' },
@@ -199,7 +199,7 @@ export default function QuotesPage() {
                 <option value="borrador">Borrador</option>
                 <option value="enviada">Enviada</option>
                 <option value="aprobada">Aprobada</option>
-                {hasWorkshop && <option value="parcial">Parcial</option>}
+                <option value="parcial">Parcial</option>
                 <option value="rechazada">Rechazada</option>
                 <option value="vencida">Vencida</option>
               </select>

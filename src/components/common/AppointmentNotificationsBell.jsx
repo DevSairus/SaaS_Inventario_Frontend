@@ -1,12 +1,16 @@
 // frontend/src/components/common/AppointmentNotificationsBell.jsx
 //
 // Campana para avisar al staff cuando llega una nueva solicitud de cita
-// desde la página pública (/agendar/:slug). Mismo patrón de polling +
-// bandeja persistida que QuoteNotificationsBell.jsx.
+// desde la página pública (/agendar/:slug). El aviso en vivo (socket
+// /appointments, ver useAppointmentNotifications) es solo un toast efímero
+// -- si nadie tenía la pantalla abierta se pierde. El polling de 90s es lo
+// que garantiza que la bandeja se ponga al día igual. Mismo patrón que
+// QuoteNotificationsBell.jsx.
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CalendarClock, Bell } from 'lucide-react';
 import { appointmentsApi } from '../../api/workshopAppointments';
+import { subscribeNewAppointment } from '../../hooks/useAppointmentNotifications';
 import useTenantStore from '../../store/tenantStore';
 
 function fmt(dateStr) {
@@ -43,6 +47,13 @@ function AppointmentNotificationsBell() {
     fetchPending();
     const interval = setInterval(fetchPending, 90 * 1000);
     return () => clearInterval(interval);
+  }, [hasWorkshop, fetchPending]);
+
+  // Refresco inmediato si el socket sigue conectado en este momento —
+  // complementa el polling, no lo reemplaza.
+  useEffect(() => {
+    if (!hasWorkshop) return;
+    return subscribeNewAppointment(() => fetchPending());
   }, [hasWorkshop, fetchPending]);
 
   if (!hasWorkshop) return null;

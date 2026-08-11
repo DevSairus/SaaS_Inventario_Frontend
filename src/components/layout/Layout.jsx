@@ -9,6 +9,7 @@ import BranchSelector from './BranchSelector';
 import NexaChatWidget from '../common/NexaChatWidget';
 import { useTicketNotifications } from '../../hooks/useTicketNotifications';
 import { useQuoteNotifications } from '../../hooks/useQuoteNotifications';
+import { useAppointmentNotifications } from '../../hooks/useAppointmentNotifications';
 import { Bars3Icon } from '@heroicons/react/24/outline';
 import useAuthStore from '../../store/authStore';
 import { isRunningAsInstalledPwa } from '../../pwa/pwaEnv';
@@ -33,6 +34,7 @@ function Layout({ children }) {
   const { user } = useAuthStore();
   useTicketNotifications();
   useQuoteNotifications();
+  useAppointmentNotifications();
   // La PWA "Taller" instalada reemplaza el sidebar completo de escritorio por
   // un bottom-nav de 3 ítems (ver PwaBootstrap/manifest scope "/workshop/").
   const isWorkshopPwa = isRunningAsInstalledPwa();
