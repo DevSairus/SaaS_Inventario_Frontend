@@ -7,6 +7,7 @@ const salesApi = {
     const params = new URLSearchParams();
     
     if (filters.status) params.append('status', filters.status);
+    if (filters.quote_status) params.append('quote_status', filters.quote_status);
     if (filters.customer_id) params.append('customer_id', filters.customer_id);
     if (filters.from_date) params.append('from_date', filters.from_date);
     if (filters.to_date) params.append('to_date', filters.to_date);
@@ -14,6 +15,7 @@ const salesApi = {
     if (filters.customer_name) params.append('customer_name', filters.customer_name);
     if (filters.vehicle_plate) params.append('vehicle_plate', filters.vehicle_plate);
     if (filters.branch_id) params.append('branch_id', filters.branch_id);
+    if (filters.quote_view) params.append('quote_view', 'true');
     
     return api.get(`/sales?${params.toString()}`);
   },
@@ -48,6 +50,8 @@ const salesApi = {
   generatePDF: (id) => api.get(`/sales/${id}/pdf`, { responseType: 'blob' }),
   // Enviar por WhatsApp
   sendWhatsApp: (id) => api.post(`/sales/${id}/send-whatsapp`),
+  // Generar/reutilizar enlace público para copiar directamente (sin WhatsApp)
+  generateShareLink: (id) => api.post(`/sales/${id}/share-link`),
 
   generatePaymentReceipt: (id, paymentIndex) => api.get(`/sales/${id}/payment-receipt`, { params: { payment_index: paymentIndex }, responseType: 'blob' }),
 

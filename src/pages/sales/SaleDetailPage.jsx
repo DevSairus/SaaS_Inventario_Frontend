@@ -10,12 +10,14 @@ import {
   PrinterIcon,
   PencilIcon,
   ClockIcon,
+  EllipsisVerticalIcon,
 } from '@heroicons/react/24/outline';
-import { RotateCcw, AlertTriangle, FileText, Wrench } from 'lucide-react';
+import { RotateCcw, AlertTriangle, FileText, Wrench, Link2 } from 'lucide-react';
 import Button from '../../components/common/Button';
 import Badge from '../../components/common/Badge';
 import Loading from '../../components/common/Loading';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
+import Dropdown from '../../components/common/Dropdown';
 import { formatCurrency, formatDate, formatDateTime, toLocalDateString } from '../../utils/formatters';
 import Layout from '../../components/layout/Layout';
 import salesApi from '../../api/sales';
@@ -38,6 +40,7 @@ export default function SaleDetailPage() {
   const hideRemisionTax = features?.hide_remision_tax === true;
   const [confirmDialog, setConfirmDialog] = useState({ show: false, action: null });
   const [sendingWA, setSendingWA] = useState(false);
+  const [copyingLink, setCopyingLink] = useState(false);
   const [showConfirmWithPayment, setShowConfirmWithPayment] = useState(false);
   const [confirmingPayment, setConfirmingPayment] = useState(false);
   const [showPaymentForm, setShowPaymentForm] = useState(false);
@@ -133,6 +136,24 @@ export default function SaleDetailPage() {
       toast.error(e.response?.data?.message || 'Error al generar enlace de WhatsApp');
     } finally {
       setSendingWA(false);
+    }
+  };
+
+  const handleCopyLink = async () => {
+    setCopyingLink(true);
+    try {
+      const res = await salesApi.generateShareLink(id);
+      const { url } = res.data;
+      if (url) {
+        await navigator.clipboard.writeText(url);
+        toast.success('Enlace copiado al portapapeles');
+      } else {
+        toast.error('No se pudo generar el enlace.');
+      }
+    } catch (e) {
+      toast.error(e.response?.data?.message || 'Error al generar el enlace');
+    } finally {
+      setCopyingLink(false);
     }
   };
 
@@ -243,6 +264,32 @@ export default function SaleDetailPage() {
     return labels[method] || method;
   };
 
+  // Acciones de menos uso agrupadas en el menú "Más acciones" para no saturar
+  // la barra superior con botones.
+  const moreActionsItems = [
+    { label: 'Imprimir', icon: PrinterIcon, onClick: handlePrint },
+    { label: 'Descargar PDF', icon: DocumentArrowDownIcon, onClick: handleDownloadPDF },
+    canVoid && {
+      label: 'Anular venta', icon: RotateCcw, onClick: () => setShowVoidModal(true),
+      className: 'text-red-700 dark:text-red-400',
+    },
+    sale.document_type === 'factura' && sale.dian_status === 'accepted' && {
+      label: 'Nota crédito', icon: FileText, onClick: () => setShowNoteModal('credit'),
+      className: 'text-purple-700 dark:text-purple-400',
+    },
+    sale.document_type === 'factura' && sale.dian_status === 'accepted' && {
+      label: 'Nota débito', icon: FileText, onClick: () => setShowNoteModal('debit'),
+      className: 'text-orange-700 dark:text-orange-400',
+    },
+    isQuote && sale.status === 'draft' && !sale.converted_to_work_order_id && enabledModules?.includes('workshop') && {
+      label: 'Convertir a Orden de Trabajo', icon: Wrench, onClick: () => setShowConvertModal(true),
+      className: 'text-blue-700 dark:text-blue-400',
+    },
+    sale.converted_to_work_order_id && {
+      label: 'Ver Orden de Trabajo', icon: Wrench, to: `/workshop/work-orders/${sale.converted_to_work_order_id}`,
+    },
+  ].filter(Boolean);
+
   return (
     <Layout>
       <div className="space-y-6">
@@ -308,60 +355,29 @@ export default function SaleDetailPage() {
                 </Button>
               )}
 
-              {/* Anular — oculto si ya está completamente devuelta */}
-              {canVoid && (
-                <button
-                  onClick={() => setShowVoidModal(true)}
-                  className="inline-flex items-center gap-2 px-3 py-2 bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 text-sm font-semibold rounded-lg transition-colors"
-                >
-                  <RotateCcw className="w-4 h-4" />
-                  Anular venta
-                </button>
+              {moreActionsItems.length > 0 && (
+                <Dropdown
+                  trigger={
+                    <button
+                      title="Más acciones"
+                      className="inline-flex items-center justify-center w-9 h-9 bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 rounded-lg transition-colors"
+                    >
+                      <EllipsisVerticalIcon className="w-5 h-5" />
+                    </button>
+                  }
+                  items={moreActionsItems}
+                />
               )}
 
-              {/* Notas crédito / débito — solo para facturas aceptadas por DIAN */}
-              {sale.document_type === 'factura' && sale.dian_status === 'accepted' && (
-                <>
-                  <button
-                    onClick={() => setShowNoteModal('credit')}
-                    className="inline-flex items-center gap-2 px-3 py-2 bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-700 text-sm font-semibold rounded-lg transition-colors"
-                  >
-                    <FileText className="w-4 h-4" />
-                    Nota crédito
-                  </button>
-                  <button
-                    onClick={() => setShowNoteModal('debit')}
-                    className="inline-flex items-center gap-2 px-3 py-2 bg-orange-50 hover:bg-orange-100 border border-orange-200 text-orange-700 text-sm font-semibold rounded-lg transition-colors"
-                  >
-                    <FileText className="w-4 h-4" />
-                    Nota débito
-                  </button>
-                </>
-              )}
-
-              {/* Cotización → Orden de Trabajo — solo con módulo Taller activo */}
-              {isQuote && sale.status === 'draft' &&
-               !sale.converted_to_work_order_id && enabledModules?.includes('workshop') && (
-                <button
-                  onClick={() => setShowConvertModal(true)}
-                  className="inline-flex items-center gap-2 px-3 py-2 bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 text-sm font-semibold rounded-lg transition-colors"
-                >
-                  <Wrench className="w-4 h-4" />
-                  Convertir a Orden de Trabajo
-                </button>
-              )}
-              {sale.converted_to_work_order_id && (
-                <Link
-                  to={`/workshop/work-orders/${sale.converted_to_work_order_id}`}
-                  className="inline-flex items-center gap-2 px-3 py-2 bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 text-sm font-semibold rounded-lg transition-colors"
-                >
-                  <Wrench className="w-4 h-4" />
-                  Ver Orden de Trabajo
-                </Link>
-              )}
-
-              <Button variant="secondary" icon={PrinterIcon} onClick={handlePrint}>Imprimir</Button>
-              <Button variant="secondary" icon={DocumentArrowDownIcon} onClick={handleDownloadPDF}>PDF</Button>
+              <button
+                onClick={handleCopyLink}
+                disabled={copyingLink}
+                title="Copiar enlace público"
+                className="inline-flex items-center gap-2 px-3 py-2 bg-gray-50 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed border border-gray-200 text-gray-700 text-sm font-semibold rounded-lg transition-colors"
+              >
+                <Link2 className="w-4 h-4" />
+                {copyingLink ? 'Copiando...' : 'Copiar enlace'}
+              </button>
 
               <button
                 onClick={handleSendWhatsApp}

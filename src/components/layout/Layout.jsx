@@ -4,6 +4,7 @@ import WorkshopBottomNav from './WorkshopBottomNav';
 import StockAlerts from '../common/StockAlerts';
 import CrmNotifications from '../common/CrmNotifications';
 import QuoteNotificationsBell from '../common/QuoteNotificationsBell';
+import AppointmentNotificationsBell from '../common/AppointmentNotificationsBell';
 import BranchSelector from './BranchSelector';
 import NexaChatWidget from '../common/NexaChatWidget';
 import { useTicketNotifications } from '../../hooks/useTicketNotifications';
@@ -45,6 +46,7 @@ function Layout({ children }) {
         <header className="sticky top-0 z-30 flex items-center justify-between bg-white dark:bg-[#17181C] border-b border-gray-200 dark:border-white/10 px-4 h-14 shadow-sm flex-shrink-0">
           <span className="font-semibold text-gray-800 dark:text-gray-100 text-sm truncate">Taller</span>
           <div className="flex items-center gap-2">
+            <AppointmentNotificationsBell />
             <QuoteNotificationsBell />
             <PendingSyncBadge />
             <SyncRetryButton />
@@ -96,6 +98,7 @@ function Layout({ children }) {
 
           <div className="flex items-center gap-2">
             <BranchSelector />
+            <AppointmentNotificationsBell />
             <QuoteNotificationsBell />
             <CrmNotifications />
             <StockAlerts />
@@ -105,6 +108,7 @@ function Layout({ children }) {
         {/* Barra desktop con alertas */}
         <div className="hidden lg:flex sticky top-0 z-30 items-center justify-end gap-3 bg-gray-50 dark:bg-[#0D0D0D] px-6 pt-4 pb-1 flex-shrink-0">
           <BranchSelector />
+          <AppointmentNotificationsBell />
           <QuoteNotificationsBell />
           <CrmNotifications />
           <StockAlerts />

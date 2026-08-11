@@ -38,6 +38,8 @@ export const workOrdersApi = {
   // Notificaciones de cotizaciones respondidas por el cliente
   getPendingQuoteNotifications: () => axios.get('/workshop/work-orders/quote-notifications/pending'),
   markQuoteNotificationSeen: (quoteRequestId) => axios.post(`/workshop/work-orders/quote-notifications/${quoteRequestId}/seen`),
+  // Listado transversal de cotizaciones de OT (todas las rondas, todas las OTs) — usado en QuotesPage.jsx
+  getWorkshopQuotes: (params) => axios.get('/workshop/work-orders/quote-requests', { params }),
 };
 
 // ── Commission Settlements ────────────────────────────────

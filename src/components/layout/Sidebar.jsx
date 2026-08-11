@@ -43,6 +43,8 @@ const NAV = [
         path: "/workshop/work-orders/new",
       },
       { label: "Vehículos",             path: "/workshop/vehicles" },
+      { label: "Agenda de citas",       path: "/workshop/appointments" },
+      { label: "Configurar horarios",   path: "/workshop/appointments/settings" },
       { label: "Productividad",         path: "/workshop/productivity" },
       { label: "Reporte Taller",        path: "/workshop/report" },
       { label: "Liquidación Servicios", path: "/workshop/commission-settlements" },
@@ -74,10 +76,16 @@ const NAV = [
     id: "crm", label: "CRM", icon: "target", module: "crm",
     children: [
       { label: "Pipeline",           path: "/crm/pipeline" },
-      { label: "Nueva cotización",   path: "/crm/quotes/new" },
       { label: "Seguimientos",       path: "/crm/followups" },
       { label: "Dashboard CRM",      path: "/crm/dashboard" },
       { label: "Integración Meta",   path: "/crm/settings/meta", module: "crm_meta_leads" },
+    ],
+  },
+  {
+    id: "quotes", label: "Cotizaciones", icon: "file", module: ["sales", "workshop", "crm"],
+    children: [
+      { label: "Nueva cotización", path: "/crm/quotes/new" },
+      { label: "Listado",          path: "/quotes" },
     ],
   },
   {
@@ -151,20 +159,23 @@ export default function Sidebar({ isCollapsed, setIsCollapsed, isMobileOpen, set
   const enabledModules = useTenantStore((s) => s.enabledModules);
   const currentPath = location.pathname;
 
+  // `module` puede ser un string (un solo módulo requerido) o un array (basta
+  // con tener CUALQUIERA de esos módulos) -- ej. "Cotizaciones" es visible
+  // para quien tenga Ventas, Taller o CRM, ya que los tres generan cotizaciones.
+  const hasModule = (module) =>
+    !module || enabledModules === null ||
+    (Array.isArray(module) ? module.some((m) => enabledModules.includes(m)) : enabledModules.includes(module));
+
   // enabledModules === null: config del tenant aún no cargó, no ocultar nada todavía.
   const visibleNav = NAV.filter(
-    (item) =>
-      (!item.module || enabledModules === null || enabledModules.includes(item.module)) &&
-      (!item.roles || item.roles.includes(user?.role))
+    (item) => hasModule(item.module) && (!item.roles || item.roles.includes(user?.role))
   );
 
   // Un child con `module` propio (ej. "Integración Meta" bajo CRM) se
   // filtra aparte de su grupo -- el grupo puede estar habilitado (crm)
   // mientras el sub-módulo específico no lo esté todavía.
   const visibleChildren = (item) =>
-    (item.children || []).filter(
-      (child) => !child.module || enabledModules === null || enabledModules.includes(child.module)
-    );
+    (item.children || []).filter((child) => hasModule(child.module));
 
   const childIsActive = (child) => {
     const base = currentPath === child.path || currentPath.startsWith(child.path + "/");

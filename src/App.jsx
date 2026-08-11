@@ -5,6 +5,7 @@ import LandingPage from './pages/LandingPage';
 import ResetPasswordPage from './pages/auth/ResetPasswordPage';
 import WorkOrderPublicPage from './pages/workshop/WorkOrderPublicPage';
 import SeguimientoPublicoPage from './pages/ensambladora/SeguimientoPublicoPage';
+import QuotePublicPage from './pages/sales/QuotePublicPage';
 import Loading from './components/common/Loading';
 import DashboardPage from './pages/dashboard/DashboardPage';
 import ProductsPage from './pages/products/ProductsPage';
@@ -22,6 +23,7 @@ import StockAlertsPage from './pages/stock-alerts/StockAlertsPage';
 import UsersPage from './pages/users/UsersPage';
 import UserForm from './pages/users/UserForm';
 import SalesPage from './pages/sales/SalesPage';
+import QuotesPage from './pages/sales/QuotesPage';
 import SaleFormPage from './pages/sales/SaleFormPage';
 import SaleDetailPage from './pages/sales/SaleDetailPage';
 import AccountsReceivablePage from './pages/sales/AccountsReceivablePage';
@@ -74,6 +76,9 @@ import CommissionSettlementDetailPage from './pages/workshop/commissions/Commiss
 import CommissionProductsReportPage from './pages/workshop/commissions/CommissionProductsReportPage';
 import DiagramPointsEditorPage from './pages/workshop/DiagramPointsEditorPage';
 import WorkshopReportPage from './pages/workshop/WorkshopReportPage';
+import AppointmentsPage from './pages/workshop/AppointmentsPage';
+import AppointmentSettingsPage from './pages/workshop/AppointmentSettingsPage';
+import PublicAppointmentPage from './pages/workshop/PublicAppointmentPage';
 import CustomersPage from './pages/customers/CustomersPage';
 import CustomerDetailPage from './pages/crm/CustomerDetailPage';
 import PipelinePage from './pages/crm/PipelinePage';
@@ -185,8 +190,15 @@ function TenantRoute({ children, module, roles }) {
   if (!isAuthenticated) return <Navigate to={ROUTES.LOGIN} replace />;
   if (user?.role === ROLES.SUPER_ADMIN) return <Navigate to={ROUTES.SUPERADMIN_DASHBOARD} replace />;
   // enabledModules === null: todavía no se cargó el config del tenant, no bloquear todavía.
-  if (module && enabledModules && !enabledModules.includes(module)) {
-    return <Navigate to={ROUTES.DASHBOARD} replace />;
+  // `module` puede ser un string (un solo módulo requerido) o un array (basta con
+  // CUALQUIERA de esos módulos) -- ej. Cotizaciones es accesible con Ventas, Taller o CRM.
+  if (module && enabledModules) {
+    const hasModuleAccess = Array.isArray(module)
+      ? module.some((m) => enabledModules.includes(m))
+      : enabledModules.includes(module);
+    if (!hasModuleAccess) {
+      return <Navigate to={ROUTES.DASHBOARD} replace />;
+    }
   }
   if (roles && !roles.includes(user?.role)) {
     return <Navigate to={ROUTES.DASHBOARD} replace />;
@@ -235,6 +247,8 @@ function App() {
         <Route path="/login"          element={<LoginPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/ot/:token"      element={<WorkOrderPublicPage />} />
+        <Route path="/public/quote/:token" element={<QuotePublicPage />} />
+        <Route path="/agendar/:slug"       element={<PublicAppointmentPage />} />
         <Route path="/ensambladora/seguimiento/:tipo/:token" element={<SeguimientoPublicoPage />} />
         <Route path="/sin-sede"       element={<NoBranchAssignedPage />} />
 
@@ -305,6 +319,9 @@ function App() {
         <Route path="sales/:id/edit" element={<TenantRoute module="sales"><SaleFormPage /></TenantRoute>} />
         <Route path="accounts-receivable" element={<TenantRoute module="receivables"><AccountsReceivablePage /></TenantRoute>} />
 
+        {/* ── Cotizaciones — sección independiente de Ventas ─────────── */}
+        <Route path="quotes" element={<TenantRoute module={["sales", "workshop", "crm"]}><QuotesPage /></TenantRoute>} />
+
         {/* ── Tesorería ──────────────────────────────── */}
         <Route path="accounts-payable" element={<TenantRoute module="treasury"><AccountsPayablePage /></TenantRoute>} />
         <Route path="expenses"         element={<TenantRoute module="treasury"><ExpensesPage /></TenantRoute>} />
@@ -324,6 +341,8 @@ function App() {
             "Taller" instalada (mobile-only, con offline). Ver frontend/src/pwa/. */}
         <Route path="workshop/work-orders"             element={<TenantRoute module="workshop"><Suspense fallback={<Loading fullScreen />}><WorkOrdersPage /></Suspense></TenantRoute>} />
         <Route path="workshop/report"                  element={<TenantRoute module="workshop"><WorkshopReportPage /></TenantRoute>} />
+        <Route path="workshop/appointments"            element={<TenantRoute module="workshop"><AppointmentsPage /></TenantRoute>} />
+        <Route path="workshop/appointments/settings"   element={<TenantRoute module="workshop" roles={['admin', 'manager']}><AppointmentSettingsPage /></TenantRoute>} />
         <Route path="workshop/work-orders/new"         element={<TenantRoute module="workshop"><Suspense fallback={<Loading fullScreen />}><WorkOrderFormPage /></Suspense></TenantRoute>} />
         <Route path="workshop/work-orders/:id"         element={<TenantRoute module="workshop"><Suspense fallback={<Loading fullScreen />}><WorkOrderDetailPage /></Suspense></TenantRoute>} />
         <Route path="workshop/vehicles"                element={<TenantRoute module="workshop"><Suspense fallback={<Loading fullScreen />}><VehiclesPage /></Suspense></TenantRoute>} />
@@ -366,7 +385,7 @@ function App() {
         {/* Cotizar es un formulario propio del CRM, no una opción dentro de
             Ventas (ver SaleFormPage: isCrmQuoteMode) -- reusa el mismo
             componente que /sales/new para no duplicar ~800 líneas. */}
-        <Route path="crm/quotes/new" element={<TenantRoute module="crm"><SaleFormPage /></TenantRoute>} />
+        <Route path="crm/quotes/new" element={<TenantRoute module={["sales", "workshop", "crm"]}><SaleFormPage /></TenantRoute>} />
         <Route path="crm/pipeline"  element={<TenantRoute module="crm"><PipelinePage /></TenantRoute>} />
         <Route path="crm/followups" element={<TenantRoute module="crm"><FollowUpsPage /></TenantRoute>} />
         <Route path="crm/dashboard" element={<TenantRoute module="crm"><CrmDashboardPage /></TenantRoute>} />

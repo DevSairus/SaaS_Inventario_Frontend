@@ -5,6 +5,7 @@ import axios from '../api/axios';
 const useTenantStore = create((set, get) => ({
   features: null,  // null = todavía no cargado
   enabledModules: null, // null = todavía no cargado; array de module keys una vez cargado
+  tenantSlug: null, // usado para armar links públicos, ej. /agendar/:slug
   loading: false,
 
   fetchFeatures: async () => {
@@ -25,7 +26,7 @@ const useTenantStore = create((set, get) => ({
           technician_field_enabled: false, // default: deshabilitado (igual que placa)
           ...rawFeatures,
         };
-        set({ features, enabledModules: res.data.data.effective_modules || [], loading: false });
+        set({ features, enabledModules: res.data.data.effective_modules || [], tenantSlug: res.data.data.slug || null, loading: false });
       }
     } catch (error) {
       if (import.meta.env.DEV) {
@@ -52,7 +53,7 @@ const useTenantStore = create((set, get) => ({
 
   // Llamar al cerrar sesión para no arrastrar los módulos del tenant anterior
   // a la siguiente sesión (por ejemplo si otro usuario inicia sesión en el mismo navegador).
-  reset: () => set({ features: null, enabledModules: null, loading: false }),
+  reset: () => set({ features: null, enabledModules: null, tenantSlug: null, loading: false }),
 }));
 
 export default useTenantStore;

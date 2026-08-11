@@ -13,7 +13,7 @@ import BarcodeScanner from '../../components/common/BarcodeScanner';
 import {
   ArrowLeft, Wrench, Car, User, Package, Plus, Trash2,
   Camera, FileText, AlertTriangle, CheckCircle, Clock, DollarSign,
-  Printer, Download, ClipboardList, Share2, Image,
+  Printer, Download, ClipboardList, Share2, Image, Link2,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { ClipboardDocumentListIcon, DocumentTextIcon } from '@heroicons/react/24/outline';
@@ -76,6 +76,7 @@ export default function WorkOrderDetailPage() {
 
   const [generatingSale, setGeneratingSale] = useState(false);
   const [sendingWA, setSendingWA]            = useState(false);
+  const [copyingLink, setCopyingLink]        = useState(false);
   // Modal de tipo de documento al generar venta desde OT
   const [showGenSaleModal, setShowGenSaleModal] = useState(false);
   // Edición de km de salida
@@ -105,7 +106,24 @@ export default function WorkOrderDetailPage() {
     }
   };
 
-
+  const handleCopyLink = async () => {
+    setCopyingLink(true);
+    try {
+      const res = await workOrdersApi.generateShareToken(id);
+      const shareUrl = res.data?.data?.share_url;
+      if (shareUrl) {
+        await navigator.clipboard.writeText(shareUrl);
+        toast.success('Enlace copiado al portapapeles');
+      } else {
+        toast.error('No se pudo generar el enlace.');
+      }
+    } catch (e) {
+      const msg = e.response?.data?.message || e.message || 'Error al generar el enlace';
+      toast.error(msg);
+    } finally {
+      setCopyingLink(false);
+    }
+  };
 
   const [sendingQuote, setSendingQuote] = useState(false);
   const [applyingQuoteId, setApplyingQuoteId] = useState(null);
@@ -1464,6 +1482,14 @@ export default function WorkOrderDetailPage() {
                   title="Enviar enlace de estado por WhatsApp"
                 >
                   <Share2 size={12}/> {sendingWA ? 'Enviando...' : 'WhatsApp'}
+                </button>
+                <button
+                  onClick={handleCopyLink}
+                  disabled={copyingLink}
+                  className="flex-1 flex items-center justify-center gap-1.5 text-xs text-gray-600 border border-gray-200 rounded-lg py-1.5 hover:bg-gray-50 transition disabled:opacity-60"
+                  title="Copiar enlace público de la OT"
+                >
+                  <Link2 size={12}/> {copyingLink ? 'Copiando...' : 'Copiar enlace'}
                 </button>
               </div>
             </div>
