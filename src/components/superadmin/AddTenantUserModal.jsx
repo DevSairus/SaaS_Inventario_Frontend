@@ -195,6 +195,8 @@ const AddTenantUserModal = ({ isOpen, onClose, onSubmit, isSubmitting, error }) 
                   <option value="manager">Gerente</option>
                   <option value="seller">Vendedor</option>
                   <option value="warehouse_keeper">Bodeguero</option>
+                  <option value="technician">Técnico</option>
+                  <option value="accountant">Contador</option>
                   <option value="user">Usuario</option>
                   <option value="viewer">Visualizador</option>
                 </select>
