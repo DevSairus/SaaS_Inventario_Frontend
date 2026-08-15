@@ -25,5 +25,11 @@ export const reportsAPI = {
     const queryParams = typeof params === 'number' ? { months: params } : params;
     const response = await api.get('/inventory/reports/rotation', { params: queryParams });
     return response.data;
+  },
+
+  getProfitabilityReport: async (params = {}) => {
+    const queryParams = typeof params === 'number' ? { months: params } : params;
+    const response = await api.get('/inventory/reports/profitability', { params: queryParams });
+    return response.data;
   }
 };

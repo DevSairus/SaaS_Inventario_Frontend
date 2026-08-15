@@ -29,6 +29,7 @@ const JournalEntriesPage = () => {
   const { branches, fetchBranches } = useBranchStore();
   const [selected, setSelected] = useState(null);
   const [showCreate, setShowCreate] = useState(false);
+  const [editingId, setEditingId] = useState(null);
   const [accounts, setAccounts] = useState([]);
   const [entryForm, setEntryForm] = useState({ entry_date: toLocalDateString(new Date()), description: '', lines: [emptyLine(), emptyLine()] });
   const [saving, setSaving] = useState(false);
@@ -83,11 +84,47 @@ const JournalEntriesPage = () => {
     }
   };
 
+  const handleReverse = async (id) => {
+    const reason = window.prompt('Motivo de la reversión:');
+    if (reason === null) return;
+    try {
+      await journalEntriesAPI.reverse(id, reason);
+      toast.success('Asiento reversado: se creó un asiento contrario');
+      setSelected(null);
+      load();
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Error al reversar');
+    }
+  };
+
   const openCreate = async () => {
     try {
       const res = await chartOfAccountsAPI.getAll();
       setAccounts((res.data || []).filter((a) => a.accepts_entries));
+      setEditingId(null);
       setEntryForm({ entry_date: toLocalDateString(new Date()), description: '', lines: [emptyLine(), emptyLine()] });
+      setShowCreate(true);
+    } catch {
+      toast.error('Error cargando el plan de cuentas');
+    }
+  };
+
+  const openEdit = async (entry) => {
+    try {
+      const res = await chartOfAccountsAPI.getAll();
+      setAccounts((res.data || []).filter((a) => a.accepts_entries));
+      setEditingId(entry.id);
+      setEntryForm({
+        entry_date: entry.entry_date,
+        description: entry.description || '',
+        lines: (entry.lines || []).map((l) => ({
+          account_id: l.account_id,
+          debit: Number(l.debit) > 0 ? l.debit : '',
+          credit: Number(l.credit) > 0 ? l.credit : '',
+          description: l.description || '',
+        })),
+      });
+      setSelected(null);
       setShowCreate(true);
     } catch {
       toast.error('Error cargando el plan de cuentas');
@@ -118,18 +155,25 @@ const JournalEntriesPage = () => {
     if (!balanced) { toast.error('El asiento no cuadra: débito debe ser igual a crédito'); return; }
     try {
       setSaving(true);
-      await journalEntriesAPI.create({
+      const payload = {
         entry_date: entryForm.entry_date,
         description: entryForm.description,
         lines: entryForm.lines
           .filter((l) => l.account_id && (Number(l.debit) > 0 || Number(l.credit) > 0))
           .map((l) => ({ account_id: l.account_id, debit: Number(l.debit || 0), credit: Number(l.credit || 0), description: l.description })),
-      });
-      toast.success('Asiento manual creado en borrador');
+      };
+      if (editingId) {
+        await journalEntriesAPI.update(editingId, payload);
+        toast.success('Asiento actualizado');
+      } else {
+        await journalEntriesAPI.create(payload);
+        toast.success('Asiento manual creado en borrador');
+      }
       setShowCreate(false);
+      setEditingId(null);
       load();
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Error al crear el asiento');
+      toast.error(error.response?.data?.message || (editingId ? 'Error al actualizar el asiento' : 'Error al crear el asiento'));
     } finally {
       setSaving(false);
     }
@@ -253,9 +297,19 @@ const JournalEntriesPage = () => {
             <div className="px-5 py-4 border-t border-gray-200 flex items-center justify-between">
               <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${STATUS_STYLES[selected.status]}`}>{STATUS_LABELS[selected.status]}</span>
               <div className="flex gap-2">
+                {selected.status === 'draft' && selected.source_type === 'manual' && (
+                  <button onClick={() => openEdit(selected)} className="inline-flex items-center gap-1.5 px-3 py-2 text-sm text-indigo-600 border border-indigo-200 rounded-lg hover:bg-indigo-50">
+                    Editar
+                  </button>
+                )}
                 {selected.status === 'draft' && (
                   <button onClick={() => handlePost(selected.id)} className="inline-flex items-center gap-1.5 px-3 py-2 text-sm text-white bg-green-600 rounded-lg hover:bg-green-700">
                     <CheckIcon className="w-4 h-4" /> Contabilizar
+                  </button>
+                )}
+                {selected.status === 'posted' && !selected.reversed_by_entry_id && (
+                  <button onClick={() => handleReverse(selected.id)} className="inline-flex items-center gap-1.5 px-3 py-2 text-sm text-amber-700 border border-amber-200 rounded-lg hover:bg-amber-50">
+                    Reversar
                   </button>
                 )}
                 {selected.status !== 'voided' && (
@@ -275,8 +329,8 @@ const JournalEntriesPage = () => {
           <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <form onSubmit={handleCreateEntry}>
               <div className="px-5 py-4 border-b border-gray-200 flex items-center justify-between">
-                <h3 className="font-semibold text-gray-900">Nuevo Asiento Manual</h3>
-                <button type="button" onClick={() => setShowCreate(false)}><XMarkIcon className="w-5 h-5 text-gray-400" /></button>
+                <h3 className="font-semibold text-gray-900">{editingId ? 'Editar Asiento Manual' : 'Nuevo Asiento Manual'}</h3>
+                <button type="button" onClick={() => { setShowCreate(false); setEditingId(null); }}><XMarkIcon className="w-5 h-5 text-gray-400" /></button>
               </div>
               <div className="px-5 py-4 space-y-3">
                 <div className="grid grid-cols-2 gap-3">
@@ -310,9 +364,9 @@ const JournalEntriesPage = () => {
                 </div>
               </div>
               <div className="px-5 py-4 border-t border-gray-200 flex justify-end gap-2">
-                <button type="button" onClick={() => setShowCreate(false)} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg">Cancelar</button>
+                <button type="button" onClick={() => { setShowCreate(false); setEditingId(null); }} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg">Cancelar</button>
                 <button type="submit" disabled={saving || !balanced} className="px-4 py-2 text-sm text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-50">
-                  {saving ? 'Guardando...' : 'Crear en Borrador'}
+                  {saving ? 'Guardando...' : (editingId ? 'Guardar Cambios' : 'Crear en Borrador')}
                 </button>
               </div>
             </form>

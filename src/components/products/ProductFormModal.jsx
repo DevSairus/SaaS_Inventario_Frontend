@@ -36,6 +36,7 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
     has_tax: true,
     tax_percentage: 19,
     price_includes_tax: false,
+    is_labor: false,
     tax_config: {
       iva: { enabled: true, rate: 19 },
       inc: { enabled: false, rate: 0 },
@@ -103,6 +104,7 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
         has_tax: productHasTax,
         tax_percentage: productTaxPercentage,
         price_includes_tax: product.price_includes_tax || false,
+        is_labor: product.is_labor || false,
         tax_config: product.tax_config || {
           iva: { enabled: productHasTax, rate: productTaxPercentage },
           inc: { enabled: false, rate: 0 },
@@ -130,7 +132,8 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
         is_active: true,
         has_tax: true,
         tax_percentage: 19,
-        price_includes_tax: false
+        price_includes_tax: false,
+        is_labor: false
       }));
       setCalculatedPrice(null);
       setSaveError('');
@@ -796,6 +799,23 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
                     </div>
                   </button>
                 </div>
+
+                {formData.product_type === 'service' && (
+                  <label className="mt-3 flex items-start gap-3 p-3 rounded-lg border border-gray-200 dark:border-white/10 cursor-pointer hover:border-gray-300">
+                    <input
+                      type="checkbox"
+                      checked={formData.is_labor}
+                      onChange={(e) => setFormData(prev => ({ ...prev, is_labor: e.target.checked }))}
+                      className="mt-0.5 h-4 w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                    />
+                    <div>
+                      <p className="text-sm font-medium text-gray-800 dark:text-gray-200">Es mano de obra (aplica comisión a técnico)</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-500">
+                        Al agregarlo a una Orden de Trabajo, el ítem se precarga como "Mano de obra" en vez de "Servicio" genérico.
+                      </p>
+                    </div>
+                  </label>
+                )}
               </div>
 
               {/* Configuración */}

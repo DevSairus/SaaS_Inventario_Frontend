@@ -213,7 +213,7 @@ export default function WorkOrderDetailPage() {
       product_id:   product.id,
       product_name: product.name,
       unit_price:   product.base_price || '',
-      item_type:    product.product_type === 'service' ? 'servicio' : 'repuesto',
+      item_type:    product.is_labor ? 'mano_obra' : (product.product_type === 'service' ? 'servicio' : 'repuesto'),
     }));
     setSearchTerm('');
     setSearchResults([]);

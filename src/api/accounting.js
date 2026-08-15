@@ -12,6 +12,7 @@ export const journalEntriesAPI = {
   getAll: async (params = {}) => (await api.get('/accounting/journal-entries', { params })).data,
   getById: async (id) => (await api.get(`/accounting/journal-entries/${id}`)).data,
   create: async (payload) => (await api.post('/accounting/journal-entries', payload)).data,
+  update: async (id, payload) => (await api.put(`/accounting/journal-entries/${id}`, payload)).data,
   post: async (id) => (await api.patch(`/accounting/journal-entries/${id}/post`)).data,
   void: async (id, reason) => (await api.patch(`/accounting/journal-entries/${id}/void`, { reason })).data,
   reverse: async (id, reason) => (await api.patch(`/accounting/journal-entries/${id}/reverse`, { reason })).data,

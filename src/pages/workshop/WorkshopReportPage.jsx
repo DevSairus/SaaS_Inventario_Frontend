@@ -44,6 +44,11 @@ export default function WorkshopReportPage() {
       'Mano de obra':      r.labor_total,
       'Repuestos':         r.parts_total,
       'Total':             r.total_amount,
+      'Costo repuestos':   r.parts_cost,
+      'Costo M. obra':     r.labor_cost,
+      'Origen costo M.O.': r.labor_cost_is_real ? 'Real' : 'Estimado',
+      'Margen neto':       r.net_margin,
+      'Margen %':          (r.margin_percentage || 0).toFixed(1),
       'Trabajo realizado': r.work_performed,
     }));
 
@@ -114,6 +119,10 @@ export default function WorkshopReportPage() {
               { label: 'Mano de obra', value: fmt(s.total_labor), color: 'border-purple-500', text: 'text-purple-700' },
               { label: 'Repuestos', value: fmt(s.total_parts), color: 'border-teal-500', text: 'text-teal-700' },
               { label: 'Ingresos totales', value: fmt(s.total_revenue), color: 'border-emerald-500', text: 'text-emerald-700' },
+              { label: 'Costo total', value: fmt(s.total_parts_cost + s.total_labor_cost), color: 'border-orange-500', text: 'text-orange-700' },
+              { label: 'Margen neto', value: fmt(s.total_net_margin), color: 'border-green-600', text: 'text-green-700' },
+              { label: 'Margen %', value: `${s.avg_margin_percentage.toFixed(1)}%`, color: 'border-green-400', text: 'text-green-700' },
+              { label: 'OTs con costo estimado', value: s.orders_with_estimated_cost, color: 'border-amber-500', text: 'text-amber-700' },
               { label: 'En proceso', value: s.in_progress, color: 'border-amber-500', text: 'text-amber-700' },
               { label: 'Canceladas', value: s.cancelled, color: 'border-red-400', text: 'text-red-600' },
               { label: 'Días prom. resolución', value: `${s.avg_resolution_days} días`, color: 'border-blue-400', text: 'text-blue-700' },
@@ -139,7 +148,7 @@ export default function WorkshopReportPage() {
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
-                      {['N° Orden','Estado','Cliente','Vehículo','Técnico','Creación','Entrega','Días','M. Obra','Repuestos','Total'].map(h => (
+                      {['N° Orden','Estado','Cliente','Vehículo','Técnico','Creación','Entrega','Días','M. Obra','Repuestos','Total','Costo Repuestos','Costo M. Obra','Margen Neto','Margen %'].map(h => (
                         <th key={h} className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">{h}</th>
                       ))}
                     </tr>
@@ -165,6 +174,21 @@ export default function WorkshopReportPage() {
                         <td className="px-3 py-2 text-sm text-right text-purple-700 font-medium">{fmt(r.labor_total)}</td>
                         <td className="px-3 py-2 text-sm text-right text-teal-700 font-medium">{fmt(r.parts_total)}</td>
                         <td className="px-3 py-2 text-sm text-right font-bold text-gray-900">{fmt(r.total_amount)}</td>
+                        <td className="px-3 py-2 text-sm text-right text-gray-500">{fmt(r.parts_cost)}</td>
+                        <td className="px-3 py-2 text-sm text-right text-gray-500">
+                          {fmt(r.labor_cost)}
+                          {r.labor_total > 0 && (
+                            <span className={`ml-1.5 text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${r.labor_cost_is_real ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
+                              {r.labor_cost_is_real ? 'Real' : 'Est.'}
+                            </span>
+                          )}
+                        </td>
+                        <td className={`px-3 py-2 text-sm text-right font-semibold ${r.net_margin >= 0 ? 'text-green-700' : 'text-red-600'}`}>{fmt(r.net_margin)}</td>
+                        <td className="px-3 py-2 text-sm text-right">
+                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${r.margin_percentage >= 30 ? 'bg-green-100 text-green-700' : r.margin_percentage >= 15 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>
+                            {r.margin_percentage.toFixed(1)}%
+                          </span>
+                        </td>
                       </tr>
                     ))}
                   </tbody>

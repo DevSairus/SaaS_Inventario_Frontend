@@ -43,5 +43,6 @@ export const EXPENSE_CATEGORIES = [
   { value: 'insumos_oficina', label: 'Insumos de Oficina' },
   { value: 'seguros', label: 'Seguros' },
   { value: 'honorarios', label: 'Honorarios' },
+  { value: 'comisiones_tecnicos', label: 'Comisiones a Técnicos' },
   { value: 'otro', label: 'Otro' }
 ];

@@ -153,6 +153,8 @@ const ReportsPage = () => {
   const [profitData, setProfitData] = useState({ products: [], totals: {} });
   const [rotationData, setRotationData] = useState({ high_rotation: [], low_rotation: [], total_products: 0, products_with_sales: 0, products_without_sales: 0 });
   const [receivablesData, setReceivablesData] = useState({ summary: {}, by_customer: [], all_invoices: [] });
+  const EMPTY_PROFITABILITY = { total_revenue: 0, parts_cost: 0, labor_cost: 0, labor_cost_real: 0, labor_cost_estimated: 0, operating_expenses_excluding_commissions: 0, net_profit: 0, net_margin_percentage: 0, default_labor_cost_percentage: 0 };
+  const [profitabilityData, setProfitabilityData] = useState(EMPTY_PROFITABILITY);
 
   // Shared date filter state
   const [dateMode, setDateMode] = useState('period');
@@ -190,10 +192,11 @@ const ReportsPage = () => {
         reportsAPI.getValuation(),
         reportsAPI.getProfitReport(dateAndBranchParams),
         reportsAPI.getRotationReport(dateAndBranchParams),
-        accountsReceivableAPI.getSummary(cleanReceivablesFilters)
+        accountsReceivableAPI.getSummary(cleanReceivablesFilters),
+        reportsAPI.getProfitabilityReport(dateAndBranchParams)
       ]);
 
-      const [movResult, valResult, profResult, rotResult, recvResult] = results;
+      const [movResult, valResult, profResult, rotResult, recvResult, profitabilityResult] = results;
 
       if (movResult.status === 'fulfilled') {
         const movData = movResult.value.data || [];
@@ -224,6 +227,13 @@ const ReportsPage = () => {
         setRotationData({ high_rotation: [], low_rotation: [], total_products: 0, products_with_sales: 0, products_without_sales: 0 });
       }
 
+      if (profitabilityResult.status === 'fulfilled') {
+        setProfitabilityData(profitabilityResult.value.data || EMPTY_PROFITABILITY);
+      } else {
+        toast.error('No se pudo cargar el reporte de rentabilidad.');
+        setProfitabilityData(EMPTY_PROFITABILITY);
+      }
+
       if (recvResult.status === 'fulfilled') {
         const receivablesResult = recvResult.value.data || { summary: {}, by_customer: [], all_invoices: [] };
         setReceivablesData(receivablesResult);
@@ -242,6 +252,7 @@ const ReportsPage = () => {
       setProfitData({ products: [], totals: { total_revenue: 0, total_cost: 0, total_profit: 0, margin_percentage: 0 } });
       setRotationData({ high_rotation: [], low_rotation: [], total_products: 0, products_with_sales: 0, products_without_sales: 0 });
       setReceivablesData({ summary: {}, by_customer: [], all_invoices: [] });
+      setProfitabilityData(EMPTY_PROFITABILITY);
     } finally {
       setLoading(false);
     }
@@ -311,6 +322,7 @@ const ReportsPage = () => {
     { id: 'valuation',  label: 'Valorización', icon: <SparklesIcon className="w-4 h-4" /> },
     { id: 'profit',     label: 'Ganancia',     icon: <CurrencyDollarIcon className="w-4 h-4" /> },
     { id: 'rotation',   label: 'Rotación',     icon: <ArrowPathIcon className="w-4 h-4" /> },
+    { id: 'profitability', label: 'Rentabilidad', icon: <BanknotesIcon className="w-4 h-4" /> },
     { id: 'receivables',label: 'Cartera',      icon: <CreditCardIcon className="w-4 h-4" /> },
   ];
 
@@ -522,6 +534,15 @@ const ReportsPage = () => {
                 }
               />
 
+              {profitTypeFilter === 'service' && profitData.totals.pct_estimated > 50 && (
+                <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded-lg px-4 py-3 text-sm flex items-start gap-2">
+                  <ExclamationTriangleIcon className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                  <span>
+                    El {profitData.totals.pct_estimated.toFixed(0)}% del costo de mano de obra mostrado es <strong>estimado</strong> (basado en un {profitData.totals.default_labor_cost_percentage}% configurado), porque esas órdenes aún no han sido liquidadas. Liquida las comisiones pendientes para ver el margen real.
+                  </span>
+                </div>
+              )}
+
               {/* Sub-tabs producto vs servicio */}
               <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit">
                 {[
@@ -583,6 +604,9 @@ const ReportsPage = () => {
                           <th className="px-4 py-2.5 text-right text-xs font-semibold text-gray-500 uppercase">Costo</th>
                           <th className="px-4 py-2.5 text-right text-xs font-semibold text-gray-500 uppercase">Ganancia</th>
                           <th className="px-4 py-2.5 text-right text-xs font-semibold text-gray-500 uppercase">Margen</th>
+                          {profitTypeFilter === 'service' && (
+                            <th className="px-4 py-2.5 text-center text-xs font-semibold text-gray-500 uppercase">Origen costo</th>
+                          )}
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
@@ -601,6 +625,17 @@ const ReportsPage = () => {
                                 {p.margin_percentage.toFixed(1)}%
                               </span>
                             </td>
+                            {profitTypeFilter === 'service' && (
+                              <td className="px-4 py-2.5 text-center">
+                                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                                  p.cost_source === 'real' ? 'bg-green-100 text-green-700' :
+                                  p.cost_source === 'mixto' ? 'bg-amber-100 text-amber-700' :
+                                  'bg-gray-200 text-gray-600'
+                                }`}>
+                                  {p.cost_source === 'real' ? 'Real' : p.cost_source === 'mixto' ? 'Mixto' : 'Estimado'}
+                                </span>
+                              </td>
+                            )}
                           </tr>
                         ))}
                       </tbody>
@@ -687,6 +722,69 @@ const ReportsPage = () => {
               </div>
             </div>
           )
+
+          /* ===== RENTABILIDAD ===== */
+          || tab === 'profitability' && (() => {
+            const pd = profitabilityData;
+            const pctEstimatedLabor = pd.labor_cost > 0 ? (pd.labor_cost_estimated / pd.labor_cost) * 100 : 0;
+            const waterfallData = [
+              { name: 'Ingresos', value: pd.total_revenue, fill: '#10b981' },
+              { name: 'Costo Repuestos', value: -pd.parts_cost, fill: '#f59e0b' },
+              { name: 'Costo M. Obra', value: -pd.labor_cost, fill: '#f59e0b' },
+              { name: 'Gastos Operativos', value: -pd.operating_expenses_excluding_commissions, fill: '#ef4444' },
+              { name: 'Utilidad Neta', value: pd.net_profit, fill: pd.net_profit >= 0 ? '#059669' : '#dc2626' },
+            ];
+            return (
+            <div className="space-y-6">
+              <DateFilterBar {...dateFilterProps} />
+
+              {pctEstimatedLabor > 50 && pd.labor_cost > 0 && (
+                <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded-lg px-4 py-3 text-sm flex items-start gap-2">
+                  <ExclamationTriangleIcon className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                  <span>
+                    El {pctEstimatedLabor.toFixed(0)}% del costo de mano de obra es <strong>estimado</strong> (% configurado del {pd.default_labor_cost_percentage}%), no liquidado todavía. La Utilidad Neta mostrada es una aproximación.
+                  </span>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+                {[
+                  { label: 'Ingresos', value: formatCOP(pd.total_revenue), color: 'border-green-500', text: 'text-green-700' },
+                  { label: 'Costo Repuestos', value: formatCOP(pd.parts_cost), color: 'border-amber-500', text: 'text-amber-700' },
+                  { label: 'Costo Mano de Obra', value: formatCOP(pd.labor_cost), color: 'border-amber-500', text: 'text-amber-700' },
+                  { label: 'Gastos Operativos', value: formatCOP(pd.operating_expenses_excluding_commissions), color: 'border-red-500', text: 'text-red-700' },
+                  { label: 'Utilidad Neta', value: formatCOP(pd.net_profit), color: pd.net_profit >= 0 ? 'border-emerald-600' : 'border-red-600', text: pd.net_profit >= 0 ? 'text-emerald-700' : 'text-red-700' },
+                  { label: 'Margen Neto', value: `${pd.net_margin_percentage.toFixed(1)}%`, color: 'border-blue-500', text: 'text-blue-700' },
+                ].map((kpi, i) => (
+                  <div key={i} className={`bg-white rounded-xl shadow p-5 border-l-4 ${kpi.color}`}>
+                    <p className="text-xs font-medium text-gray-500 uppercase">{kpi.label}</p>
+                    <p className={`text-2xl font-bold ${kpi.text} mt-1`}>{kpi.value}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="bg-white rounded-xl shadow p-6">
+                <h3 className="text-lg font-bold text-gray-800 mb-1">Composición de la utilidad</h3>
+                <p className="text-sm text-gray-500 mb-4">Ingresos menos costos y gastos del período</p>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={waterfallData} layout="vertical">
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis type="number" tickFormatter={(v) => `$${(Math.abs(v) / 1000).toFixed(0)}k`} tick={{ fontSize: 11 }} />
+                    <YAxis type="category" dataKey="name" width={130} tick={{ fontSize: 11 }} />
+                    <Tooltip formatter={(v) => formatCOP(Math.abs(v))} />
+                    <Bar dataKey="value" radius={[0, 4, 4, 0]}>
+                      {waterfallData.map((d, i) => <Cell key={i} fill={d.fill} />)}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+
+              <div className="bg-amber-50 border border-amber-100 rounded-lg px-4 py-3 text-xs text-amber-700">
+                Los gastos operativos excluyen comisiones a técnicos (categoría "Comisiones a Técnicos") para no contarlas dos veces: ya están incluidas en "Costo Mano de Obra" cuando la OT fue liquidada.
+              </div>
+            </div>
+            );
+          })()
 
           /* ===== CARTERA ===== */
           || tab === 'receivables' && (

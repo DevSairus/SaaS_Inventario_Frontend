@@ -30,7 +30,8 @@ const TenantSettingsPage = () => {
     secondary_color: '#475569',
     pdf_config: { payment_notes: '', legal_note: '' },
     features: {},
-    tax_config: {}
+    tax_config: {},
+    business_config: { default_labor_cost_percentage: 40 }
   });
   const [logoPreview, setLogoPreview] = useState(null);
   const [logoFile, setLogoFile] = useState(null);
@@ -58,7 +59,11 @@ const TenantSettingsPage = () => {
           hide_invoice_tax: false,   // facturas muestran IVA por defecto
           ...(data.features || {}),
         };
-        setConfig({ ...data, features: normalizedFeatures });
+        const normalizedBusinessConfig = {
+          default_labor_cost_percentage: 40,
+          ...(data.business_config || {}),
+        };
+        setConfig({ ...data, features: normalizedFeatures, business_config: normalizedBusinessConfig });
         // ✅ Manejar tanto URLs locales como de Cloudinary
         if (response.data.data.logo_url) {
           const logoUrl = response.data.data.logo_url;
@@ -510,6 +515,44 @@ const TenantSettingsPage = () => {
                 taxConfig={config.tax_config}
                 onChange={(tax_config) => setConfig(prev => ({ ...prev, tax_config }))}
               />
+            </div>
+          </Card>
+
+          {/* Taller — Costo estimado de mano de obra */}
+          <Card>
+            <div className="p-6">
+              <h2 className="text-xl font-semibold mb-1">Taller — Costo de Mano de Obra</h2>
+              <p className="text-sm text-gray-500 mb-5">
+                Los técnicos cobran comisión variable, y esa comisión solo se conoce con certeza
+                cuando la orden de trabajo ya fue liquidada. Mientras tanto, los reportes de
+                Ganancia, Rentabilidad y Margen por OT usan este porcentaje estimado sobre el
+                ingreso de mano de obra para aproximar el costo real. Una vez liquidada la
+                comisión, el reporte usa el valor real en su lugar.
+              </p>
+              <div className="max-w-xs">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  % estimado de costo de mano de obra
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="1"
+                    value={config.business_config?.default_labor_cost_percentage ?? 40}
+                    onChange={(e) => {
+                      const raw = e.target.value;
+                      const value = raw === '' ? '' : Math.min(100, Math.max(0, parseFloat(raw)));
+                      setConfig(prev => ({
+                        ...prev,
+                        business_config: { ...prev.business_config, default_labor_cost_percentage: value }
+                      }));
+                    }}
+                    className="w-full px-3 py-2 pr-8 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">%</span>
+                </div>
+              </div>
             </div>
           </Card>
 
