@@ -1,9 +1,12 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { ArrowLeft, ClipboardCheck, Loader2 } from 'lucide-react';
 import Layout from '../../components/layout/Layout';
-import { ensambladoraAlistamientosApi } from '../../api/ensambladora';
+import { ensambladoraAlistamientosApi, ensambladoraVehiculosApi, ensambladoraLiquidacionesApi } from '../../api/ensambladora';
+import TecnicoAutocomplete from '../../components/ensambladora/TecnicoAutocomplete';
+import useUsuarioTecnico from '../../hooks/useUsuarioTecnico';
+import NumericInput from '../../components/inputs/NumericInput';
 
 const inputCls = 'w-full border border-gray-200 dark:border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-graphite-2 dark:text-gray-100';
 const today = () => new Date().toISOString().slice(0, 10);
@@ -33,6 +36,42 @@ export default function AlistamientoFormPage() {
   const [checklist, setChecklist] = useState({});
   const [saving, setSaving] = useState(false);
 
+  // Responsable es, por defecto, quien inició sesión -- un admin puede
+  // elegir a otra persona (autocomplete), mismo criterio que VentaFormPage.
+  const { documentoPropio, esAdmin, loading: cargandoUsuario } = useUsuarioTecnico();
+  useEffect(() => {
+    if (documentoPropio) setResponsable(documentoPropio);
+  }, [documentoPropio]);
+
+  // Sin esto, el alistamiento nunca llevaba ningún valor de mano de obra al
+  // Core -- se busca la tarifa de tipo 'alistamiento' vigente para la marca
+  // del vehículo (mismo mecanismo que RevisionFormPage.jsx con la tarifa de
+  // su política), y queda editable por si el taller cobra un valor distinto.
+  const [tarifarioServicioId, setTarifarioServicioId] = useState(null);
+  const [tarifaAsignada, setTarifaAsignada] = useState(null);
+  const [valorManoObra, setValorManoObra] = useState('');
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await ensambladoraVehiculosApi.getByVin(vin);
+        const vehiculo = res.data?.data ?? res.data ?? null;
+        const marcaId = vehiculo?.marca?.id;
+        if (!marcaId) return;
+        const tarifasRes = await ensambladoraLiquidacionesApi.tarifarioVigente(marcaId);
+        const tarifas = tarifasRes.data?.data ?? [];
+        const tarifa = tarifas.find((t) => t.tipo_servicio === 'alistamiento') || null;
+        if (tarifa) {
+          setTarifarioServicioId(tarifa.id);
+          setTarifaAsignada(tarifa);
+          setValorManoObra(tarifa.valor_mano_obra);
+        }
+      } catch {
+        // silencioso -- el formulario sigue usable sin tarifa (valor manual)
+      }
+    })();
+  }, [vin]);
+
   const setCL = (key, val) => setChecklist((p) => ({ ...p, [key]: val }));
 
   const handleSubmit = async (e) => {
@@ -49,6 +88,8 @@ export default function AlistamientoFormPage() {
         responsable: responsable || undefined,
         checklist,
         observaciones: observaciones || undefined,
+        tarifario_servicio_id: tarifarioServicioId || undefined,
+        valor_mano_obra: valorManoObra !== '' ? Number(valorManoObra) : undefined,
       });
       toast.success('Alistamiento registrado');
       navigate(`/ensambladora/vehiculos/${encodeURIComponent(vin)}`);
@@ -85,7 +126,16 @@ export default function AlistamientoFormPage() {
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Responsable</label>
-              <input type="text" value={responsable} onChange={(e) => setResponsable(e.target.value)} className={inputCls} />
+              {esAdmin ? (
+                <TecnicoAutocomplete value={responsable} onChange={setResponsable} placeholder="Cédula o nombre" />
+              ) : (
+                <input
+                  type="text"
+                  value={cargandoUsuario ? 'Cargando…' : responsable}
+                  disabled
+                  className={`${inputCls} text-gray-400 dark:text-gray-500 cursor-not-allowed`}
+                />
+              )}
             </div>
           </div>
 
@@ -116,6 +166,27 @@ export default function AlistamientoFormPage() {
                   </div>
                 );
               })}
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-graphite-2 border border-gray-200 dark:border-white/10 rounded-xl p-3 space-y-2.5">
+            <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">Mano de obra</p>
+            <div>
+              <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Tarifa (asignada por la Ensambladora)</label>
+              <p className="text-sm text-gray-700 dark:text-gray-200 bg-gray-50 dark:bg-white/5 rounded-lg px-3 py-2">
+                {tarifaAsignada
+                  ? `${tarifaAsignada.descripcion || 'Mano de obra — alistamiento'} — $${Number(tarifaAsignada.valor_mano_obra).toLocaleString('es-CO')}`
+                  : 'Sin tarifa asignada para alistamiento'}
+              </p>
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Valor cobrado</label>
+              <NumericInput
+                value={valorManoObra}
+                onChange={(e) => setValorManoObra(e.target.value)}
+                className={inputCls}
+                placeholder="Ej: 40000"
+              />
             </div>
           </div>
 

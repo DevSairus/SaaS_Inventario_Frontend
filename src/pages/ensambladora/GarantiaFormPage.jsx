@@ -6,6 +6,7 @@ import Layout from '../../components/layout/Layout';
 import { ensambladoraGarantiasApi, ensambladoraVehiculosApi, ensambladoraMantenimientoApi } from '../../api/ensambladora';
 import ComprobanteAcciones from '../../components/ensambladora/ComprobanteAcciones';
 import TecnicoAutocomplete from '../../components/ensambladora/TecnicoAutocomplete';
+import useUsuarioTecnico from '../../hooks/useUsuarioTecnico';
 
 const inputCls = 'w-full border border-gray-200 dark:border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-graphite-2 dark:text-gray-100';
 
@@ -20,6 +21,13 @@ export default function GarantiaFormPage() {
   const [saving, setSaving] = useState(false);
   const [catalogoPiezas, setCatalogoPiezas] = useState([]);
   const [garantiaCreada, setGarantiaCreada] = useState(null);
+
+  // Quién atiende es, por defecto, quien inició sesión -- un admin puede
+  // elegir a otra persona (autocomplete), mismo criterio que VentaFormPage.
+  const { documentoPropio, esAdmin, loading: cargandoUsuario } = useUsuarioTecnico();
+  useEffect(() => {
+    if (documentoPropio) setTecnicoDocumento(documentoPropio);
+  }, [documentoPropio]);
 
   // Trae el catálogo de piezas de la marca/línea del vehículo para
   // sugerir códigos válidos -- mismo patrón que RevisionFormPage.jsx. Si
@@ -138,7 +146,16 @@ export default function GarantiaFormPage() {
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
             <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Técnico</label>
-            <TecnicoAutocomplete value={tecnicoDocumento} onChange={setTecnicoDocumento} placeholder="Cédula o nombre de quien atiende" />
+            {esAdmin ? (
+              <TecnicoAutocomplete value={tecnicoDocumento} onChange={setTecnicoDocumento} placeholder="Cédula o nombre de quien atiende" />
+            ) : (
+              <input
+                type="text"
+                value={cargandoUsuario ? 'Cargando…' : tecnicoDocumento}
+                disabled
+                className={`${inputCls} text-gray-400 dark:text-gray-500 cursor-not-allowed`}
+              />
+            )}
           </div>
 
           <div className="space-y-3">

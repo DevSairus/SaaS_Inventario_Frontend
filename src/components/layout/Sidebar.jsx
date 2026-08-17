@@ -62,6 +62,7 @@ const NAV = [
       { label: "Garantías", path: "/ensambladora/garantias" },
       { label: "Técnicos y asesores", path: "/ensambladora/tecnicos" },
       { label: "Sincronización", path: "/ensambladora/sync" },
+      { label: "Auditoría", path: "/ensambladora/auditoria" },
     ],
   },
   {

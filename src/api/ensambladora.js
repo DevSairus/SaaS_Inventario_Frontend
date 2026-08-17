@@ -176,6 +176,11 @@ export const ensambladoraSyncApi = {
     axios.post(`/ensambladora/sync/events/${encodeURIComponent(eventId)}/marcar-revisado`, { revisado_por: revisadoPor }),
 };
 
+// ── Auditoría de garantía/alistamiento/etc (ver auditoria.controller.js) ──
+export const ensambladoraAuditoriaApi = {
+  list: (filtros = {}) => axios.get('/ensambladora/auditoria', { params: filtros }),
+};
+
 // ── Fase 4: garantías ────────────────────────────────────────────────────
 // Radicar: { vin*, tecnico_documento, items*: [{pieza_codigo*, codigo_falla,
 // cantidad, evidencia_url}] }. Si algún item trae foto, se manda multipart:

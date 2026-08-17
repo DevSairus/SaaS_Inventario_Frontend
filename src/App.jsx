@@ -70,6 +70,7 @@ const TecnicosPage = lazy(() => import('./pages/ensambladora/TecnicosPage'));
 const CotizarPage = lazy(() => import('./pages/ensambladora/CotizarPage'));
 // Fase 8 — panel de monitoreo de sincronización
 const SyncMonitorPage = lazy(() => import('./pages/ensambladora/SyncMonitorPage'));
+const AuditoriaPage = lazy(() => import('./pages/ensambladora/AuditoriaPage'));
 import TechnicianProductivityPage from './pages/workshop/productivity/TechnicianProductivityPage';
 import CommissionSettlementsPage from './pages/workshop/commissions/CommissionSettlementsPage';
 import CommissionSettlementDetailPage from './pages/workshop/commissions/CommissionSettlementDetailPage';
@@ -363,6 +364,7 @@ function App() {
         <Route path="ensambladora/tecnicos"                     element={<TenantRoute module="ensambladora"><Suspense fallback={<Loading fullScreen />}><TecnicosPage /></Suspense></TenantRoute>} />
         <Route path="ensambladora/cotizar"                      element={<TenantRoute module="ensambladora"><Suspense fallback={<Loading fullScreen />}><CotizarPage /></Suspense></TenantRoute>} />
         <Route path="ensambladora/sync"                         element={<TenantRoute module="ensambladora"><Suspense fallback={<Loading fullScreen />}><SyncMonitorPage /></Suspense></TenantRoute>} />
+        <Route path="ensambladora/auditoria"                    element={<TenantRoute module="ensambladora"><Suspense fallback={<Loading fullScreen />}><AuditoriaPage /></Suspense></TenantRoute>} />
         <Route path="workshop/productivity"            element={<TenantRoute module="workshop"><TechnicianProductivityPage /></TenantRoute>} />
         <Route path="workshop/commission-settlements"  element={<TenantRoute module="workshop"><CommissionSettlementsPage /></TenantRoute>} />
         <Route path="workshop/commission-settlements/:id" element={<TenantRoute module="workshop"><CommissionSettlementDetailPage /></TenantRoute>} />
