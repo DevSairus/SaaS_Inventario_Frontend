@@ -23,6 +23,12 @@ const STATUS_CONFIG = {
   vencida:   { label: 'Vencida',   color: '#d97706', bg: '#fffbeb' },
 };
 
+// Esta página se comparte para cotización, factura y remisión por igual
+// (mismo endpoint /public/sales/:token, ver sales.controller.js) -- el
+// texto debe reflejar el tipo real del documento, no asumir "cotización".
+const DOC_LABELS = { factura: 'Factura', remision: 'Remisión', cotizacion: 'Cotización' };
+const docLabelOf = (documentType) => DOC_LABELS[documentType] || 'Cotización';
+
 // El cliente aprueba/rechaza cada ítem por separado (mismo patrón que
 // QuoteApprovalSection en WorkOrderPublicPage.jsx) — mezclar aprobados y
 // rechazados deja la cotización en 'parcial'.
@@ -136,7 +142,7 @@ export default function QuotePublicPage() {
       const res = await api.get(`/public/sales/${token}`);
       setQuote(res.data.data);
     } catch (err) {
-      setError(err.response?.data?.message || 'No se encontró la cotización.');
+      setError(err.response?.data?.message || 'No se encontró el documento.');
     } finally {
       setLoading(false);
     }
@@ -147,7 +153,7 @@ export default function QuotePublicPage() {
       <div className="min-h-screen bg-gray-50 dark:bg-ink flex items-center justify-center">
         <div className="text-center">
           <div className="inline-block w-10 h-10 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mb-4" />
-          <p className="text-gray-500 dark:text-gray-500 text-sm">Cargando tu cotización...</p>
+          <p className="text-gray-500 dark:text-gray-500 text-sm">Cargando tu documento...</p>
         </div>
       </div>
     );
@@ -169,25 +175,32 @@ export default function QuotePublicPage() {
     );
   }
 
-  const statusCfg = STATUS_CONFIG[quote.quote_status] || STATUS_CONFIG.borrador;
+  // quote_status (borrador/enviada/aprobada/...) es un concepto exclusivo de
+  // cotización -- una factura/remisión no tiene ese flujo, así que el badge
+  // de estado coloreado solo aplica a document_type === 'cotizacion'.
+  const isQuoteDoc = (quote.document_type || 'cotizacion') === 'cotizacion';
+  const docLabel = docLabelOf(quote.document_type);
+  const statusCfg = isQuoteDoc ? (STATUS_CONFIG[quote.quote_status] || STATUS_CONFIG.borrador) : null;
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#f1f5f9' }}>
       <header style={{ backgroundColor: '#2563eb' }} className="text-white">
         <div className="max-w-lg mx-auto px-4 py-5">
-          <h1 className="font-bold text-base leading-tight">{quote.tenant?.company_name || 'Cotización'}</h1>
+          <h1 className="font-bold text-base leading-tight">{quote.tenant?.company_name || docLabel}</h1>
         </div>
       </header>
 
       <div className="max-w-lg mx-auto px-4 py-5 space-y-4">
 
         <div className="bg-white dark:bg-graphite rounded-2xl shadow-sm overflow-hidden">
-          <div style={{ backgroundColor: statusCfg.bg }} className="px-5 py-4">
+          <div style={{ backgroundColor: statusCfg?.bg || '#f9fafb' }} className="px-5 py-4">
             <div className="flex items-start justify-between mb-1">
-              <p className="text-xs font-semibold text-gray-500 dark:text-gray-500 uppercase tracking-wide">Cotización</p>
-              <span style={{ backgroundColor: statusCfg.bg, color: statusCfg.color }} className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold">
-                {statusCfg.label}
-              </span>
+              <p className="text-xs font-semibold text-gray-500 dark:text-gray-500 uppercase tracking-wide">{docLabel}</p>
+              {statusCfg && (
+                <span style={{ backgroundColor: statusCfg.bg, color: statusCfg.color }} className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold">
+                  {statusCfg.label}
+                </span>
+              )}
             </div>
             <h2 className="text-2xl font-black text-gray-900 dark:text-gray-100">{quote.sale_number}</h2>
             <p className="text-sm text-gray-500 dark:text-gray-500 mt-1">Para {quote.customer_name} · {fmt(quote.sale_date)}</p>

@@ -404,6 +404,12 @@ export default function WorkOrderDetailPage() {
   const [selectedWarehouseId, setSelectedWarehouseId] = useState('');
   const [savingWarehouse,  setSavingWarehouse]   = useState(false);
 
+  // ── Estado cliente ────────────────────────────────────────────
+  const [customers,        setCustomers]         = useState([]);
+  const [editingCustomer,  setEditingCustomer]   = useState(false);
+  const [selectedCustomerId, setSelectedCustomerId] = useState('');
+  const [savingCustomer,   setSavingCustomer]    = useState(false);
+
   useEffect(() => {
     axios.get('/users?limit=100&role=technician').then(r => {
       const list = r.data.data?.users || r.data.users || r.data.data || [];
@@ -411,6 +417,9 @@ export default function WorkOrderDetailPage() {
     }).catch(() => {});
     axios.get('/inventory/warehouses').then(r => {
       setWarehouses(r.data.data || []);
+    }).catch(() => {});
+    axios.get('/customers?limit=500').then(r => {
+      setCustomers(r.data.data || []);
     }).catch(() => {});
   }, []);
 
@@ -430,6 +439,28 @@ export default function WorkOrderDetailPage() {
       toast.error('No se pudo actualizar el técnico. Verifica tu conexión e intenta de nuevo.');
     } finally {
       setSavingTech(false);
+    }
+  };
+
+  const saveCustomer = async () => {
+    // customer_id es obligatorio desde la creación (ver workOrders.controller#create) --
+    // no se ofrece "Quitar cliente" acá, solo cambiarlo por otro existente.
+    if (!selectedCustomerId) return toast.error('Debes seleccionar un cliente de la lista.');
+    setSavingCustomer(true);
+    try {
+      const res = await workOrdersApiOffline.update(id, { customer_id: selectedCustomerId }, order?.updated_at);
+      if (res.data.data._pendingSync) {
+        patchCurrentOrder({ customer_id: selectedCustomerId });
+        toast.success('Cliente guardado sin conexión — se sincronizará automáticamente');
+      } else {
+        await fetchOrder(id);
+        toast.success('Cliente actualizado');
+      }
+      setEditingCustomer(false);
+    } catch (e) {
+      toast.error(e.response?.data?.message || 'No se pudo actualizar el cliente. Verifica tu conexión e intenta de nuevo.');
+    } finally {
+      setSavingCustomer(false);
     }
   };
 
@@ -1251,11 +1282,57 @@ export default function WorkOrderDetailPage() {
 
             {/* Cliente */}
             <div className="bg-white dark:bg-graphite border border-gray-100 dark:border-white/10 rounded-xl p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <User size={15} className="text-blue-600" />
-                <h2 className="font-semibold text-sm text-gray-800 dark:text-gray-200">Cliente</h2>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <User size={15} className="text-blue-600" />
+                  <h2 className="font-semibold text-sm text-gray-800 dark:text-gray-200">Cliente</h2>
+                </div>
+                {!isClosed && !editingCustomer && (
+                  <button
+                    onClick={() => { setSelectedCustomerId(order.customer?.id || ''); setEditingCustomer(true); }}
+                    className="text-xs text-blue-600 font-medium hover:underline">
+                    {order.customer ? 'Cambiar' : 'Asignar'}
+                  </button>
+                )}
               </div>
-              {order.customer ? (
+              {editingCustomer ? (
+                <div className="space-y-2">
+                  <Combobox
+                    placeholder="Buscar por nombre o teléfono..."
+                    items={customers}
+                    value={selectedCustomerId}
+                    displayValue={(() => {
+                      const c = customers.find(c => c.id === selectedCustomerId);
+                      return c ? (c.business_name || `${c.first_name || ''} ${c.last_name || ''}`.trim()) : '';
+                    })()}
+                    onSelect={c => setSelectedCustomerId(c.id)}
+                    onClear={() => setSelectedCustomerId('')}
+                    filterFn={(c, q) => {
+                      const s = q.toLowerCase();
+                      const n = (c.business_name || `${c.first_name || ''} ${c.last_name || ''}`).toLowerCase();
+                      return n.includes(s) || (c.phone || '').includes(s) || (c.tax_id || '').includes(s);
+                    }}
+                    renderItem={c => (
+                      <div>
+                        <p className="text-sm font-medium text-gray-900 dark:text-gray-200">
+                          {c.business_name || `${c.first_name || ''} ${c.last_name || ''}`}
+                        </p>
+                        {c.phone && <p className="text-xs text-gray-400">{c.phone}</p>}
+                      </div>
+                    )}
+                  />
+                  <div className="flex gap-2">
+                    <button onClick={() => setEditingCustomer(false)}
+                      className="flex-1 py-1.5 text-xs border border-gray-200 rounded-lg text-gray-500 hover:bg-gray-50">
+                      Cancelar
+                    </button>
+                    <button onClick={saveCustomer} disabled={savingCustomer || !selectedCustomerId}
+                      className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-60 font-medium">
+                      {savingCustomer ? '...' : 'Guardar'}
+                    </button>
+                  </div>
+                </div>
+              ) : order.customer ? (
                 <div className="text-sm">
                   <p className="font-medium text-gray-900">
                     {order.customer.business_name || `${order.customer.first_name} ${order.customer.last_name}`}
@@ -1263,7 +1340,12 @@ export default function WorkOrderDetailPage() {
                   {order.customer.phone && <p className="text-gray-500 text-xs mt-1">{order.customer.phone}</p>}
                   {order.customer.email && <p className="text-gray-500 text-xs">{order.customer.email}</p>}
                 </div>
-              ) : <p className="text-sm text-gray-400">Sin cliente</p>}
+              ) : (
+                <div className="flex items-center gap-2 text-xs bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
+                  <AlertTriangle size={12} className="text-amber-500" />
+                  <span className="text-amber-700">Sin cliente — asígnalo lo antes posible</span>
+                </div>
+              )}
             </div>
 
             {/* Técnico */}

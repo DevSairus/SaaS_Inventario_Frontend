@@ -356,6 +356,76 @@ function Timeline({ status }) {
   );
 }
 
+// ─── Inventario de ingreso (checklist_in) ─────────────────────────────────────
+// Mismos ítems y niveles de combustible que captura el asesor al recibir el
+// vehículo (ver el modal equivalente en WorkOrderDetailPage.jsx) -- acá es
+// de solo lectura, para que el cliente pueda verificar qué quedó registrado.
+const INTAKE_ITEMS = [
+  { key: 'estado_general', label: 'Estado general' },
+  { key: 'testigos',       label: 'Testigos' },
+  { key: 'tanque',         label: 'Tanque combustible' },
+  { key: 'espejos',        label: 'Espejos' },
+  { key: 'sillin',         label: 'Sillín' },
+  { key: 'luces',          label: 'Luces' },
+  { key: 'carenaje',       label: 'Carenaje / plásticos' },
+  { key: 'llantas',        label: 'Llantas' },
+  { key: 'rele_encendido', label: 'Rele de encendido' },
+];
+const FUEL_LEVEL_LABELS = ['Vacío', '1/4', '1/2', '3/4', 'Lleno'];
+
+function IntakeChecklistModal({ checklist, onClose }) {
+  const registeredItems = INTAKE_ITEMS.filter(({ key }) => checklist[key] !== undefined);
+  return (
+    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div
+        className="bg-white dark:bg-graphite rounded-2xl w-full max-w-sm max-h-[85vh] overflow-y-auto shadow-2xl"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-white/10">
+          <h3 className="font-bold text-gray-900 dark:text-gray-100 text-sm">Inventario de ingreso</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">✕</button>
+        </div>
+        <div className="p-4 space-y-4">
+          {typeof checklist.fuel_level === 'number' && (
+            <div className="bg-gray-50 dark:bg-graphite-2 rounded-xl p-3">
+              <p className="text-xs text-gray-500 dark:text-gray-500">Nivel de combustible</p>
+              <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 mt-0.5">
+                ⛽ {FUEL_LEVEL_LABELS[checklist.fuel_level] || '—'}
+              </p>
+            </div>
+          )}
+
+          {registeredItems.length > 0 && (
+            <div className="space-y-1.5">
+              {registeredItems.map(({ key, label }) => {
+                const v = checklist[key];
+                const isOk = v === true, isBad = v === false, isNA = v === null;
+                return (
+                  <div key={key} className="flex items-center justify-between text-sm py-1.5 border-b border-gray-50 dark:border-white/10 last:border-0">
+                    <span className="text-gray-600 dark:text-gray-400">{label}</span>
+                    <span className={`font-semibold text-xs px-2 py-0.5 rounded-full ${
+                      isOk ? 'bg-green-50 text-green-700' : isBad ? 'bg-red-50 text-red-600' : 'bg-gray-100 text-gray-500'
+                    }`}>
+                      {isOk ? 'OK' : isBad ? 'Mal' : isNA ? 'N/A' : '—'}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {checklist.observations && (
+            <div>
+              <p className="text-xs text-gray-500 dark:text-gray-500 mb-1">Observaciones al ingreso</p>
+              <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{checklist.observations}</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Photo Gallery ────────────────────────────────────────────────────────────
 const resolvePhotoUrl = (url) => {
   if (!url) return '';
@@ -421,6 +491,7 @@ export default function WorkOrderPublicPage() {
   const [order, setOrder]     = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState(null);
+  const [showIntake, setShowIntake] = useState(false);
 
   useEffect(() => {
     fetchOrder();
@@ -588,7 +659,24 @@ export default function WorkOrderPublicPage() {
                 </div>
               )}
             </div>
+
+            {order.checklist_in && Object.keys(order.checklist_in).length > 0 && (
+              <button
+                onClick={() => setShowIntake(true)}
+                className="mt-3 w-full flex items-center justify-center gap-2 text-sm font-medium text-blue-600 border border-blue-100 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-900/40 dark:text-blue-300 rounded-xl py-2.5 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition"
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+                  <rect x="6" y="4" width="12" height="17" rx="2" stroke="currentColor" strokeWidth="2"/>
+                  <path d="M9 11h6M9 15h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                </svg>
+                Ver inventario de ingreso
+              </button>
+            )}
           </div>
+        )}
+
+        {showIntake && (
+          <IntakeChecklistModal checklist={order.checklist_in} onClose={() => setShowIntake(false)} />
         )}
 
         {/* ── Fechas ────────────────────────────────────────────────── */}
@@ -603,6 +691,7 @@ export default function WorkOrderPublicPage() {
           <div className="space-y-2">
             {[
               { label: 'Ingreso', val: order.received_at },
+              { label: 'Entrega prometida', val: order.promised_at },
             ].filter(f => f.val).map(({ label, val }) => (
               <div key={label} className="flex justify-between items-center py-1.5 border-b border-gray-50 dark:border-white/10 last:border-0">
                 <span className="text-sm text-gray-500 dark:text-gray-500">{label}</span>

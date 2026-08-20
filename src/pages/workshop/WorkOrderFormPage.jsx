@@ -291,6 +291,18 @@ export default function WorkOrderFormPage() {
 
   const handleSubmit = async () => {
     if (!form.vehicle_id)        return toast.error('Debes seleccionar un vehículo');
+    // El panel de "nuevo cliente" solo escribe en el form al confirmar
+    // "Guardar cliente" (handleCreateCustomer) -- si quedó abierto con datos
+    // sin guardar, form.customer_id sigue vacío y la OT se crearía sin
+    // cliente en silencio. Se bloquea acá en vez de solo abajo para poder
+    // dar un mensaje específico según si el panel está abierto o no.
+    if (!form.customer_id) {
+      return toast.error(
+        showNewCustomer
+          ? 'Guarda los datos del cliente nuevo (botón "Guardar cliente") antes de crear la OT'
+          : 'Debes seleccionar o registrar un cliente'
+      );
+    }
     if (!form.mileage_in && form.mileage_in !== 0) {
       return toast.error('El kilometraje de ingreso es requerido');
     }
@@ -468,7 +480,7 @@ export default function WorkOrderFormPage() {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
 
-              <Field label="Cliente">
+              <Field label="Cliente *">
                 {showNewCustomer ? (
                   <div className="p-3 bg-green-50 rounded-lg border border-green-100 space-y-2">
                     <div className="flex items-center justify-between">
@@ -543,6 +555,9 @@ export default function WorkOrderFormPage() {
                           className="ml-auto text-amber-600 font-medium hover:underline">+ Agregar</button>
                       </div>
                     )}
+                    {!loadingCust && !selVehicle && !selCustomer && (
+                      <p className="text-xs text-amber-500">Campo obligatorio — selecciona un cliente o registra uno nuevo</p>
+                    )}
                   </div>
                 )}
               </Field>
@@ -611,7 +626,7 @@ export default function WorkOrderFormPage() {
             className="flex-1 border border-gray-200 text-gray-600 py-2.5 rounded-xl text-sm font-medium hover:bg-gray-50 transition">
             Cancelar
           </button>
-          <button type="button" onClick={handleSubmit} disabled={saving || !form.vehicle_id || !form.problem_description?.trim() || !form.mileage_in || !form.promised_at}
+          <button type="button" onClick={handleSubmit} disabled={saving || !form.vehicle_id || !form.customer_id || !form.problem_description?.trim() || !form.mileage_in || !form.promised_at}
             className="flex-1 bg-blue-600 text-white py-2.5 rounded-xl text-sm font-medium flex items-center justify-center gap-2 hover:bg-blue-700 disabled:opacity-60 transition">
             <Save size={16}/>
             {saving ? 'Guardando...' : 'Crear Orden'}
