@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import Layout from '../../components/layout/Layout';
 import { useNavigate } from 'react-router-dom';
 import useWorkshopStore from '../../store/workshopStore';
+import useAuthStore from '../../store/authStore';
 import { Wrench, Plus, Search, Car, User, Clock, ChevronRight } from 'lucide-react';
 import {
   InboxArrowDownIcon,
@@ -68,6 +69,8 @@ const COP = (n) => new Intl.NumberFormat('es-CO', { style: 'currency', currency:
 export default function WorkOrdersPage() {
   const navigate = useNavigate();
   const { workOrders, workOrdersTotal, workOrdersLoading, fetchWorkOrders } = useWorkshopStore();
+  const { user } = useAuthStore();
+  const hidePrices = user?.role === 'technician';
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('activas'); // activas = excluye entregado/cancelado
   const [page, setPage] = useState(1);
@@ -187,7 +190,9 @@ export default function WorkOrdersPage() {
                   </div>
                   <div className="flex items-center gap-3 flex-shrink-0">
                     <div className="text-right">
-                      <div className="font-semibold text-gray-900 text-sm">{COP(order.total_amount)}</div>
+                      {!hidePrices && (
+                        <div className="font-semibold text-gray-900 text-sm">{COP(order.total_amount)}</div>
+                      )}
                       <div className="text-xs text-gray-400 flex items-center gap-1 justify-end">
                         <Clock size={10} />
                         {new Date(order.received_at).toLocaleDateString('es-CO')}

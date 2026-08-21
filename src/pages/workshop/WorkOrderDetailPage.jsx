@@ -4,6 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import useWorkshopStore from '../../store/workshopStore';
 import useProductsStore from '../../store/productsStore';
 import useTenantStore from '../../store/tenantStore';
+import useAuthStore from '../../store/authStore';
 import { productsAPI } from '../../api/products';
 import { workOrdersApi } from '../../api/workshop';
 import { workOrdersApiOffline } from '../../api/workshopOffline';
@@ -58,6 +59,11 @@ export default function WorkOrderDetailPage() {
   const { searchProducts } = useProductsStore();
   const { features, fetchFeatures } = useTenantStore();
   const hideRemisionTax = features?.hide_remision_tax === true;
+  const { user } = useAuthStore();
+  // El técnico ve/opera la OT (diagnóstico, checklist, ítems) pero no debe
+  // ver ningún valor monetario -- ni de repuestos, mano de obra, servicios
+  // ni totales -- para que no negocie precios con el cliente en el taller.
+  const hidePrices = user?.role === 'technician';
 
   // Búsqueda de producto
   const [searchTerm, setSearchTerm]       = useState('');
@@ -673,10 +679,17 @@ export default function WorkOrderDetailPage() {
               title="Imprimir orden de ingreso">
               <Printer size={13} /> Ingreso
             </button>
-            <button onClick={() => openPDF('workorder')}
-              className="px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800/40 dark:hover:bg-blue-900/50 flex items-center gap-1.5 transition"
-              title="Imprimir OT completa">
-              <Download size={13} /> OT
+            {!hidePrices && (
+              <button onClick={() => openPDF('workorder')}
+                className="px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800/40 dark:hover:bg-blue-900/50 flex items-center gap-1.5 transition"
+                title="Imprimir OT completa">
+                <Download size={13} /> OT
+              </button>
+            )}
+            <button onClick={() => openPDF('technician')}
+              className="px-3 py-1.5 text-xs font-medium text-orange-700 bg-orange-50 border border-orange-200 rounded-lg hover:bg-orange-100 dark:bg-orange-900/30 dark:text-orange-300 dark:border-orange-800/40 dark:hover:bg-orange-900/50 flex items-center gap-1.5 transition"
+              title="Hoja para el técnico — sin precios, para dejar en el vehículo">
+              <Wrench size={13} /> Hoja técnico
             </button>
           </div>
         </div>
@@ -961,7 +974,9 @@ export default function WorkOrderDetailPage() {
                                     </svg>
                                   </button>
                                 )}
-                                <span className="text-sm font-semibold text-blue-600">{COP(p.base_price)}</span>
+                                {!hidePrices && (
+                                  <span className="text-sm font-semibold text-blue-600">{COP(p.base_price)}</span>
+                                )}
                               </div>
                             </div>
                           </button>
@@ -999,12 +1014,14 @@ export default function WorkOrderDetailPage() {
                         onChange={e => setNewItem(p => ({ ...p, quantity: e.target.value }))}
                         className={inputCls} />
                     </div>
-                    <div className="col-span-2">
-                      <label className="text-xs text-gray-500 mb-0.5 block">Precio unitario</label>
-                      <NumericInput value={newItem.unit_price}
-                        onChange={e => setNewItem(p => ({ ...p, unit_price: e.target.value }))}
-                        className={inputCls} />
-                    </div>
+                    {!hidePrices && (
+                      <div className="col-span-2">
+                        <label className="text-xs text-gray-500 mb-0.5 block">Precio unitario</label>
+                        <NumericInput value={newItem.unit_price}
+                          onChange={e => setNewItem(p => ({ ...p, unit_price: e.target.value }))}
+                          className={inputCls} />
+                      </div>
+                    )}
                     <label className="col-span-2 flex items-center gap-2 text-xs bg-amber-50 border border-amber-100 rounded-lg px-3 py-2 cursor-pointer">
                       <input
                         type="checkbox"
@@ -1112,7 +1129,7 @@ export default function WorkOrderDetailPage() {
                         </div>
                         {!isEditingThis && (
                           <p className="text-xs text-gray-400 mt-0.5">
-                            {item.quantity} × {COP(item.unit_price)}
+                            {hidePrices ? `Cantidad: ${item.quantity}` : <>{item.quantity} × {COP(item.unit_price)}</>}
                             {item.item_technician && (
                               <span className="ml-2 text-blue-500">
                                 · {item.item_technician.first_name} {item.item_technician.last_name}
@@ -1122,7 +1139,9 @@ export default function WorkOrderDetailPage() {
                         )}
                       </div>
                       <div className="flex items-center gap-2 flex-shrink-0">
-                        <span className="text-sm font-semibold text-gray-900">{COP(item.total)}</span>
+                        {!hidePrices && (
+                          <span className="text-sm font-semibold text-gray-900">{COP(item.total)}</span>
+                        )}
                         {!isClosed && isPending && !isEditingThis && (
                           <button onClick={() => startEditItem(item)}
                             className="p-1 text-gray-300 hover:text-blue-500 transition"
@@ -1148,9 +1167,11 @@ export default function WorkOrderDetailPage() {
                         <NumericInput value={editItemVals.quantity}
                           onChange={e => setEditItemVals(vals => ({ ...vals, quantity: e.target.value }))}
                           placeholder="Cantidad" className={`${inputCls} w-20 !py-1.5`} />
-                        <NumericInput value={editItemVals.unit_price}
-                          onChange={e => setEditItemVals(vals => ({ ...vals, unit_price: e.target.value }))}
-                          placeholder="Precio" className={`${inputCls} w-28 !py-1.5`} />
+                        {!hidePrices && (
+                          <NumericInput value={editItemVals.unit_price}
+                            onChange={e => setEditItemVals(vals => ({ ...vals, unit_price: e.target.value }))}
+                            placeholder="Precio" className={`${inputCls} w-28 !py-1.5`} />
+                        )}
                         <button onClick={() => saveEditItem(item)} disabled={savingEditItem}
                           className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 disabled:opacity-50">
                           {savingEditItem ? 'Guardando...' : 'Guardar'}
@@ -1167,8 +1188,8 @@ export default function WorkOrderDetailPage() {
                 </div>
               )}
 
-              {/* Totales */}
-              {order.items?.length > 0 && (() => {
+              {/* Totales — ocultos para el rol técnico */}
+              {!hidePrices && order.items?.length > 0 && (() => {
                 // El total real solo cuenta ítems 'aprobado' (ver calcTotals en el
                 // backend). Si hay ítems 'pendiente' de aprobación del cliente, se
                 // muestra además un estimado con lo que sumarían si se aprueban.
@@ -1224,12 +1245,20 @@ export default function WorkOrderDetailPage() {
                 );
               })()}
 
-                {/* Botón imprimir OT desde sección ítems */}
+                {/* Botones imprimir OT desde sección ítems */}
                 {order.items?.length > 0 && (
-                  <button onClick={() => openPDF('workorder')}
-                    className="mt-3 w-full flex items-center justify-center gap-2 text-xs text-blue-600 border border-blue-200 rounded-lg py-2 hover:bg-blue-50 transition">
-                    <Download size={12}/> Descargar OT completa (PDF)
-                  </button>
+                  <div className="mt-3 flex gap-2">
+                    {!hidePrices && (
+                      <button onClick={() => openPDF('workorder')}
+                        className="flex-1 flex items-center justify-center gap-2 text-xs text-blue-600 border border-blue-200 rounded-lg py-2 hover:bg-blue-50 transition">
+                        <Download size={12}/> Descargar OT completa (PDF)
+                      </button>
+                    )}
+                    <button onClick={() => openPDF('technician')}
+                      className="flex-1 flex items-center justify-center gap-2 text-xs text-orange-600 border border-orange-200 rounded-lg py-2 hover:bg-orange-50 transition">
+                      <Wrench size={12}/> Hoja para el técnico (sin precios)
+                    </button>
+                  </div>
                 )}
             </div>
 
@@ -1255,7 +1284,7 @@ export default function WorkOrderDetailPage() {
                         {pendingUnsent.map(i => (
                           <li key={i.id} className="text-xs text-gray-600 flex justify-between">
                             <span>{i.product_name} × {i.quantity}</span>
-                            <span className="font-medium">{COP(i.total)}</span>
+                            {!hidePrices && <span className="font-medium">{COP(i.total)}</span>}
                           </li>
                         ))}
                       </ul>
@@ -1372,7 +1401,7 @@ export default function WorkOrderDetailPage() {
                                 {i.product_name || i.product?.name}
                               </p>
                               <p className="text-xs text-gray-400 mt-0.5">
-                                {i.quantity} × {COP(i.unit_price)}
+                                {hidePrices ? `Cantidad: ${i.quantity}` : <>{i.quantity} × {COP(i.unit_price)}</>}
                                 {q?.approved_by_name && (
                                   <span className="ml-2 text-green-600">
                                     · Aprobado por {q.approved_by_name}
@@ -1381,14 +1410,18 @@ export default function WorkOrderDetailPage() {
                                 )}
                               </p>
                             </div>
-                            <span className="text-sm font-semibold text-gray-900 flex-shrink-0">{COP(i.total)}</span>
+                            {!hidePrices && (
+                              <span className="text-sm font-semibold text-gray-900 flex-shrink-0">{COP(i.total)}</span>
+                            )}
                           </div>
                         );
                       })}
-                      <div className="flex justify-between pt-2 text-sm font-bold text-gray-900">
-                        <span>Total aprobado</span>
-                        <span>{COP(totalApproved)}</span>
-                      </div>
+                      {!hidePrices && (
+                        <div className="flex justify-between pt-2 text-sm font-bold text-gray-900">
+                          <span>Total aprobado</span>
+                          <span>{COP(totalApproved)}</span>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -1667,7 +1700,7 @@ export default function WorkOrderDetailPage() {
                   <h2 className="font-semibold text-sm text-green-800">Remisión Generada</h2>
                 </div>
                 <p className="text-sm font-mono font-bold text-green-700">{order.sale.sale_number}</p>
-                <p className="text-xs text-green-600 mt-0.5">{COP(order.sale.total_amount)}</p>
+                {!hidePrices && <p className="text-xs text-green-600 mt-0.5">{COP(order.sale.total_amount)}</p>}
                 <button onClick={() => navigate(`/sales/${order.sale_id}`)}
                   className="mt-2 text-xs text-green-700 underline hover:text-green-900">
                   Ver remisión →
@@ -1753,10 +1786,12 @@ export default function WorkOrderDetailPage() {
                   className="flex-1 flex items-center justify-center gap-1.5 text-xs text-gray-600 border border-gray-200 rounded-lg py-1.5 hover:bg-gray-50 transition">
                   <Printer size={12}/> Imprimir ingreso
                 </button>
-                <button onClick={() => openPDF('workorder')}
-                  className="flex-1 flex items-center justify-center gap-1.5 text-xs text-blue-600 border border-blue-200 rounded-lg py-1.5 hover:bg-blue-50 transition">
-                  <Download size={12}/> OT PDF
-                </button>
+                {!hidePrices && (
+                  <button onClick={() => openPDF('workorder')}
+                    className="flex-1 flex items-center justify-center gap-1.5 text-xs text-blue-600 border border-blue-200 rounded-lg py-1.5 hover:bg-blue-50 transition">
+                    <Download size={12}/> OT PDF
+                  </button>
+                )}
                 <button
                   onClick={handleSendWhatsApp}
                   disabled={sendingWA}
