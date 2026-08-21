@@ -34,6 +34,7 @@ export const workOrdersApi = {
   sendWhatsApp: (id) => axios.post(`/workshop/work-orders/${id}/send-whatsapp`),
   // Cotización con aprobación del cliente
   sendQuoteRequest: (id) => axios.post(`/workshop/work-orders/${id}/quote-requests`),
+  resendQuoteRequest: (id, quoteRequestId) => axios.post(`/workshop/work-orders/${id}/quote-requests/${quoteRequestId}/resend`),
   applyApprovedItems: (id, quoteRequestId) => axios.post(`/workshop/work-orders/${id}/quote-requests/${quoteRequestId}/apply`),
   // Notificaciones de cotizaciones respondidas por el cliente
   getPendingQuoteNotifications: () => axios.get('/workshop/work-orders/quote-notifications/pending'),

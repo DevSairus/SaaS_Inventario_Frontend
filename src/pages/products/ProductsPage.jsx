@@ -8,7 +8,7 @@ import ImportProductsModal from '../../components/products/ImportProductsModal';
 import BarcodePrintModal from '../../components/products/BarcodePrintModal';
 import QuickStockModal from '../../components/products/QuickStockModal';
 import Layout from '../../components/layout/Layout';
-import { exportProductsToExcel } from '../../utils/excelExport';
+import { exportProductsToExcel, mapUnitOfMeasure } from '../../utils/excelExport';
 import { formatCurrency } from '../../utils/formatters';
 import { vehicleApplicationsAPI } from '../../api/vehicleApplications';
 import toast from 'react-hot-toast';
@@ -157,46 +157,6 @@ function ProductsPage() {
     exportProductsToExcel(products, 'inventario');
   };
 
-  // Mapear unidades de español a los valores aceptados por la BD
-  const mapUnitOfMeasure = (unit) => {
-    if (!unit) return 'unit';
-    
-    const unitMap = {
-      // Español → Inglés (BD)
-      'pieza': 'unit',
-      'unidad': 'unit',
-      'kg': 'kg',
-      'kilogramo': 'kg',
-      'g': 'g',
-      'gramo': 'g',
-      'lb': 'lb',
-      'libra': 'lb',
-      'oz': 'oz',
-      'onza': 'oz',
-      'l': 'l',
-      'litro': 'l',
-      'ml': 'ml',
-      'mililitro': 'ml',
-      'gal': 'gal',
-      'galon': 'gal',
-      'm': 'm',
-      'metro': 'm',
-      'cm': 'cm',
-      'centimetro': 'cm',
-      'ft': 'ft',
-      'pie': 'ft',
-      'box': 'box',
-      'caja': 'box',
-      'pack': 'pack',
-      'paquete': 'pack',
-      'dozen': 'dozen',
-      'docena': 'dozen'
-    };
-
-    const normalized = unit.toLowerCase().trim();
-    return unitMap[normalized] || 'unit'; // Default a 'unit' si no se encuentra
-  };
-
   const handleImport = async (productsData) => {
     try {
       let successCount = 0;
@@ -213,7 +173,7 @@ function ProductsPage() {
             name: productData.name,
             description: null,
             category_id: null,
-            unit_of_measure: 'unidad',
+            unit_of_measure: mapUnitOfMeasure(productData.unit_of_measure),
             current_stock: parseFloat(productData.current_stock) || 0,
             min_stock: parseFloat(productData.min_stock) || 0,
             max_stock: null,

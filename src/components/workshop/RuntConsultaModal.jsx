@@ -24,13 +24,15 @@ export default function RuntConsultaModal({ placa: placaProp = '', onConfirm, on
   const [loadingCap,   setLoadingCap]   = useState(false);
   const [loading,      setLoading]      = useState(false);
   const [error,        setError]        = useState('');
+  const [errorHint,    setErrorHint]    = useState('');
 
   /* ── Cargar / recargar captcha ─────────────────────────────── */
+  // No limpia `error`: se llama automáticamente tras una consulta fallida
+  // (captcha de un solo uso) y el mensaje de esa falla debe seguir visible.
   const fetchCaptcha = useCallback(async () => {
     setLoadingCap(true);
     setCaptchaImg(null);
     setCaptchaText('');
-    setError('');
     try {
       const res = await axios.get('/workshop/vehicles/runt/captcha');
       setCaptchaId(res.data.id);
@@ -45,6 +47,12 @@ export default function RuntConsultaModal({ placa: placaProp = '', onConfirm, on
   // Cargar captcha al montar
   useEffect(() => { fetchCaptcha(); }, [fetchCaptcha]);
 
+  const handleNuevoCaptcha = () => {
+    setError('');
+    setErrorHint('');
+    fetchCaptcha();
+  };
+
   /* ── Consultar ─────────────────────────────────────────────── */
   const handleConsultar = async () => {
     if (!placa.trim())        return setError('Ingresa la placa del vehículo');
@@ -54,6 +62,7 @@ export default function RuntConsultaModal({ placa: placaProp = '', onConfirm, on
 
     setLoading(true);
     setError('');
+    setErrorHint('');
 
     try {
       const res = await axios.post('/workshop/vehicles/runt/consultar', {
@@ -67,8 +76,18 @@ export default function RuntConsultaModal({ placa: placaProp = '', onConfirm, on
       onConfirm(res.data.data);   // pre-llena el formulario
 
     } catch (err) {
+      const status = err.response?.status;
       const msg = err.response?.data?.message || 'Error consultando el RUNT. Se ha cargado un nuevo CAPTCHA.';
       setError(msg);
+
+      if (status === 404) {
+        setErrorHint('Verifica que la placa y el número de documento correspondan al propietario registrado en el RUNT.');
+      } else if (status === 422) {
+        setErrorHint('RUNT reporta este mismo mensaje tanto para un CAPTCHA mal digitado como para una placa o documento incorrectos. Revisa los tres campos antes de reintentar.');
+      } else {
+        setErrorHint('');
+      }
+
       // Siempre refrescar el captcha — es de un solo uso, ya quedó consumido
       fetchCaptcha();
     } finally {
@@ -145,7 +164,7 @@ export default function RuntConsultaModal({ placa: placaProp = '', onConfirm, on
               <label className="text-xs text-gray-500 dark:text-gray-400">CAPTCHA *</label>
               <button
                 type="button"
-                onClick={fetchCaptcha}
+                onClick={handleNuevoCaptcha}
                 disabled={loadingCap}
                 className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 disabled:opacity-40 transition"
               >
@@ -185,9 +204,16 @@ export default function RuntConsultaModal({ placa: placaProp = '', onConfirm, on
 
           {/* Error */}
           {error && (
-            <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-xs text-red-700 dark:bg-red-900/30 dark:border-red-800/40 dark:text-red-300">
-              <AlertTriangle size={13} className="flex-shrink-0 mt-0.5" />
-              {error}
+            <div className="bg-red-50 border border-red-200 rounded-lg px-3 py-2 dark:bg-red-900/30 dark:border-red-800/40">
+              <div className="flex items-start gap-2 text-xs text-red-700 dark:text-red-300">
+                <AlertTriangle size={13} className="flex-shrink-0 mt-0.5" />
+                {error}
+              </div>
+              {errorHint && (
+                <p className="text-[11px] text-red-600/80 mt-1 pl-[21px] dark:text-red-300/70">
+                  {errorHint}
+                </p>
+              )}
             </div>
           )}
         </div>

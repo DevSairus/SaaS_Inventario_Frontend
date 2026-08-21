@@ -227,7 +227,9 @@ export default function QuotePublicPage() {
                 <div key={i} className="flex items-center justify-between py-2 border-b border-gray-50 dark:border-white/10 last:border-0">
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{item.product_name}</p>
-                    <p className="text-xs text-gray-400 dark:text-gray-500">{item.quantity} × {COP(item.unit_price)}</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500">
+                      {item.quantity} × {COP(item.unit_price)}{parseFloat(item.tax_amount) > 0 ? ` · IVA ${COP(item.tax_amount)}` : ''}
+                    </p>
                   </div>
                   <div className="text-right shrink-0">
                     <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{COP(item.total)}</p>

@@ -179,7 +179,10 @@ function QuoteApprovalSection({ activeQuoteRequest, diagrams, token, primaryColo
     }
   };
 
-  const total = (activeQuoteRequest.items || []).reduce((s, i) => s + (checks[i.id] ? i.total : 0), 0);
+  const checkedItems = (activeQuoteRequest.items || []).filter(i => checks[i.id]);
+  const subtotal = checkedItems.reduce((s, i) => s + (i.subtotal || 0), 0);
+  const taxAmount = checkedItems.reduce((s, i) => s + (i.tax_amount || 0), 0);
+  const total = checkedItems.reduce((s, i) => s + i.total, 0);
 
   return (
     <div className="bg-white dark:bg-graphite rounded-2xl shadow-sm overflow-hidden border-2" style={{ borderColor: primaryColor }}>
@@ -204,15 +207,31 @@ function QuoteApprovalSection({ activeQuoteRequest, diagrams, token, primaryColo
             />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{item.product_name}</p>
-              <p className="text-xs text-gray-400 dark:text-gray-500">{item.quantity} × {COP(item.unit_price)}</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500">
+                {item.quantity} × {COP(item.unit_price)}{item.tax_amount > 0 ? ` · IVA ${COP(item.tax_amount)}` : ''}
+              </p>
             </div>
             <span className="text-sm font-semibold text-gray-900 dark:text-gray-100 shrink-0">{COP(item.total)}</span>
           </label>
         ))}
 
-        <div className="flex justify-between text-sm font-bold text-gray-900 dark:text-gray-100 pt-2 border-t border-gray-100 dark:border-white/10">
-          <span>Total aprobado</span>
-          <span>{COP(total)}</span>
+        <div className="pt-2 border-t border-gray-100 dark:border-white/10 space-y-1">
+          {subtotal > 0 && (
+            <div className="flex justify-between text-sm text-gray-500 dark:text-gray-500">
+              <span>Subtotal</span>
+              <span>{COP(subtotal)}</span>
+            </div>
+          )}
+          {taxAmount > 0 && (
+            <div className="flex justify-between text-sm text-gray-500 dark:text-gray-500">
+              <span>IVA</span>
+              <span>{COP(taxAmount)}</span>
+            </div>
+          )}
+          <div className="flex justify-between text-sm font-bold text-gray-900 dark:text-gray-100">
+            <span>Total aprobado</span>
+            <span>{COP(total)}</span>
+          </div>
         </div>
 
         <div className="pt-3 space-y-2">
@@ -267,11 +286,21 @@ function QuoteHistorySection({ quoteHistory }) {
                 <li key={j} className="text-xs flex justify-between">
                   <span className="text-gray-600 dark:text-gray-400">{i.product_name} × {i.quantity}</span>
                   <span className={i.approval_status === 'aprobado' ? 'text-green-600 dark:text-green-400 font-medium' : 'text-red-500 dark:text-red-400 font-medium'}>
-                    {i.approval_status === 'aprobado' ? `Aprobado — ${COP(i.total)}` : 'Rechazado'}
+                    {i.approval_status === 'aprobado'
+                      ? `Aprobado — ${COP(i.total)}${i.tax_amount > 0 ? ` (IVA ${COP(i.tax_amount)})` : ''}`
+                      : 'Rechazado'}
                   </span>
                 </li>
               ))}
             </ul>
+            {(() => {
+              const approvedTax = (q.items || [])
+                .filter(i => i.approval_status === 'aprobado')
+                .reduce((s, i) => s + (i.tax_amount || 0), 0);
+              return approvedTax > 0 ? (
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 text-right">IVA total: {COP(approvedTax)}</p>
+              ) : null;
+            })()}
           </div>
         ))}
       </div>
@@ -752,7 +781,9 @@ export default function WorkOrderPublicPage() {
                       </div>
                       <div className="text-right ml-3 shrink-0">
                         <p className="text-sm font-semibold text-gray-900">{COP(item.total)}</p>
-                        <p className="text-xs text-gray-400">x{item.quantity}</p>
+                        <p className="text-xs text-gray-400">
+                          x{item.quantity}{item.tax_amount > 0 ? ` · IVA ${COP(item.tax_amount)}` : ''}
+                        </p>
                       </div>
                     </div>
                   ))}
@@ -772,7 +803,9 @@ export default function WorkOrderPublicPage() {
                       <p className="text-sm font-medium text-gray-900 flex-1 truncate">{item.product_name}</p>
                       <div className="text-right ml-3 shrink-0">
                         <p className="text-sm font-semibold text-gray-900">{COP(item.total)}</p>
-                        <p className="text-xs text-gray-400">x{item.quantity}</p>
+                        <p className="text-xs text-gray-400">
+                          x{item.quantity}{item.tax_amount > 0 ? ` · IVA ${COP(item.tax_amount)}` : ''}
+                        </p>
                       </div>
                     </div>
                   ))}

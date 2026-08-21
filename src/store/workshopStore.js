@@ -232,6 +232,19 @@ const useWorkshopStore = create((set, get) => ({
     }
   },
 
+  resendQuoteRequest: async (id, quoteRequestId) => {
+    try {
+      const res = await workOrdersApi.resendQuoteRequest(id, quoteRequestId);
+      toast.success('Cotización reenviada');
+      await get().fetchOrder(id);
+      return res.data.data;
+    } catch (err) {
+      const msg = err?.response?.data?.message || 'No se pudo reenviar la cotización.';
+      toast.error(msg);
+      throw err;
+    }
+  },
+
   applyApprovedItems: async (id, quoteRequestId) => {
     try {
       const res = await workOrdersApi.applyApprovedItems(id, quoteRequestId);

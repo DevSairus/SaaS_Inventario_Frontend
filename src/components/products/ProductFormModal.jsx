@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X } from 'lucide-react';
+import { X, Search } from 'lucide-react';
 import useProductsStore from '../../store/productsStore';
 import useCategoriesStore from '../../store/categoriesStore';
 import BarcodeScanner from '../common/BarcodeScanner';
@@ -7,6 +7,7 @@ import { warehousesService } from '../../api/warehouses';
 import { formatNumber } from '../../utils/formatters';
 import ProductImageUpload from './ProductImageUpload';
 import { productsAPI } from '../../api/products';
+import RuntConsultaModal from '../workshop/RuntConsultaModal';
 
 const ProductFormModal = ({ isOpen, onClose, product = null }) => {
   const { createProduct, updateProduct, loading } = useProductsStore();
@@ -15,12 +16,43 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
   const [warehouses, setWarehouses] = useState([]);
   const [loadingWarehouses, setLoadingWarehouses] = useState(false);
 
+  const EMPTY_VEHICLE_DATA = {
+    plate: '', vehicle_type: 'automovil', brand: '', model: '', year: '',
+    color: '', vin: '', engine_number: '', fuel_type: 'gasolina', current_mileage: '',
+  };
+
+  const [vehicleData, setVehicleData] = useState(EMPTY_VEHICLE_DATA);
+  const [showRunt, setShowRunt] = useState(false);
+
+  const handleVehicleChange = (e) => {
+    const { name, value } = e.target;
+    setSaveError('');
+    setVehicleData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleRuntConfirm = (data) => {
+    setVehicleData(prev => ({
+      ...prev,
+      plate:         data.plate         || prev.plate,
+      vehicle_type:  data.vehicle_type  || prev.vehicle_type,
+      brand:         data.brand         || prev.brand,
+      model:         data.model         || prev.model,
+      year:          data.year          || prev.year,
+      color:         data.color         || prev.color,
+      fuel_type:     data.fuel_type     || prev.fuel_type,
+      engine_number: data.engine_number || prev.engine_number,
+      vin:           data.vin           || prev.vin,
+    }));
+    setShowRunt(false);
+  };
+
   const [formData, setFormData] = useState({
     sku: '',
     barcode: '',
     name: '',
     description: '',
     category_id: '',
+    brand: '',
     unit_of_measure: 'unit',
     average_cost: '',
     min_stock: '',
@@ -89,6 +121,7 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
         name: product.name || '',
         description: product.description || '',
         category_id: product.category_id || '',
+        brand: product.brand || '',
         unit_of_measure: product.unit_of_measure || 'unit',
         average_cost: fmtNum(product.average_cost),
         min_stock: fmtNum(product.min_stock),
@@ -111,6 +144,22 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
           ica: { enabled: false, rate: 0 },
         }
       });
+      // Los campos del vehículo vinculado no son editables desde acá (ver
+      // updateProduct en el backend) -- solo se muestran de referencia.
+      if (product.vehicle) {
+        setVehicleData({
+          plate: product.vehicle.plate || '',
+          vehicle_type: product.vehicle.vehicle_type || 'automovil',
+          brand: product.vehicle.brand || '',
+          model: product.vehicle.model || '',
+          year: product.vehicle.year || '',
+          color: product.vehicle.color || '',
+          vin: product.vehicle.vin || '',
+          engine_number: product.vehicle.engine_number || '',
+          fuel_type: product.vehicle.fuel_type || 'gasolina',
+          current_mileage: product.vehicle.current_mileage || '',
+        });
+      }
     } else {
       setFormData(prev => ({
         sku: '',
@@ -118,6 +167,7 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
         name: '',
         description: '',
         category_id: '',
+        brand: '',
         unit_of_measure: 'unit',
         average_cost: '',
         min_stock: '',
@@ -135,6 +185,7 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
         price_includes_tax: false,
         is_labor: false
       }));
+      setVehicleData(EMPTY_VEHICLE_DATA);
       setCalculatedPrice(null);
       setSaveError('');
     }
@@ -200,6 +251,12 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
       tax_percentage: parseFloat(formData.tax_percentage) || 0,
       warehouse_id: formData.warehouse_id || null,
     };
+
+    // El Vehicle real solo se crea junto con el producto la primera vez --
+    // después se edita desde el módulo Vehículos (ver updateProduct backend).
+    if (!product && formData.product_type === 'vehicle') {
+      dataToSend.vehicle = vehicleData;
+    }
 
     try {
       if (product) {
@@ -334,6 +391,20 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
                     }
                     // Para producto existente, el componente sube directamente
                   }}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Marca
+                </label>
+                <input
+                  type="text"
+                  name="brand"
+                  value={formData.brand}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100"
+                  placeholder="Ej: Bosch, Michelin, Toyota..."
                 />
               </div>
 
@@ -696,7 +767,7 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
                   step="1"
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100"
                   placeholder="0.00"
-                  disabled={formData.product_type === 'service' || !!product}
+                  disabled={formData.product_type === 'service' || formData.product_type === 'vehicle' || !!product}
                 />
                 {product && (
                   <p className="mt-1 text-xs text-gray-500 dark:text-gray-500">Usa Ajustes o Compras para modificar el stock</p>
@@ -711,7 +782,7 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
                   type="number"
                   onWheel={(e) => e.target.blur()}
                   name="min_stock"
-                  disabled={formData.product_type === 'service'}
+                  disabled={formData.product_type === 'service' || formData.product_type === 'vehicle'}
                   value={formData.min_stock}
                   onChange={handleChange}
                   step="1"
@@ -755,7 +826,7 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
               {/* Tipo de ítem */}
               <div className="md:col-span-2 mt-4">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3 pb-2 border-b dark:border-white/10">Tipo de ítem</h3>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <button
                     type="button"
                     onClick={() => setFormData(prev => ({ ...prev, product_type: 'product', track_inventory: true }))}
@@ -798,7 +869,192 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
                       <p className="text-xs text-gray-500 dark:text-gray-500">Sin inventario, solo facturación</p>
                     </div>
                   </button>
+                  <button
+                    type="button"
+                    disabled={!!product}
+                    onClick={() => setFormData(prev => ({
+                      ...prev,
+                      product_type: 'vehicle',
+                      track_inventory: true,
+                      current_stock: '1',
+                      min_stock: '0',
+                      max_stock: '',
+                    }))}
+                    title={product ? 'El tipo no se puede cambiar después de creado' : ''}
+                    className={`flex items-center gap-3 p-4 rounded-xl border-2 text-left transition-all disabled:opacity-40 disabled:cursor-not-allowed ${
+                      formData.product_type === 'vehicle' ? 'border-green-500 bg-green-50 dark:bg-green-900/30' : 'border-gray-200 dark:border-white/10 hover:border-gray-300'
+                    }`}
+                  >
+                    <svg className="w-7 h-7 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 17h8m-8 0a2 2 0 11-4 0m4 0a2 2 0 10-4 0m12 0a2 2 0 104 0m-4 0a2 2 0 114 0m-16-4l1.5-4.5A2 2 0 017.4 7h9.2a2 2 0 011.9 1.5L20 13m-16 0h16m-16 0v3a1 1 0 001 1h1m14-4v3a1 1 0 01-1 1h-1" />
+                    </svg>
+                    <div>
+                      <p className={`font-semibold text-sm ${formData.product_type === 'vehicle' ? 'text-green-700 dark:text-green-300' : 'text-gray-700 dark:text-gray-300'}`}>
+                        Vehículo
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-500">Stock de concesionario</p>
+                    </div>
+                  </button>
                 </div>
+
+                {formData.product_type === 'vehicle' && (
+                  <div className="mt-3 p-4 rounded-lg border border-green-200 dark:border-green-800/40 bg-green-50 dark:bg-green-900/20 space-y-3">
+                    <p className="text-xs text-green-700 dark:text-green-300">
+                      {product
+                        ? 'Estos datos son de solo lectura acá — para editarlos ve al módulo Vehículos.'
+                        : 'Al guardar, además del producto se registra el vehículo en el módulo Vehículos.'}
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Placa
+                        </label>
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            name="plate"
+                            value={vehicleData.plate}
+                            onChange={handleVehicleChange}
+                            disabled={!!product}
+                            maxLength={20}
+                            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100 uppercase disabled:opacity-60"
+                            placeholder="Ej: ABC123"
+                          />
+                          {!product && (
+                            <button
+                              type="button"
+                              onClick={() => setShowRunt(true)}
+                              disabled={!vehicleData.plate.trim()}
+                              className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800/40"
+                              title={vehicleData.plate.trim() ? 'Consultar datos en el RUNT' : 'Ingresa la placa para consultar el RUNT'}
+                            >
+                              <Search size={13} /> Consultar RUNT
+                            </button>
+                          )}
+                        </div>
+                        <p className="mt-1 text-xs text-gray-500 dark:text-gray-500">
+                          Déjala vacía si es un vehículo nuevo sin matrícula aún — se asigna un identificador temporal que puedes actualizar después desde Vehículos.
+                        </p>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Tipo de vehículo</label>
+                        <select
+                          name="vehicle_type"
+                          value={vehicleData.vehicle_type}
+                          onChange={handleVehicleChange}
+                          disabled={!!product}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100 disabled:opacity-60"
+                        >
+                          <option value="automovil">Automóvil</option>
+                          <option value="camioneta">Camioneta</option>
+                          <option value="motocicleta">Motocicleta</option>
+                          <option value="camion">Camión</option>
+                          <option value="otro">Otro</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Marca</label>
+                        <input
+                          type="text"
+                          name="brand"
+                          value={vehicleData.brand}
+                          onChange={handleVehicleChange}
+                          disabled={!!product}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100 disabled:opacity-60"
+                          placeholder="Ej: Toyota"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Modelo/Línea</label>
+                        <input
+                          type="text"
+                          name="model"
+                          value={vehicleData.model}
+                          onChange={handleVehicleChange}
+                          disabled={!!product}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100 disabled:opacity-60"
+                          placeholder="Ej: Corolla"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Año</label>
+                        <input
+                          type="number"
+                          onWheel={(e) => e.target.blur()}
+                          name="year"
+                          value={vehicleData.year}
+                          onChange={handleVehicleChange}
+                          disabled={!!product}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100 disabled:opacity-60"
+                          placeholder="Ej: 2026"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Color</label>
+                        <input
+                          type="text"
+                          name="color"
+                          value={vehicleData.color}
+                          onChange={handleVehicleChange}
+                          disabled={!!product}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100 disabled:opacity-60"
+                          placeholder="Ej: Blanco"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">VIN / Chasis</label>
+                        <input
+                          type="text"
+                          name="vin"
+                          value={vehicleData.vin}
+                          onChange={handleVehicleChange}
+                          disabled={!!product}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100 disabled:opacity-60"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Número de motor</label>
+                        <input
+                          type="text"
+                          name="engine_number"
+                          value={vehicleData.engine_number}
+                          onChange={handleVehicleChange}
+                          disabled={!!product}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100 disabled:opacity-60"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Combustible</label>
+                        <select
+                          name="fuel_type"
+                          value={vehicleData.fuel_type}
+                          onChange={handleVehicleChange}
+                          disabled={!!product}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100 disabled:opacity-60"
+                        >
+                          <option value="gasolina">Gasolina</option>
+                          <option value="diesel">Diésel</option>
+                          <option value="gas">Gas</option>
+                          <option value="hibrido">Híbrido</option>
+                          <option value="electrico">Eléctrico</option>
+                          <option value="otro">Otro</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Kilometraje</label>
+                        <input
+                          type="number"
+                          onWheel={(e) => e.target.blur()}
+                          name="current_mileage"
+                          value={vehicleData.current_mileage}
+                          onChange={handleVehicleChange}
+                          disabled={!!product}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100 disabled:opacity-60"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {formData.product_type === 'service' && (
                   <label className="mt-3 flex items-start gap-3 p-3 rounded-lg border border-gray-200 dark:border-white/10 cursor-pointer hover:border-gray-300">
@@ -906,6 +1162,14 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
             setShowScanner(false);
           }}
           onClose={() => setShowScanner(false)}
+        />
+      )}
+
+      {showRunt && (
+        <RuntConsultaModal
+          placa={vehicleData.plate}
+          onConfirm={handleRuntConfirm}
+          onClose={() => setShowRunt(false)}
         />
       )}
     </>

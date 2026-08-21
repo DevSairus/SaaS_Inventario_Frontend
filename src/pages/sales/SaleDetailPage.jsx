@@ -600,6 +600,27 @@ export default function SaleDetailPage() {
                         <span>TOTAL:</span>
                         <span className="text-blue-600">{formatCurrency(sale.total_amount)}</span>
                       </div>
+                      {/* Estimado con ítems pendientes de aprobación del cliente --
+                          el TOTAL de arriba solo cuenta ítems 'aprobado' (ver
+                          calcTotals en el backend). */}
+                      {(() => {
+                        const pendingValue = (sale.items || [])
+                          .filter(i => i.approval_status === 'pendiente')
+                          .reduce((s, i) => s + parseFloat(i.total || 0), 0);
+                        if (pendingValue <= 0) return null;
+                        const estimatedTotal = parseFloat(sale.total_amount || 0) + pendingValue;
+                        return (
+                          <div className="border-t border-dashed border-amber-200 pt-2">
+                            <div className="flex justify-between text-sm font-medium text-amber-700">
+                              <span>Estimado (con pendientes):</span>
+                              <span>{formatCurrency(estimatedTotal)}</span>
+                            </div>
+                            <p className="text-xs text-amber-600/80 mt-0.5">
+                              Incluye {formatCurrency(pendingValue)} en ítems que aún esperan aprobación del cliente — no se facturan hasta que se aprueben.
+                            </p>
+                          </div>
+                        );
+                      })()}
                       {/* Retenciones */}
                       {sale.total_retentions > 0 && (
                         <>

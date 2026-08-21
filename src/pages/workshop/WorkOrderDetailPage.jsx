@@ -53,7 +53,7 @@ export default function WorkOrderDetailPage() {
   const {
     currentOrder: order, orderLoading,
     fetchOrder, patchCurrentOrder, changeStatus, addItem, removeItem, generateSale, uploadPhotos, deletePhoto,
-    sendQuoteRequest, applyApprovedItems,
+    sendQuoteRequest, resendQuoteRequest, applyApprovedItems,
   } = useWorkshopStore();
   const { searchProducts } = useProductsStore();
   const { features, fetchFeatures } = useTenantStore();
@@ -83,6 +83,13 @@ export default function WorkOrderDetailPage() {
   const [editingMileageOut, setEditingMileageOut] = useState(false);
   const [mileageOutVal, setMileageOutVal]         = useState('');
   const [savingMileageOut, setSavingMileageOut]   = useState(false);
+  // Edición de diagnóstico / trabajo realizado
+  const [editingDiagnosis, setEditingDiagnosis]         = useState(false);
+  const [diagnosisVal, setDiagnosisVal]                 = useState('');
+  const [savingDiagnosis, setSavingDiagnosis]           = useState(false);
+  const [editingWorkPerformed, setEditingWorkPerformed] = useState(false);
+  const [workPerformedVal, setWorkPerformedVal]         = useState('');
+  const [savingWorkPerformed, setSavingWorkPerformed]   = useState(false);
 
   const handleSendWhatsApp = async () => {
     const win = window.open('', '_blank');
@@ -126,6 +133,7 @@ export default function WorkOrderDetailPage() {
   };
 
   const [sendingQuote, setSendingQuote] = useState(false);
+  const [resendingQuoteId, setResendingQuoteId] = useState(null);
   const [applyingQuoteId, setApplyingQuoteId] = useState(null);
   const [showApprovedItems, setShowApprovedItems] = useState(false);
 
@@ -143,6 +151,23 @@ export default function WorkOrderDetailPage() {
       win?.close();
     } finally {
       setSendingQuote(false);
+    }
+  };
+
+  const handleResendQuoteRequest = async (quoteRequestId) => {
+    const win = window.open('', '_blank');
+    setResendingQuoteId(quoteRequestId);
+    try {
+      const data = await resendQuoteRequest(id, quoteRequestId);
+      if (data?.whatsapp_url && win) {
+        win.location.href = data.whatsapp_url;
+      } else {
+        win?.close();
+      }
+    } catch {
+      win?.close();
+    } finally {
+      setResendingQuoteId(null);
     }
   };
 
@@ -319,6 +344,34 @@ export default function WorkOrderDetailPage() {
       toast.error('No se pudo guardar el kilometraje de entrega');
     } finally {
       setSavingMileageOut(false);
+    }
+  };
+
+  const saveDiagnosis = async () => {
+    setSavingDiagnosis(true);
+    try {
+      const res = await workOrdersApiOffline.update(id, { diagnosis: diagnosisVal.trim() }, order?.updated_at);
+      patchCurrentOrder({ diagnosis: diagnosisVal.trim() });
+      setEditingDiagnosis(false);
+      toast.success(res.data.data._pendingSync ? 'Diagnóstico guardado sin conexión — se sincronizará automáticamente' : 'Diagnóstico guardado');
+    } catch {
+      toast.error('No se pudo guardar el diagnóstico');
+    } finally {
+      setSavingDiagnosis(false);
+    }
+  };
+
+  const saveWorkPerformed = async () => {
+    setSavingWorkPerformed(true);
+    try {
+      const res = await workOrdersApiOffline.update(id, { work_performed: workPerformedVal.trim() }, order?.updated_at);
+      patchCurrentOrder({ work_performed: workPerformedVal.trim() });
+      setEditingWorkPerformed(false);
+      toast.success(res.data.data._pendingSync ? 'Trabajo realizado guardado sin conexión — se sincronizará automáticamente' : 'Trabajo realizado guardado');
+    } catch {
+      toast.error('No se pudo guardar el trabajo realizado');
+    } finally {
+      setSavingWorkPerformed(false);
     }
   };
 
@@ -676,21 +729,79 @@ export default function WorkOrderDetailPage() {
                     <p className="text-gray-700 bg-gray-50 rounded-lg p-2">{order.problem_description}</p>
                   </div>
                 )}
-                {order.diagnosis && (
-                  <div>
-                    <span className="text-xs text-gray-400 dark:text-gray-500 block mb-1">Diagnóstico</span>
-                    <p className="text-gray-700 bg-gray-50 rounded-lg p-2">{order.diagnosis}</p>
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs text-gray-400 dark:text-gray-500">Diagnóstico</span>
+                    {!isClosed && !editingDiagnosis && (
+                      <button
+                        onClick={() => { setDiagnosisVal(order.diagnosis || ''); setEditingDiagnosis(true); }}
+                        className="text-xs text-blue-500 hover:text-blue-700 underline">
+                        {order.diagnosis ? 'Editar' : 'Agregar'}
+                      </button>
+                    )}
                   </div>
-                )}
-                {order.work_performed && (
-                  <div>
-                    <span className="text-xs text-gray-400 dark:text-gray-500 block mb-1">Trabajo realizado</span>
-                    <p className="text-gray-700 bg-gray-50 rounded-lg p-2">{order.work_performed}</p>
+                  {editingDiagnosis ? (
+                    <div className="space-y-1.5">
+                      <textarea
+                        value={diagnosisVal}
+                        onChange={e => setDiagnosisVal(e.target.value)}
+                        placeholder="Ej: Se detecta desgaste en pastillas de freno delanteras..."
+                        rows={3}
+                        autoFocus
+                        className="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100"
+                      />
+                      <div className="flex gap-2">
+                        <button onClick={saveDiagnosis} disabled={savingDiagnosis}
+                          className="text-xs bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 disabled:opacity-50">
+                          {savingDiagnosis ? 'Guardando...' : 'Guardar'}
+                        </button>
+                        <button onClick={() => setEditingDiagnosis(false)}
+                          className="text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300">Cancelar</button>
+                      </div>
+                    </div>
+                  ) : (
+                    order.diagnosis
+                      ? <p className="text-gray-700 bg-gray-50 rounded-lg p-2 dark:bg-white/5 dark:text-gray-300 whitespace-pre-wrap">{order.diagnosis}</p>
+                      : <p className="text-gray-400 text-xs">Sin diagnóstico registrado</p>
+                  )}
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs text-gray-400 dark:text-gray-500">Trabajo realizado / Observaciones</span>
+                    {!isClosed && !editingWorkPerformed && (
+                      <button
+                        onClick={() => { setWorkPerformedVal(order.work_performed || ''); setEditingWorkPerformed(true); }}
+                        className="text-xs text-blue-500 hover:text-blue-700 underline">
+                        {order.work_performed ? 'Editar' : 'Agregar'}
+                      </button>
+                    )}
                   </div>
-                )}
-                {!order.problem_description && !order.diagnosis && !order.work_performed && (
-                  <p className="text-gray-400 text-xs">Sin descripción registrada</p>
-                )}
+                  {editingWorkPerformed ? (
+                    <div className="space-y-1.5">
+                      <textarea
+                        value={workPerformedVal}
+                        onChange={e => setWorkPerformedVal(e.target.value)}
+                        placeholder="Ej: Se cambian pastillas y se rectifican discos delanteros..."
+                        rows={3}
+                        autoFocus
+                        className="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100"
+                      />
+                      <div className="flex gap-2">
+                        <button onClick={saveWorkPerformed} disabled={savingWorkPerformed}
+                          className="text-xs bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 disabled:opacity-50">
+                          {savingWorkPerformed ? 'Guardando...' : 'Guardar'}
+                        </button>
+                        <button onClick={() => setEditingWorkPerformed(false)}
+                          className="text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300">Cancelar</button>
+                      </div>
+                    </div>
+                  ) : (
+                    order.work_performed
+                      ? <p className="text-gray-700 bg-gray-50 rounded-lg p-2 dark:bg-white/5 dark:text-gray-300 whitespace-pre-wrap">{order.work_performed}</p>
+                      : <p className="text-gray-400 text-xs">Sin trabajo/observaciones registradas</p>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -998,7 +1109,16 @@ export default function WorkOrderDetailPage() {
               )}
 
               {/* Totales */}
-              {order.items?.length > 0 && (
+              {order.items?.length > 0 && (() => {
+                // El total real solo cuenta ítems 'aprobado' (ver calcTotals en el
+                // backend). Si hay ítems 'pendiente' de aprobación del cliente, se
+                // muestra además un estimado con lo que sumarían si se aprueban.
+                const pendingValue = order.items
+                  .filter(i => i.approval_status === 'pendiente')
+                  .reduce((s, i) => s + parseFloat(i.total || 0), 0);
+                const estimatedTotal = parseFloat(order.total_amount || 0) + pendingValue;
+
+                return (
                 <div className="mt-3 pt-3 border-t border-gray-100 space-y-1">
                   {hideRemisionTax ? (
                     /* IVA oculto: mostrar solo total (IVA incluido, no discriminado) */
@@ -1031,8 +1151,19 @@ export default function WorkOrderDetailPage() {
                       </div>
                     </>
                   )}
+                  {pendingValue > 0 && (
+                    <div className="mt-1.5 pt-1.5 border-t border-dashed border-amber-200">
+                      <div className="flex justify-between text-xs font-medium text-amber-700">
+                        <span>Total estimado (con pendientes)</span><span>{COP(estimatedTotal)}</span>
+                      </div>
+                      <p className="text-[10px] text-amber-600/80 mt-0.5">
+                        Incluye {COP(pendingValue)} en ítems que aún esperan aprobación del cliente — no se facturan hasta que se aprueben.
+                      </p>
+                    </div>
+                  )}
                 </div>
-              )}
+                );
+              })()}
 
                 {/* Botón imprimir OT desde sección ítems */}
                 {order.items?.length > 0 && (
@@ -1117,6 +1248,16 @@ export default function WorkOrderDetailPage() {
                                 </li>
                               ))}
                             </ul>
+                            {q.status === 'enviada' && (
+                              <button
+                                onClick={() => handleResendQuoteRequest(q.id)}
+                                disabled={resendingQuoteId === q.id}
+                                className="mt-2 w-full flex items-center justify-center gap-1.5 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg py-1.5 hover:bg-blue-100 disabled:opacity-60 transition"
+                                title="El cliente no ha respondido — vuelve a enviarle el mismo enlace"
+                              >
+                                <Share2 size={12} /> {resendingQuoteId === q.id ? 'Reenviando...' : 'Reenviar al cliente'}
+                              </button>
+                            )}
                             {approvedUnapplied.length > 0 && (
                               <button
                                 onClick={() => handleApplyApprovedItems(q.id)}

@@ -10,6 +10,9 @@ const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
     lg: 'max-w-4xl',
     xl: 'max-w-6xl',
   };
+  // Fallback a 'md' si se pasa un size inválido (ej. "large") -- sin esto
+  // sizes[size] da undefined, el modal queda sin max-w y se desborda a lo ancho.
+  const sizeCls = sizes[size] || sizes.md;
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
@@ -20,12 +23,12 @@ const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
       />
 
       {/* Modal */}
-      <div className="flex min-h-full items-center justify-center p-4">
+      <div className="flex min-h-full items-start justify-center p-4">
         <div
-          className={`relative bg-white dark:bg-graphite rounded-lg shadow-xl ${sizes[size]} w-full`}
+          className={`relative bg-white dark:bg-graphite rounded-lg shadow-xl ${sizeCls} w-full my-8 max-h-[85vh] flex flex-col`}
         >
           {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b dark:border-white/10">
+          <div className="flex items-center justify-between p-6 border-b dark:border-white/10 flex-shrink-0">
             <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">{title}</h3>
             <button
               onClick={onClose}
@@ -36,7 +39,7 @@ const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
           </div>
 
           {/* Content */}
-          <div className="p-6 dark:text-gray-100">{children}</div>
+          <div className="p-6 dark:text-gray-100 overflow-y-auto">{children}</div>
         </div>
       </div>
     </div>

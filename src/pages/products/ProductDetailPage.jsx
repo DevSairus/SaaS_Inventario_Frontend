@@ -165,9 +165,22 @@ export default function ProductDetailPage() {
                 <DetailRow label="SKU" value={product.sku} mono />
                 <DetailRow label="Código de barras" value={product.barcode || '—'} mono />
                 <DetailRow label="Descripción" value={product.description || '—'} />
+                <DetailRow label="Marca" value={product.brand || '—'} />
                 <DetailRow label="Categoría" value={product.category?.name || '—'} />
                 <DetailRow label="Unidad" value={product.unit_of_measure || '—'} />
                 <DetailRow label="Tipo" value={product.product_type} />
+                {product.vehicle && (
+                  <div className="pt-2">
+                    <span className="text-sm text-gray-500">Vehículo vinculado</span>
+                    <button
+                      type="button"
+                      onClick={() => navigate(`/workshop/vehicles/${product.vehicle.id}`)}
+                      className="block mt-1 text-sm font-medium text-blue-600 hover:underline text-left"
+                    >
+                      {product.vehicle.plate} — {product.vehicle.brand} {product.vehicle.model} {product.vehicle.year || ''}
+                    </button>
+                  </div>
+                )}
               </div>
               <div className="space-y-4">
                 <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Inventario y Precios</h3>

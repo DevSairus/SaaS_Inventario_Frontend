@@ -11,6 +11,37 @@ import ExcelJS from 'exceljs';
 
 const CURRENCY_FORMAT = '"$"#,##0';
 
+// Debe reflejar exactamente el CHECK constraint de products.unit_of_measure
+// en la BD (ver 20260101000000-baseline-core-inventory-tables.js) -- un valor
+// fuera de esta lista hace que el insert falle en el backend.
+const UNIT_OF_MEASURE_MAP = {
+  'pieza': 'unit', 'unidad': 'unit', 'unit': 'unit',
+  'kg': 'kg', 'kilogramo': 'kg',
+  'g': 'g', 'gramo': 'g',
+  'lb': 'lb', 'libra': 'lb',
+  'oz': 'oz', 'onza': 'oz',
+  'l': 'l', 'litro': 'l',
+  'ml': 'ml', 'mililitro': 'ml',
+  'gal': 'gal', 'galon': 'gal', 'galón': 'gal',
+  'm': 'm', 'metro': 'm',
+  'cm': 'cm', 'centimetro': 'cm', 'centímetro': 'cm',
+  'ft': 'ft', 'pie': 'ft',
+  'box': 'box', 'caja': 'box',
+  'pack': 'pack', 'paquete': 'pack',
+  'dozen': 'dozen', 'docena': 'dozen',
+};
+
+/**
+ * Mapea una unidad de medida en español (o ya en inglés) al valor que acepta
+ * la BD. Si no se reconoce, cae a 'unit' en vez de dejar pasar un valor
+ * inválido que reviente el CHECK constraint del backend.
+ */
+export const mapUnitOfMeasure = (unit) => {
+  if (!unit) return 'unit';
+  const normalized = unit.toString().toLowerCase().trim();
+  return UNIT_OF_MEASURE_MAP[normalized] || 'unit';
+};
+
 /**
  * Descargar un workbook de ExcelJS como archivo .xlsx en el navegador
  */
@@ -207,6 +238,7 @@ export const downloadProductsTemplate = async () => {
     {
       'Código*': 'PROD001',
       'Nombre*': 'Producto de Ejemplo',
+      'Unidad': 'Unidad',
       'Costo Promedio': 10000,
       'Precio Venta': 13000,
       'Margen Utilidad (%)': 30,
@@ -215,6 +247,7 @@ export const downloadProductsTemplate = async () => {
     {
       'Código*': 'PROD002',
       'Nombre*': 'Producto Sin Costo',
+      'Unidad': 'Kilogramo',
       'Costo Promedio': '',
       'Precio Venta': 15000,
       'Margen Utilidad (%)': '',
@@ -223,6 +256,7 @@ export const downloadProductsTemplate = async () => {
     {
       'Código*': 'PROD003',
       'Nombre*': 'Producto Sin Cantidad',
+      'Unidad': '',
       'Costo Promedio': 5000,
       'Precio Venta': 6500,
       'Margen Utilidad (%)': 30,
@@ -235,6 +269,7 @@ export const downloadProductsTemplate = async () => {
     templateData.push({
       'Código*': '',
       'Nombre*': '',
+      'Unidad': '',
       'Costo Promedio': '',
       'Precio Venta': '',
       'Margen Utilidad (%)': '',
@@ -247,6 +282,7 @@ export const downloadProductsTemplate = async () => {
   // Anchos de columnas
   ws.getColumn('Código*').width = 20;
   ws.getColumn('Nombre*').width = 35;
+  ws.getColumn('Unidad').width = 14;
   ws.getColumn('Costo Promedio').width = 18;
   ws.getColumn('Precio Venta').width = 18;
   ws.getColumn('Margen Utilidad (%)').width = 20;
@@ -264,6 +300,9 @@ export const downloadProductsTemplate = async () => {
     '   • Nombre*: Nombre del producto',
     '',
     '2️⃣ CAMPOS OPCIONALES (valores por defecto si están vacíos)',
+    '   • Unidad: Unidad de medida (por defecto: Unidad)',
+    '     Valores aceptados: Unidad, Kilogramo, Gramo, Libra, Onza, Litro,',
+    '     Mililitro, Galón, Metro, Centímetro, Pie, Caja, Paquete, Docena',
     '   • Costo Promedio: Costo de compra (por defecto: 0)',
     '   • Precio Venta: Precio al público (se calcula si está vacío)',
     '   • Margen Utilidad (%): Porcentaje de ganancia (por defecto: 30%)',
@@ -441,8 +480,10 @@ export const validateImportedProducts = (data) => {
     const cantidad = parseFloat(row['Cantidad']);
     product.current_stock = !isNaN(cantidad) && cantidad >= 0 ? cantidad : 0;
 
+    // Unidad de medida (por defecto: 'unit' / "Unidad")
+    product.unit_of_measure = mapUnitOfMeasure(row['Unidad']);
+
     // ✅ CAMPOS FIJOS PARA COMPATIBILIDAD CON EL SISTEMA
-    product.unit_of_measure = 'unit';
     product.min_stock = 0;
     product.track_inventory = true;
 

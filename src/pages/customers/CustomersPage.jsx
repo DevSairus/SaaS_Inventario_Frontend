@@ -166,7 +166,7 @@ export default function CustomersPage() {
           </div>
         </div>
 
-        <Modal isOpen={showModal} onClose={handleCloseModal} title={editingCustomer ? 'Editar Cliente' : 'Nuevo Cliente'} size="large">
+        <Modal isOpen={showModal} onClose={handleCloseModal} title={editingCustomer ? 'Editar Cliente' : 'Nuevo Cliente'} size="lg">
           <form onSubmit={handleSubmit} className="space-y-4">
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
