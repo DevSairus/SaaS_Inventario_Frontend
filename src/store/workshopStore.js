@@ -150,6 +150,18 @@ const useWorkshopStore = create((set, get) => ({
     }
   },
 
+  updateItem: async (orderId, itemId, data) => {
+    try {
+      await workOrdersApiOffline.updateItem(orderId, itemId, data);
+      toast.success('Ítem actualizado');
+      await get().fetchOrder(orderId);
+    } catch (err) {
+      const msg = err?.response?.data?.message || 'No se pudo editar el ítem.';
+      toast.error(msg);
+      throw err;
+    }
+  },
+
   removeItem: async (orderId, itemId) => {
     try {
       // Optimistic update: quitar el ítem del estado local de inmediato

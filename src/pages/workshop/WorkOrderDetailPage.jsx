@@ -11,7 +11,7 @@ import axios from '../../api/axios';
 import Combobox from '../../components/common/Combobox';
 import BarcodeScanner from '../../components/common/BarcodeScanner';
 import {
-  ArrowLeft, Wrench, Car, User, Package, Plus, Trash2,
+  ArrowLeft, Wrench, Car, User, Package, Plus, Trash2, Pencil,
   Camera, FileText, AlertTriangle, CheckCircle, Clock, DollarSign,
   Printer, Download, ClipboardList, Share2, Image, Link2,
 } from 'lucide-react';
@@ -52,7 +52,7 @@ export default function WorkOrderDetailPage() {
   const navigate = useNavigate();
   const {
     currentOrder: order, orderLoading,
-    fetchOrder, patchCurrentOrder, changeStatus, addItem, removeItem, generateSale, uploadPhotos, deletePhoto,
+    fetchOrder, patchCurrentOrder, changeStatus, addItem, updateItem, removeItem, generateSale, uploadPhotos, deletePhoto,
     sendQuoteRequest, resendQuoteRequest, applyApprovedItems,
   } = useWorkshopStore();
   const { searchProducts } = useProductsStore();
@@ -73,6 +73,27 @@ export default function WorkOrderDetailPage() {
   });
   const [addingItem, setAddingItem] = useState(false);
   const [stockAlternatives, setStockAlternatives] = useState([]);
+
+  // Edición de ítem pendiente (aún sin aprobar/rechazar por el cliente)
+  const [editingItemId, setEditingItemId] = useState(null);
+  const [editItemVals, setEditItemVals]   = useState({ product_name: '', quantity: '', unit_price: '' });
+  const [savingEditItem, setSavingEditItem] = useState(false);
+
+  const startEditItem = (item) => {
+    setEditingItemId(item.id);
+    setEditItemVals({ product_name: item.product_name || '', quantity: item.quantity, unit_price: item.unit_price });
+  };
+  const cancelEditItem = () => setEditingItemId(null);
+  const saveEditItem = async (item) => {
+    setSavingEditItem(true);
+    try {
+      const payload = { quantity: editItemVals.quantity, unit_price: editItemVals.unit_price };
+      if (item.item_type === 'free_line') payload.product_name = editItemVals.product_name;
+      await updateItem(id, item.id, payload);
+      setEditingItemId(null);
+    } catch { /* el store ya muestra el toast de error */ }
+    finally { setSavingEditItem(false); }
+  };
 
   const [generatingSale, setGeneratingSale] = useState(false);
   const [sendingWA, setSendingWA]            = useState(false);
@@ -1052,8 +1073,12 @@ export default function WorkOrderDetailPage() {
                 <p className="text-sm text-gray-400 text-center py-6">Sin ítems aún</p>
               ) : (
                 <div className="divide-y divide-gray-50">
-                  {order.items.map(item => (
-                    <div key={item.id} className="flex items-center justify-between py-2.5 gap-2">
+                  {order.items.map(item => {
+                    const isPending = (item.approval_status || 'aprobado') === 'pendiente';
+                    const isEditingThis = editingItemId === item.id;
+                    return (
+                    <div key={item.id} className="py-2.5">
+                    <div className="flex items-center justify-between gap-2">
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${
@@ -1074,7 +1099,7 @@ export default function WorkOrderDetailPage() {
                           <span className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">
                             {item.product_name || item.product?.name}
                           </span>
-                          {item.approval_status === 'pendiente' && (
+                          {isPending && (
                             <span className="text-xs px-1.5 py-0.5 rounded font-medium bg-amber-100 text-amber-700">
                               {item.quote_request_id ? 'Cotización enviada' : 'Pendiente de enviar'}
                             </span>
@@ -1085,17 +1110,26 @@ export default function WorkOrderDetailPage() {
                             </span>
                           )}
                         </div>
-                        <p className="text-xs text-gray-400 mt-0.5">
-                          {item.quantity} × {COP(item.unit_price)}
-                          {item.item_technician && (
-                            <span className="ml-2 text-blue-500">
-                              · {item.item_technician.first_name} {item.item_technician.last_name}
-                            </span>
-                          )}
-                        </p>
+                        {!isEditingThis && (
+                          <p className="text-xs text-gray-400 mt-0.5">
+                            {item.quantity} × {COP(item.unit_price)}
+                            {item.item_technician && (
+                              <span className="ml-2 text-blue-500">
+                                · {item.item_technician.first_name} {item.item_technician.last_name}
+                              </span>
+                            )}
+                          </p>
+                        )}
                       </div>
                       <div className="flex items-center gap-2 flex-shrink-0">
                         <span className="text-sm font-semibold text-gray-900">{COP(item.total)}</span>
+                        {!isClosed && isPending && !isEditingThis && (
+                          <button onClick={() => startEditItem(item)}
+                            className="p-1 text-gray-300 hover:text-blue-500 transition"
+                            title="Editar ítem pendiente">
+                            <Pencil size={14} />
+                          </button>
+                        )}
                         {!isClosed && (
                           <button onClick={() => removeItem(id, item.id)}
                             className="p-1 text-gray-300 hover:text-red-500 transition">
@@ -1104,7 +1138,32 @@ export default function WorkOrderDetailPage() {
                         )}
                       </div>
                     </div>
-                  ))}
+                    {isEditingThis && (
+                      <div className="mt-2 p-2.5 bg-gray-50 dark:bg-graphite-2 rounded-lg flex flex-wrap items-end gap-2">
+                        {item.item_type === 'free_line' && (
+                          <input type="text" value={editItemVals.product_name}
+                            onChange={e => setEditItemVals(v => ({ ...v, product_name: e.target.value }))}
+                            placeholder="Descripción" className={`${inputCls} flex-1 min-w-[140px] !py-1.5`} />
+                        )}
+                        <NumericInput value={editItemVals.quantity}
+                          onChange={e => setEditItemVals(vals => ({ ...vals, quantity: e.target.value }))}
+                          placeholder="Cantidad" className={`${inputCls} w-20 !py-1.5`} />
+                        <NumericInput value={editItemVals.unit_price}
+                          onChange={e => setEditItemVals(vals => ({ ...vals, unit_price: e.target.value }))}
+                          placeholder="Precio" className={`${inputCls} w-28 !py-1.5`} />
+                        <button onClick={() => saveEditItem(item)} disabled={savingEditItem}
+                          className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 disabled:opacity-50">
+                          {savingEditItem ? 'Guardando...' : 'Guardar'}
+                        </button>
+                        <button onClick={cancelEditItem} disabled={savingEditItem}
+                          className="text-xs text-gray-500 px-2 py-1.5 hover:text-gray-700">
+                          Cancelar
+                        </button>
+                      </div>
+                    )}
+                    </div>
+                    );
+                  })}
                 </div>
               )}
 

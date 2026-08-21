@@ -18,6 +18,7 @@ export const workOrdersApi = {
   update: (id, data) => axios.put(`/workshop/work-orders/${id}`, data),
   changeStatus: (id, data) => axios.patch(`/workshop/work-orders/${id}/status`, data),
   addItem: (id, data) => axios.post(`/workshop/work-orders/${id}/items`, data),
+  updateItem: (id, itemId, data) => axios.patch(`/workshop/work-orders/${id}/items/${itemId}`, data),
   removeItem: (id, itemId) => axios.delete(`/workshop/work-orders/${id}/items/${itemId}`),
   generateSale: (id, data = {}) => axios.post(`/workshop/work-orders/${id}/generate-sale`, data),
   uploadPhotos: (id, phase, formData) =>
