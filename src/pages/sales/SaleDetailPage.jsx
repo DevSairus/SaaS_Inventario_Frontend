@@ -596,6 +596,12 @@ export default function SaleDetailPage() {
                           <span className="font-medium">{formatCurrency(sale.items.reduce((s, i) => s + parseFloat(i.ica_amount || 0), 0))}</span>
                         </div>
                       )}
+                      {sale.global_discount_amount > 0 && (
+                        <div className="flex justify-between text-sm text-red-600">
+                          <span>Descuento global:</span>
+                          <span>-{formatCurrency(sale.global_discount_amount)}</span>
+                        </div>
+                      )}
                       <div className="flex justify-between text-xl font-bold border-t pt-2">
                         <span>TOTAL:</span>
                         <span className="text-blue-600">{formatCurrency(sale.total_amount)}</span>

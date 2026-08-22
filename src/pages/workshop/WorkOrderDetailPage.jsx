@@ -65,6 +65,38 @@ export default function WorkOrderDetailPage() {
   // ni totales -- para que no negocie precios con el cliente en el taller.
   const hidePrices = user?.role === 'technician';
 
+  // Descuento global de la OT
+  const [editingDiscount, setEditingDiscount] = useState(false);
+  const [discountForm, setDiscountForm] = useState({ discount_type: 'fixed', discount_value: 0 });
+  const [savingDiscount, setSavingDiscount] = useState(false);
+
+  const startEditDiscount = () => {
+    setDiscountForm({
+      discount_type: order?.discount_type || 'fixed',
+      discount_value: order?.discount_value || 0,
+    });
+    setEditingDiscount(true);
+  };
+
+  const saveDiscount = async () => {
+    setSavingDiscount(true);
+    try {
+      const res = await workOrdersApiOffline.update(id, {
+        discount_type: discountForm.discount_type,
+        discount_value: discountForm.discount_value,
+      }, order?.updated_at);
+      patchCurrentOrder(res.data.data);
+      toast.success(res.data.data._pendingSync
+        ? 'Descuento guardado sin conexión — se sincronizará automáticamente'
+        : 'Descuento actualizado');
+      setEditingDiscount(false);
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'No se pudo guardar el descuento');
+    } finally {
+      setSavingDiscount(false);
+    }
+  };
+
   // Búsqueda de producto
   const [searchTerm, setSearchTerm]       = useState('');
   const [searchResults, setSearchResults] = useState([]);
@@ -1239,6 +1271,36 @@ export default function WorkOrderDetailPage() {
                       <p className="text-[10px] text-amber-600/80 mt-0.5">
                         Incluye {COP(pendingValue)} en ítems que aún esperan aprobación del cliente — no se facturan hasta que se aprueben.
                       </p>
+                    </div>
+                  )}
+                  {!isClosed && (
+                    <div className="mt-2 pt-2 border-t border-dashed border-gray-100">
+                      {!editingDiscount ? (
+                        <button onClick={startEditDiscount} className="text-xs text-blue-600 hover:text-blue-800 font-medium">
+                          {parseFloat(order.discount_value) > 0 ? 'Editar descuento global' : '+ Aplicar descuento global'}
+                        </button>
+                      ) : (
+                        <div className="flex items-end gap-2 flex-wrap">
+                          <select value={discountForm.discount_type}
+                            onChange={e => setDiscountForm(f => ({ ...f, discount_type: e.target.value }))}
+                            className={`${inputCls} w-32 !py-1.5`}>
+                            <option value="fixed">Monto ($)</option>
+                            <option value="percentage">Porcentaje (%)</option>
+                          </select>
+                          <NumericInput value={discountForm.discount_value}
+                            onChange={e => setDiscountForm(f => ({ ...f, discount_value: e.target.value }))}
+                            placeholder={discountForm.discount_type === 'percentage' ? '%' : '$'}
+                            className={`${inputCls} w-28 !py-1.5`} />
+                          <button onClick={saveDiscount} disabled={savingDiscount}
+                            className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 disabled:opacity-50">
+                            {savingDiscount ? 'Guardando...' : 'Guardar'}
+                          </button>
+                          <button onClick={() => setEditingDiscount(false)} disabled={savingDiscount}
+                            className="text-xs text-gray-500 px-2 py-1.5 hover:text-gray-700">
+                            Cancelar
+                          </button>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

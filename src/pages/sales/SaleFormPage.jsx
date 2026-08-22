@@ -4,6 +4,7 @@ import { useNavigate, useParams, useSearchParams, useLocation } from 'react-rout
 import useSalesStore from '../../store/salesStore';
 import useBranchStore from '../../store/branchStore';
 import useTenantStore from '../../store/tenantStore';
+import useAuthStore from '../../store/authStore';
 import DiagramMapEditor from '../../components/workshop/DiagramMapEditor';
 import { brandsForType } from '../../constants/vehicleBrands';
 import useCustomersStore from '../../store/customersStore';
@@ -52,6 +53,41 @@ import {
   MagnifyingGlassIcon as SearchSvgIcon,
 } from '@heroicons/react/24/outline';
 
+// Descuento global de la venta/cotización -- independiente del descuento por
+// línea (item.discount_percentage). El técnico no puede aplicarlo (mismo
+// criterio que en la OT), así que se muestra solo lectura para ese rol.
+function GlobalDiscountInput({ formData, setFormData, canDiscount }) {
+  const hasValue = toInteger(formData.global_discount_value, 0) > 0;
+  if (!canDiscount && !hasValue) return null;
+  return (
+    <div className="flex items-center gap-2 py-1">
+      <span className="text-sm text-gray-500 flex-shrink-0">Desc. global:</span>
+      {canDiscount ? (
+        <>
+          <select
+            value={formData.global_discount_type}
+            onChange={e => setFormData(f => ({ ...f, global_discount_type: e.target.value }))}
+            className="border border-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="fixed">$ Monto</option>
+            <option value="percentage">% Porcentaje</option>
+          </select>
+          <NumericInput
+            value={formData.global_discount_value}
+            onChange={e => setFormData(f => ({ ...f, global_discount_value: e.target.value }))}
+            placeholder={formData.global_discount_type === 'percentage' ? '%' : '$'}
+            className="border border-gray-200 rounded-lg px-2 py-1 text-xs w-24 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </>
+      ) : (
+        <span className="text-sm font-medium text-gray-700">
+          {formData.global_discount_type === 'percentage' ? `${formData.global_discount_value}%` : formatCurrency(formData.global_discount_value)}
+        </span>
+      )}
+    </div>
+  );
+}
+
 function SaleFormPage() {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -75,6 +111,10 @@ function SaleFormPage() {
   const isCrmQuoteMode = isCrmQuoteRoute || Boolean(opportunityId);
   const { createSale, updateSale, fetchSaleById, currentSale, loading } = useSalesStore();
   const { features, enabledModules, fetchFeatures } = useTenantStore();
+  const { user } = useAuthStore();
+  // El descuento global mueve el total a cobrar -- el técnico no puede
+  // aplicarlo (mismo criterio que en la OT).
+  const canApplyDiscount = user?.role !== 'technician';
   // true = ocultar IVA en remisiones (el store aplica este default si no está configurado)
   const hideRemisionTax = features?.hide_remision_tax === true;
   const vehiclePlateEnabled = features?.vehicle_field_enabled !== false; // default true
@@ -122,6 +162,8 @@ function SaleFormPage() {
     vehicle_year: '',
     mileage: '',
     technician_id: '',
+    global_discount_type: 'fixed',
+    global_discount_value: 0,
   });
 
   const [showBrandDropdown, setShowBrandDropdown] = useState(false);
@@ -348,6 +390,8 @@ function SaleFormPage() {
         vehicle_year: currentSale.vehicle_year || '',
         mileage: currentSale.mileage || '',
         technician_id: currentSale.technician_id || '',
+        global_discount_type: currentSale.global_discount_type || 'fixed',
+        global_discount_value: currentSale.global_discount_value || 0,
       });
 
       // Establecer el nombre del cliente en el campo de búsqueda
@@ -548,7 +592,15 @@ function SaleFormPage() {
     const discount = items.reduce((sum, item) => sum + toInteger(item.discount_amount, 0), 0);
     const tax = items.reduce((sum, item) => sum + toInteger(item.tax_amount, 0), 0);
     const total = items.reduce((sum, item) => sum + toInteger(item.total, 0), 0);
-    return { subtotal, discount, tax, total };
+    // Descuento global -- preview del lado del cliente; el backend recalcula
+    // y persiste el valor real al guardar (ver resolveGlobalDiscount).
+    const globalDiscountValue = toInteger(formData.global_discount_value, 0);
+    const globalDiscount = globalDiscountValue <= 0 ? 0
+      : formData.global_discount_type === 'percentage'
+        ? Math.round(total * Math.min(globalDiscountValue, 100) / 100)
+        : Math.min(globalDiscountValue, total);
+    const grandTotal = total - globalDiscount;
+    return { subtotal, discount, tax, total, globalDiscount, grandTotal };
   };
 
   const handleSubmit = async (e) => {
@@ -1411,11 +1463,20 @@ function SaleFormPage() {
                               </span>
                             </div>
                           )}
+                          {totals.globalDiscount > 0 && (
+                            <div className="flex justify-between text-sm text-red-600">
+                              <span>Descuento global:</span>
+                              <span className="font-medium">
+                                -{formatCurrency(totals.globalDiscount)}
+                              </span>
+                            </div>
+                          )}
+                          <GlobalDiscountInput formData={formData} setFormData={setFormData} canDiscount={canApplyDiscount} />
                           <div className="border-t-2 border-gray-300 pt-3">
                             <div className="flex justify-between items-center">
                               <span className="text-lg font-bold text-gray-900">TOTAL:</span>
                               <span className="text-2xl font-bold text-blue-600">
-                                {formatCurrency(totals.total)}
+                                {formatCurrency(totals.grandTotal)}
                               </span>
                             </div>
                           </div>
@@ -1446,11 +1507,21 @@ function SaleFormPage() {
                             </span>
                           </div>
 
+                          {totals.globalDiscount > 0 && (
+                            <div className="flex justify-between text-sm text-red-600">
+                              <span>Descuento global:</span>
+                              <span className="font-medium">
+                                -{formatCurrency(totals.globalDiscount)}
+                              </span>
+                            </div>
+                          )}
+                          <GlobalDiscountInput formData={formData} setFormData={setFormData} canDiscount={canApplyDiscount} />
+
                           <div className="border-t-2 border-gray-300 pt-3">
                             <div className="flex justify-between items-center">
                               <span className="text-lg font-bold text-gray-900">TOTAL:</span>
                               <span className="text-2xl font-bold text-blue-600">
-                                {formatCurrency(totals.total)}
+                                {formatCurrency(totals.grandTotal)}
                               </span>
                             </div>
                           </div>
