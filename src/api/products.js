@@ -27,7 +27,7 @@ export const productsAPI = {
     const response = await api.post('/products/bulk-import', formData, {
       params: { dry_run: dryRun ? 'true' : 'false' },
       headers: { 'Content-Type': 'multipart/form-data' },
-      timeout: 180000, // archivos de miles de filas pueden tardar más que el timeout default
+      timeout: 600000, // archivos de miles de filas pueden tardar varios minutos
     });
     return response.data;
   },
