@@ -145,15 +145,24 @@ function DiagnosisDiagramsSection({ diagrams, primaryColor, embedded = false }) 
   return <div className="bg-white dark:bg-graphite rounded-2xl shadow-sm p-5">{content}</div>;
 }
 
-// ─── Sección de cotización pendiente de aprobación ─────────────────────────
-function QuoteApprovalSection({ activeQuoteRequest, diagrams, token, primaryColor, onResponded }) {
-  const [checks, setChecks] = useState(() =>
-    Object.fromEntries((activeQuoteRequest.items || []).map(i => [i.id, true]))
-  );
+// ─── Repuestos y servicios: aprobados (solo lectura) + nuevos (por aprobar) ──
+// Una sola lista, como la ve el taller en la OT: lo ya aprobado sin opción de
+// editar, y lo nuevo con checkbox para aprobar/rechazar. Debajo, dos totales:
+// lo que ya está aprobado y el nuevo total si se aprueba todo lo pendiente —
+// en vez de partir la vista en dos tarjetas con totales separados.
+function ItemsAndQuoteSection({ order, diagrams, token, primaryColor, onResponded }) {
+  const activeQuoteRequest = order.active_quote_request;
+  const approvedItems = order.items || [];
+  const pendingItems = activeQuoteRequest?.items || [];
+  const hasPending = pendingItems.length > 0;
+
+  const [checks, setChecks] = useState(() => Object.fromEntries(pendingItems.map(i => [i.id, true])));
   const [name, setName] = useState('');
   const [document_, setDocument] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
+
+  if (approvedItems.length === 0 && !hasPending) return null;
 
   const toggle = (itemId) => setChecks(prev => ({ ...prev, [itemId]: !prev[itemId] }));
 
@@ -165,7 +174,7 @@ function QuoteApprovalSection({ activeQuoteRequest, diagrams, token, primaryColo
     }
     setSubmitting(true);
     try {
-      const approvals = (activeQuoteRequest.items || []).map(i => ({ item_id: i.id, approved: !!checks[i.id] }));
+      const approvals = pendingItems.map(i => ({ item_id: i.id, approved: !!checks[i.id] }));
       await api.post(`/public/work-orders/${token}/quote-requests/${activeQuoteRequest.id}/respond`, {
         approvals,
         approved_by_name: name.trim(),
@@ -179,91 +188,134 @@ function QuoteApprovalSection({ activeQuoteRequest, diagrams, token, primaryColo
     }
   };
 
-  const checkedItems = (activeQuoteRequest.items || []).filter(i => checks[i.id]);
-  const subtotal = checkedItems.reduce((s, i) => s + (i.subtotal || 0), 0);
-  const taxAmount = checkedItems.reduce((s, i) => s + (i.tax_amount || 0), 0);
-  const total = checkedItems.reduce((s, i) => s + i.total, 0);
+  const checkedPendingTotal = pendingItems.filter(i => checks[i.id]).reduce((s, i) => s + i.total, 0);
+  const approvedTotal = parseFloat(order.total_amount) || 0;
+  const newGrandTotal = approvedTotal + checkedPendingTotal;
+
+  const allItems = [
+    ...approvedItems.map(i => ({ ...i, _pending: false })),
+    ...pendingItems.map(i => ({ ...i, _pending: true })),
+  ];
+  const partesAll = allItems.filter(i => i.item_type === 'repuesto');
+  const serviciosAll = allItems.filter(i => i.item_type !== 'repuesto');
+
+  const renderRow = (item) => (
+    <label
+      key={item.id}
+      className={`flex items-start gap-3 py-2.5 px-2 -mx-2 rounded-lg border-b border-gray-50 dark:border-white/10 last:border-0 ${item._pending ? 'bg-amber-50/70 dark:bg-amber-900/10 cursor-pointer' : ''}`}
+    >
+      {item._pending ? (
+        <input
+          type="checkbox"
+          checked={!!checks[item.id]}
+          onChange={() => toggle(item.id)}
+          className="mt-1 w-4 h-4 rounded border-gray-300 dark:border-white/10 shrink-0"
+        />
+      ) : (
+        <svg className="mt-1 w-4 h-4 text-green-500 shrink-0" viewBox="0 0 20 20" fill="currentColor" aria-label="Aprobado">
+          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+        </svg>
+      )}
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{item.product_name}</p>
+        <p className="text-xs text-gray-400 dark:text-gray-500">
+          x{item.quantity}{item.tax_amount > 0 ? ` · IVA ${COP(item.tax_amount)}` : ''}
+          {item._pending && (
+            <span className="ml-1.5 font-medium" style={{ color: primaryColor }}>· Nuevo, pendiente de tu aprobación</span>
+          )}
+        </p>
+      </div>
+      <span className="text-sm font-semibold text-gray-900 dark:text-gray-100 shrink-0">{COP(item.total)}</span>
+    </label>
+  );
 
   return (
-    <div className="bg-white dark:bg-graphite rounded-2xl shadow-sm overflow-hidden border-2" style={{ borderColor: primaryColor }}>
-      <div style={{ backgroundColor: `${primaryColor}15` }} className="px-5 py-3">
-        <h3 className="text-sm font-bold" style={{ color: primaryColor }}>Cotización pendiente de tu aprobación</h3>
-        <p className="text-xs text-gray-500 dark:text-gray-500 mt-0.5">Revisa cada ítem y marca los que apruebas antes de enviar tu decisión.</p>
+    <div
+      className="bg-white dark:bg-graphite rounded-2xl shadow-sm overflow-hidden"
+      style={hasPending ? { border: `2px solid ${primaryColor}` } : undefined}
+    >
+      <div
+        style={hasPending ? { backgroundColor: `${primaryColor}15` } : undefined}
+        className={hasPending ? 'px-5 py-3' : 'px-5 pt-5'}
+      >
+        <h3 className={hasPending ? 'text-sm font-bold' : 'text-xs font-semibold text-gray-500 dark:text-gray-500 uppercase tracking-wide'} style={hasPending ? { color: primaryColor } : undefined}>
+          Repuestos y servicios
+        </h3>
+        {hasPending && (
+          <p className="text-xs text-gray-500 dark:text-gray-500 mt-0.5">Revisa lo nuevo y marca lo que apruebas antes de enviar tu decisión.</p>
+        )}
       </div>
+
       <div className="p-5 space-y-3">
-        {diagrams && diagrams.length > 0 && (
+        {hasPending && diagrams && diagrams.length > 0 && (
           <div className="pb-3 border-b border-gray-100 dark:border-white/10">
             <DiagnosisDiagramsSection diagrams={diagrams} primaryColor={primaryColor} embedded />
           </div>
         )}
 
-        {(activeQuoteRequest.items || []).map(item => (
-          <label key={item.id} className="flex items-start gap-3 p-3 rounded-xl bg-gray-50 dark:bg-graphite-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={!!checks[item.id]}
-              onChange={() => toggle(item.id)}
-              className="mt-0.5 w-4 h-4 rounded border-gray-300 dark:border-white/10"
-            />
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{item.product_name}</p>
-              <p className="text-xs text-gray-400 dark:text-gray-500">
-                {item.quantity} × {COP(item.unit_price)}{item.tax_amount > 0 ? ` · IVA ${COP(item.tax_amount)}` : ''}
-              </p>
-            </div>
-            <span className="text-sm font-semibold text-gray-900 dark:text-gray-100 shrink-0">{COP(item.total)}</span>
-          </label>
-        ))}
+        {partesAll.length > 0 && (
+          <div>
+            <p className="text-xs font-medium text-blue-600 mb-1 flex items-center gap-1">
+              <span className="w-1.5 h-1.5 bg-blue-600 rounded-full" /> Repuestos
+            </p>
+            <div>{partesAll.map(renderRow)}</div>
+          </div>
+        )}
+
+        {serviciosAll.length > 0 && (
+          <div>
+            <p className="text-xs font-medium text-emerald-600 mb-1 flex items-center gap-1">
+              <span className="w-1.5 h-1.5 bg-emerald-600 rounded-full" /> Servicios / Mano de obra
+            </p>
+            <div>{serviciosAll.map(renderRow)}</div>
+          </div>
+        )}
 
         <div className="pt-2 border-t border-gray-100 dark:border-white/10 space-y-1">
-          {subtotal > 0 && (
-            <div className="flex justify-between text-sm text-gray-500 dark:text-gray-500">
-              <span>Subtotal</span>
-              <span>{COP(subtotal)}</span>
-            </div>
-          )}
-          {taxAmount > 0 && (
-            <div className="flex justify-between text-sm text-gray-500 dark:text-gray-500">
-              <span>IVA</span>
-              <span>{COP(taxAmount)}</span>
-            </div>
-          )}
           <div className="flex justify-between text-sm font-bold text-gray-900 dark:text-gray-100">
             <span>Total aprobado</span>
-            <span>{COP(total)}</span>
+            <span>{COP(approvedTotal)}</span>
           </div>
+          {hasPending && (
+            <div className="flex justify-between text-sm font-bold" style={{ color: primaryColor }}>
+              <span>Nuevo total si apruebas lo pendiente</span>
+              <span>{COP(newGrandTotal)}</span>
+            </div>
+          )}
         </div>
 
-        <div className="pt-3 space-y-2">
-          <input
-            type="text"
-            placeholder="Nombre completo"
-            value={name}
-            onChange={e => setName(e.target.value)}
-            className="w-full border border-gray-200 dark:border-white/10 dark:bg-graphite-2 dark:text-gray-100 dark:placeholder-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2"
-            style={{ '--tw-ring-color': primaryColor }}
-          />
-          <input
-            type="text"
-            placeholder="Documento de identidad (cédula)"
-            value={document_}
-            onChange={e => setDocument(e.target.value)}
-            className="w-full border border-gray-200 dark:border-white/10 dark:bg-graphite-2 dark:text-gray-100 dark:placeholder-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2"
-            style={{ '--tw-ring-color': primaryColor }}
-          />
-          {error && <p className="text-xs text-red-500 dark:text-red-400">{error}</p>}
-          <button
-            onClick={handleSubmit}
-            disabled={submitting}
-            style={{ backgroundColor: primaryColor }}
-            className="w-full text-white text-sm font-semibold rounded-lg py-2.5 disabled:opacity-60 transition"
-          >
-            {submitting ? 'Enviando...' : 'Enviar mi decisión'}
-          </button>
-          <p className="text-xs text-gray-400 dark:text-gray-500 text-center">
-            Tu respuesta queda registrada de forma definitiva y no se puede modificar después.
-          </p>
-        </div>
+        {hasPending && (
+          <div className="pt-3 space-y-2">
+            <input
+              type="text"
+              placeholder="Nombre completo"
+              value={name}
+              onChange={e => setName(e.target.value)}
+              className="w-full border border-gray-200 dark:border-white/10 dark:bg-graphite-2 dark:text-gray-100 dark:placeholder-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2"
+              style={{ '--tw-ring-color': primaryColor }}
+            />
+            <input
+              type="text"
+              placeholder="Documento de identidad (cédula)"
+              value={document_}
+              onChange={e => setDocument(e.target.value)}
+              className="w-full border border-gray-200 dark:border-white/10 dark:bg-graphite-2 dark:text-gray-100 dark:placeholder-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2"
+              style={{ '--tw-ring-color': primaryColor }}
+            />
+            {error && <p className="text-xs text-red-500 dark:text-red-400">{error}</p>}
+            <button
+              onClick={handleSubmit}
+              disabled={submitting}
+              style={{ backgroundColor: primaryColor }}
+              className="w-full text-white text-sm font-semibold rounded-lg py-2.5 disabled:opacity-60 transition"
+            >
+              {submitting ? 'Enviando...' : 'Enviar mi decisión'}
+            </button>
+            <p className="text-xs text-gray-400 dark:text-gray-500 text-center">
+              Tu respuesta queda registrada de forma definitiva y no se puede modificar después.
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -539,8 +591,6 @@ export default function WorkOrderPublicPage() {
 
   const statusCfg = order ? (STATUS_CONFIG[order.status] || STATUS_CONFIG.recibido) : null;
 
-  const partes    = order?.items?.filter(i => i.item_type === 'repuesto')   || [];
-  const servicios = order?.items?.filter(i => i.item_type !== 'repuesto')   || [];
   const primaryColor = order?.workshop?.primary_color || '#2563eb';
 
   // ── Loading ──────────────────────────────────────────────────────────────
@@ -620,23 +670,21 @@ export default function WorkOrderPublicPage() {
           )}
         </div>
 
-        {/* ── Cotización pendiente de aprobación ────────────────────── */}
-        {order.active_quote_request && (
-          <QuoteApprovalSection
-            activeQuoteRequest={order.active_quote_request}
-            diagrams={order.diagrams}
-            token={token}
-            primaryColor={primaryColor}
-            onResponded={fetchOrder}
-          />
-        )}
+        {/* ── Repuestos y servicios: aprobados + nuevos por aprobar ──── */}
+        <ItemsAndQuoteSection
+          order={order}
+          diagrams={order.diagrams}
+          token={token}
+          primaryColor={primaryColor}
+          onResponded={fetchOrder}
+        />
 
         {/* ── Mapa de intervención (standalone) ──────────────────────
             Si no hay cotización activa pero sí hubo diagnóstico marcado,
             se muestra igual como referencia visual — ya no justifica una
             aprobación pendiente, pero le sirve al cliente para ver qué se
-            revisó (mismo dato que ya vio, ahora también en la sección de
-            cotización de arriba si aplicaba). */}
+            revisó (mismo dato que ya vio, ahora también dentro de la
+            sección de repuestos y servicios de arriba si aplicaba). */}
         {!order.active_quote_request && (
           <DiagnosisDiagramsSection diagrams={order.diagrams} primaryColor={primaryColor} />
         )}
@@ -751,87 +799,6 @@ export default function WorkOrderPublicPage() {
                 <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{order.work_performed}</p>
               </div>
             )}
-          </div>
-        )}
-
-        {/* ── Repuestos y Servicios ─────────────────────────────────── */}
-        {order.items && order.items.length > 0 && (
-          <div className="bg-white rounded-2xl shadow-sm p-5">
-            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3 flex items-center gap-1.5">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" stroke="#6b7280" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-              Repuestos y servicios
-            </h3>
-
-            {/* Repuestos */}
-            {partes.length > 0 && (
-              <div className="mb-4">
-                <p className="text-xs font-medium text-blue-600 mb-2 flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 bg-blue-600 rounded-full" /> Repuestos
-                </p>
-                <div className="space-y-2">
-                  {partes.map((item, i) => (
-                    <div key={i} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900 truncate">{item.product_name}</p>
-                        {item.product_sku && (
-                          <p className="text-xs text-gray-400">{item.product_sku}</p>
-                        )}
-                      </div>
-                      <div className="text-right ml-3 shrink-0">
-                        <p className="text-sm font-semibold text-gray-900">{COP(item.total)}</p>
-                        <p className="text-xs text-gray-400">
-                          x{item.quantity}{item.tax_amount > 0 ? ` · IVA ${COP(item.tax_amount)}` : ''}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Servicios */}
-            {servicios.length > 0 && (
-              <div>
-                <p className="text-xs font-medium text-emerald-600 mb-2 flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 bg-emerald-600 rounded-full" /> Servicios / Mano de obra
-                </p>
-                <div className="space-y-2">
-                  {servicios.map((item, i) => (
-                    <div key={i} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
-                      <p className="text-sm font-medium text-gray-900 flex-1 truncate">{item.product_name}</p>
-                      <div className="text-right ml-3 shrink-0">
-                        <p className="text-sm font-semibold text-gray-900">{COP(item.total)}</p>
-                        <p className="text-xs text-gray-400">
-                          x{item.quantity}{item.tax_amount > 0 ? ` · IVA ${COP(item.tax_amount)}` : ''}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Totales */}
-            <div className="mt-4 pt-4 border-t border-gray-100 space-y-1.5">
-              {parseFloat(order.subtotal) > 0 && (
-                <div className="flex justify-between text-sm text-gray-500">
-                  <span>Subtotal</span>
-                  <span>{COP(order.subtotal)}</span>
-                </div>
-              )}
-              {parseFloat(order.tax_amount) > 0 && (
-                <div className="flex justify-between text-sm text-gray-500">
-                  <span>IVA</span>
-                  <span>{COP(order.tax_amount)}</span>
-                </div>
-              )}
-              <div className="flex justify-between text-base font-bold text-gray-900 pt-1">
-                <span>Total</span>
-                <span>{COP(order.total_amount)}</span>
-              </div>
-            </div>
           </div>
         )}
 
