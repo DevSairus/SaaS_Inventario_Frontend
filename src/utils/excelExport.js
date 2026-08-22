@@ -11,37 +11,6 @@ import ExcelJS from 'exceljs';
 
 const CURRENCY_FORMAT = '"$"#,##0';
 
-// Debe reflejar exactamente el CHECK constraint de products.unit_of_measure
-// en la BD (ver 20260101000000-baseline-core-inventory-tables.js) -- un valor
-// fuera de esta lista hace que el insert falle en el backend.
-const UNIT_OF_MEASURE_MAP = {
-  'pieza': 'unit', 'unidad': 'unit', 'unit': 'unit',
-  'kg': 'kg', 'kilogramo': 'kg',
-  'g': 'g', 'gramo': 'g',
-  'lb': 'lb', 'libra': 'lb',
-  'oz': 'oz', 'onza': 'oz',
-  'l': 'l', 'litro': 'l',
-  'ml': 'ml', 'mililitro': 'ml',
-  'gal': 'gal', 'galon': 'gal', 'galón': 'gal',
-  'm': 'm', 'metro': 'm',
-  'cm': 'cm', 'centimetro': 'cm', 'centímetro': 'cm',
-  'ft': 'ft', 'pie': 'ft',
-  'box': 'box', 'caja': 'box',
-  'pack': 'pack', 'paquete': 'pack',
-  'dozen': 'dozen', 'docena': 'dozen',
-};
-
-/**
- * Mapea una unidad de medida en español (o ya en inglés) al valor que acepta
- * la BD. Si no se reconoce, cae a 'unit' en vez de dejar pasar un valor
- * inválido que reviente el CHECK constraint del backend.
- */
-export const mapUnitOfMeasure = (unit) => {
-  if (!unit) return 'unit';
-  const normalized = unit.toString().toLowerCase().trim();
-  return UNIT_OF_MEASURE_MAP[normalized] || 'unit';
-};
-
 /**
  * Descargar un workbook de ExcelJS como archivo .xlsx en el navegador
  */
@@ -243,7 +212,7 @@ export const downloadProductsTemplate = async () => {
       'Precio Venta': 13000,
       'Margen Utilidad (%)': 30,
       'Cantidad': 100,
-      'Grupo Equivalencia': ''
+      'Equivalente(s)': ''
     },
     {
       'Código*': 'PROD002',
@@ -253,7 +222,7 @@ export const downloadProductsTemplate = async () => {
       'Precio Venta': 15000,
       'Margen Utilidad (%)': '',
       'Cantidad': 50,
-      'Grupo Equivalencia': 'Filtro de aceite 16mm'
+      'Equivalente(s)': 'PROD003'
     },
     {
       'Código*': 'PROD003',
@@ -263,7 +232,7 @@ export const downloadProductsTemplate = async () => {
       'Precio Venta': 6500,
       'Margen Utilidad (%)': 30,
       'Cantidad': '',
-      'Grupo Equivalencia': 'Filtro de aceite 16mm'
+      'Equivalente(s)': ''
     }
   ];
 
@@ -277,7 +246,7 @@ export const downloadProductsTemplate = async () => {
       'Precio Venta': '',
       'Margen Utilidad (%)': '',
       'Cantidad': '',
-      'Grupo Equivalencia': ''
+      'Equivalente(s)': ''
     });
   }
 
@@ -291,7 +260,7 @@ export const downloadProductsTemplate = async () => {
   ws.getColumn('Precio Venta').width = 18;
   ws.getColumn('Margen Utilidad (%)').width = 20;
   ws.getColumn('Cantidad').width = 15;
-  ws.getColumn('Grupo Equivalencia').width = 28;
+  ws.getColumn('Equivalente(s)').width = 28;
 
   // Hoja 2: Instrucciones
   const instructions = [
@@ -312,10 +281,12 @@ export const downloadProductsTemplate = async () => {
     '   • Precio Venta: Precio al público (se calcula si está vacío)',
     '   • Margen Utilidad (%): Porcentaje de ganancia (por defecto: 30%)',
     '   • Cantidad: Stock inicial (por defecto: 0)',
-    '   • Grupo Equivalencia: nombre del grupo de productos sustitutos entre sí',
-    '     (ej. "Filtro de aceite 16mm"). Si varias filas usan el mismo nombre,',
-    '     quedan enlazadas como equivalentes. Si el nombre ya existe como grupo',
-    '     en el sistema, el producto se agrega a ese grupo existente.',
+    '   • Equivalente(s): Código(s) de producto(s) sustitutos, separados por "|"',
+    '     (ej. "PROD010|PROD011"). Puede ser un código de otra fila de este',
+    '     mismo archivo o el código de un producto que ya existe en el sistema.',
+    '     Basta con declararlo en UNA de las dos filas (no hace falta repetirlo',
+    '     en ambas). El sistema arma los grupos de equivalencia automáticamente',
+    '     por código -- no es necesario crear ni nombrar grupos a mano.',
     '',
     '3️⃣ REGLAS AUTOMÁTICAS',
     '   • Si Costo Promedio está vacío → se pone 0',
@@ -423,107 +394,6 @@ export const parseImportedFile = (file) => {
 
     reader.readAsArrayBuffer(file);
   });
-};
-
-/**
- * Validar productos importados con NUEVO FORMATO SIMPLIFICADO
- */
-export const validateImportedProducts = (data) => {
-  if (!data || data.length === 0) {
-    return {
-      valid: false,
-      validProducts: [],
-      errors: [],
-      summary: { total: 0, valid: 0, invalid: 0 }
-    };
-  }
-
-  const errors = [];
-  const validProducts = [];
-
-  data.forEach((row, index) => {
-    const rowNumber = index + 2; // +2 porque Excel empieza en 1 y hay header
-    const product = {};
-    const rowErrors = [];
-
-    // ✅ VALIDAR CAMPOS OBLIGATORIOS
-
-    // Código (obligatorio)
-    if (!row['Código*'] || row['Código*'].toString().trim() === '') {
-      rowErrors.push('Código es requerido');
-    } else {
-      product.sku = row['Código*'].toString().trim();
-    }
-
-    // Nombre (obligatorio)
-    if (!row['Nombre*'] || row['Nombre*'].toString().trim() === '') {
-      rowErrors.push('Nombre es requerido');
-    } else {
-      product.name = row['Nombre*'].toString().trim();
-    }
-
-    // ✅ CAMPOS OPCIONALES CON VALORES POR DEFECTO
-
-    // Costo Promedio (por defecto: 0)
-    const costoPromedio = parseFloat(row['Costo Promedio']);
-    product.average_cost = !isNaN(costoPromedio) && costoPromedio >= 0 ? costoPromedio : 0;
-
-    // Margen Utilidad (por defecto: 30%)
-    const margen = parseFloat(row['Margen Utilidad (%)']);
-    product.profit_margin_percentage = !isNaN(margen) && margen >= 0 ? margen : 30;
-
-    // Precio Venta
-    const precioVenta = parseFloat(row['Precio Venta']);
-    if (!isNaN(precioVenta) && precioVenta >= 0) {
-      // Si tiene precio de venta, usarlo
-      product.base_price = precioVenta;
-    } else if (product.average_cost > 0) {
-      // Si no tiene precio pero tiene costo, calcularlo
-      product.base_price = product.average_cost * (1 + product.profit_margin_percentage / 100);
-    } else {
-      // Si no tiene ni precio ni costo, poner 0
-      product.base_price = 0;
-    }
-
-    // Cantidad (por defecto: 0)
-    const cantidad = parseFloat(row['Cantidad']);
-    product.current_stock = !isNaN(cantidad) && cantidad >= 0 ? cantidad : 0;
-
-    // Unidad de medida (por defecto: 'unit' / "Unidad")
-    product.unit_of_measure = mapUnitOfMeasure(row['Unidad']);
-
-    // Grupo Equivalencia (opcional): nombre del grupo de productos sustitutos.
-    // Se resuelve/crea contra ProductEquivalenceGroup después de crear el producto.
-    const equivalenceGroup = row['Grupo Equivalencia'];
-    product.equivalence_group_name = equivalenceGroup ? equivalenceGroup.toString().trim() : '';
-
-    // ✅ CAMPOS FIJOS PARA COMPATIBILIDAD CON EL SISTEMA
-    product.min_stock = 0;
-    product.track_inventory = true;
-
-    // ✅ AGREGAR A LA LISTA
-    if (rowErrors.length > 0) {
-      errors.push({
-        row: rowNumber,
-        sku: row['Código*'] || 'Sin código',
-        name: row['Nombre*'] || 'Sin nombre',
-        errors: rowErrors
-      });
-    } else {
-      validProducts.push(product);
-    }
-  });
-
-  return {
-    valid: errors.length === 0,
-    validProducts,
-    errors,
-    summary: {
-      total: data.length,
-      valid: validProducts.length,
-      invalid: errors.length
-    }
-  };
 };
 
 // ========================================

@@ -1,18 +1,21 @@
 import { useState } from 'react';
-import { parseImportedFile, validateImportedProducts, downloadProductsTemplate } from '../../utils/excelExport';
+import { downloadProductsTemplate } from '../../utils/excelExport';
+import { productsAPI } from '../../api/products';
 import toast from 'react-hot-toast';
 
-function ImportProductsModal({ isOpen, onClose, onImport }) {
+function ImportProductsModal({ isOpen, onClose, onImported }) {
   const [file, setFile] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [validationResult, setValidationResult] = useState(null);
-  const [step, setStep] = useState(1); // 1: Upload, 2: Validation, 3: Confirm
+  const [validation, setValidation] = useState(null);
+  const [result, setResult] = useState(null);
+  const [step, setStep] = useState(1); // 1: Upload, 2: Validation, 3: Resultado
 
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];
     if (selectedFile) {
       setFile(selectedFile);
-      setValidationResult(null);
+      setValidation(null);
+      setResult(null);
       setStep(1);
     }
   };
@@ -22,26 +25,27 @@ function ImportProductsModal({ isOpen, onClose, onImport }) {
 
     setIsProcessing(true);
     try {
-      const data = await parseImportedFile(file);
-      const result = validateImportedProducts(data);
-      setValidationResult(result);
+      const response = await productsAPI.bulkImport(file, true);
+      setValidation(response.data);
       setStep(2);
     } catch (error) {
-      toast.error('Error al procesar el archivo: ' + error.message);
+      toast.error('Error al validar el archivo: ' + (error.response?.data?.message || error.message));
     } finally {
       setIsProcessing(false);
     }
   };
 
   const handleImport = async () => {
-    if (!validationResult || !validationResult.valid) return;
+    if (!file) return;
 
     setIsProcessing(true);
     try {
-      await onImport(validationResult.validProducts);
-      handleClose();
+      const response = await productsAPI.bulkImport(file, false);
+      setResult(response.data);
+      setStep(3);
+      onImported?.(response.data);
     } catch (error) {
-      toast.error('Error al importar productos: ' + error.message);
+      toast.error('Error al importar productos: ' + (error.response?.data?.message || error.message));
     } finally {
       setIsProcessing(false);
     }
@@ -49,7 +53,8 @@ function ImportProductsModal({ isOpen, onClose, onImport }) {
 
   const handleClose = () => {
     setFile(null);
-    setValidationResult(null);
+    setValidation(null);
+    setResult(null);
     setStep(1);
     onClose();
   };
@@ -97,6 +102,7 @@ function ImportProductsModal({ isOpen, onClose, onImport }) {
                   <ol className="text-sm text-blue-800 space-y-1 list-decimal list-inside">
                     <li>Descarga la plantilla de Excel (.xlsx)</li>
                     <li>Completa los datos de los productos</li>
+                    <li>Si tienes productos sustitutos, indica sus códigos en "Equivalente(s)"</li>
                     <li>Guarda el archivo (mantén el formato .xlsx)</li>
                     <li>Sube el archivo aquí</li>
                   </ol>
@@ -156,31 +162,53 @@ function ImportProductsModal({ isOpen, onClose, onImport }) {
               </div>
             )}
 
-            {/* Step 2: Validation Results */}
-            {step === 2 && validationResult && (
+            {/* Step 2: Validation Results (dry run del backend) */}
+            {step === 2 && validation && (
               <div className="space-y-4">
-                {/* Summary */}
                 <div className="grid grid-cols-3 gap-4">
                   <div className="bg-blue-50 rounded-lg p-4 text-center">
-                    <p className="text-2xl font-bold text-blue-600">{validationResult.summary.total}</p>
+                    <p className="text-2xl font-bold text-blue-600">{validation.total_registros}</p>
                     <p className="text-xs text-blue-800">Total</p>
                   </div>
                   <div className="bg-green-50 rounded-lg p-4 text-center">
-                    <p className="text-2xl font-bold text-green-600">{validationResult.summary.valid}</p>
-                    <p className="text-xs text-green-800">Válidos</p>
+                    <p className="text-2xl font-bold text-green-600">{validation.para_crear}</p>
+                    <p className="text-xs text-green-800">Para crear</p>
                   </div>
                   <div className="bg-red-50 rounded-lg p-4 text-center">
-                    <p className="text-2xl font-bold text-red-600">{validationResult.summary.invalid}</p>
+                    <p className="text-2xl font-bold text-red-600">{validation.invalidos}</p>
                     <p className="text-xs text-red-800">Con errores</p>
                   </div>
                 </div>
 
-                {/* Errors */}
-                {validationResult.errors.length > 0 && (
+                {validation.omitidos_duplicados > 0 && (
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-sm text-yellow-800">
+                    ⏭️ {validation.omitidos_duplicados} código(s) ya existen en el sistema y se omitirán.
+                  </div>
+                )}
+
+                {validation.grupos_equivalencia_estimados > 0 && (
+                  <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-3 text-sm text-indigo-800">
+                    🔗 Se detectaron {validation.grupos_equivalencia_estimados} grupo(s) de equivalencia
+                    ({validation.enlaces_equivalencia_estimados} productos enlazados en total).
+                  </div>
+                )}
+
+                {validation.codigos_equivalencia_no_encontrados?.length > 0 && (
+                  <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
+                    <p className="text-sm font-medium text-orange-900 mb-1">
+                      ⚠️ Códigos en "Equivalente(s)" que no se encontraron (ni en el archivo ni en el sistema):
+                    </p>
+                    <p className="text-xs text-orange-700">
+                      {validation.codigos_equivalencia_no_encontrados.join(', ')}
+                    </p>
+                  </div>
+                )}
+
+                {validation.errores.length > 0 && (
                   <div className="bg-red-50 border border-red-200 rounded-lg p-4 max-h-64 overflow-y-auto">
                     <h4 className="font-semibold text-red-900 mb-2">❌ Errores encontrados:</h4>
                     <div className="space-y-2">
-                      {validationResult.errors.map((error, index) => (
+                      {validation.errores.map((error, index) => (
                         <div key={index} className="bg-white rounded p-2 border border-red-200">
                           <p className="text-sm font-medium text-red-900">
                             Fila {error.row} - {error.sku}
@@ -193,15 +221,78 @@ function ImportProductsModal({ isOpen, onClose, onImport }) {
                         </div>
                       ))}
                     </div>
+                    {validation.errores_truncados && (
+                      <p className="text-xs text-red-600 mt-2">Se muestran solo los primeros errores.</p>
+                    )}
                   </div>
                 )}
 
-                {/* Success message */}
-                {validationResult.valid && (
+                {validation.para_crear > 0 && (
                   <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                     <p className="text-green-900 font-medium">
-                      ✅ Todos los productos son válidos y están listos para importar
+                      ✅ {validation.para_crear} producto(s) listos para importar
                     </p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Step 3: Resultado de la importación real */}
+            {step === 3 && result && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="bg-green-50 rounded-lg p-4 text-center">
+                    <p className="text-2xl font-bold text-green-600">{result.creados}</p>
+                    <p className="text-xs text-green-800">Creados</p>
+                  </div>
+                  <div className="bg-yellow-50 rounded-lg p-4 text-center">
+                    <p className="text-2xl font-bold text-yellow-600">{result.omitidos_duplicados}</p>
+                    <p className="text-xs text-yellow-800">Omitidos</p>
+                  </div>
+                  <div className="bg-red-50 rounded-lg p-4 text-center">
+                    <p className="text-2xl font-bold text-red-600">{result.con_errores}</p>
+                    <p className="text-xs text-red-800">Con errores</p>
+                  </div>
+                </div>
+
+                {(result.grupos_equivalencia_creados > 0 || result.grupos_equivalencia_reusados > 0) && (
+                  <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-3 text-sm text-indigo-800">
+                    🔗 {result.grupos_equivalencia_creados} grupo(s) de equivalencia nuevos y {result.grupos_equivalencia_reusados} reutilizados —
+                    {' '}{result.enlaces_equivalencia_creados} producto(s) enlazados en total.
+                  </div>
+                )}
+
+                {result.codigos_equivalencia_no_encontrados?.length > 0 && (
+                  <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
+                    <p className="text-sm font-medium text-orange-900 mb-1">
+                      ⚠️ Códigos de "Equivalente(s)" no encontrados:
+                    </p>
+                    <p className="text-xs text-orange-700">
+                      {result.codigos_equivalencia_no_encontrados.join(', ')}
+                    </p>
+                  </div>
+                )}
+
+                {result.errores.length > 0 && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4 max-h-64 overflow-y-auto">
+                    <h4 className="font-semibold text-red-900 mb-2">❌ Filas con errores:</h4>
+                    <div className="space-y-2">
+                      {result.errores.map((error, index) => (
+                        <div key={index} className="bg-white rounded p-2 border border-red-200">
+                          <p className="text-sm font-medium text-red-900">
+                            Fila {error.row} - {error.sku}
+                          </p>
+                          <ul className="text-xs text-red-700 mt-1 list-disc list-inside">
+                            {error.errors.map((err, i) => (
+                              <li key={i}>{err}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      ))}
+                    </div>
+                    {result.errores_truncados && (
+                      <p className="text-xs text-red-600 mt-2">Se muestran solo los primeros errores.</p>
+                    )}
                   </div>
                 )}
               </div>
@@ -214,7 +305,7 @@ function ImportProductsModal({ isOpen, onClose, onImport }) {
               onClick={handleClose}
               className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100"
             >
-              Cancelar
+              {step === 3 ? 'Cerrar' : 'Cancelar'}
             </button>
 
             <div className="flex gap-2">
@@ -228,21 +319,21 @@ function ImportProductsModal({ isOpen, onClose, onImport }) {
                 </button>
               )}
 
-              {step === 2 && validationResult && validationResult.valid && (
+              {step === 2 && validation && validation.para_crear > 0 && (
                 <button
                   onClick={handleImport}
                   disabled={isProcessing}
                   className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
                 >
-                  {isProcessing ? 'Importando...' : `Importar ${validationResult.summary.valid} Productos`}
+                  {isProcessing ? 'Importando...' : `Importar ${validation.para_crear} Productos`}
                 </button>
               )}
 
-              {step === 2 && validationResult && !validationResult.valid && (
+              {step === 2 && validation && validation.para_crear === 0 && (
                 <button
                   onClick={() => {
                     setFile(null);
-                    setValidationResult(null);
+                    setValidation(null);
                     setStep(1);
                   }}
                   className="px-6 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700"

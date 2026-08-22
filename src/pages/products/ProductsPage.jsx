@@ -8,11 +8,9 @@ import ImportProductsModal from '../../components/products/ImportProductsModal';
 import BarcodePrintModal from '../../components/products/BarcodePrintModal';
 import QuickStockModal from '../../components/products/QuickStockModal';
 import Layout from '../../components/layout/Layout';
-import { exportProductsToExcel, mapUnitOfMeasure } from '../../utils/excelExport';
+import { exportProductsToExcel } from '../../utils/excelExport';
 import { formatCurrency } from '../../utils/formatters';
 import { vehicleApplicationsAPI } from '../../api/vehicleApplications';
-import { productsAPI } from '../../api/products';
-import { equivalencesAPI } from '../../api/equivalences';
 import toast from 'react-hot-toast';
 import { Car, X } from 'lucide-react';
 
@@ -159,153 +157,14 @@ function ProductsPage() {
     exportProductsToExcel(products, 'inventario');
   };
 
-  const handleImport = async (productsData) => {
-    try {
-      let successCount = 0;
-      let skippedCount = 0;
-      let errorCount = 0;
-      let equivalenceLinkedCount = 0;
-      let equivalenceErrorCount = 0;
-      const errors = [];
-      const skipped = [];
-      const imported = [];
-      // Nombre de grupo (normalizado) -> group_id, para que varias filas del
-      // mismo archivo con el mismo "Grupo Equivalencia" queden en un solo
-      // grupo en vez de crear uno nuevo por fila.
-      const equivalenceGroupIds = new Map();
-      for (const productData of productsData) {
-        try {
-          // Mapear los datos al formato esperado por el API
-          const mappedData = {
-            sku: productData.sku,
-            name: productData.name,
-            description: null,
-            category_id: null,
-            unit_of_measure: mapUnitOfMeasure(productData.unit_of_measure),
-            current_stock: parseFloat(productData.current_stock) || 0,
-            min_stock: parseFloat(productData.min_stock) || 0,
-            max_stock: null,
-            base_price: parseFloat(productData.base_price) || 0,
-            average_cost: parseFloat(productData.average_cost) || 0,
-            profit_margin_percentage: parseFloat(productData.profit_margin_percentage) || 30,
-            track_inventory: true,
-            location: null,
-            is_active: true,
-            is_for_sale: true,
-            is_for_purchase: true,
-            reserved_stock: 0
-          };
-          const createResponse = await productsAPI.create(mappedData);
-          const newProductId = createResponse?.data?.id;
-
-          successCount++;
-          imported.push(productData.sku);
-
-          // Si la fila trae "Grupo Equivalencia", enlazar el producto recién
-          // creado a ese grupo (crearlo si es la primera fila que lo usa).
-          if (newProductId && productData.equivalence_group_name) {
-            try {
-              const groupKey = productData.equivalence_group_name.toLowerCase();
-              const existingGroupId = equivalenceGroupIds.get(groupKey);
-              const linkResult = await equivalencesAPI.addToGroup(newProductId, existingGroupId
-                ? { group_id: existingGroupId }
-                : { new_group_name: productData.equivalence_group_name });
-              if (!existingGroupId && linkResult?.data?.group_id) {
-                equivalenceGroupIds.set(groupKey, linkResult.data.group_id);
-              }
-              equivalenceLinkedCount++;
-            } catch (equivError) {
-              equivalenceErrorCount++;
-              console.error(`Error al enlazar equivalencia para ${productData.sku}:`, equivError);
-            }
-          }
-        } catch (error) {
-          const errorMsg = error.message || error.response?.data?.message || 'Error desconocido';
-          
-          // Verificar si es un error de código duplicado
-          if (errorMsg.includes('ya existe') || 
-              errorMsg.includes('duplicate') || 
-              errorMsg.includes('unique') ||
-              errorMsg.includes('duplicado')) {
-            
-            skippedCount++;
-            skipped.push(productData.sku);
-          } else {
-            // Error real
-            errorCount++;
-            errors.push({
-              sku: productData.sku,
-              name: productData.name,
-              error: errorMsg
-            });
-          }
-        }
-      }
-
-      // ========================================
-      // MOSTRAR RESUMEN COMPLETO
-      // ========================================
-      // Construir mensaje para el usuario
-      let message = 'RESUMEN DE IMPORTACIÓN\n\n';
-      message += `Total procesados: ${productsData.length}\n\n`;
-      
-      if (successCount > 0) {
-        message += `${successCount} productos importados correctamente\n`;
-        if (imported.length <= 5) {
-          message += `   ${imported.join(', ')}\n`;
-        } else {
-          message += `   ${imported.slice(0, 5).join(', ')} y ${imported.length - 5} más\n`;
-        }
-        message += '\n';
-      }
-      
-      if (skippedCount > 0) {
-        message += `⏭️ ${skippedCount} productos omitidos (códigos duplicados)\n`;
-        if (skipped.length <= 5) {
-          message += `   ${skipped.join(', ')}\n`;
-        } else {
-          message += `   ${skipped.slice(0, 5).join(', ')} y ${skipped.length - 5} más\n`;
-        }
-        message += '\n';
-      }
-
-      if (equivalenceLinkedCount > 0) {
-        message += `🔗 ${equivalenceLinkedCount} productos enlazados a su grupo de equivalencia\n`;
-      }
-      if (equivalenceErrorCount > 0) {
-        message += `⚠️ ${equivalenceErrorCount} equivalencias no se pudieron enlazar (revisa la consola)\n`;
-      }
-      if (equivalenceLinkedCount > 0 || equivalenceErrorCount > 0) {
-        message += '\n';
-      }
-
-      if (errorCount > 0) {
-        message += `${errorCount} productos con errores\n\n`;
-        message += 'Detalles de errores:\n';
-        errors.slice(0, 3).forEach(err => {
-          message += `• ${err.sku}: ${err.error}\n`;
-        });
-        
-        if (errors.length > 3) {
-          message += `\n... y ${errors.length - 3} errores más`;
-        }
-      }
-      
-      if (successCount === 0 && skippedCount === 0 && errorCount === 0) {
-        message = 'No se procesaron productos';
-      }
-
-      // Mostrar el resumen
-      toast(message);
-      
-      // Refrescar la lista si hubo al menos un producto importado
-      if (successCount > 0) {
-        fetchProducts();
-        fetchStats();
-      }
-      
-    } catch (error) {
-      toast.error('Error al importar productos: ' + error.message);
+  // La importación (parseo, validación, creación y armado de equivalencias
+  // por código) corre enteramente en el backend -- ImportProductsModal solo
+  // sube el archivo y muestra su propio resumen. Acá solo se refresca la
+  // lista si algo se llegó a crear.
+  const handleImported = (result) => {
+    if (result?.creados > 0) {
+      fetchProducts();
+      fetchStats();
     }
   };
 
@@ -916,7 +775,7 @@ function ProductsPage() {
       <ImportProductsModal
         isOpen={isImportModalOpen}
         onClose={() => setIsImportModalOpen(false)}
-        onImport={handleImport}
+        onImported={handleImported}
       />
 
       <BarcodePrintModal

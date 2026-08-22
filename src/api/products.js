@@ -19,6 +19,19 @@ export const productsAPI = {
     return response.data;
   },
 
+  // Carga masiva de productos por Excel (incluye equivalencias por código).
+  // dryRun=true solo valida el archivo, no persiste nada.
+  bulkImport: async (file, dryRun) => {
+    const formData = new FormData();
+    formData.append('archivo', file);
+    const response = await api.post('/products/bulk-import', formData, {
+      params: { dry_run: dryRun ? 'true' : 'false' },
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 180000, // archivos de miles de filas pueden tardar más que el timeout default
+    });
+    return response.data;
+  },
+
   // Actualizar producto
   update: async (id, productData) => {
     const response = await api.put(`/products/${id}`, productData);
