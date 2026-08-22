@@ -13,6 +13,7 @@ import { useAppointmentNotifications } from '../../hooks/useAppointmentNotificat
 import { Bars3Icon } from '@heroicons/react/24/outline';
 import useAuthStore from '../../store/authStore';
 import { isRunningAsInstalledPwa } from '../../pwa/pwaEnv';
+import { useIsFullPwaAccess } from '../../pwa/useWorkshopPwaEligible';
 import OfflineBanner from '../../pwa/components/OfflineBanner';
 import PendingSyncBadge from '../../pwa/components/PendingSyncBadge';
 import SyncRetryButton from '../../pwa/components/SyncRetryButton';
@@ -35,9 +36,13 @@ function Layout({ children }) {
   useTicketNotifications();
   useQuoteNotifications();
   useAppointmentNotifications();
-  // La PWA "Taller" instalada reemplaza el sidebar completo de escritorio por
-  // un bottom-nav de 3 ítems (ver PwaBootstrap/manifest scope "/workshop/").
-  const isWorkshopPwa = isRunningAsInstalledPwa();
+  // La PWA "Taller" instalada (scope /workshop/, rol técnico) reemplaza el
+  // sidebar completo de escritorio por un bottom-nav de 3 ítems. La PWA
+  // completa (cualquier otro rol, scope "/") también corre en standalone
+  // pero debe conservar el layout normal con sidebar -- por eso no alcanza
+  // con isRunningAsInstalledPwa() solo, hay que descartar el caso "full".
+  const isFullPwaAccess = useIsFullPwaAccess();
+  const isWorkshopPwa = isRunningAsInstalledPwa() && !isFullPwaAccess;
 
   if (isWorkshopPwa) {
     return (
