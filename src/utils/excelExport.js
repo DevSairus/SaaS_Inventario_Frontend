@@ -242,7 +242,8 @@ export const downloadProductsTemplate = async () => {
       'Costo Promedio': 10000,
       'Precio Venta': 13000,
       'Margen Utilidad (%)': 30,
-      'Cantidad': 100
+      'Cantidad': 100,
+      'Grupo Equivalencia': ''
     },
     {
       'Código*': 'PROD002',
@@ -251,7 +252,8 @@ export const downloadProductsTemplate = async () => {
       'Costo Promedio': '',
       'Precio Venta': 15000,
       'Margen Utilidad (%)': '',
-      'Cantidad': 50
+      'Cantidad': 50,
+      'Grupo Equivalencia': 'Filtro de aceite 16mm'
     },
     {
       'Código*': 'PROD003',
@@ -260,7 +262,8 @@ export const downloadProductsTemplate = async () => {
       'Costo Promedio': 5000,
       'Precio Venta': 6500,
       'Margen Utilidad (%)': 30,
-      'Cantidad': ''
+      'Cantidad': '',
+      'Grupo Equivalencia': 'Filtro de aceite 16mm'
     }
   ];
 
@@ -273,7 +276,8 @@ export const downloadProductsTemplate = async () => {
       'Costo Promedio': '',
       'Precio Venta': '',
       'Margen Utilidad (%)': '',
-      'Cantidad': ''
+      'Cantidad': '',
+      'Grupo Equivalencia': ''
     });
   }
 
@@ -287,6 +291,7 @@ export const downloadProductsTemplate = async () => {
   ws.getColumn('Precio Venta').width = 18;
   ws.getColumn('Margen Utilidad (%)').width = 20;
   ws.getColumn('Cantidad').width = 15;
+  ws.getColumn('Grupo Equivalencia').width = 28;
 
   // Hoja 2: Instrucciones
   const instructions = [
@@ -307,6 +312,10 @@ export const downloadProductsTemplate = async () => {
     '   • Precio Venta: Precio al público (se calcula si está vacío)',
     '   • Margen Utilidad (%): Porcentaje de ganancia (por defecto: 30%)',
     '   • Cantidad: Stock inicial (por defecto: 0)',
+    '   • Grupo Equivalencia: nombre del grupo de productos sustitutos entre sí',
+    '     (ej. "Filtro de aceite 16mm"). Si varias filas usan el mismo nombre,',
+    '     quedan enlazadas como equivalentes. Si el nombre ya existe como grupo',
+    '     en el sistema, el producto se agrega a ese grupo existente.',
     '',
     '3️⃣ REGLAS AUTOMÁTICAS',
     '   • Si Costo Promedio está vacío → se pone 0',
@@ -482,6 +491,11 @@ export const validateImportedProducts = (data) => {
 
     // Unidad de medida (por defecto: 'unit' / "Unidad")
     product.unit_of_measure = mapUnitOfMeasure(row['Unidad']);
+
+    // Grupo Equivalencia (opcional): nombre del grupo de productos sustitutos.
+    // Se resuelve/crea contra ProductEquivalenceGroup después de crear el producto.
+    const equivalenceGroup = row['Grupo Equivalencia'];
+    product.equivalence_group_name = equivalenceGroup ? equivalenceGroup.toString().trim() : '';
 
     // ✅ CAMPOS FIJOS PARA COMPATIBILIDAD CON EL SISTEMA
     product.min_stock = 0;

@@ -11,6 +11,8 @@ import Layout from '../../components/layout/Layout';
 import { exportProductsToExcel, mapUnitOfMeasure } from '../../utils/excelExport';
 import { formatCurrency } from '../../utils/formatters';
 import { vehicleApplicationsAPI } from '../../api/vehicleApplications';
+import { productsAPI } from '../../api/products';
+import { equivalencesAPI } from '../../api/equivalences';
 import toast from 'react-hot-toast';
 import { Car, X } from 'lucide-react';
 
@@ -162,9 +164,15 @@ function ProductsPage() {
       let successCount = 0;
       let skippedCount = 0;
       let errorCount = 0;
+      let equivalenceLinkedCount = 0;
+      let equivalenceErrorCount = 0;
       const errors = [];
       const skipped = [];
       const imported = [];
+      // Nombre de grupo (normalizado) -> group_id, para que varias filas del
+      // mismo archivo con el mismo "Grupo Equivalencia" queden en un solo
+      // grupo en vez de crear uno nuevo por fila.
+      const equivalenceGroupIds = new Map();
       for (const productData of productsData) {
         try {
           // Mapear los datos al formato esperado por el API
@@ -187,10 +195,30 @@ function ProductsPage() {
             is_for_purchase: true,
             reserved_stock: 0
           };
-          await createProduct(mappedData);
-          
+          const createResponse = await productsAPI.create(mappedData);
+          const newProductId = createResponse?.data?.id;
+
           successCount++;
           imported.push(productData.sku);
+
+          // Si la fila trae "Grupo Equivalencia", enlazar el producto recién
+          // creado a ese grupo (crearlo si es la primera fila que lo usa).
+          if (newProductId && productData.equivalence_group_name) {
+            try {
+              const groupKey = productData.equivalence_group_name.toLowerCase();
+              const existingGroupId = equivalenceGroupIds.get(groupKey);
+              const linkResult = await equivalencesAPI.addToGroup(newProductId, existingGroupId
+                ? { group_id: existingGroupId }
+                : { new_group_name: productData.equivalence_group_name });
+              if (!existingGroupId && linkResult?.data?.group_id) {
+                equivalenceGroupIds.set(groupKey, linkResult.data.group_id);
+              }
+              equivalenceLinkedCount++;
+            } catch (equivError) {
+              equivalenceErrorCount++;
+              console.error(`Error al enlazar equivalencia para ${productData.sku}:`, equivError);
+            }
+          }
         } catch (error) {
           const errorMsg = error.message || error.response?.data?.message || 'Error desconocido';
           
@@ -240,7 +268,17 @@ function ProductsPage() {
         }
         message += '\n';
       }
-      
+
+      if (equivalenceLinkedCount > 0) {
+        message += `🔗 ${equivalenceLinkedCount} productos enlazados a su grupo de equivalencia\n`;
+      }
+      if (equivalenceErrorCount > 0) {
+        message += `⚠️ ${equivalenceErrorCount} equivalencias no se pudieron enlazar (revisa la consola)\n`;
+      }
+      if (equivalenceLinkedCount > 0 || equivalenceErrorCount > 0) {
+        message += '\n';
+      }
+
       if (errorCount > 0) {
         message += `${errorCount} productos con errores\n\n`;
         message += 'Detalles de errores:\n';
