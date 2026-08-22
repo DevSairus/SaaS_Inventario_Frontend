@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Download, Share, X } from 'lucide-react';
-import { useWorkshopPwaEligible } from '../useWorkshopPwaEligible';
+import { useWorkshopPwaEligible, useIsFullPwaAccess } from '../useWorkshopPwaEligible';
 import { isRunningAsInstalledPwa } from '../pwaEnv';
 
 const DISMISS_KEY = 'workshop-install-dismissed';
@@ -23,8 +23,12 @@ function isIosSafari() {
 //   ya que no hay una acción real que ofrecer.
 function InstallPrompt() {
   const eligible = useWorkshopPwaEligible();
+  const isFull = useIsFullPwaAccess();
   const location = useLocation();
-  const onWorkshopPage = location.pathname.startsWith('/workshop/');
+  // La PWA "Taller" (técnico) solo se ofrece dentro de /workshop/*, que es
+  // todo lo que esa app cubre. La PWA completa (cualquier otro rol) no tiene
+  // esa limitación de alcance, así que se ofrece en cualquier página.
+  const onEligiblePage = isFull || location.pathname.startsWith('/workshop/');
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [dismissed, setDismissed] = useState(
     () => sessionStorage.getItem(DISMISS_KEY) === '1'
@@ -45,7 +49,7 @@ function InstallPrompt() {
     sessionStorage.setItem(DISMISS_KEY, '1');
   };
 
-  if (!eligible || !onWorkshopPage || dismissed || isRunningAsInstalledPwa()) return null;
+  if (!eligible || !onEligiblePage || dismissed || isRunningAsInstalledPwa()) return null;
 
   const handleInstall = async () => {
     if (!deferredPrompt) return;
@@ -57,7 +61,7 @@ function InstallPrompt() {
   if (deferredPrompt) {
     return (
       <div className="fixed bottom-20 inset-x-4 z-50 bg-gray-900 text-white rounded-xl shadow-lg p-3 flex items-center gap-3">
-        <span className="flex-1 text-sm">Instala la app de Taller en este dispositivo</span>
+        <span className="flex-1 text-sm">{isFull ? 'Instala la app de Pitbox en este dispositivo' : 'Instala la app de Taller en este dispositivo'}</span>
         <button onClick={handleInstall} className="flex items-center gap-1.5 bg-white text-gray-900 text-xs font-medium px-3 py-1.5 rounded-lg whitespace-nowrap">
           <Download className="w-4 h-4" /> Instalar
         </button>

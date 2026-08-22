@@ -1,16 +1,24 @@
-// Service Worker de la PWA "Taller" — scope /workshop/ únicamente.
-// Ver plan: 00 - Documentación / PWA Taller. No debe interceptar nada fuera
-// de /workshop/ (el resto de la SPA sigue funcionando sin SW).
+// Service Worker de la PWA — mismo archivo compilado sirve dos alcances
+// distintos según con qué `scope` se haya registrado (ver PwaBootstrap.jsx):
+//   - /workshop/ -> PWA "Taller", limitada a esas rutas (rol técnico).
+//   - /          -> PWA completa, sin restricción de navegación (todo
+//                   el resto de roles). Se detecta leyendo
+//                   self.registration.scope en vez de hardcodearlo, así no
+//                   hace falta compilar dos Service Workers distintos.
 import { precacheAndRoute, createHandlerBoundToURL } from 'workbox-precaching';
 import { registerRoute, NavigationRoute } from 'workbox-routing';
 import { NetworkFirst } from 'workbox-strategies';
 
 precacheAndRoute(self.__WB_MANIFEST || []);
 
-// Navegaciones dentro de /workshop/* caen al shell precacheado si no hay red.
+const isFullScope = new URL(self.registration.scope).pathname === '/';
+
+// Navegaciones dentro del alcance registrado caen al shell precacheado si no
+// hay red -- /workshop/* nada más para la PWA "Taller", cualquier ruta para
+// la PWA completa.
 registerRoute(
   new NavigationRoute(createHandlerBoundToURL('/index.html'), {
-    allowlist: [/^\/workshop\//],
+    allowlist: isFullScope ? [/^\//] : [/^\/workshop\//],
   })
 );
 
