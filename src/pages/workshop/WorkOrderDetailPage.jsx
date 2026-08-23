@@ -21,6 +21,7 @@ import { ClipboardDocumentListIcon, DocumentTextIcon } from '@heroicons/react/24
 import ProductImageViewer from '../../components/products/ProductImageViewer';
 import DiagramMapEditor from '../../components/workshop/DiagramMapEditor';
 import NumericInput from '../../components/inputs/NumericInput';
+import CompleteCustomerDianModal from '../../components/dian/CompleteCustomerDianModal';
 
 const STATUS_FLOW = ['recibido', 'en_proceso', 'en_espera', 'listo', 'entregado'];
 
@@ -138,6 +139,9 @@ export default function WorkOrderDetailPage() {
   const [copyingLink, setCopyingLink]        = useState(false);
   // Modal de tipo de documento al generar venta desde OT
   const [showGenSaleModal, setShowGenSaleModal] = useState(false);
+  // Se abre si generateSale (o el reintento tras completarlo) responde
+  // DIAN_CUSTOMER_INCOMPLETE -- ver customerDianReadiness.js en el backend.
+  const [dianIncompleteModal, setDianIncompleteModal] = useState(null); // { customerId, missingFields, docType } | null
   // Edición de km de salida
   const [editingMileageOut, setEditingMileageOut] = useState(false);
   const [mileageOutVal, setMileageOutVal]         = useState('');
@@ -378,7 +382,9 @@ export default function WorkOrderDetailPage() {
     } catch (e) {
       const data = e?.response?.data || {};
       const msg = data.message || '';
-      if (msg.toLowerCase().includes('ítems') || msg.toLowerCase().includes('items')) {
+      if (data.code === 'DIAN_CUSTOMER_INCOMPLETE') {
+        setDianIncompleteModal({ customerId: data.customerId, missingFields: data.missingFields || [], docType });
+      } else if (msg.toLowerCase().includes('ítems') || msg.toLowerCase().includes('items')) {
         toast.error('La OT no tiene ítems. Agrega al menos un repuesto o servicio antes de generar el documento.');
       } else if (msg.toLowerCase().includes('estado') || msg.toLowerCase().includes('listo')) {
         toast.error('La OT debe estar en estado "Listo" para generar el documento.');
@@ -2147,6 +2153,18 @@ export default function WorkOrderDetailPage() {
             </div>
           </div>
         )}
+
+      <CompleteCustomerDianModal
+        open={!!dianIncompleteModal}
+        customerId={dianIncompleteModal?.customerId}
+        missingFields={dianIncompleteModal?.missingFields || []}
+        onClose={() => setDianIncompleteModal(null)}
+        onCompleted={() => {
+          const docType = dianIncompleteModal?.docType;
+          setDianIncompleteModal(null);
+          if (docType) confirmGenerateSale(docType);
+        }}
+      />
     </Layout>
   );
 }

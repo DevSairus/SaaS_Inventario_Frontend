@@ -10,6 +10,7 @@ import {
 } from '../../api/dian';
 import { branchesService } from '../../api/branches';
 import Layout from '../../components/layout/Layout';
+import DivipolaCitySelect from '../../components/common/DivipolaCitySelect';
 import {
   Cog6ToothIcon,
   ClipboardDocumentListIcon,
@@ -335,19 +336,16 @@ export default function DianConfigPage() {
               <input className={inputCls} value={cfg.address || ''} placeholder="Calle 123 # 45-67"
                 onChange={e => setCfg(p => ({ ...p, address: e.target.value }))} />
             </Field>
-            <Field label="Ciudad">
-              <input className={inputCls} value={cfg.city || ''} placeholder="Bogotá D.C."
-                onChange={e => setCfg(p => ({ ...p, city: e.target.value }))} />
-            </Field>
-            <Field label="Código DIVIPOLA Ciudad"
-              hint="Código municipal DANE (ej: 11001 para Bogotá)">
-              <input className={inputCls} value={cfg.city_code || ''} placeholder="11001"
-                onChange={e => setCfg(p => ({ ...p, city_code: e.target.value }))} />
-            </Field>
-            <Field label="Departamento">
-              <input className={inputCls} value={cfg.dept || ''} placeholder="Cundinamarca"
-                onChange={e => setCfg(p => ({ ...p, dept: e.target.value }))} />
-            </Field>
+            <div className="md:col-span-2">
+              <DivipolaCitySelect
+                required
+                departmentCode={cfg.city_code ? cfg.city_code.substring(0, 2) : ''}
+                cityCode={cfg.city_code || ''}
+                onChange={({ cityCode, cityName, departmentName }) => {
+                  setCfg(p => ({ ...p, city_code: cityCode, city: cityName, dept: departmentName }));
+                }}
+              />
+            </div>
             <Field label="Régimen Tributario">
               <select className={selectCls} value={cfg.regime_code || '48'}
                 onChange={e => setCfg(p => ({ ...p, regime_code: e.target.value }))}>

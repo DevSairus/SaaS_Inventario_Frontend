@@ -11,12 +11,27 @@ import Input from '../../components/common/Input';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
 import Layout from '../../components/layout/Layout';
 import RuesNitButton from '../../components/common/RuesNitButton';
+import DivipolaCitySelect from '../../components/common/DivipolaCitySelect';
 import LibroAuxiliarModal from '../../components/accounting/LibroAuxiliarModal';
 import toast from 'react-hot-toast';
 
+// schemeID DIAN — mismos códigos que usa dianKitAdapter.js. El default por
+// tipo de cliente se aplica al cambiar "Tipo de Cliente" (ver setCustomerType).
+const DOCUMENT_TYPE_OPTIONS = [
+  { value: '13', label: 'Cédula de ciudadanía' },
+  { value: '31', label: 'NIT' },
+  { value: '22', label: 'Cédula de extranjería' },
+  { value: '41', label: 'Pasaporte' },
+  { value: '12', label: 'Tarjeta de identidad' },
+  { value: '91', label: 'NUIP' },
+];
+
 const FORM_EMPTY = {
   customer_type: 'individual', full_name: '', business_name: '', tax_id: '',
-  email: '', phone: '', mobile: '', address: '', city: '', customer_category: '', notes: '',
+  document_type: '13',
+  email: '', phone: '', mobile: '', address: '',
+  city: '', state: '', city_code: '',
+  customer_category: '', notes: '',
 };
 
 export default function CustomersPage() {
@@ -39,8 +54,24 @@ export default function CustomersPage() {
       tax_id:        data.tax_id        || prev.tax_id,
       city:          data.city          || prev.city,
       address:       data.address       || prev.address,
+      // RUES no trae código DIVIPOLA — si vino ciudad, el campo queda para
+      // que el usuario la confirme/seleccione con el selector DIVIPOLA
+      // (city_code se limpia a propósito: la ciudad de texto libre de RUES
+      // puede no calzar 1:1 con un código DIVIPOLA válido).
+      city_code:     data.city ? '' : prev.city_code,
     }));
-    toast.success('Datos RUES cargados. Completa email y teléfono.');
+    toast.success('Datos RUES cargados. Completa email, teléfono y confirma la ciudad.');
+  };
+
+  // Al cambiar el tipo de cliente, ajusta el tipo de identificación por
+  // defecto (empresa → NIT, persona → cédula) — el usuario puede corregirlo.
+  const handleCustomerTypeChange = (e) => {
+    const customer_type = e.target.value;
+    setFormData(prev => ({
+      ...prev,
+      customer_type,
+      document_type: customer_type === 'company' ? '31' : '13',
+    }));
   };
 
   const handleOpenModal = (customer = null) => {
@@ -49,8 +80,10 @@ export default function CustomersPage() {
       setFormData({
         customer_type: customer.customer_type || 'individual', full_name: customer.full_name || '',
         business_name: customer.business_name || '', tax_id: customer.tax_id || '',
+        document_type: customer.document_type || (customer.customer_type === 'company' ? '31' : '13'),
         email: customer.email || '', phone: customer.phone || '', mobile: customer.mobile || '',
-        address: customer.address || '', city: customer.city || '',
+        address: customer.address || '',
+        city: customer.city || '', state: customer.state || '', city_code: customer.city_code || '',
         customer_category: customer.customer_category || '', notes: customer.notes || '',
         is_active: customer.is_active ?? true,
       });
@@ -172,7 +205,7 @@ export default function CustomersPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">Tipo de Cliente *</label>
-                <select value={formData.customer_type} onChange={set('customer_type')} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100" required>
+                <select value={formData.customer_type} onChange={handleCustomerTypeChange} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100" required>
                   <option value="individual">Persona Natural</option>
                   <option value="company">Empresa</option>
                 </select>
@@ -189,19 +222,30 @@ export default function CustomersPage() {
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">
-                {formData.customer_type === 'company' ? 'NIT' : 'Cédula / Documento'}
-              </label>
-              <div className="flex items-start gap-2">
-                <input type="text" value={formData.tax_id} onChange={set('tax_id')}
-                  placeholder={formData.customer_type === 'company' ? 'Ej: 900072256 o 900072256-1' : 'Ej: 92549045'}
-                  className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100 dark:placeholder-gray-600" />
-                {!editingCustomer && (
-                  <RuesNitButton nit={formData.tax_id} tipoCliente={formData.customer_type} onResult={handleRuesResult} />
-                )}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">
+                  {formData.customer_type === 'company' ? 'NIT' : 'Cédula / Documento'}
+                </label>
+                <div className="flex items-start gap-2">
+                  <input type="text" value={formData.tax_id} onChange={set('tax_id')}
+                    placeholder={formData.customer_type === 'company' ? 'Ej: 900072256 o 900072256-1' : 'Ej: 92549045'}
+                    className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100 dark:placeholder-gray-600" />
+                  {!editingCustomer && (
+                    <RuesNitButton nit={formData.tax_id} tipoCliente={formData.customer_type} onResult={handleRuesResult} />
+                  )}
+                </div>
+                {editingCustomer && <p className="text-xs text-gray-400 mt-1 dark:text-gray-500">La consulta RUES solo está disponible al crear un cliente nuevo.</p>}
               </div>
-              {editingCustomer && <p className="text-xs text-gray-400 mt-1 dark:text-gray-500">La consulta RUES solo está disponible al crear un cliente nuevo.</p>}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">Tipo de Identificación (DIAN) *</label>
+                <select value={formData.document_type} onChange={set('document_type')} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100" required>
+                  {DOCUMENT_TYPE_OPTIONS.map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+                <p className="text-xs text-gray-400 mt-1 dark:text-gray-500">Usado al facturar electrónicamente a este cliente.</p>
+              </div>
             </div>
 
             <Input label="Nombre Completo *" value={formData.full_name} onChange={set('full_name')} required />
@@ -217,10 +261,17 @@ export default function CustomersPage() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Input label="Celular" type="tel" value={formData.mobile} onChange={set('mobile')} />
-              <Input label="Ciudad" value={formData.city} onChange={set('city')} />
+              <Input label="Dirección" value={formData.address} onChange={set('address')} />
             </div>
 
-            <Input label="Dirección" value={formData.address} onChange={set('address')} />
+            <DivipolaCitySelect
+              required
+              departmentCode={formData.city_code ? formData.city_code.substring(0, 2) : ''}
+              cityCode={formData.city_code || ''}
+              onChange={({ cityCode, cityName, departmentName }) => {
+                setFormData(prev => ({ ...prev, city_code: cityCode, city: cityName, state: departmentName }));
+              }}
+            />
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">Notas</label>

@@ -26,6 +26,8 @@ import ConfirmSaleWithPaymentModal from '../../components/sales/ConfirmSaleWithP
 import { customerAdvancesAPI } from '../../api/customerAdvances';
 import VoidSaleModal from '../../components/sales/VoidSaleModal';
 import CreditDebitNoteModal from '../../components/sales/CreditDebitNoteModal';
+import CompleteCustomerDianModal from '../../components/dian/CompleteCustomerDianModal';
+import { DianDetailPanel } from '../../components/dian/DianStatusBadge';
 import useTenantStore from '../../store/tenantStore';
 import toast from 'react-hot-toast';
 import DiagramMapEditor from '../../components/workshop/DiagramMapEditor';
@@ -50,6 +52,9 @@ export default function SaleDetailPage() {
   const [showNoteModal, setShowNoteModal] = useState(null); // null | 'credit' | 'debit'
   const [showConvertModal, setShowConvertModal] = useState(false);
   const [stockErrors, setStockErrors] = useState([]);
+  // Se abre si confirmSale responde DIAN_CUSTOMER_INCOMPLETE -- ver
+  // customerDianReadiness.js en el backend.
+  const [dianIncompleteModal, setDianIncompleteModal] = useState(null); // { customerId, missingFields, paymentData } | null
 
   const openPaymentReceipt = async (paymentIndex) => {
     try {
@@ -123,7 +128,9 @@ export default function SaleDetailPage() {
       fetchSaleById(id);
     } catch (error) {
       const data = error.response?.data || {};
-      if (data.stock_errors && data.stock_errors.length > 0) {
+      if (data.code === 'DIAN_CUSTOMER_INCOMPLETE') {
+        setDianIncompleteModal({ customerId: data.customerId, missingFields: data.missingFields || [], paymentData });
+      } else if (data.stock_errors && data.stock_errors.length > 0) {
         setStockErrors(data.stock_errors);
         toast.error(`Stock insuficiente en ${data.stock_errors.length} ítem(s). Revisa las alternativas disponibles.`);
       } else {
@@ -442,6 +449,19 @@ export default function SaleDetailPage() {
                 </div>
               )}
             </div>
+          </div>
+        )}
+
+        {/* ── Panel DIAN (solo facturas): estado, CUFE, fechas, motivo de rechazo y acciones ── */}
+        {sale.document_type === 'factura' && (
+          <div className="no-print">
+            <DianDetailPanel
+              sale={sale}
+              onUpdate={() => fetchSaleById(id)}
+              onCustomerIncomplete={(data) =>
+                setDianIncompleteModal({ customerId: data.customerId, missingFields: data.missingFields || [], paymentData: null })
+              }
+            />
           </div>
         )}
 
@@ -966,6 +986,18 @@ export default function SaleDetailPage() {
             onSuccess={(workOrder) => {
               setShowConvertModal(false);
               navigate(`/workshop/work-orders/${workOrder.id}`);
+            }}
+          />
+
+          <CompleteCustomerDianModal
+            open={!!dianIncompleteModal}
+            customerId={dianIncompleteModal?.customerId}
+            missingFields={dianIncompleteModal?.missingFields || []}
+            onClose={() => setDianIncompleteModal(null)}
+            onCompleted={() => {
+              const paymentData = dianIncompleteModal?.paymentData;
+              setDianIncompleteModal(null);
+              if (paymentData) handleConfirmWithPayment(paymentData);
             }}
           />
         </div>

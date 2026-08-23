@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import useSalesStore from '../../store/salesStore';
 import useBranchStore from '../../store/branchStore';
 import Layout from '../../components/layout/Layout';
+import DianStatusBadge from '../../components/dian/DianStatusBadge';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import { PlusIcon, MagnifyingGlassIcon, FunnelIcon } from '@heroicons/react/24/outline';
 
@@ -208,7 +209,7 @@ export default function SalesPage() {
               <table className="hidden lg:table min-w-full divide-y divide-gray-100 dark:divide-white/10">
                 <thead className="bg-gray-50 dark:bg-graphite-2">
                   <tr>
-                    {(branches.length > 1 ? ['#', 'Cliente', 'Documento', 'Sede', 'Fecha', 'Total', 'Pago', 'Estado'] : ['#', 'Cliente', 'Documento', 'Fecha', 'Total', 'Pago', 'Estado']).map(h => (
+                    {(branches.length > 1 ? ['#', 'Cliente', 'Documento', 'Sede', 'Fecha', 'Total', 'Pago', 'Estado', 'DIAN'] : ['#', 'Cliente', 'Documento', 'Fecha', 'Total', 'Pago', 'Estado', 'DIAN']).map(h => (
                       <th key={h} className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-500 uppercase tracking-wide">
                         {h}
                       </th>
@@ -252,6 +253,13 @@ export default function SalesPage() {
                         <td className="px-4 py-3">
                           <span className={`inline-flex text-xs font-medium px-2 py-0.5 rounded-full ${st.cls}`}>{st.label}</span>
                         </td>
+                        <td className="px-4 py-3">
+                          {sale.document_type === 'factura' ? (
+                            <DianStatusBadge sale={sale} />
+                          ) : (
+                            <span className="text-xs text-gray-300 dark:text-gray-700">—</span>
+                          )}
+                        </td>
                       </tr>
                     );
                   })}
@@ -276,9 +284,10 @@ export default function SalesPage() {
                         </div>
                         <p className="text-sm font-semibold text-gray-900 whitespace-nowrap">{formatCurrency(sale.total_amount)}</p>
                       </div>
-                      <div className="flex items-center gap-2 mt-2">
+                      <div className="flex items-center gap-2 mt-2 flex-wrap">
                         <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${st.cls}`}>{st.label}</span>
                         <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${pt.cls}`}>{pt.label}</span>
+                        {sale.document_type === 'factura' && <DianStatusBadge sale={sale} />}
                         {sale.converted_to_work_order_id && (
                           <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-600">→ OT</span>
                         )}

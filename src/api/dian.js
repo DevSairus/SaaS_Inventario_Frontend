@@ -10,6 +10,9 @@ export const getDianResolutions   = ()     => api.get('/dian/resolutions');
 export const createDianResolution = (data) => api.post('/dian/resolutions', data);
 export const deactivateResolution = (id)   => api.delete(`/dian/resolutions/${id}`);
 
+// ── Catálogo DIVIPOLA (departamentos + municipios) ───────────
+export const getDivipola          = ()     => api.get('/dian/divipola');
+
 // ── Estado de habilitación ───────────────────────────────────
 export const getHabilitacionStatus = ()   => api.get('/dian/habilitacion-status');
 
@@ -46,6 +49,7 @@ const dianAPI = {
   getResolutions:       getDianResolutions,
   createResolution:     createDianResolution,
   deleteResolution:     deactivateResolution,
+  getDivipola,
   getHabilitacionStatus,
   diagnoseCert,
   testConnection:       testDianConnection,
