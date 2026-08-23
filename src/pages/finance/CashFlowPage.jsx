@@ -121,7 +121,14 @@ const CashFlowPage = () => {
     return isNaN(d.getTime()) ? date : d.toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' });
   };
 
-  const sourceLabel = { sale: 'Venta', purchase: 'Compra', expense: 'Gasto' };
+  const sourceLabel = {
+    sale: 'Venta',
+    purchase: 'Compra',
+    expense: 'Gasto',
+    work_order: 'Abono OT',
+    customer_advance: 'Anticipo recibido',
+    customer_advance_refund: 'Devolución de anticipo',
+  };
 
   const maxDayAbs = data?.by_day?.length
     ? Math.max(...data.by_day.map(d => Math.max(d.in, d.out)))

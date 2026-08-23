@@ -2,6 +2,8 @@ import { useState } from 'react';
 import Sidebar from './Sidebar';
 import WorkshopBottomNav from './WorkshopBottomNav';
 import StockAlerts from '../common/StockAlerts';
+import PayableAlerts from '../common/PayableAlerts';
+import AdvanceAlerts from '../common/AdvanceAlerts';
 import CrmNotifications from '../common/CrmNotifications';
 import QuoteNotificationsBell from '../common/QuoteNotificationsBell';
 import AppointmentNotificationsBell from '../common/AppointmentNotificationsBell';
@@ -109,6 +111,8 @@ function Layout({ children }) {
             <QuoteNotificationsBell />
             <CrmNotifications />
             <StockAlerts />
+            <PayableAlerts />
+            <AdvanceAlerts />
           </div>
         </header>
 
@@ -119,6 +123,8 @@ function Layout({ children }) {
           <QuoteNotificationsBell />
           <CrmNotifications />
           <StockAlerts />
+          <PayableAlerts />
+          <AdvanceAlerts />
         </div>
 
         {/* Contenido principal */}

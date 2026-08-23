@@ -93,6 +93,8 @@ const NAV = [
     id: "cartera", label: "Cartera", icon: "wallet", module: "receivables",
     children: [
       { label: "Cuentas por Cobrar",   path: "/accounts-receivable" },
+      { label: "Anticipos",            path: "/customer-advances" },
+      { label: "Antigüedad de Anticipos", path: "/customer-advance-alerts" },
       { label: "Devoluciones Clientes", path: "/sales/customer-returns" },
       { label: "Dev. Proveedores",     path: "/inventory/supplier-returns" },
     ],

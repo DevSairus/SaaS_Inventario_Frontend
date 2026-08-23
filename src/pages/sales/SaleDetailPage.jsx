@@ -23,6 +23,7 @@ import Layout from '../../components/layout/Layout';
 import salesApi from '../../api/sales';
 import { movementsAPI } from '../../api/movements';
 import ConfirmSaleWithPaymentModal from '../../components/sales/ConfirmSaleWithPaymentModal';
+import { customerAdvancesAPI } from '../../api/customerAdvances';
 import VoidSaleModal from '../../components/sales/VoidSaleModal';
 import CreditDebitNoteModal from '../../components/sales/CreditDebitNoteModal';
 import useTenantStore from '../../store/tenantStore';
@@ -94,15 +95,30 @@ export default function SaleDetailPage() {
   const handleConfirmWithPayment = async (paymentData) => {
     try {
       setConfirmingPayment(true);
+      const { advance_applications, ...saleConfirmData } = paymentData;
+      const cashPortion = saleConfirmData.paid_amount ?? currentSale?.total_amount;
+
       if (['pending', 'completed'].includes(currentSale?.status)) {
-        await salesApi.registerPayment(id, {
-          amount: paymentData.paid_amount ?? currentSale?.total_amount,
-          payment_method: paymentData.payment_method,
-          payment_date: toLocalDateString(),
-        });
+        // Si el anticipo cubre todo el saldo, paid_amount llega en 0 -- no
+        // hay nada que registrar como abono (registerPayment exige monto > 0).
+        if (parseFloat(cashPortion || 0) > 0) {
+          await salesApi.registerPayment(id, {
+            amount: cashPortion,
+            payment_method: saleConfirmData.payment_method,
+            payment_date: toLocalDateString(),
+          });
+        }
       } else {
-        await confirmSale(id, paymentData);
+        await confirmSale(id, saleConfirmData);
       }
+
+      // Aplicar anticipo(s) seleccionados en el modal (Cartera) -- se hace
+      // aparte porque el backend no permite aplicar anticipos sobre una
+      // venta en borrador, así que siempre va después de confirmar/abonar.
+      if (advance_applications && advance_applications.length > 0) {
+        await customerAdvancesAPI.applyToSale(id, advance_applications);
+      }
+
       setShowConfirmWithPayment(false);
       fetchSaleById(id);
     } catch (error) {
@@ -909,6 +925,7 @@ export default function SaleDetailPage() {
             currentDocType={sale?.document_type}
             hideQuoteOption={enabledModules?.includes('crm')}
             loading={confirmingPayment}
+            customerId={enabledModules?.includes('receivables') ? sale?.customer_id : null}
           />
 
           <ConfirmDialog

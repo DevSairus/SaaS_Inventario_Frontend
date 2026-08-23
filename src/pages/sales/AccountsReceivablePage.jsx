@@ -16,6 +16,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { formatCurrency } from '../../utils/formatters';
 import NumericInput from '../../components/inputs/NumericInput';
+import ApplyAdvanceModal from '../../components/finance/ApplyAdvanceModal';
 
 const AccountsReceivablePage = () => {
   const [loading, setLoading] = useState(true);
@@ -29,6 +30,7 @@ const AccountsReceivablePage = () => {
   const [paymentMethod, setPaymentMethod] = useState('Efectivo');
   const [paymentNotes, setPaymentNotes] = useState('');
   const [view, setView] = useState('by-customer'); // 'by-customer' o 'all-invoices'
+  const [applyAdvanceTarget, setApplyAdvanceTarget] = useState(null);
   const [filters, setFilters] = useState({
     customer_id: '',
     from_date: '',
@@ -364,17 +366,25 @@ const AccountsReceivablePage = () => {
                                   </span>
                                 </div>
                               </div>
-                              <button
-                                onClick={() => {
-                                  setSelectedInvoice(invoice);
-                                  setPaymentAmount(invoice.balance.toString());
-                                  setShowPaymentModal(true);
-                                }}
-                                className="ml-4 inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
-                              >
-                                <CreditCardIcon className="h-4 w-4 mr-1" />
-                                Registrar Pago
-                              </button>
+                              <div className="ml-4 flex-shrink-0 flex items-center gap-2">
+                                <button
+                                  onClick={() => setApplyAdvanceTarget(invoice)}
+                                  className="inline-flex items-center px-3 py-2 border border-blue-300 text-sm leading-4 font-medium rounded-md text-blue-700 bg-white hover:bg-blue-50"
+                                >
+                                  Aplicar Anticipo
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setSelectedInvoice(invoice);
+                                    setPaymentAmount(invoice.balance.toString());
+                                    setShowPaymentModal(true);
+                                  }}
+                                  className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+                                >
+                                  <CreditCardIcon className="h-4 w-4 mr-1" />
+                                  Registrar Pago
+                                </button>
+                              </div>
                             </div>
                           ))}
                         </div>
@@ -459,7 +469,13 @@ const AccountsReceivablePage = () => {
                       <span className="text-gray-500">{invoice.days_overdue} días</span>
                     )}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-3">
+                    <button
+                      onClick={() => setApplyAdvanceTarget(invoice)}
+                      className="text-blue-700 hover:text-blue-900"
+                    >
+                      Aplicar Anticipo
+                    </button>
                     <button
                       onClick={() => {
                         setSelectedInvoice(invoice);
@@ -569,6 +585,14 @@ const AccountsReceivablePage = () => {
           </div>
         </div>
       )}
+
+      {/* Aplicar Anticipo */}
+      <ApplyAdvanceModal
+        isOpen={!!applyAdvanceTarget}
+        onClose={() => setApplyAdvanceTarget(null)}
+        onSuccess={loadData}
+        sale={applyAdvanceTarget}
+      />
       </div>
     </Layout>
   );

@@ -9,6 +9,9 @@ import Modal from '../../components/common/Modal';
 import Input from '../../components/common/Input';
 import Button from '../../components/common/Button';
 import toast from 'react-hot-toast';
+import { customerAdvancesAPI } from '../../api/customerAdvances';
+import RegisterAdvanceModal from '../../components/finance/RegisterAdvanceModal';
+import { WalletIcon } from '@heroicons/react/24/outline';
 
 const COP = n => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(n || 0);
 const fmtDate = d => d ? new Date(d).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
@@ -40,6 +43,8 @@ export default function CustomerDetailPage() {
   const [editModal, setEditModal] = useState(false);
   const [editForm,  setEditForm]  = useState({});
   const [saving,    setSaving]    = useState(false);
+  const [advances,  setAdvances]  = useState([]);
+  const [showRegisterAdvance, setShowRegisterAdvance] = useState(false);
 
   useEffect(() => { load(); }, [id]);
 
@@ -54,11 +59,23 @@ export default function CustomerDetailPage() {
       setCustomer(cRes.data.data);
       setVehicles(vRes.data.data || []);
       setWorkOrders(otRes.data.data || []);
+      loadAdvances();
     } catch {
       toast.error('Error cargando cliente');
       navigate('/customers');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Anticipos del cliente -- no bloquea la carga principal si el módulo
+  // Cartera no está activo o el endpoint falla por cualquier razón.
+  const loadAdvances = async () => {
+    try {
+      const res = await customerAdvancesAPI.list({ customer_id: id });
+      setAdvances(res.data.data || []);
+    } catch {
+      setAdvances([]);
     }
   };
 
@@ -102,6 +119,9 @@ export default function CustomerDetailPage() {
 
   const sales         = customer.sales || [];
   const totalFact     = sales.reduce((s, v) => s + parseFloat(v.total_amount || 0), 0);
+  const advancesAvailable = advances
+    .filter(a => a.status === 'active')
+    .reduce((s, a) => s + parseFloat(a.balance || 0), 0);
   const displayName   = customer.business_name || customer.full_name
     || `${customer.first_name||''} ${customer.last_name||''}`.trim();
 
@@ -224,6 +244,43 @@ export default function CustomerDetailPage() {
               </div>
             )}
           </div>
+        </div>
+
+        {/* Anticipos */}
+        <div className="bg-white border border-gray-100 rounded-xl p-4 dark:bg-graphite dark:border-white/10">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <WalletIcon className="w-4 h-4 text-blue-600" />
+              <h2 className="font-semibold text-sm text-gray-800 dark:text-gray-200">Anticipos</h2>
+              {advancesAvailable > 0 && (
+                <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
+                  Disponible: {COP(advancesAvailable)}
+                </span>
+              )}
+            </div>
+            <button onClick={() => setShowRegisterAdvance(true)}
+              className="text-xs font-medium text-blue-600 hover:underline">
+              + Registrar anticipo
+            </button>
+          </div>
+          {advances.length === 0 ? (
+            <p className="text-sm text-gray-400 py-2">Sin anticipos registrados</p>
+          ) : (
+            <div className="divide-y divide-gray-50 dark:divide-white/10">
+              {advances.slice(0, 6).map((adv) => (
+                <div key={adv.id} className="flex items-center justify-between py-2 text-sm">
+                  <div>
+                    <span className="font-mono text-xs font-bold text-gray-800 dark:text-gray-200">{adv.advance_number}</span>
+                    <span className="text-xs text-gray-400 ml-2">{fmtDate(adv.received_date)}</span>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-semibold text-gray-900 dark:text-gray-100">{COP(adv.amount)}</p>
+                    <p className="text-xs text-gray-400">Saldo: {COP(adv.balance)}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* ── Vehículos + Órdenes de Trabajo ── */}
@@ -404,6 +461,14 @@ export default function CustomerDetailPage() {
           </div>
         </form>
       </Modal>
+
+      {/* Registrar anticipo */}
+      <RegisterAdvanceModal
+        isOpen={showRegisterAdvance}
+        onClose={() => setShowRegisterAdvance(false)}
+        onSuccess={loadAdvances}
+        presetCustomer={{ id: customer.id, name: displayName }}
+      />
     </Layout>
   );
 }

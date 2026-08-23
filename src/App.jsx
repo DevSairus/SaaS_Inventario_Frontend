@@ -20,6 +20,7 @@ import AdjustmentFormPage from './pages/adjustments/AdjustmentFormPage';
 import AdjustmentDetailPage from './pages/adjustments/AdjustmentDetailPage';
 import MovementsPage from './pages/movements/MovementsPage';
 import StockAlertsPage from './pages/stock-alerts/StockAlertsPage';
+import PayableAlertsPage from './pages/payable-alerts/PayableAlertsPage';
 import UsersPage from './pages/users/UsersPage';
 import UserForm from './pages/users/UserForm';
 import SalesPage from './pages/sales/SalesPage';
@@ -27,6 +28,8 @@ import QuotesPage from './pages/sales/QuotesPage';
 import SaleFormPage from './pages/sales/SaleFormPage';
 import SaleDetailPage from './pages/sales/SaleDetailPage';
 import AccountsReceivablePage from './pages/sales/AccountsReceivablePage';
+import CustomerAdvancesPage from './pages/finance/CustomerAdvancesPage';
+import CustomerAdvanceAlertsPage from './pages/customer-advance-alerts/CustomerAdvanceAlertsPage';
 import AccountsPayablePage from './pages/finance/AccountsPayablePage';
 import ExpensesPage from './pages/finance/ExpensesPage';
 import CashFlowPage from './pages/finance/CashFlowPage';
@@ -319,12 +322,15 @@ function App() {
         <Route path="sales/new"      element={<TenantRoute module="sales"><SaleFormPage /></TenantRoute>} />
         <Route path="sales/:id/edit" element={<TenantRoute module="sales"><SaleFormPage /></TenantRoute>} />
         <Route path="accounts-receivable" element={<TenantRoute module="receivables"><AccountsReceivablePage /></TenantRoute>} />
+        <Route path="customer-advances" element={<TenantRoute module="receivables"><CustomerAdvancesPage /></TenantRoute>} />
+        <Route path="customer-advance-alerts" element={<TenantRoute module="receivables"><CustomerAdvanceAlertsPage /></TenantRoute>} />
 
         {/* ── Cotizaciones — sección independiente de Ventas ─────────── */}
         <Route path="quotes" element={<TenantRoute module={["sales", "workshop", "crm"]}><QuotesPage /></TenantRoute>} />
 
         {/* ── Tesorería ──────────────────────────────── */}
         <Route path="accounts-payable" element={<TenantRoute module="treasury"><AccountsPayablePage /></TenantRoute>} />
+        <Route path="payable-alerts"   element={<TenantRoute module="treasury"><PayableAlertsPage /></TenantRoute>} />
         <Route path="expenses"         element={<TenantRoute module="treasury"><ExpensesPage /></TenantRoute>} />
         <Route path="cashflow"         element={<TenantRoute module="treasury"><CashFlowPage /></TenantRoute>} />
         <Route path="accounting/chart-of-accounts" element={<TenantRoute module="accounting" roles={['admin', 'manager']}><ChartOfAccountsPage /></TenantRoute>} />

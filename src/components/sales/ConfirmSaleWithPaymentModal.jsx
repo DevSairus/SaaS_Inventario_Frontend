@@ -1,7 +1,8 @@
 // frontend/src/components/sales/ConfirmSaleWithPaymentModal.jsx
 import { useState, useEffect } from 'react';
-import { XMarkIcon, CreditCardIcon, BanknotesIcon, DevicePhoneMobileIcon, CalendarDaysIcon, ClockIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, CreditCardIcon, BanknotesIcon, DevicePhoneMobileIcon, CalendarDaysIcon, ClockIcon, PlusIcon, TrashIcon, WalletIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import NumericInput from '../inputs/NumericInput';
+import { customerAdvancesAPI } from '../../api/customerAdvances';
 
 const CREDIT_DAYS_OPTIONS = [15, 30, 60, 90];
 
@@ -58,6 +59,9 @@ const ConfirmSaleWithPaymentModal = ({
   // para no dejar sin opción visible una venta que ya nació así.
   hideQuoteOption = false,
   loading = false,
+  // ID del cliente de la venta -- si viene, se consultan sus anticipos
+  // disponibles (Cartera) para poder aplicarlos como parte del pago.
+  customerId = null,
 }) => {
   const docTypes = DOC_TYPES.filter(t => t.value !== 'cotizacion' || !hideQuoteOption || currentDocType === 'cotizacion');
   const [docType, setDocType]           = useState(currentDocType || 'remision');
@@ -72,6 +76,14 @@ const ConfirmSaleWithPaymentModal = ({
   // Mixed payment state
   const [mixedRows, setMixedRows] = useState([emptyMixedRow(), emptyMixedRow()]);
 
+  // ── Anticipos del cliente (Cartera) ──────────────────────────────────────
+  // Se sugiere pero nunca se aplica automático/silencioso (decisión #3 del
+  // plan de Anticipos): se muestran los disponibles, el usuario marca cuáles
+  // usar y puede editar el monto de cada uno antes de confirmar.
+  const [advances, setAdvances]                 = useState([]);
+  const [loadingAdvances, setLoadingAdvances]   = useState(false);
+  const [selectedAdvances, setSelectedAdvances] = useState({}); // { advance_id: amountString }
+
   useEffect(() => {
     if (isOpen) {
       setDocType(currentDocType || 'remision');
@@ -83,15 +95,66 @@ const ConfirmSaleWithPaymentModal = ({
       setUseCustomDays(false);
       setCashReceived('');
       setMixedRows([emptyMixedRow(), emptyMixedRow()]);
+      setSelectedAdvances({});
+      setAdvances([]);
     }
   }, [isOpen, saleTotal, currentDocType]);
 
   useEffect(() => {
-    if (paymentType === 'full')    setPaidAmount(saleTotal);
+    if (!isOpen || !customerId) return;
+    let cancelled = false;
+    setLoadingAdvances(true);
+    customerAdvancesAPI.getAvailableForCustomer(customerId)
+      .then((res) => { if (!cancelled) setAdvances(res.data?.data || []); })
+      .catch(() => { if (!cancelled) setAdvances([]); })
+      .finally(() => { if (!cancelled) setLoadingAdvances(false); });
+    return () => { cancelled = true; };
+  }, [isOpen, customerId]);
+
+  // Cuánto se cubre con anticipos y cuánto queda realmente por cobrar hoy
+  // (efectivo/tarjeta/crédito/mixto). Todo el bloque de "Tipo de Pago" de
+  // abajo trabaja sobre este remanente, no sobre saleTotal.
+  const advanceTotal      = Object.values(selectedAdvances).reduce((sum, v) => sum + (parseFloat(v) || 0), 0);
+  const advanceOverBalance = advanceTotal > saleTotal + 0.01;
+  const effectiveTotal    = Math.max(saleTotal - advanceTotal, 0);
+  const advanceCoversAll  = advanceTotal > 0 && effectiveTotal <= 0 && !advanceOverBalance;
+
+  const toggleAdvance = (advance, checked) => {
+    setSelectedAdvances((prev) => {
+      const next = { ...prev };
+      if (checked) {
+        const alreadySelected = Object.entries(prev).reduce(
+          (sum, [id, amt]) => sum + (id === advance.id ? 0 : (parseFloat(amt) || 0)), 0
+        );
+        const remaining = Math.max(saleTotal - alreadySelected, 0);
+        next[advance.id] = String(Math.min(parseFloat(advance.balance), remaining));
+      } else {
+        delete next[advance.id];
+      }
+      return next;
+    });
+  };
+  const updateAdvanceAmount = (advanceId, value) => {
+    setSelectedAdvances((prev) => ({ ...prev, [advanceId]: value }));
+  };
+  const applyAdvancesFifo = () => {
+    let remaining = saleTotal;
+    const next = {};
+    for (const adv of advances) {
+      if (remaining <= 0) break;
+      const toApply = Math.min(parseFloat(adv.balance), remaining);
+      if (toApply > 0) { next[adv.id] = String(toApply); remaining -= toApply; }
+    }
+    setSelectedAdvances(next);
+  };
+
+  useEffect(() => {
+    if (paymentType === 'full')    setPaidAmount(effectiveTotal);
     if (paymentType === 'credit')  setPaidAmount(0);
-    if (paymentType === 'partial' && paidAmount === saleTotal) setPaidAmount(Math.round(saleTotal / 2));
+    if (paymentType === 'partial' && paidAmount === effectiveTotal) setPaidAmount(Math.round(effectiveTotal / 2));
     setCashReceived('');
-  }, [paymentType, saleTotal]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paymentType, effectiveTotal]);
 
   useEffect(() => {
     if (paymentMethod !== 'cash') setCashReceived('');
@@ -111,9 +174,9 @@ const ConfirmSaleWithPaymentModal = ({
   const cashChange        = paymentMethod === 'cash' && cashReceived !== '' ? cashReceivedNum - amountToPay : null;
   const cashChangePositive = cashChange !== null && cashChange >= 0;
 
-  // Mixed totals
+  // Mixed totals -- se reparte lo que falta por cobrar después del anticipo
   const mixedTotal = mixedRows.reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0);
-  const mixedRemaining = saleTotal - mixedTotal;
+  const mixedRemaining = effectiveTotal - mixedTotal;
   const mixedValid = Math.abs(mixedRemaining) < 1 && mixedRows.every(r => parseFloat(r.amount) > 0);
 
   const updateMixedRow = (index, field, value) => {
@@ -125,23 +188,41 @@ const ConfirmSaleWithPaymentModal = ({
     setMixedRows(prev => prev.filter((_, i) => i !== index));
   };
 
+  const advanceApplications = Object.entries(selectedAdvances)
+    .map(([advance_id, amount]) => ({ advance_id, amount: parseFloat(amount) }))
+    .filter(a => a.amount > 0);
+
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (advanceOverBalance) return;
+
+    // El anticipo ya cubre todo lo pendiente: no hace falta método de pago,
+    // se confirma con paid_amount 0 y se aplica el anticipo aparte.
+    if (advanceCoversAll) {
+      onConfirm({
+        document_type: docType,
+        payment_method: 'cash',
+        paid_amount: 0,
+        advance_applications: advanceApplications,
+      });
+      return;
+    }
 
     if (paymentType === 'mixed') {
       if (!mixedValid) return;
       onConfirm({
         document_type: docType,
         payment_method: 'mixed',
-        paid_amount: saleTotal,
+        paid_amount: effectiveTotal,
         payment_splits: mixedRows.map(r => ({ method: r.method, amount: parseFloat(r.amount) })),
+        advance_applications: advanceApplications,
       });
       return;
     }
 
     if (!paymentMethod) return;
     const finalAmount = paymentType === 'credit' ? 0 : parseFloat(paidAmount);
-    if (paymentType === 'partial' && (finalAmount <= 0 || finalAmount >= saleTotal)) return;
+    if (paymentType === 'partial' && (finalAmount <= 0 || finalAmount >= effectiveTotal)) return;
     if ((paymentType === 'partial' || paymentType === 'credit') && effectiveCreditDays <= 0) return;
     if (paymentMethod === 'cash' && cashReceived !== '' && cashReceivedNum < amountToPay) return;
 
@@ -150,12 +231,13 @@ const ConfirmSaleWithPaymentModal = ({
       payment_method: paymentMethod,
       paid_amount: finalAmount,
       credit_days: paymentType !== 'full' ? effectiveCreditDays : undefined,
+      advance_applications: advanceApplications,
     });
   };
 
   if (!isOpen) return null;
 
-  const pendingAmount = saleTotal - parseFloat(paidAmount || 0);
+  const pendingAmount = effectiveTotal - parseFloat(paidAmount || 0);
   const paymentMethods = PAYMENT_METHODS_LIST;
   const needsCreditSection = paymentType === 'partial' || paymentType === 'credit';
   const dueDate = getDueDate();
@@ -216,6 +298,74 @@ const ConfirmSaleWithPaymentModal = ({
                 <p className="text-3xl font-bold text-gray-900">${saleTotal.toLocaleString('es-CO')}</p>
               </div>
 
+              {/* ── Anticipos disponibles del cliente (Cartera) ── */}
+              {loadingAdvances && (
+                <div className="flex items-center gap-2 text-sm text-gray-400">
+                  <ArrowPathIcon className="w-4 h-4 animate-spin" /> Consultando anticipos del cliente...
+                </div>
+              )}
+              {!loadingAdvances && advances.length > 0 && (
+                <div className="rounded-xl border-2 border-teal-100 bg-teal-50 p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-semibold text-teal-800 flex items-center gap-1.5">
+                      <WalletIcon className="w-4 h-4" /> Anticipos disponibles del cliente
+                    </span>
+                    <button type="button" onClick={applyAdvancesFifo}
+                      className="text-xs text-teal-700 font-semibold bg-white border border-teal-300 hover:bg-teal-100 px-2.5 py-1 rounded-lg transition-all">
+                      Aplicar automático
+                    </button>
+                  </div>
+
+                  <div className="space-y-2">
+                    {advances.map((adv) => {
+                      const isChecked = selectedAdvances[adv.id] !== undefined;
+                      return (
+                        <div key={adv.id} className={`flex items-center gap-2 rounded-lg border px-3 py-2 ${isChecked ? 'border-teal-300 bg-white' : 'border-teal-100 bg-white/60'}`}>
+                          <input type="checkbox" checked={isChecked}
+                            onChange={(e) => toggleAdvance(adv, e.target.checked)}
+                            className="h-4 w-4 text-teal-600 border-gray-300 rounded flex-shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-medium text-gray-900">{adv.advance_number}</div>
+                            <div className="text-xs text-gray-500">
+                              Recibido {new Date(adv.received_date).toLocaleDateString('es-CO')} · Disponible ${parseFloat(adv.balance).toLocaleString('es-CO')}
+                            </div>
+                            {adv.reference_note && (
+                              <div className="text-xs text-gray-400 italic truncate">{adv.reference_note}</div>
+                            )}
+                          </div>
+                          <div className="relative w-28 flex-shrink-0">
+                            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-xs font-medium">$</span>
+                            <NumericInput
+                              value={selectedAdvances[adv.id] || ''}
+                              onChange={(e) => updateAdvanceAmount(adv.id, e.target.value)}
+                              disabled={!isChecked}
+                              className="w-full pl-5 pr-2 py-1.5 border border-gray-200 rounded-lg text-sm text-right focus:ring-2 focus:ring-teal-400 focus:border-transparent disabled:bg-gray-100"
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {advanceTotal > 0 && (
+                    <div className={`flex items-center justify-between rounded-lg px-4 py-2 border-2 text-sm font-semibold ${
+                      advanceOverBalance ? 'bg-red-50 border-red-300 text-red-800' : 'bg-teal-100 border-teal-300 text-teal-800'
+                    }`}>
+                      <span>{advanceOverBalance ? 'Supera el total de la venta' : 'Cubierto con anticipo'}</span>
+                      <span>${advanceTotal.toLocaleString('es-CO')}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {advanceCoversAll && (
+                <div className="bg-teal-50 border-l-4 border-teal-400 p-3 rounded-r-lg text-sm text-teal-800">
+                  El anticipo cubre el total de la venta. No se requiere cobrar nada adicional hoy.
+                </div>
+              )}
+
+              {!advanceCoversAll && (
+              <>
               {/* Tipo de pago */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-3">Tipo de Pago</label>
@@ -293,7 +443,7 @@ const ConfirmSaleWithPaymentModal = ({
                     <span>{mixedValid ? '✅ Total cubierto' : mixedRemaining > 0 ? '⚠️ Falta cubrir' : '❌ Excede el total'}</span>
                     <span>
                       {mixedValid
-                        ? `$${saleTotal.toLocaleString('es-CO')}`
+                        ? `$${effectiveTotal.toLocaleString('es-CO')}`
                         : `$${Math.abs(mixedRemaining).toLocaleString('es-CO')}`
                       }
                     </span>
@@ -466,6 +616,12 @@ const ConfirmSaleWithPaymentModal = ({
                     <span className="text-gray-600">Total Venta:</span>
                     <span className="font-semibold text-gray-900">${saleTotal.toLocaleString('es-CO')}</span>
                   </div>
+                  {advanceTotal > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Cubierto con anticipo:</span>
+                      <span className="font-semibold text-teal-700">-${advanceTotal.toLocaleString('es-CO')}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between">
                     <span className="text-gray-600">Monto a cobrar hoy:</span>
                     <span className="font-bold text-green-600 text-base">
@@ -476,7 +632,7 @@ const ConfirmSaleWithPaymentModal = ({
                     <div className="flex justify-between pt-2 border-t border-blue-300">
                       <span className="text-gray-600">Saldo a crédito:</span>
                       <span className="font-bold text-orange-600 text-base">
-                        ${(paymentType === 'credit' ? saleTotal : pendingAmount).toLocaleString('es-CO')}
+                        ${(paymentType === 'credit' ? effectiveTotal : pendingAmount).toLocaleString('es-CO')}
                       </span>
                     </div>
                   )}
@@ -500,6 +656,8 @@ const ConfirmSaleWithPaymentModal = ({
                   Esta venta se registrará como <strong>pendiente de pago</strong>. El saldo completo queda en cartera.
                 </div>
               )}
+              </>
+              )}
             </div>
 
             {/* Footer */}
@@ -511,8 +669,9 @@ const ConfirmSaleWithPaymentModal = ({
               <button type="submit"
                 disabled={
                   loading ||
-                  (paymentType === 'mixed' && !mixedValid) ||
-                  (paymentType !== 'mixed' && isCash && cashReceived !== '' && !cashChangePositive)
+                  advanceOverBalance ||
+                  (!advanceCoversAll && paymentType === 'mixed' && !mixedValid) ||
+                  (!advanceCoversAll && paymentType !== 'mixed' && isCash && cashReceived !== '' && !cashChangePositive)
                 }
                 className="w-full sm:w-auto inline-flex justify-center rounded-lg px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-base font-medium text-white hover:from-indigo-700 hover:to-purple-700 disabled:opacity-50 shadow-sm transition-all">
                 {loading ? (
