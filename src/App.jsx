@@ -7,41 +7,41 @@ import WorkOrderPublicPage from './pages/workshop/WorkOrderPublicPage';
 import SeguimientoPublicoPage from './pages/ensambladora/SeguimientoPublicoPage';
 import QuotePublicPage from './pages/sales/QuotePublicPage';
 import Loading from './components/common/Loading';
-import DashboardPage from './pages/dashboard/DashboardPage';
-import ProductsPage from './pages/products/ProductsPage';
-import ProductDetailPage from './pages/products/ProductDetailPage';
-import CategoriesPage from './pages/categories/CategoriesPage';
-import SuppliersPage from './pages/suppliers/SuppliersPage';
-import PurchasesPage from './pages/purchases/PurchasesPage';
-import PurchaseFormPage from './pages/purchases/PurchaseFormPage';
-import PurchaseDetailPage from './pages/purchases/PurchaseDetailPage';
-import AdjustmentsPage from './pages/adjustments/AdjustmentsPage';
-import AdjustmentFormPage from './pages/adjustments/AdjustmentFormPage';
-import AdjustmentDetailPage from './pages/adjustments/AdjustmentDetailPage';
-import MovementsPage from './pages/movements/MovementsPage';
-import StockAlertsPage from './pages/stock-alerts/StockAlertsPage';
-import PayableAlertsPage from './pages/payable-alerts/PayableAlertsPage';
-import UsersPage from './pages/users/UsersPage';
-import UserForm from './pages/users/UserForm';
-import SalesPage from './pages/sales/SalesPage';
-import QuotesPage from './pages/sales/QuotesPage';
-import SaleFormPage from './pages/sales/SaleFormPage';
-import SaleDetailPage from './pages/sales/SaleDetailPage';
-import AccountsReceivablePage from './pages/sales/AccountsReceivablePage';
-import CustomerAdvancesPage from './pages/finance/CustomerAdvancesPage';
-import CustomerAdvanceAlertsPage from './pages/customer-advance-alerts/CustomerAdvanceAlertsPage';
-import AccountsPayablePage from './pages/finance/AccountsPayablePage';
-import ExpensesPage from './pages/finance/ExpensesPage';
-import CashFlowPage from './pages/finance/CashFlowPage';
-import CashSessionsPage from './pages/finance/CashSessionsPage';
-import ReceiptsPage from './pages/finance/ReceiptsPage';
-import ChartOfAccountsPage from './pages/accounting/ChartOfAccountsPage';
-import JournalEntriesPage from './pages/accounting/JournalEntriesPage';
-import AccountMappingsPage from './pages/accounting/AccountMappingsPage';
-import FinancialReportsPage from './pages/accounting/FinancialReportsPage';
-import FiscalPeriodsPage from './pages/accounting/FiscalPeriodsPage';
-import AccountingHealthPage from './pages/accounting/AccountingHealthPage';
-import OpeningBalancesPage from './pages/accounting/OpeningBalancesPage';
+const DashboardPage = lazy(() => import('./pages/dashboard/DashboardPage'));
+const ProductsPage = lazy(() => import('./pages/products/ProductsPage'));
+const ProductDetailPage = lazy(() => import('./pages/products/ProductDetailPage'));
+const CategoriesPage = lazy(() => import('./pages/categories/CategoriesPage'));
+const SuppliersPage = lazy(() => import('./pages/suppliers/SuppliersPage'));
+const PurchasesPage = lazy(() => import('./pages/purchases/PurchasesPage'));
+const PurchaseFormPage = lazy(() => import('./pages/purchases/PurchaseFormPage'));
+const PurchaseDetailPage = lazy(() => import('./pages/purchases/PurchaseDetailPage'));
+const AdjustmentsPage = lazy(() => import('./pages/adjustments/AdjustmentsPage'));
+const AdjustmentFormPage = lazy(() => import('./pages/adjustments/AdjustmentFormPage'));
+const AdjustmentDetailPage = lazy(() => import('./pages/adjustments/AdjustmentDetailPage'));
+const MovementsPage = lazy(() => import('./pages/movements/MovementsPage'));
+const StockAlertsPage = lazy(() => import('./pages/stock-alerts/StockAlertsPage'));
+const PayableAlertsPage = lazy(() => import('./pages/payable-alerts/PayableAlertsPage'));
+const UsersPage = lazy(() => import('./pages/users/UsersPage'));
+const UserForm = lazy(() => import('./pages/users/UserForm'));
+const SalesPage = lazy(() => import('./pages/sales/SalesPage'));
+const QuotesPage = lazy(() => import('./pages/sales/QuotesPage'));
+const SaleFormPage = lazy(() => import('./pages/sales/SaleFormPage'));
+const SaleDetailPage = lazy(() => import('./pages/sales/SaleDetailPage'));
+const AccountsReceivablePage = lazy(() => import('./pages/sales/AccountsReceivablePage'));
+const CustomerAdvancesPage = lazy(() => import('./pages/finance/CustomerAdvancesPage'));
+const CustomerAdvanceAlertsPage = lazy(() => import('./pages/customer-advance-alerts/CustomerAdvanceAlertsPage'));
+const AccountsPayablePage = lazy(() => import('./pages/finance/AccountsPayablePage'));
+const ExpensesPage = lazy(() => import('./pages/finance/ExpensesPage'));
+const CashFlowPage = lazy(() => import('./pages/finance/CashFlowPage'));
+const CashSessionsPage = lazy(() => import('./pages/finance/CashSessionsPage'));
+const ReceiptsPage = lazy(() => import('./pages/finance/ReceiptsPage'));
+const ChartOfAccountsPage = lazy(() => import('./pages/accounting/ChartOfAccountsPage'));
+const JournalEntriesPage = lazy(() => import('./pages/accounting/JournalEntriesPage'));
+const AccountMappingsPage = lazy(() => import('./pages/accounting/AccountMappingsPage'));
+const FinancialReportsPage = lazy(() => import('./pages/accounting/FinancialReportsPage'));
+const FiscalPeriodsPage = lazy(() => import('./pages/accounting/FiscalPeriodsPage'));
+const AccountingHealthPage = lazy(() => import('./pages/accounting/AccountingHealthPage'));
+const OpeningBalancesPage = lazy(() => import('./pages/accounting/OpeningBalancesPage'));
 // Lazy: son las únicas páginas dentro del alcance de la PWA "Taller" instalada
 // (offline + precache del Service Worker, ver frontend/src/pwa/sw.js). El resto
 // del módulo workshop (reportes, productividad, comisiones) sigue siendo eager.
@@ -74,83 +74,83 @@ const CotizarPage = lazy(() => import('./pages/ensambladora/CotizarPage'));
 // Fase 8 — panel de monitoreo de sincronización
 const SyncMonitorPage = lazy(() => import('./pages/ensambladora/SyncMonitorPage'));
 const AuditoriaPage = lazy(() => import('./pages/ensambladora/AuditoriaPage'));
-import TechnicianProductivityPage from './pages/workshop/productivity/TechnicianProductivityPage';
-import CommissionSettlementsPage from './pages/workshop/commissions/CommissionSettlementsPage';
-import CommissionSettlementDetailPage from './pages/workshop/commissions/CommissionSettlementDetailPage';
-import CommissionProductsReportPage from './pages/workshop/commissions/CommissionProductsReportPage';
-import DiagramPointsEditorPage from './pages/workshop/DiagramPointsEditorPage';
-import WorkshopReportPage from './pages/workshop/WorkshopReportPage';
-import AppointmentsPage from './pages/workshop/AppointmentsPage';
-import AppointmentSettingsPage from './pages/workshop/AppointmentSettingsPage';
+const TechnicianProductivityPage = lazy(() => import('./pages/workshop/productivity/TechnicianProductivityPage'));
+const CommissionSettlementsPage = lazy(() => import('./pages/workshop/commissions/CommissionSettlementsPage'));
+const CommissionSettlementDetailPage = lazy(() => import('./pages/workshop/commissions/CommissionSettlementDetailPage'));
+const CommissionProductsReportPage = lazy(() => import('./pages/workshop/commissions/CommissionProductsReportPage'));
+const DiagramPointsEditorPage = lazy(() => import('./pages/workshop/DiagramPointsEditorPage'));
+const WorkshopReportPage = lazy(() => import('./pages/workshop/WorkshopReportPage'));
+const AppointmentsPage = lazy(() => import('./pages/workshop/AppointmentsPage'));
+const AppointmentSettingsPage = lazy(() => import('./pages/workshop/AppointmentSettingsPage'));
 import PublicAppointmentPage from './pages/workshop/PublicAppointmentPage';
-import CustomersPage from './pages/customers/CustomersPage';
-import CustomerDetailPage from './pages/crm/CustomerDetailPage';
-import PipelinePage from './pages/crm/PipelinePage';
-import FollowUpsPage from './pages/crm/FollowUpsPage';
-import CrmDashboardPage from './pages/crm/CrmDashboardPage';
-import MetaIntegrationSettingsPage from './pages/crm/MetaIntegrationSettingsPage';
-import CrmSettingsPage from './pages/crm/CrmSettingsPage';
-import WarehousesPage from './pages/warehouses/WarehousesPage';
-import BranchesPage from './pages/branches/BranchesPage';
+const CustomersPage = lazy(() => import('./pages/customers/CustomersPage'));
+const CustomerDetailPage = lazy(() => import('./pages/crm/CustomerDetailPage'));
+const PipelinePage = lazy(() => import('./pages/crm/PipelinePage'));
+const FollowUpsPage = lazy(() => import('./pages/crm/FollowUpsPage'));
+const CrmDashboardPage = lazy(() => import('./pages/crm/CrmDashboardPage'));
+const MetaIntegrationSettingsPage = lazy(() => import('./pages/crm/MetaIntegrationSettingsPage'));
+const CrmSettingsPage = lazy(() => import('./pages/crm/CrmSettingsPage'));
+const WarehousesPage = lazy(() => import('./pages/warehouses/WarehousesPage'));
+const BranchesPage = lazy(() => import('./pages/branches/BranchesPage'));
 import NoBranchAssignedPage from './pages/branches/NoBranchAssignedPage';
-import TenantSettingsPage from './pages/settings/TenantSettingsPage';
-import WhatsAppSettingsPage from './pages/settings/WhatsAppSettingsPage';
-import ReportsPage from './pages/reports/ReportsPage';
-import ProfilePage from './pages/profile/ProfilePage';
-import NexaApprovalsPage from './pages/nexa/NexaApprovalsPage';
+const TenantSettingsPage = lazy(() => import('./pages/settings/TenantSettingsPage'));
+const WhatsAppSettingsPage = lazy(() => import('./pages/settings/WhatsAppSettingsPage'));
+const ReportsPage = lazy(() => import('./pages/reports/ReportsPage'));
+const ProfilePage = lazy(() => import('./pages/profile/ProfilePage'));
+const NexaApprovalsPage = lazy(() => import('./pages/nexa/NexaApprovalsPage'));
 
 // Movimientos Avanzados
-import CustomerReturnsPage from './pages/sales/CustomerReturnsPage';
-import CustomerReturnFormPage from './pages/sales/CustomerReturnFormPage';
-import CustomerReturnDetailPage from './pages/sales/CustomerReturnDetailPage';
-import SupplierReturnsPage from './pages/inventory/SupplierReturnsPage';
-import SupplierReturnFormPage from './pages/inventory/SupplierReturnFormPage';
-import SupplierReturnDetailPage from './pages/inventory/SupplierReturnDetailPage';
-import TransfersPage from './pages/inventory/TransfersPage';
-import TransferFormPage from './pages/inventory/TransferFormPage';
-import TransferReceivePage from './pages/inventory/TransferReceivePage';
-import TransferDetailPage from './pages/inventory/TransferDetailPage';
-import InternalConsumptionsPage from './pages/inventory/InternalConsumptionsPage';
-import InternalConsumptionFormPage from './pages/inventory/InternalConsumptionFormPage';
-import InternalConsumptionDetailPage from './pages/inventory/InternalConsumptionDetailPage';
+const CustomerReturnsPage = lazy(() => import('./pages/sales/CustomerReturnsPage'));
+const CustomerReturnFormPage = lazy(() => import('./pages/sales/CustomerReturnFormPage'));
+const CustomerReturnDetailPage = lazy(() => import('./pages/sales/CustomerReturnDetailPage'));
+const SupplierReturnsPage = lazy(() => import('./pages/inventory/SupplierReturnsPage'));
+const SupplierReturnFormPage = lazy(() => import('./pages/inventory/SupplierReturnFormPage'));
+const SupplierReturnDetailPage = lazy(() => import('./pages/inventory/SupplierReturnDetailPage'));
+const TransfersPage = lazy(() => import('./pages/inventory/TransfersPage'));
+const TransferFormPage = lazy(() => import('./pages/inventory/TransferFormPage'));
+const TransferReceivePage = lazy(() => import('./pages/inventory/TransferReceivePage'));
+const TransferDetailPage = lazy(() => import('./pages/inventory/TransferDetailPage'));
+const InternalConsumptionsPage = lazy(() => import('./pages/inventory/InternalConsumptionsPage'));
+const InternalConsumptionFormPage = lazy(() => import('./pages/inventory/InternalConsumptionFormPage'));
+const InternalConsumptionDetailPage = lazy(() => import('./pages/inventory/InternalConsumptionDetailPage'));
 
 // Super Admin
 import SuperAdminLayout from './components/layout/SuperAdminLayout';
-import SuperAdminDashboard from './pages/superadmin/Dashboard';
-import TenantsList from './pages/superadmin/TenantsList';
-import TenantForm from './pages/superadmin/TenantForm';
-import TenantDetail from './pages/superadmin/TenantDetail';
-import TenantUsers from './pages/superadmin/TenantUsers';
-import Analytics from './pages/superadmin/Analytics';
-import RolePermissionsPage from './pages/superadmin/RolePermissionsPage';
-import SubscriptionPlansManagement from './pages/superadmin/SubscriptionPlansManagement';
-import SuperAdminSubscriptionsList from './pages/superadmin/SuperAdminSubscriptionsList';
-import SubscriptionInvoicesManagement from './pages/superadmin/SubscriptionInvoicesManagement';
-import SubscriptionManagement from './pages/superadmin/SubscriptionManagement';
-import SuperAdminMercadoPagoConfig from './pages/superadmin/SuperAdminMercadoPagoConfig';
-import SuperAdminNcfConfig from './pages/superadmin/SuperAdminNcfConfig';
-import SuperAdminMetaConfig from './pages/superadmin/SuperAdminMetaConfig';
-import SuperAdminEnsambladoraConfig from './pages/superadmin/SuperAdminEnsambladoraConfig';
-import TenantMigrationStatus from './pages/superadmin/TenantMigrationStatus';
-import AnnouncementsManagement from './pages/superadmin/AnnouncementsManagement';
+const SuperAdminDashboard = lazy(() => import('./pages/superadmin/Dashboard'));
+const TenantsList = lazy(() => import('./pages/superadmin/TenantsList'));
+const TenantForm = lazy(() => import('./pages/superadmin/TenantForm'));
+const TenantDetail = lazy(() => import('./pages/superadmin/TenantDetail'));
+const TenantUsers = lazy(() => import('./pages/superadmin/TenantUsers'));
+const Analytics = lazy(() => import('./pages/superadmin/Analytics'));
+const RolePermissionsPage = lazy(() => import('./pages/superadmin/RolePermissionsPage'));
+const SubscriptionPlansManagement = lazy(() => import('./pages/superadmin/SubscriptionPlansManagement'));
+const SuperAdminSubscriptionsList = lazy(() => import('./pages/superadmin/SuperAdminSubscriptionsList'));
+const SubscriptionInvoicesManagement = lazy(() => import('./pages/superadmin/SubscriptionInvoicesManagement'));
+const SubscriptionManagement = lazy(() => import('./pages/superadmin/SubscriptionManagement'));
+const SuperAdminMercadoPagoConfig = lazy(() => import('./pages/superadmin/SuperAdminMercadoPagoConfig'));
+const SuperAdminNcfConfig = lazy(() => import('./pages/superadmin/SuperAdminNcfConfig'));
+const SuperAdminMetaConfig = lazy(() => import('./pages/superadmin/SuperAdminMetaConfig'));
+const SuperAdminEnsambladoraConfig = lazy(() => import('./pages/superadmin/SuperAdminEnsambladoraConfig'));
+const TenantMigrationStatus = lazy(() => import('./pages/superadmin/TenantMigrationStatus'));
+const AnnouncementsManagement = lazy(() => import('./pages/superadmin/AnnouncementsManagement'));
 import AnnouncementsModal from './components/common/AnnouncementsModal';
 
 // ✅ DIAN — Facturación Electrónica
-import DianConfigPage from './pages/dian/DianConfigPage';
-import DianEventsPage from './pages/dian/DianEventsPage';
+const DianConfigPage = lazy(() => import('./pages/dian/DianConfigPage'));
+const DianEventsPage = lazy(() => import('./pages/dian/DianEventsPage'));
 
 // Soporte — Cliente
-import SupportFAQ from './pages/support/SupportFAQ';
-import MyTickets from './pages/support/MyTickets';
-import TicketDetail from './pages/support/TicketDetail';
-import CreateTicket from './pages/support/CreateTicket';
+const SupportFAQ = lazy(() => import('./pages/support/SupportFAQ'));
+const MyTickets = lazy(() => import('./pages/support/MyTickets'));
+const TicketDetail = lazy(() => import('./pages/support/TicketDetail'));
+const CreateTicket = lazy(() => import('./pages/support/CreateTicket'));
 
 // Soporte — SuperAdmin
-import SupportInbox from './pages/superadmin/support/SupportInbox';
-import SupportTicketDetail from './pages/superadmin/support/SupportTicketDetail';
-import FaqManagement from './pages/superadmin/support/FaqManagement';
-import SupportAnalytics from './pages/superadmin/support/SupportAnalytics';
-import RemoteSessionsHistory from './pages/superadmin/support/RemoteSessionsHistory';
+const SupportInbox = lazy(() => import('./pages/superadmin/support/SupportInbox'));
+const SupportTicketDetail = lazy(() => import('./pages/superadmin/support/SupportTicketDetail'));
+const FaqManagement = lazy(() => import('./pages/superadmin/support/FaqManagement'));
+const SupportAnalytics = lazy(() => import('./pages/superadmin/support/SupportAnalytics'));
+const RemoteSessionsHistory = lazy(() => import('./pages/superadmin/support/RemoteSessionsHistory'));
 
 // Auth / Session
 import SessionMonitor from './components/auth/SessionMonitor';
@@ -262,25 +262,25 @@ function App() {
           element={<SuperAdminRoute><SuperAdminLayout /></SuperAdminRoute>}
         >
           <Route index element={<Navigate to="/superadmin/dashboard" replace />} />
-          <Route path="dashboard"           element={<SuperAdminDashboard />} />
-          <Route path="tenants"             element={<TenantsList />} />
-          <Route path="tenants/new"         element={<TenantForm />} />
-          <Route path="tenants/:id"         element={<TenantDetail />} />
-          <Route path="tenants/:id/edit"    element={<TenantForm />} />
-          <Route path="tenants/:id/users"   element={<TenantUsers />} />
-          <Route path="tenants/:id/subscription" element={<SubscriptionManagement />} />
-          <Route path="subscription-plans"  element={<SubscriptionPlansManagement />} />
-          <Route path="subscriptions"       element={<SuperAdminSubscriptionsList />} />
-          <Route path="subscriptions/:id"   element={<SubscriptionManagement />} />
-          <Route path="subscription-invoices" element={<SubscriptionInvoicesManagement />} />
-          <Route path="mercadopago-config"  element={<SuperAdminMercadoPagoConfig />} />
-          <Route path="ncf-config"          element={<SuperAdminNcfConfig />} />
-          <Route path="meta-config"         element={<SuperAdminMetaConfig />} />
-          <Route path="ensambladora-config" element={<SuperAdminEnsambladoraConfig />} />
-          <Route path="tenant-migration"    element={<TenantMigrationStatus />} />
-          <Route path="announcements"       element={<AnnouncementsManagement />} />
-          <Route path="analytics"           element={<Analytics />} />
-          <Route path="permissions"         element={<RolePermissionsPage />} />
+          <Route path="dashboard"           element={<Suspense fallback={<Loading fullScreen />}><SuperAdminDashboard /></Suspense>} />
+          <Route path="tenants"             element={<Suspense fallback={<Loading fullScreen />}><TenantsList /></Suspense>} />
+          <Route path="tenants/new"         element={<Suspense fallback={<Loading fullScreen />}><TenantForm /></Suspense>} />
+          <Route path="tenants/:id"         element={<Suspense fallback={<Loading fullScreen />}><TenantDetail /></Suspense>} />
+          <Route path="tenants/:id/edit"    element={<Suspense fallback={<Loading fullScreen />}><TenantForm /></Suspense>} />
+          <Route path="tenants/:id/users"   element={<Suspense fallback={<Loading fullScreen />}><TenantUsers /></Suspense>} />
+          <Route path="tenants/:id/subscription" element={<Suspense fallback={<Loading fullScreen />}><SubscriptionManagement /></Suspense>} />
+          <Route path="subscription-plans"  element={<Suspense fallback={<Loading fullScreen />}><SubscriptionPlansManagement /></Suspense>} />
+          <Route path="subscriptions"       element={<Suspense fallback={<Loading fullScreen />}><SuperAdminSubscriptionsList /></Suspense>} />
+          <Route path="subscriptions/:id"   element={<Suspense fallback={<Loading fullScreen />}><SubscriptionManagement /></Suspense>} />
+          <Route path="subscription-invoices" element={<Suspense fallback={<Loading fullScreen />}><SubscriptionInvoicesManagement /></Suspense>} />
+          <Route path="mercadopago-config"  element={<Suspense fallback={<Loading fullScreen />}><SuperAdminMercadoPagoConfig /></Suspense>} />
+          <Route path="ncf-config"          element={<Suspense fallback={<Loading fullScreen />}><SuperAdminNcfConfig /></Suspense>} />
+          <Route path="meta-config"         element={<Suspense fallback={<Loading fullScreen />}><SuperAdminMetaConfig /></Suspense>} />
+          <Route path="ensambladora-config" element={<Suspense fallback={<Loading fullScreen />}><SuperAdminEnsambladoraConfig /></Suspense>} />
+          <Route path="tenant-migration"    element={<Suspense fallback={<Loading fullScreen />}><TenantMigrationStatus /></Suspense>} />
+          <Route path="announcements"       element={<Suspense fallback={<Loading fullScreen />}><AnnouncementsManagement /></Suspense>} />
+          <Route path="analytics"           element={<Suspense fallback={<Loading fullScreen />}><Analytics /></Suspense>} />
+          <Route path="permissions"         element={<Suspense fallback={<Loading fullScreen />}><RolePermissionsPage /></Suspense>} />
         </Route>
 
         {/* Soporte SuperAdmin — accesible para super_admin y support */}
@@ -288,68 +288,68 @@ function App() {
           path="/superadmin"
           element={<SuperAdminRoute roles={[ROLES.SUPER_ADMIN, ROLES.SUPPORT]}><SuperAdminLayout /></SuperAdminRoute>}
         >
-          <Route path="support/tickets"     element={<SupportInbox />} />
-          <Route path="support/tickets/:id" element={<SupportTicketDetail />} />
-          <Route path="support/faq"         element={<FaqManagement />} />
-          <Route path="support/stats"       element={<SupportAnalytics />} />
-          <Route path="support/remote-sessions" element={<RemoteSessionsHistory />} />
+          <Route path="support/tickets"     element={<Suspense fallback={<Loading fullScreen />}><SupportInbox /></Suspense>} />
+          <Route path="support/tickets/:id" element={<Suspense fallback={<Loading fullScreen />}><SupportTicketDetail /></Suspense>} />
+          <Route path="support/faq"         element={<Suspense fallback={<Loading fullScreen />}><FaqManagement /></Suspense>} />
+          <Route path="support/stats"       element={<Suspense fallback={<Loading fullScreen />}><SupportAnalytics /></Suspense>} />
+          <Route path="support/remote-sessions" element={<Suspense fallback={<Loading fullScreen />}><RemoteSessionsHistory /></Suspense>} />
         </Route>
 
         {/* ─── Tenant ──────────────────────────────────────── */}
-        <Route path="dashboard"  element={<TenantRoute><DashboardPage /></TenantRoute>} />
-        <Route path="products/:id" element={<TenantRoute module="inventory"><ProductDetailPage /></TenantRoute>} />
-        <Route path="products"   element={<TenantRoute module="inventory"><ProductsPage /></TenantRoute>} />
-        <Route path="categories" element={<TenantRoute module="inventory"><CategoriesPage /></TenantRoute>} />
-        <Route path="suppliers"  element={<TenantRoute module="inventory"><SuppliersPage /></TenantRoute>} />
+        <Route path="dashboard"  element={<TenantRoute><Suspense fallback={<Loading fullScreen />}><DashboardPage /></Suspense></TenantRoute>} />
+        <Route path="products/:id" element={<TenantRoute module="inventory"><Suspense fallback={<Loading fullScreen />}><ProductDetailPage /></Suspense></TenantRoute>} />
+        <Route path="products"   element={<TenantRoute module="inventory"><Suspense fallback={<Loading fullScreen />}><ProductsPage /></Suspense></TenantRoute>} />
+        <Route path="categories" element={<TenantRoute module="inventory"><Suspense fallback={<Loading fullScreen />}><CategoriesPage /></Suspense></TenantRoute>} />
+        <Route path="suppliers"  element={<TenantRoute module="inventory"><Suspense fallback={<Loading fullScreen />}><SuppliersPage /></Suspense></TenantRoute>} />
 
         {/* Compras */}
-        <Route path="purchases"          element={<TenantRoute module="inventory"><PurchasesPage /></TenantRoute>} />
-        <Route path="purchases/new"      element={<TenantRoute module="inventory"><PurchaseFormPage /></TenantRoute>} />
-        <Route path="purchases/edit/:id" element={<TenantRoute module="inventory"><PurchaseFormPage /></TenantRoute>} />
-        <Route path="purchases/:id"      element={<TenantRoute module="inventory"><PurchaseDetailPage /></TenantRoute>} />
+        <Route path="purchases"          element={<TenantRoute module="inventory"><Suspense fallback={<Loading fullScreen />}><PurchasesPage /></Suspense></TenantRoute>} />
+        <Route path="purchases/new"      element={<TenantRoute module="inventory"><Suspense fallback={<Loading fullScreen />}><PurchaseFormPage /></Suspense></TenantRoute>} />
+        <Route path="purchases/edit/:id" element={<TenantRoute module="inventory"><Suspense fallback={<Loading fullScreen />}><PurchaseFormPage /></Suspense></TenantRoute>} />
+        <Route path="purchases/:id"      element={<TenantRoute module="inventory"><Suspense fallback={<Loading fullScreen />}><PurchaseDetailPage /></Suspense></TenantRoute>} />
 
         {/* Ajustes */}
-        <Route path="adjustments"          element={<TenantRoute module="inventory"><AdjustmentsPage /></TenantRoute>} />
-        <Route path="adjustments/new"      element={<TenantRoute module="inventory"><AdjustmentFormPage /></TenantRoute>} />
-        <Route path="adjustments/edit/:id" element={<TenantRoute module="inventory"><AdjustmentFormPage /></TenantRoute>} />
-        <Route path="adjustments/:id"      element={<TenantRoute module="inventory"><AdjustmentDetailPage /></TenantRoute>} />
+        <Route path="adjustments"          element={<TenantRoute module="inventory"><Suspense fallback={<Loading fullScreen />}><AdjustmentsPage /></Suspense></TenantRoute>} />
+        <Route path="adjustments/new"      element={<TenantRoute module="inventory"><Suspense fallback={<Loading fullScreen />}><AdjustmentFormPage /></Suspense></TenantRoute>} />
+        <Route path="adjustments/edit/:id" element={<TenantRoute module="inventory"><Suspense fallback={<Loading fullScreen />}><AdjustmentFormPage /></Suspense></TenantRoute>} />
+        <Route path="adjustments/:id"      element={<TenantRoute module="inventory"><Suspense fallback={<Loading fullScreen />}><AdjustmentDetailPage /></Suspense></TenantRoute>} />
 
-        <Route path="movements"   element={<TenantRoute module="inventory"><MovementsPage /></TenantRoute>} />
-        <Route path="stock-alerts" element={<TenantRoute module="inventory"><StockAlertsPage /></TenantRoute>} />
+        <Route path="movements"   element={<TenantRoute module="inventory"><Suspense fallback={<Loading fullScreen />}><MovementsPage /></Suspense></TenantRoute>} />
+        <Route path="stock-alerts" element={<TenantRoute module="inventory"><Suspense fallback={<Loading fullScreen />}><StockAlertsPage /></Suspense></TenantRoute>} />
 
         {/* ── Ventas ─────────────────────────────────── */}
-        <Route path="sales"          element={<TenantRoute module="sales"><SalesPage /></TenantRoute>} />
-        <Route path="sales/new"      element={<TenantRoute module="sales"><SaleFormPage /></TenantRoute>} />
-        <Route path="sales/:id/edit" element={<TenantRoute module="sales"><SaleFormPage /></TenantRoute>} />
-        <Route path="accounts-receivable" element={<TenantRoute module="receivables"><AccountsReceivablePage /></TenantRoute>} />
-        <Route path="customer-advances" element={<TenantRoute module="receivables"><CustomerAdvancesPage /></TenantRoute>} />
-        <Route path="customer-advance-alerts" element={<TenantRoute module="receivables"><CustomerAdvanceAlertsPage /></TenantRoute>} />
+        <Route path="sales"          element={<TenantRoute module="sales"><Suspense fallback={<Loading fullScreen />}><SalesPage /></Suspense></TenantRoute>} />
+        <Route path="sales/new"      element={<TenantRoute module="sales"><Suspense fallback={<Loading fullScreen />}><SaleFormPage /></Suspense></TenantRoute>} />
+        <Route path="sales/:id/edit" element={<TenantRoute module="sales"><Suspense fallback={<Loading fullScreen />}><SaleFormPage /></Suspense></TenantRoute>} />
+        <Route path="accounts-receivable" element={<TenantRoute module="receivables"><Suspense fallback={<Loading fullScreen />}><AccountsReceivablePage /></Suspense></TenantRoute>} />
+        <Route path="customer-advances" element={<TenantRoute module="receivables"><Suspense fallback={<Loading fullScreen />}><CustomerAdvancesPage /></Suspense></TenantRoute>} />
+        <Route path="customer-advance-alerts" element={<TenantRoute module="receivables"><Suspense fallback={<Loading fullScreen />}><CustomerAdvanceAlertsPage /></Suspense></TenantRoute>} />
 
         {/* ── Cotizaciones — sección independiente de Ventas ─────────── */}
-        <Route path="quotes" element={<TenantRoute module={["sales", "workshop", "crm"]}><QuotesPage /></TenantRoute>} />
+        <Route path="quotes" element={<TenantRoute module={["sales", "workshop", "crm"]}><Suspense fallback={<Loading fullScreen />}><QuotesPage /></Suspense></TenantRoute>} />
 
         {/* ── Tesorería ──────────────────────────────── */}
-        <Route path="accounts-payable" element={<TenantRoute module="treasury"><AccountsPayablePage /></TenantRoute>} />
-        <Route path="payable-alerts"   element={<TenantRoute module="treasury"><PayableAlertsPage /></TenantRoute>} />
-        <Route path="expenses"         element={<TenantRoute module="treasury"><ExpensesPage /></TenantRoute>} />
-        <Route path="cashflow"         element={<TenantRoute module="treasury"><CashFlowPage /></TenantRoute>} />
-        <Route path="accounting/chart-of-accounts" element={<TenantRoute module="accounting" roles={['admin', 'manager']}><ChartOfAccountsPage /></TenantRoute>} />
-        <Route path="accounting/journal-entries"   element={<TenantRoute module="accounting" roles={['admin', 'manager']}><JournalEntriesPage /></TenantRoute>} />
-        <Route path="accounting/account-mappings"  element={<TenantRoute module="accounting" roles={['admin', 'manager']}><AccountMappingsPage /></TenantRoute>} />
-        <Route path="accounting/reports"           element={<TenantRoute module="accounting" roles={['admin', 'manager']}><FinancialReportsPage /></TenantRoute>} />
-        <Route path="accounting/fiscal-periods"    element={<TenantRoute module="accounting" roles={['admin', 'manager']}><FiscalPeriodsPage /></TenantRoute>} />
-        <Route path="accounting/health"            element={<TenantRoute module="accounting" roles={['admin', 'manager']}><AccountingHealthPage /></TenantRoute>} />
-        <Route path="accounting/opening-balances"  element={<TenantRoute module="accounting" roles={['admin', 'manager']}><OpeningBalancesPage /></TenantRoute>} />
-        <Route path="cash-sessions"    element={<TenantRoute module="treasury"><CashSessionsPage /></TenantRoute>} />
-        <Route path="receipts"         element={<TenantRoute module="treasury"><ReceiptsPage /></TenantRoute>} />
+        <Route path="accounts-payable" element={<TenantRoute module="treasury"><Suspense fallback={<Loading fullScreen />}><AccountsPayablePage /></Suspense></TenantRoute>} />
+        <Route path="payable-alerts"   element={<TenantRoute module="treasury"><Suspense fallback={<Loading fullScreen />}><PayableAlertsPage /></Suspense></TenantRoute>} />
+        <Route path="expenses"         element={<TenantRoute module="treasury"><Suspense fallback={<Loading fullScreen />}><ExpensesPage /></Suspense></TenantRoute>} />
+        <Route path="cashflow"         element={<TenantRoute module="treasury"><Suspense fallback={<Loading fullScreen />}><CashFlowPage /></Suspense></TenantRoute>} />
+        <Route path="accounting/chart-of-accounts" element={<TenantRoute module="accounting" roles={['admin', 'manager']}><Suspense fallback={<Loading fullScreen />}><ChartOfAccountsPage /></Suspense></TenantRoute>} />
+        <Route path="accounting/journal-entries"   element={<TenantRoute module="accounting" roles={['admin', 'manager']}><Suspense fallback={<Loading fullScreen />}><JournalEntriesPage /></Suspense></TenantRoute>} />
+        <Route path="accounting/account-mappings"  element={<TenantRoute module="accounting" roles={['admin', 'manager']}><Suspense fallback={<Loading fullScreen />}><AccountMappingsPage /></Suspense></TenantRoute>} />
+        <Route path="accounting/reports"           element={<TenantRoute module="accounting" roles={['admin', 'manager']}><Suspense fallback={<Loading fullScreen />}><FinancialReportsPage /></Suspense></TenantRoute>} />
+        <Route path="accounting/fiscal-periods"    element={<TenantRoute module="accounting" roles={['admin', 'manager']}><Suspense fallback={<Loading fullScreen />}><FiscalPeriodsPage /></Suspense></TenantRoute>} />
+        <Route path="accounting/health"            element={<TenantRoute module="accounting" roles={['admin', 'manager']}><Suspense fallback={<Loading fullScreen />}><AccountingHealthPage /></Suspense></TenantRoute>} />
+        <Route path="accounting/opening-balances"  element={<TenantRoute module="accounting" roles={['admin', 'manager']}><Suspense fallback={<Loading fullScreen />}><OpeningBalancesPage /></Suspense></TenantRoute>} />
+        <Route path="cash-sessions"    element={<TenantRoute module="treasury"><Suspense fallback={<Loading fullScreen />}><CashSessionsPage /></Suspense></TenantRoute>} />
+        <Route path="receipts"         element={<TenantRoute module="treasury"><Suspense fallback={<Loading fullScreen />}><ReceiptsPage /></Suspense></TenantRoute>} />
 
         {/* ── Taller ─────────────────────────────────── */}
         {/* Lazy + Suspense: estas 6 rutas son el alcance completo de la PWA
             "Taller" instalada (mobile-only, con offline). Ver frontend/src/pwa/. */}
         <Route path="workshop/work-orders"             element={<TenantRoute module="workshop"><Suspense fallback={<Loading fullScreen />}><WorkOrdersPage /></Suspense></TenantRoute>} />
-        <Route path="workshop/report"                  element={<TenantRoute module="workshop"><WorkshopReportPage /></TenantRoute>} />
-        <Route path="workshop/appointments"            element={<TenantRoute module="workshop"><AppointmentsPage /></TenantRoute>} />
-        <Route path="workshop/appointments/settings"   element={<TenantRoute module="workshop" roles={['admin', 'manager']}><AppointmentSettingsPage /></TenantRoute>} />
+        <Route path="workshop/report"                  element={<TenantRoute module="workshop"><Suspense fallback={<Loading fullScreen />}><WorkshopReportPage /></Suspense></TenantRoute>} />
+        <Route path="workshop/appointments"            element={<TenantRoute module="workshop"><Suspense fallback={<Loading fullScreen />}><AppointmentsPage /></Suspense></TenantRoute>} />
+        <Route path="workshop/appointments/settings"   element={<TenantRoute module="workshop" roles={['admin', 'manager']}><Suspense fallback={<Loading fullScreen />}><AppointmentSettingsPage /></Suspense></TenantRoute>} />
         <Route path="workshop/work-orders/new"         element={<TenantRoute module="workshop"><Suspense fallback={<Loading fullScreen />}><WorkOrderFormPage /></Suspense></TenantRoute>} />
         <Route path="workshop/work-orders/:id"         element={<TenantRoute module="workshop"><Suspense fallback={<Loading fullScreen />}><WorkOrderDetailPage /></Suspense></TenantRoute>} />
         <Route path="workshop/vehicles"                element={<TenantRoute module="workshop"><Suspense fallback={<Loading fullScreen />}><VehiclesPage /></Suspense></TenantRoute>} />
@@ -371,69 +371,69 @@ function App() {
         <Route path="ensambladora/cotizar"                      element={<TenantRoute module="ensambladora"><Suspense fallback={<Loading fullScreen />}><CotizarPage /></Suspense></TenantRoute>} />
         <Route path="ensambladora/sync"                         element={<TenantRoute module="ensambladora"><Suspense fallback={<Loading fullScreen />}><SyncMonitorPage /></Suspense></TenantRoute>} />
         <Route path="ensambladora/auditoria"                    element={<TenantRoute module="ensambladora"><Suspense fallback={<Loading fullScreen />}><AuditoriaPage /></Suspense></TenantRoute>} />
-        <Route path="workshop/productivity"            element={<TenantRoute module="workshop"><TechnicianProductivityPage /></TenantRoute>} />
-        <Route path="workshop/commission-settlements"  element={<TenantRoute module="workshop"><CommissionSettlementsPage /></TenantRoute>} />
-        <Route path="workshop/commission-settlements/:id" element={<TenantRoute module="workshop"><CommissionSettlementDetailPage /></TenantRoute>} />
-        <Route path="workshop/commission-products"     element={<TenantRoute module="workshop"><CommissionProductsReportPage /></TenantRoute>} />
-        <Route path="workshop/diagram-points-editor"   element={<TenantRoute module="workshop"><DiagramPointsEditorPage /></TenantRoute>} />
+        <Route path="workshop/productivity"            element={<TenantRoute module="workshop"><Suspense fallback={<Loading fullScreen />}><TechnicianProductivityPage /></Suspense></TenantRoute>} />
+        <Route path="workshop/commission-settlements"  element={<TenantRoute module="workshop"><Suspense fallback={<Loading fullScreen />}><CommissionSettlementsPage /></Suspense></TenantRoute>} />
+        <Route path="workshop/commission-settlements/:id" element={<TenantRoute module="workshop"><Suspense fallback={<Loading fullScreen />}><CommissionSettlementDetailPage /></Suspense></TenantRoute>} />
+        <Route path="workshop/commission-products"     element={<TenantRoute module="workshop"><Suspense fallback={<Loading fullScreen />}><CommissionProductsReportPage /></Suspense></TenantRoute>} />
+        <Route path="workshop/diagram-points-editor"   element={<TenantRoute module="workshop"><Suspense fallback={<Loading fullScreen />}><DiagramPointsEditorPage /></Suspense></TenantRoute>} />
 
         {/* Customer Returns — ANTES de la ruta dinámica :id */}
-        <Route path="sales/customer-returns"      element={<TenantRoute module="receivables"><CustomerReturnsPage /></TenantRoute>} />
-        <Route path="sales/customer-returns/new"  element={<TenantRoute module="receivables"><CustomerReturnFormPage /></TenantRoute>} />
-        <Route path="sales/customer-returns/:id"  element={<TenantRoute module="receivables"><CustomerReturnDetailPage /></TenantRoute>} />
+        <Route path="sales/customer-returns"      element={<TenantRoute module="receivables"><Suspense fallback={<Loading fullScreen />}><CustomerReturnsPage /></Suspense></TenantRoute>} />
+        <Route path="sales/customer-returns/new"  element={<TenantRoute module="receivables"><Suspense fallback={<Loading fullScreen />}><CustomerReturnFormPage /></Suspense></TenantRoute>} />
+        <Route path="sales/customer-returns/:id"  element={<TenantRoute module="receivables"><Suspense fallback={<Loading fullScreen />}><CustomerReturnDetailPage /></Suspense></TenantRoute>} />
 
         {/* Sale Detail — después de las rutas específicas */}
-        <Route path="sales/:id" element={<TenantRoute module="sales"><SaleDetailPage /></TenantRoute>} />
+        <Route path="sales/:id" element={<TenantRoute module="sales"><Suspense fallback={<Loading fullScreen />}><SaleDetailPage /></Suspense></TenantRoute>} />
 
         {/* Clientes */}
-        <Route path="customers"     element={<TenantRoute module="sales"><CustomersPage /></TenantRoute>} />
-        <Route path="customers/:id" element={<TenantRoute module="sales"><CustomerDetailPage /></TenantRoute>} />
+        <Route path="customers"     element={<TenantRoute module="sales"><Suspense fallback={<Loading fullScreen />}><CustomersPage /></Suspense></TenantRoute>} />
+        <Route path="customers/:id" element={<TenantRoute module="sales"><Suspense fallback={<Loading fullScreen />}><CustomerDetailPage /></Suspense></TenantRoute>} />
 
         {/* CRM — pipeline, seguimiento y dashboard */}
         {/* Cotizar es un formulario propio del CRM, no una opción dentro de
             Ventas (ver SaleFormPage: isCrmQuoteMode) -- reusa el mismo
             componente que /sales/new para no duplicar ~800 líneas. */}
-        <Route path="crm/quotes/new" element={<TenantRoute module={["sales", "workshop", "crm"]}><SaleFormPage /></TenantRoute>} />
-        <Route path="crm/pipeline"  element={<TenantRoute module="crm"><PipelinePage /></TenantRoute>} />
-        <Route path="crm/followups" element={<TenantRoute module="crm"><FollowUpsPage /></TenantRoute>} />
-        <Route path="crm/dashboard" element={<TenantRoute module="crm"><CrmDashboardPage /></TenantRoute>} />
-        <Route path="crm/settings/meta" element={<TenantRoute module="crm_meta_leads"><MetaIntegrationSettingsPage /></TenantRoute>} />
-        <Route path="crm/settings" element={<TenantRoute module="crm"><CrmSettingsPage /></TenantRoute>} />
+        <Route path="crm/quotes/new" element={<TenantRoute module={["sales", "workshop", "crm"]}><Suspense fallback={<Loading fullScreen />}><SaleFormPage /></Suspense></TenantRoute>} />
+        <Route path="crm/pipeline"  element={<TenantRoute module="crm"><Suspense fallback={<Loading fullScreen />}><PipelinePage /></Suspense></TenantRoute>} />
+        <Route path="crm/followups" element={<TenantRoute module="crm"><Suspense fallback={<Loading fullScreen />}><FollowUpsPage /></Suspense></TenantRoute>} />
+        <Route path="crm/dashboard" element={<TenantRoute module="crm"><Suspense fallback={<Loading fullScreen />}><CrmDashboardPage /></Suspense></TenantRoute>} />
+        <Route path="crm/settings/meta" element={<TenantRoute module="crm_meta_leads"><Suspense fallback={<Loading fullScreen />}><MetaIntegrationSettingsPage /></Suspense></TenantRoute>} />
+        <Route path="crm/settings" element={<TenantRoute module="crm"><Suspense fallback={<Loading fullScreen />}><CrmSettingsPage /></Suspense></TenantRoute>} />
 
         {/* ── Inventario – Movimientos Avanzados ────── */}
-        <Route path="inventory/supplier-returns"        element={<TenantRoute module="receivables"><SupplierReturnsPage /></TenantRoute>} />
-        <Route path="inventory/supplier-returns/new"    element={<TenantRoute module="receivables"><SupplierReturnFormPage /></TenantRoute>} />
-        <Route path="inventory/supplier-returns/:id"    element={<TenantRoute module="receivables"><SupplierReturnDetailPage /></TenantRoute>} />
-        <Route path="inventory/transfers"              element={<TenantRoute module="inventory"><TransfersPage /></TenantRoute>} />
-        <Route path="inventory/transfers/new"          element={<TenantRoute module="inventory"><TransferFormPage /></TenantRoute>} />
-        <Route path="inventory/transfers/:id/receive"  element={<TenantRoute module="inventory"><TransferReceivePage /></TenantRoute>} />
-        <Route path="inventory/transfers/:id"          element={<TenantRoute module="inventory"><TransferDetailPage /></TenantRoute>} />
-        <Route path="inventory/internal-consumptions"      element={<TenantRoute module="inventory"><InternalConsumptionsPage /></TenantRoute>} />
-        <Route path="inventory/internal-consumptions/new"  element={<TenantRoute module="inventory"><InternalConsumptionFormPage /></TenantRoute>} />
-        <Route path="inventory/internal-consumptions/:id"  element={<TenantRoute module="inventory"><InternalConsumptionDetailPage /></TenantRoute>} />
-        <Route path="warehouses" element={<TenantRoute module="inventory"><WarehousesPage /></TenantRoute>} />
-        <Route path="branches"   element={<TenantRoute module="inventory"><BranchesPage /></TenantRoute>} />
+        <Route path="inventory/supplier-returns"        element={<TenantRoute module="receivables"><Suspense fallback={<Loading fullScreen />}><SupplierReturnsPage /></Suspense></TenantRoute>} />
+        <Route path="inventory/supplier-returns/new"    element={<TenantRoute module="receivables"><Suspense fallback={<Loading fullScreen />}><SupplierReturnFormPage /></Suspense></TenantRoute>} />
+        <Route path="inventory/supplier-returns/:id"    element={<TenantRoute module="receivables"><Suspense fallback={<Loading fullScreen />}><SupplierReturnDetailPage /></Suspense></TenantRoute>} />
+        <Route path="inventory/transfers"              element={<TenantRoute module="inventory"><Suspense fallback={<Loading fullScreen />}><TransfersPage /></Suspense></TenantRoute>} />
+        <Route path="inventory/transfers/new"          element={<TenantRoute module="inventory"><Suspense fallback={<Loading fullScreen />}><TransferFormPage /></Suspense></TenantRoute>} />
+        <Route path="inventory/transfers/:id/receive"  element={<TenantRoute module="inventory"><Suspense fallback={<Loading fullScreen />}><TransferReceivePage /></Suspense></TenantRoute>} />
+        <Route path="inventory/transfers/:id"          element={<TenantRoute module="inventory"><Suspense fallback={<Loading fullScreen />}><TransferDetailPage /></Suspense></TenantRoute>} />
+        <Route path="inventory/internal-consumptions"      element={<TenantRoute module="inventory"><Suspense fallback={<Loading fullScreen />}><InternalConsumptionsPage /></Suspense></TenantRoute>} />
+        <Route path="inventory/internal-consumptions/new"  element={<TenantRoute module="inventory"><Suspense fallback={<Loading fullScreen />}><InternalConsumptionFormPage /></Suspense></TenantRoute>} />
+        <Route path="inventory/internal-consumptions/:id"  element={<TenantRoute module="inventory"><Suspense fallback={<Loading fullScreen />}><InternalConsumptionDetailPage /></Suspense></TenantRoute>} />
+        <Route path="warehouses" element={<TenantRoute module="inventory"><Suspense fallback={<Loading fullScreen />}><WarehousesPage /></Suspense></TenantRoute>} />
+        <Route path="branches"   element={<TenantRoute module="inventory"><Suspense fallback={<Loading fullScreen />}><BranchesPage /></Suspense></TenantRoute>} />
 
         {/* ── Configuración y Reportes ───────────────── */}
-        <Route path="settings" element={<TenantRoute><TenantSettingsPage /></TenantRoute>} />
-        <Route path="settings/whatsapp" element={<TenantRoute><WhatsAppSettingsPage /></TenantRoute>} />
+        <Route path="settings" element={<TenantRoute><Suspense fallback={<Loading fullScreen />}><TenantSettingsPage /></Suspense></TenantRoute>} />
+        <Route path="settings/whatsapp" element={<TenantRoute><Suspense fallback={<Loading fullScreen />}><WhatsAppSettingsPage /></Suspense></TenantRoute>} />
 
-        <Route path="reports"  element={<TenantRoute><ReportsPage /></TenantRoute>} />
-        <Route path="nexa/aprobaciones" element={<TenantRoute module="ai_assistant"><NexaApprovalsPage /></TenantRoute>} />
-        <Route path="users"          element={<TenantRoute><UsersPage /></TenantRoute>} />
-        <Route path="users/new"      element={<TenantRoute><UserForm /></TenantRoute>} />
-        <Route path="users/:id/edit" element={<TenantRoute><UserForm /></TenantRoute>} />
-        <Route path="profile"  element={<TenantRoute><ProfilePage /></TenantRoute>} />
+        <Route path="reports"  element={<TenantRoute><Suspense fallback={<Loading fullScreen />}><ReportsPage /></Suspense></TenantRoute>} />
+        <Route path="nexa/aprobaciones" element={<TenantRoute module="ai_assistant"><Suspense fallback={<Loading fullScreen />}><NexaApprovalsPage /></Suspense></TenantRoute>} />
+        <Route path="users"          element={<TenantRoute><Suspense fallback={<Loading fullScreen />}><UsersPage /></Suspense></TenantRoute>} />
+        <Route path="users/new"      element={<TenantRoute><Suspense fallback={<Loading fullScreen />}><UserForm /></Suspense></TenantRoute>} />
+        <Route path="users/:id/edit" element={<TenantRoute><Suspense fallback={<Loading fullScreen />}><UserForm /></Suspense></TenantRoute>} />
+        <Route path="profile"  element={<TenantRoute><Suspense fallback={<Loading fullScreen />}><ProfilePage /></Suspense></TenantRoute>} />
 
         {/* ✅ DIAN — Facturación Electrónica ────────── */}
-        <Route path="dian/config"  element={<TenantRoute><DianConfigPage /></TenantRoute>} />
-        <Route path="dian/eventos" element={<TenantRoute><DianEventsPage /></TenantRoute>} />
+        <Route path="dian/config"  element={<TenantRoute><Suspense fallback={<Loading fullScreen />}><DianConfigPage /></Suspense></TenantRoute>} />
+        <Route path="dian/eventos" element={<TenantRoute><Suspense fallback={<Loading fullScreen />}><DianEventsPage /></Suspense></TenantRoute>} />
 
         {/* ── Soporte ──────────────────────────────── */}
-        <Route path="support"              element={<TenantRoute><SupportFAQ /></TenantRoute>} />
-        <Route path="support/new-ticket"   element={<TenantRoute><CreateTicket /></TenantRoute>} />
-        <Route path="support/tickets"      element={<TenantRoute><MyTickets /></TenantRoute>} />
-        <Route path="support/tickets/:id"  element={<TenantRoute><TicketDetail /></TenantRoute>} />
+        <Route path="support"              element={<TenantRoute><Suspense fallback={<Loading fullScreen />}><SupportFAQ /></Suspense></TenantRoute>} />
+        <Route path="support/new-ticket"   element={<TenantRoute><Suspense fallback={<Loading fullScreen />}><CreateTicket /></Suspense></TenantRoute>} />
+        <Route path="support/tickets"      element={<TenantRoute><Suspense fallback={<Loading fullScreen />}><MyTickets /></Suspense></TenantRoute>} />
+        <Route path="support/tickets/:id"  element={<TenantRoute><Suspense fallback={<Loading fullScreen />}><TicketDetail /></Suspense></TenantRoute>} />
 
         {/* 404 */}
         <Route path="*" element={<Navigate to="/" replace />} />
