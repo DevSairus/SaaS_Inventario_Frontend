@@ -28,6 +28,7 @@ export default function ConvertQuoteToWorkOrderModal({ isOpen, onClose, sale, on
   const [color, setColor] = useState('');
   const [vehicleType, setVehicleType] = useState('automovil');
   const [converting, setConverting] = useState(false);
+  const [stockAlternatives, setStockAlternatives] = useState([]);
 
   // Precargar con lo que ya traía la cotización (placa/marca/modelo del
   // formulario de venta), una sola vez al abrir el modal para esta venta.
@@ -53,6 +54,7 @@ export default function ConvertQuoteToWorkOrderModal({ isOpen, onClose, sale, on
       return;
     }
     setConverting(true);
+    setStockAlternatives([]);
     try {
       const res = await salesApi.convertToWorkOrder(sale.id, {
         vehicle: { plate: plate.trim(), brand, model, year: year || null, color, vehicle_type: vehicleType },
@@ -60,7 +62,14 @@ export default function ConvertQuoteToWorkOrderModal({ isOpen, onClose, sale, on
       toast.success(res.data.message || 'Orden de trabajo creada');
       onSuccess?.(res.data.data);
     } catch (e) {
-      toast.error(e?.response?.data?.message || 'No se pudo convertir la cotización');
+      const data = e?.response?.data || {};
+      const msg = data.message || 'No se pudo convertir la cotización';
+      if (data.alternatives && data.alternatives.length > 0) {
+        setStockAlternatives(data.alternatives);
+        toast.error(`${msg} — hay ${data.alternatives.length} equivalente(s) disponible(s)`);
+      } else {
+        toast.error(msg);
+      }
     } finally {
       setConverting(false);
     }
@@ -127,6 +136,31 @@ export default function ConvertQuoteToWorkOrderModal({ isOpen, onClose, sale, on
               {VEHICLE_TYPES.map(v => <option key={v.value} value={v.value}>{v.label}</option>)}
             </select>
           </div>
+
+          {/* Alternativas de equivalencia cuando la conversión falló por stock */}
+          {stockAlternatives.length > 0 && (
+            <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs font-semibold text-amber-800">
+                  Equivalentes con stock ({stockAlternatives.length})
+                </p>
+                <button onClick={() => setStockAlternatives([])} className="text-amber-600 hover:text-amber-800 text-xs">✕ Cerrar</button>
+              </div>
+              <p className="text-xs text-gray-500 mb-2">
+                Edita la línea en la cotización con uno de estos productos y vuelve a intentar convertir.
+              </p>
+              <div className="space-y-1.5">
+                {stockAlternatives.map(alt => (
+                  <div key={alt.product_id} className="flex items-center justify-between p-2 bg-white border border-amber-200 rounded-lg">
+                    <div>
+                      <p className="text-sm text-gray-900">{alt.name}</p>
+                      <p className="text-xs text-gray-500">{alt.sku} · Stock: <span className="text-green-600 font-medium">{alt.available_stock}</span></p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="flex gap-2 px-5 py-4 border-t border-gray-100">

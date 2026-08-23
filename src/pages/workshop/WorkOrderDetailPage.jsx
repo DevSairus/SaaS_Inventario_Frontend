@@ -376,11 +376,19 @@ export default function WorkOrderDetailPage() {
     try {
       await generateSale(id, { document_type: docType });
     } catch (e) {
-      const msg = e?.response?.data?.message || '';
+      const data = e?.response?.data || {};
+      const msg = data.message || '';
       if (msg.toLowerCase().includes('ítems') || msg.toLowerCase().includes('items')) {
         toast.error('La OT no tiene ítems. Agrega al menos un repuesto o servicio antes de generar el documento.');
       } else if (msg.toLowerCase().includes('estado') || msg.toLowerCase().includes('listo')) {
         toast.error('La OT debe estar en estado "Listo" para generar el documento.');
+      } else if (msg.toLowerCase().includes('stock')) {
+        if (data.alternatives && data.alternatives.length > 0) {
+          setStockAlternatives(data.alternatives);
+          toast.error(`Sin stock suficiente. Se encontraron ${data.alternatives.length} equivalente(s) disponible(s).`);
+        } else {
+          toast.error(`Sin stock suficiente: ${msg}`);
+        }
       } else {
         toast.error(msg || 'No se pudo generar el documento. Intenta de nuevo.');
       }

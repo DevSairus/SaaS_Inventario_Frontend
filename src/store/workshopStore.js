@@ -133,21 +133,18 @@ const useWorkshopStore = create((set, get) => ({
   },
 
   addItem: async (id, data) => {
-    try {
-      const res = await workOrdersApiOffline.addItem(id, data);
-      const pendingSync = res?.data?.data?._pendingSync;
-      if (pendingSync) {
-        toast.success('Ítem guardado sin conexión — se agregará al sincronizar');
-      } else {
-        toast.success('Ítem agregado a la OT');
-        await get().fetchOrder(id);
-      }
-      return res?.data?.data;
-    } catch (err) {
-      const msg = err?.response?.data?.message || 'No se pudo agregar el ítem.';
-      toast.error(msg);
-      throw err;
+    // Sin toast propio en el catch: el único caller (WorkOrderDetailPage)
+    // ya distingue mensajes de stock/bodega y muestra alternativas de
+    // equivalencia -- un toast genérico acá duplicaba el aviso de error.
+    const res = await workOrdersApiOffline.addItem(id, data);
+    const pendingSync = res?.data?.data?._pendingSync;
+    if (pendingSync) {
+      toast.success('Ítem guardado sin conexión — se agregará al sincronizar');
+    } else {
+      toast.success('Ítem agregado a la OT');
+      await get().fetchOrder(id);
     }
+    return res?.data?.data;
   },
 
   updateItem: async (orderId, itemId, data) => {
