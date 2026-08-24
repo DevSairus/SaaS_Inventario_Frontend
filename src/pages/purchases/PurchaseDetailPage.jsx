@@ -291,6 +291,35 @@ const PurchaseDetailPage = () => {
                 </tfoot>
               </table>
             </div>
+
+            {/* Retenciones (Fase C) — el tenant, como comprador, retiene a
+                este proveedor. Solo aparece si aplicó alguna. */}
+            {purchase.total_retentions > 0 && (
+              <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 space-y-1">
+                {purchase.retefuente_amount > 0 && (
+                  <div className="flex justify-between text-sm text-orange-600">
+                    <span>ReteFuente ({purchase.retefuente_rate}%):</span>
+                    <span>-{formatCurrency(purchase.retefuente_amount)}</span>
+                  </div>
+                )}
+                {purchase.reteiva_amount > 0 && (
+                  <div className="flex justify-between text-sm text-orange-600">
+                    <span>ReteIVA ({purchase.reteiva_rate}%):</span>
+                    <span>-{formatCurrency(purchase.reteiva_amount)}</span>
+                  </div>
+                )}
+                {purchase.reteica_amount > 0 && (
+                  <div className="flex justify-between text-sm text-orange-600">
+                    <span>ReteICA ({purchase.reteica_rate}‰):</span>
+                    <span>-{formatCurrency(purchase.reteica_amount)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-base font-bold text-green-700 border-t border-gray-200 pt-2">
+                  <span>Neto a pagar al proveedor:</span>
+                  <span>{formatCurrency(purchase.total_amount - purchase.total_retentions)}</span>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Notes */}

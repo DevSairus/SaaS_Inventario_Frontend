@@ -13,7 +13,7 @@ import TaxConfigSection from '../../components/settings/TaxConfigSection';
 
 const TenantSettingsPage = () => {
   const navigate = useNavigate();
-  const { setFeatures } = useTenantStore();
+  const { setFeatures, setTaxConfig } = useTenantStore();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
@@ -178,8 +178,10 @@ const TenantSettingsPage = () => {
       
       if (response.data.success) {
         toast.success('Configuración guardada exitosamente');
-        // Sincronizar features en el store global para que otros componentes lo lean
+        // Sincronizar features y tax_config en el store global para que otros
+        // componentes (ej. ProductFormModal) lean las tarifas ICA al toque.
         setFeatures(config.features || {});
+        setTaxConfig(config.tax_config || {});
       }
     } catch (error) {
       toast.error('Error al guardar la configuración');

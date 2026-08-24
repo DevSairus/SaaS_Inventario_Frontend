@@ -32,6 +32,7 @@ const FORM_EMPTY = {
   email: '', phone: '', mobile: '', address: '',
   city: '', state: '', city_code: '',
   customer_category: '', notes: '',
+  retention_config: {},
 };
 
 export default function CustomersPage() {
@@ -86,6 +87,9 @@ export default function CustomersPage() {
         city: customer.city || '', state: customer.state || '', city_code: customer.city_code || '',
         customer_category: customer.customer_category || '', notes: customer.notes || '',
         is_active: customer.is_active ?? true,
+        // Se preserva tal cual (incluye tasas por-cliente que aún no tienen UI,
+        // como reteica_rate); esta pantalla solo edita is_exento.
+        retention_config: customer.retention_config || {},
       });
     } else {
       setEditingCustomer(null);
@@ -294,6 +298,20 @@ export default function CustomersPage() {
                 </button>
               </div>
             )}
+
+            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200 dark:bg-graphite-2 dark:border-white/10">
+              <div>
+                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Exento de retención</p>
+                <p className="text-xs text-gray-500 mt-0.5 dark:text-gray-500">
+                  Si está activo, este cliente no te aplicará ReteFuente, ReteIVA ni ReteICA al pagarte.
+                </p>
+              </div>
+              <button type="button"
+                onClick={() => setFormData(prev => ({ ...prev, retention_config: { ...prev.retention_config, is_exento: !prev.retention_config?.is_exento } }))}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0 ${formData.retention_config?.is_exento ? 'bg-purple-600' : 'bg-gray-300 dark:bg-white/10'}`}>
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${formData.retention_config?.is_exento ? 'translate-x-6' : 'translate-x-1'}`} />
+              </button>
+            </div>
 
             <div className="flex justify-end space-x-2 pt-4 border-t dark:border-white/10">
               <Button type="button" variant="secondary" onClick={handleCloseModal}>Cancelar</Button>

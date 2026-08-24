@@ -25,7 +25,8 @@ const SupplierModal = ({ supplier, onClose }) => {
     credit_limit: 0,
     website: '',
     notes: '',
-    is_active: true
+    is_active: true,
+    retention_config: {},
   });
 
   const [errors, setErrors] = useState({});
@@ -51,7 +52,8 @@ const SupplierModal = ({ supplier, onClose }) => {
         credit_limit: supplier.credit_limit || 0,
         website: supplier.website || '',
         notes: supplier.notes || '',
-        is_active: supplier.is_active !== undefined ? supplier.is_active : true
+        is_active: supplier.is_active !== undefined ? supplier.is_active : true,
+        retention_config: supplier.retention_config || {},
       });
     }
   }, [supplier]);
@@ -425,6 +427,43 @@ const SupplierModal = ({ supplier, onClose }) => {
                 className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 h-4 w-4"
               />
               <span className="ml-2 text-sm text-gray-700">Proveedor Activo</span>
+            </label>
+          </div>
+
+          {/* Retenciones (Fase C) — el tenant, como comprador, puede retener
+              a este proveedor en ReteFuente/ReteIVA/ReteICA. Estos dos
+              toggles cubren los dos motivos por los que NO debería
+              retenerle, y son independientes entre sí. */}
+          <div className="mb-6 space-y-3">
+            <label className="flex items-center">
+              <input
+                type="checkbox"
+                checked={!!formData.retention_config?.is_exento}
+                onChange={(e) => setFormData(prev => ({
+                  ...prev,
+                  retention_config: { ...prev.retention_config, is_exento: e.target.checked }
+                }))}
+                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 h-4 w-4"
+              />
+              <span className="ml-2 text-sm text-gray-700">
+                Exento de retención
+                <span className="block text-xs text-gray-400">No se le practicará ninguna retención en las compras a este proveedor.</span>
+              </span>
+            </label>
+            <label className="flex items-center">
+              <input
+                type="checkbox"
+                checked={!!formData.retention_config?.is_autoretenedor}
+                onChange={(e) => setFormData(prev => ({
+                  ...prev,
+                  retention_config: { ...prev.retention_config, is_autoretenedor: e.target.checked }
+                }))}
+                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 h-4 w-4"
+              />
+              <span className="ml-2 text-sm text-gray-700">
+                Proveedor autorretenedor
+                <span className="block text-xs text-gray-400">Marcar si este proveedor está autorizado por la DIAN para autorretenerse. Aunque tu empresa no sea autorretenedora, no debes practicarle retención a este proveedor.</span>
+              </span>
             </label>
           </div>
 
