@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useState } from 'react';
 import { io } from 'socket.io-client';
 import useAuthStore from '../store/authStore';
 
@@ -39,10 +39,28 @@ function ensureSocket(token) {
 
 export function useRemoteSocket() {
   const { token } = useAuthStore();
+  // Estado reactivo de la conexión — lo usa RemoteSessionNotifier para
+  // decidir cuándo prender el poll de emergencia (ver fallback más abajo
+  // en ese componente): mientras el socket esté conectado, no hace falta.
+  const [isConnected, setIsConnected] = useState(() => !!socket?.connected);
 
   useEffect(() => {
     if (token) ensureSocket(token);
     // No desconectar nunca — singleton
+  }, [token]);
+
+  useEffect(() => {
+    const s = ensureSocket(token);
+    if (!s) return;
+    setIsConnected(s.connected);
+    const handleConnect = () => setIsConnected(true);
+    const handleDisconnect = () => setIsConnected(false);
+    s.on('connect', handleConnect);
+    s.on('disconnect', handleDisconnect);
+    return () => {
+      s.off('connect', handleConnect);
+      s.off('disconnect', handleDisconnect);
+    };
   }, [token]);
 
   const emit = useCallback((event, data) => {
@@ -62,5 +80,5 @@ export function useRemoteSocket() {
     return () => s.off(event, handler);
   }, [token]);
 
-  return { emit, on, socket: ensureSocket(token) };
+  return { emit, on, socket: ensureSocket(token), isConnected };
 }

@@ -13,6 +13,7 @@ import { FileCheck2, Bell } from 'lucide-react';
 import { workOrdersApi } from '../../api/workshop';
 import { subscribeQuoteApproved } from '../../hooks/useQuoteNotifications';
 import useTenantStore from '../../store/tenantStore';
+import useNotificationsBundleStore from '../../store/notificationsBundleStore';
 
 const COP = (n) =>
   new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(n || 0);
@@ -30,6 +31,7 @@ function QuoteNotificationsBell() {
   const navigate = useNavigate();
   const enabledModules = useTenantStore((s) => s.enabledModules);
   const hasWorkshop = enabledModules === null || enabledModules.includes('workshop');
+  const bundleQuotes = useNotificationsBundleStore((s) => s.data.quotes);
 
   const fetchPending = useCallback(async () => {
     if (!hasWorkshop) return;
@@ -44,12 +46,12 @@ function QuoteNotificationsBell() {
     }
   }, []);
 
+  // Antes: fetch propio cada 90s. Ahora se alimenta del bundle consolidado
+  // (Layout.jsx llama startPolling una sola vez, cada 30 min); el refresco
+  // en vivo sigue viniendo del socket (subscribeQuoteApproved más abajo).
   useEffect(() => {
-    if (!hasWorkshop) return;
-    fetchPending();
-    const interval = setInterval(fetchPending, 90 * 1000);
-    return () => clearInterval(interval);
-  }, [hasWorkshop, fetchPending]);
+    if (hasWorkshop && bundleQuotes) setItems(bundleQuotes);
+  }, [hasWorkshop, bundleQuotes]);
 
   // Refresco inmediato si el socket sigue conectado en este momento —
   // complementa el polling, no lo reemplaza (el polling es lo que cubre

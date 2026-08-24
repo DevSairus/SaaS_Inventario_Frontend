@@ -12,6 +12,7 @@ import { CalendarClock, Bell } from 'lucide-react';
 import { appointmentsApi } from '../../api/workshopAppointments';
 import { subscribeNewAppointment } from '../../hooks/useAppointmentNotifications';
 import useTenantStore from '../../store/tenantStore';
+import useNotificationsBundleStore from '../../store/notificationsBundleStore';
 
 function fmt(dateStr) {
   return new Date(dateStr).toLocaleString('es-CO', { dateStyle: 'medium', timeStyle: 'short' });
@@ -28,6 +29,7 @@ function AppointmentNotificationsBell() {
   // así que asumir acceso antes de tiempo dispara un 403 para tenants sin
   // el módulo Taller (ver mismo fix en CrmNotifications.jsx).
   const hasWorkshop = enabledModules !== null && enabledModules.includes('workshop');
+  const bundleAppointments = useNotificationsBundleStore((s) => s.data.appointments);
 
   const fetchPending = useCallback(async () => {
     if (!hasWorkshop) return;
@@ -42,12 +44,12 @@ function AppointmentNotificationsBell() {
     }
   }, [hasWorkshop]);
 
+  // Antes: fetch propio cada 90s. Ahora se alimenta del bundle consolidado
+  // (Layout.jsx llama startPolling una sola vez, cada 30 min); el refresco
+  // en vivo sigue viniendo del socket (subscribeNewAppointment más abajo).
   useEffect(() => {
-    if (!hasWorkshop) return;
-    fetchPending();
-    const interval = setInterval(fetchPending, 90 * 1000);
-    return () => clearInterval(interval);
-  }, [hasWorkshop, fetchPending]);
+    if (hasWorkshop && bundleAppointments) setItems(bundleAppointments);
+  }, [hasWorkshop, bundleAppointments]);
 
   // Refresco inmediato si el socket sigue conectado en este momento —
   // complementa el polling, no lo reemplaza.

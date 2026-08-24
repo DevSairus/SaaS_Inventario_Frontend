@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Sidebar from './Sidebar';
 import WorkshopBottomNav from './WorkshopBottomNav';
 import StockAlerts from '../common/StockAlerts';
@@ -20,6 +20,7 @@ import OfflineBanner from '../../pwa/components/OfflineBanner';
 import PendingSyncBadge from '../../pwa/components/PendingSyncBadge';
 import SyncRetryButton from '../../pwa/components/SyncRetryButton';
 import ConflictResolutionModal from '../../pwa/components/ConflictResolutionModal';
+import useNotificationsBundleStore from '../../store/notificationsBundleStore';
 
 // Marca de agua decorativa (auto/moto + llave) — patrón sutil de fondo para
 // que las pantallas no sean un blanco plano. Muy baja opacidad, no interactivo.
@@ -38,6 +39,15 @@ function Layout({ children }) {
   useTicketNotifications();
   useQuoteNotifications();
   useAppointmentNotifications();
+  // Un solo timer de 30 min para las 6 campanas del header (StockAlerts,
+  // PayableAlerts, AdvanceAlerts, CrmNotifications, QuoteNotificationsBell,
+  // AppointmentNotificationsBell) en vez de que cada una tenga el suyo.
+  // startPolling es idempotente — Layout se monta dos veces en pantallas
+  // móviles/desktop pero solo arranca un timer.
+  const startPolling = useNotificationsBundleStore((s) => s.startPolling);
+  useEffect(() => {
+    startPolling();
+  }, [startPolling]);
   // La PWA "Taller" instalada (scope /workshop/, rol técnico) reemplaza el
   // sidebar completo de escritorio por un bottom-nav de 3 ítems. La PWA
   // completa (cualquier otro rol, scope "/") también corre en standalone

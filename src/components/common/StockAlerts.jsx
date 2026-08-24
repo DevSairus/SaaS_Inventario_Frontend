@@ -1,38 +1,39 @@
 import toast from 'react-hot-toast';
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import useNotificationsBundleStore from '../../store/notificationsBundleStore';
+
+const mapAlertsToProducts = (rows) => (rows || []).filter(a => a.product).map(a => a.product);
 
 function StockAlerts() {
   const [isOpen, setIsOpen] = useState(false);
   const [allProducts, setAllProducts] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const bundleStock = useNotificationsBundleStore((s) => s.data.stock);
+
+  // Antes: fetch propio cada 2 min. Ahora se alimenta del bundle
+  // consolidado (Layout.jsx llama startPolling una sola vez, cada 30 min)
+  // en vez de tener su propio timer — ver notificationsBundleStore.js.
+  useEffect(() => {
+    if (bundleStock) setAllProducts(mapAlertsToProducts(bundleStock));
+  }, [bundleStock]);
 
   const fetchAllLowStockProducts = useCallback(async () => {
     setIsLoading(true);
     try {
-      // Usar el endpoint dedicado de alertas de stock en lugar de traer todos los productos
+      // Endpoint dedicado — se sigue usando solo para el refresh al abrir
+      // el dropdown (acción del usuario, no un timer).
       const { getStockAlerts } = await import('../../api/stockAlerts');
       const response = await getStockAlerts({ status: 'active', limit: 500 });
       if (response && response.success) {
-        // Mapear alertas a formato de producto para compatibilidad con el resto del componente
-        const products = (response.data || [])
-          .filter(a => a.product)
-          .map(a => a.product);
-        setAllProducts(products);
+        setAllProducts(mapAlertsToProducts(response.data));
       }
     } catch (error) {
     } finally {
       setIsLoading(false);
     }
   }, []);
-
-  // Cargar productos al montar el componente y refrescar periódicamente
-  useEffect(() => {
-    fetchAllLowStockProducts();
-    const interval = setInterval(fetchAllLowStockProducts, 2 * 60 * 1000);
-    return () => clearInterval(interval);
-  }, [fetchAllLowStockProducts]);
 
   // Recargar productos cada vez que se abre el modal
   useEffect(() => {

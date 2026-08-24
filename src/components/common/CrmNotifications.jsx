@@ -12,6 +12,7 @@ import { useNavigate } from 'react-router-dom';
 import { Bell, AlertTriangle, Megaphone, CheckCircle2 } from 'lucide-react';
 import crmApi from '../../api/crm';
 import useTenantStore from '../../store/tenantStore';
+import useNotificationsBundleStore from '../../store/notificationsBundleStore';
 
 function CrmNotifications() {
   const [isOpen, setIsOpen] = useState(false);
@@ -19,12 +20,19 @@ function CrmNotifications() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const enabledModules = useTenantStore((s) => s.enabledModules);
+  const bundleCrm = useNotificationsBundleStore((s) => s.data.crm);
   // A diferencia de TenantRoute (App.jsx), acá null no debe tratarse como
   // "con acceso": este componente dispara el fetch apenas hasCrm es true,
   // así que asumir acceso mientras carga el config del tenant dispara la
   // llamada antes de tiempo -- si el tenant no tiene CRM, el backend
   // responde 403 en cada carga de página.
   const hasCrm = enabledModules !== null && enabledModules.includes('crm');
+
+  // Antes: fetch propio cada 2 min. Ahora se alimenta del bundle
+  // consolidado (Layout.jsx llama startPolling una sola vez, cada 30 min).
+  useEffect(() => {
+    if (hasCrm && bundleCrm) setSummary(bundleCrm);
+  }, [hasCrm, bundleCrm]);
 
   const fetchSummary = useCallback(async () => {
     setLoading(true);
@@ -38,13 +46,7 @@ function CrmNotifications() {
     }
   }, []);
 
-  useEffect(() => {
-    if (!hasCrm) return;
-    fetchSummary();
-    const interval = setInterval(fetchSummary, 2 * 60 * 1000);
-    return () => clearInterval(interval);
-  }, [hasCrm, fetchSummary]);
-
+  // Recargar al abrir el dropdown (acción del usuario, no un timer).
   useEffect(() => {
     if (isOpen && hasCrm) fetchSummary();
   }, [isOpen, hasCrm, fetchSummary]);

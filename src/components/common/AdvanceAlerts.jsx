@@ -1,12 +1,20 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getAdvanceAlerts } from '../../api/customerAdvanceAlerts';
+import useNotificationsBundleStore from '../../store/notificationsBundleStore';
 
 function AdvanceAlerts() {
   const [isOpen, setIsOpen] = useState(false);
   const [alerts, setAlerts] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const bundleAdvance = useNotificationsBundleStore((s) => s.data.advance);
+
+  // Antes: fetch propio cada 2 min. Ahora se alimenta del bundle
+  // consolidado (Layout.jsx llama startPolling una sola vez, cada 30 min).
+  useEffect(() => {
+    if (bundleAdvance) setAlerts(bundleAdvance);
+  }, [bundleAdvance]);
 
   const fetchActiveAlerts = useCallback(async () => {
     setIsLoading(true);
@@ -22,14 +30,8 @@ function AdvanceAlerts() {
     }
   }, []);
 
-  // Cargar alertas al montar y refrescar periódicamente
-  useEffect(() => {
-    fetchActiveAlerts();
-    const interval = setInterval(fetchActiveAlerts, 2 * 60 * 1000);
-    return () => clearInterval(interval);
-  }, [fetchActiveAlerts]);
-
-  // Recargar cada vez que se abre el dropdown
+  // Recargar cada vez que se abre el dropdown (acción del usuario, no un
+  // timer).
   useEffect(() => {
     if (isOpen) {
       fetchActiveAlerts();
