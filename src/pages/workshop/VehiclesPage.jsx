@@ -46,7 +46,7 @@ const PAYMENT_CONFIG = {
 const COP = (n) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(n || 0);
 const fmtDate = (d) => new Date(d).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' });
 const inputCls = 'w-full border border-gray-200 dark:border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-graphite-2 dark:text-gray-100';
-const EMPTY_VEHICLE = { plate: '', brand: '', model: '', year: '', color: '', vehicle_type: 'automovil', fuel_type: 'gasolina', engine_number: '', vin: '', soat_number: '', soat_expiry: '', tecnomecanica_number: '', tecnomecanica_expiry: '', customer_id: '', notes: '' };
+const EMPTY_VEHICLE = { plate: '', brand: '', model: '', year: '', color: '', vehicle_type: 'automovil', fuel_type: 'gasolina', engine: '', engine_number: '', vin: '', soat_number: '', soat_expiry: '', tecnomecanica_number: '', tecnomecanica_expiry: '', customer_id: '', notes: '' };
 
 /* ── Modal: Crear vehículo ─────────────────────────────────────────── */
 function CreateVehicleModal({ onClose, onCreated }) {
@@ -71,6 +71,7 @@ function CreateVehicleModal({ onClose, onCreated }) {
       year:                 data.year                 || p.year,
       color:                data.color                || p.color,
       fuel_type:            data.fuel_type            || p.fuel_type,
+      engine:               data.engine               || p.engine,
       engine_number:        data.engine_number        || p.engine_number,
       vin:                  data.vin                  || p.vin,
       soat_number:          data.soat_number          || p.soat_number,
@@ -174,17 +175,23 @@ function CreateVehicleModal({ onClose, onCreated }) {
                 </select>
               </div>
             </div>
-            {/* N° Motor + VIN */}
+            {/* Cilindraje + N° Motor */}
             <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-medium text-gray-600 dark:text-gray-400 block mb-1">Cilindraje / Tipo motor</label>
+                <input value={form.engine} onChange={e => setF('engine', e.target.value)}
+                  placeholder="Ej: 150cc, 1.6L" className={inputCls} />
+              </div>
               <div>
                 <label className="text-xs font-medium text-gray-600 dark:text-gray-400 block mb-1">N° Motor</label>
                 <input value={form.engine_number} onChange={e => setF('engine_number', e.target.value)}
                   placeholder="Motor serial" className={`${inputCls} font-mono`} />
               </div>
-              <div>
-                <label className="text-xs font-medium text-gray-600 dark:text-gray-400 block mb-1">VIN / Chasis</label>
-                <input value={form.vin} onChange={e => setF('vin', e.target.value)} placeholder="VIN" className={`${inputCls} font-mono`} />
-              </div>
+            </div>
+            {/* VIN */}
+            <div>
+              <label className="text-xs font-medium text-gray-600 dark:text-gray-400 block mb-1">VIN / Chasis</label>
+              <input value={form.vin} onChange={e => setF('vin', e.target.value)} placeholder="VIN" className={`${inputCls} font-mono`} />
             </div>
             {/* SOAT */}
             <div className="bg-gray-50 dark:bg-graphite-2 rounded-xl p-3 space-y-2">
