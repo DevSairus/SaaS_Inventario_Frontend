@@ -10,6 +10,7 @@ import Layout from '../../components/layout/Layout';
 import toast from 'react-hot-toast';
 import useTenantStore from '../../store/tenantStore';
 import TaxConfigSection from '../../components/settings/TaxConfigSection';
+import { Building2, Receipt, ShoppingCart, Wrench, Landmark } from 'lucide-react';
 
 const TenantSettingsPage = () => {
   const navigate = useNavigate();
@@ -35,6 +36,14 @@ const TenantSettingsPage = () => {
   });
   const [logoPreview, setLogoPreview] = useState(null);
   const [logoFile, setLogoFile] = useState(null);
+  const [activeTab, setActiveTab] = useState('general');
+
+  const TABS = [
+    { id: 'general',     label: 'General',     Icon: Building2 },
+    { id: 'facturacion', label: 'Facturación',  Icon: Receipt },
+    { id: 'ventas',      label: 'Ventas',       Icon: ShoppingCart },
+    { id: 'taller',      label: 'Taller',       Icon: Wrench },
+  ];
 
   useEffect(() => {
     loadConfig();
@@ -204,7 +213,32 @@ const TenantSettingsPage = () => {
           <p className="text-sm text-gray-500 mt-0.5">Datos y personalización de tu empresa</p>
         </div>
 
+        {/* Pestañas — cada una filtra qué cards se muestran, pero el <form>
+            sigue siendo uno solo: Guardar Cambios manda TODO config.state
+            sin importar qué pestaña esté activa, así no se pierden cambios
+            hechos en una pestaña al pasar a otra antes de guardar. */}
+        <div className="flex gap-1 border-b border-gray-200 overflow-x-auto">
+          {TABS.map(tab => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 whitespace-nowrap transition-colors ${
+                activeTab === tab.id
+                  ? 'border-blue-600 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <tab.Icon size={16} strokeWidth={2} />
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
         <form onSubmit={handleSubmit} className="space-y-6">
+          {/* ============ GENERAL ============ */}
+          {activeTab === 'general' && (
+          <>
           {/* Logo */}
           <Card>
             <div className="p-6">
@@ -341,7 +375,12 @@ const TenantSettingsPage = () => {
               </div>
             </div>
           </Card>
+          </>
+          )}
 
+          {/* ============ FACTURACIÓN ============ */}
+          {activeTab === 'facturacion' && (
+          <>
           {/* Configuración de Facturas / PDF */}
           <Card>
             <div className="p-6">
@@ -381,12 +420,12 @@ const TenantSettingsPage = () => {
             </div>
           </Card>
 
-          {/* Módulos y funcionalidades */}
+          {/* Mostrar/ocultar IVA discriminado en documentos de Ventas */}
           <Card>
             <div className="p-6">
-              <h2 className="text-xl font-semibold mb-1">Módulos y funcionalidades</h2>
+              <h2 className="text-xl font-semibold mb-1">IVA en documentos de venta</h2>
               <p className="text-sm text-gray-500 mb-5">
-                Activa o desactiva funciones según las necesidades de tu negocio.
+                Controla si el IVA se discrimina (Subtotal + IVA) o va incluido sin desglosar, por tipo de documento.
               </p>
               <div className="space-y-4">
 
@@ -412,30 +451,6 @@ const TenantSettingsPage = () => {
                   </button>
                 </div>
 
-                {/* Toggle: Ocultar IVA en órdenes de trabajo (Taller) — config
-                    independiente de la de remisiones de Ventas de arriba, para
-                    que cambiar una no afecte la otra sin querer. */}
-                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
-                  <div className="flex-1 mr-4">
-                    <p className="font-medium text-gray-900 text-sm">Ocultar IVA en órdenes de trabajo</p>
-                    <p className="text-xs text-gray-500 mt-0.5">
-                      Aplica a la vista interna de la OT y al enlace público que ve el cliente: no se discrimina
-                      Subtotal/IVA, solo el total (IVA incluido). Es una configuración aparte de la de remisiones.
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => toggleFeature('hide_workorder_tax')}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0 ${
-                      config.features?.hide_workorder_tax ? 'bg-blue-600' : 'bg-gray-300'
-                    }`}
-                  >
-                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
-                      config.features?.hide_workorder_tax ? 'translate-x-6' : 'translate-x-1'
-                    }`} />
-                  </button>
-                </div>
-
                 {/* Toggle: Ocultar IVA en facturas */}
                 <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
                   <div className="flex-1 mr-4">
@@ -457,6 +472,63 @@ const TenantSettingsPage = () => {
                     }`} />
                   </button>
                 </div>
+
+              </div>
+            </div>
+          </Card>
+
+          {/* Facturación Electrónica DIAN */}
+          <Card>
+            <div className="p-6 flex items-center justify-between">
+              <div className="flex items-start gap-4">
+                <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600">
+                  <Landmark size={20} strokeWidth={2} />
+                </div>
+                <div>
+                  <p className="font-semibold text-gray-900">Facturación Electrónica DIAN</p>
+                  <p className="text-sm text-gray-500 mt-0.5">
+                    Configura el envío de facturas electrónicas ante la DIAN: software ID, certificado digital,
+                    resolución de numeración y set de pruebas.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => navigate('/dian/config')}
+                className="flex-shrink-0 ml-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
+              >
+                Configurar →
+              </button>
+            </div>
+          </Card>
+
+          {/* Configuración de Impuestos */}
+          <Card>
+            <div className="p-6">
+              <h2 className="text-xl font-semibold mb-1">Configuración de Impuestos</h2>
+              <p className="text-sm text-gray-500 mb-5">
+                Define los impuestos y retenciones que aplica tu empresa. Se usan en facturas, notas crédito/débito y el XML de la DIAN.
+              </p>
+              <TaxConfigSection
+                taxConfig={config.tax_config}
+                onChange={(tax_config) => setConfig(prev => ({ ...prev, tax_config }))}
+              />
+            </div>
+          </Card>
+          </>
+          )}
+
+          {/* ============ VENTAS ============ */}
+          {activeTab === 'ventas' && (
+          <>
+          {/* Campos del formulario de ventas */}
+          <Card>
+            <div className="p-6">
+              <h2 className="text-xl font-semibold mb-1">Campos del formulario de ventas</h2>
+              <p className="text-sm text-gray-500 mb-5">
+                Activa o desactiva campos según cómo trabaje tu negocio en ventas directas (fuera de una orden de trabajo).
+              </p>
+              <div className="space-y-4">
 
                 {/* Toggle: Campo de vehículo y placa en ventas */}
                 <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
@@ -505,50 +577,53 @@ const TenantSettingsPage = () => {
               </div>
             </div>
           </Card>
+          </>
+          )}
 
-          {/* Facturación Electrónica DIAN */}
-          <Card>
-            <div className="p-6 flex items-center justify-between">
-              <div className="flex items-start gap-4">
-                <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-xl">
-                  🏛️
-                </div>
-                <div>
-                  <p className="font-semibold text-gray-900">Facturación Electrónica DIAN</p>
-                  <p className="text-sm text-gray-500 mt-0.5">
-                    Configura el envío de facturas electrónicas ante la DIAN: software ID, certificado digital,
-                    resolución de numeración y set de pruebas.
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => navigate('/dian/config')}
-                className="flex-shrink-0 ml-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
-              >
-                Configurar →
-              </button>
-            </div>
-          </Card>
-
-          {/* Configuración de Impuestos */}
+          {/* ============ TALLER ============ */}
+          {activeTab === 'taller' && (
+          <>
+          {/* IVA en órdenes de trabajo */}
           <Card>
             <div className="p-6">
-              <h2 className="text-xl font-semibold mb-1">Configuración de Impuestos</h2>
+              <h2 className="text-xl font-semibold mb-1">IVA en órdenes de trabajo</h2>
               <p className="text-sm text-gray-500 mb-5">
-                Define los impuestos y retenciones que aplica tu empresa. Se usan en facturas, notas crédito/débito y el XML de la DIAN.
+                Configuración propia del Taller, independiente del IVA de remisiones/facturas de Ventas.
               </p>
-              <TaxConfigSection
-                taxConfig={config.tax_config}
-                onChange={(tax_config) => setConfig(prev => ({ ...prev, tax_config }))}
-              />
+              <div className="space-y-4">
+
+                {/* Toggle: Ocultar IVA en órdenes de trabajo (Taller) — config
+                    independiente de la de remisiones de Ventas, para que
+                    cambiar una no afecte la otra sin querer. */}
+                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
+                  <div className="flex-1 mr-4">
+                    <p className="font-medium text-gray-900 text-sm">Ocultar IVA en órdenes de trabajo</p>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      Aplica a la vista interna de la OT, al enlace público que ve el cliente y al PDF de la OT:
+                      no se discrimina Subtotal/IVA, solo el total (IVA incluido).
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => toggleFeature('hide_workorder_tax')}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0 ${
+                      config.features?.hide_workorder_tax ? 'bg-blue-600' : 'bg-gray-300'
+                    }`}
+                  >
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                      config.features?.hide_workorder_tax ? 'translate-x-6' : 'translate-x-1'
+                    }`} />
+                  </button>
+                </div>
+
+              </div>
             </div>
           </Card>
 
           {/* Taller — Costo estimado de mano de obra */}
           <Card>
             <div className="p-6">
-              <h2 className="text-xl font-semibold mb-1">Taller — Costo de Mano de Obra</h2>
+              <h2 className="text-xl font-semibold mb-1">Costo de Mano de Obra</h2>
               <p className="text-sm text-gray-500 mb-5">
                 Los técnicos cobran comisión variable, y esa comisión solo se conoce con certeza
                 cuando la orden de trabajo ya fue liquidada. Mientras tanto, los reportes de
@@ -582,8 +657,12 @@ const TenantSettingsPage = () => {
               </div>
             </div>
           </Card>
+          </>
+          )}
 
-          {/* Botones de acción */}
+          {/* Botones de acción — siempre visibles, sin importar la pestaña
+              activa: el submit manda config completo (todas las pestañas),
+              así que Guardar Cambios funciona igual desde cualquiera. */}
           <div className="flex justify-end gap-3">
             <Button
               type="button"
