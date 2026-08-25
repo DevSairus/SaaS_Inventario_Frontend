@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useEffect, lazy, Suspense } from 'react';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 import LoginPage from './pages/auth/LoginPage';
 import LandingPage from './pages/LandingPage';
 import ResetPasswordPage from './pages/auth/ResetPasswordPage';
@@ -440,6 +441,7 @@ function App() {
       </Routes>
 
       {isAuthenticated && <AnnouncementsModal />}
+      <SpeedInsights />
     </BrowserRouter>
   );
 }
