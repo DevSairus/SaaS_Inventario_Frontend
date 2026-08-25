@@ -6,6 +6,7 @@ import useTenantStore from '../../store/tenantStore';
 import BarcodeScanner from '../common/BarcodeScanner';
 import { warehousesService } from '../../api/warehouses';
 import { formatNumber } from '../../utils/formatters';
+import NumericInput from '../inputs/NumericInput';
 import ProductImageUpload from './ProductImageUpload';
 import { productsAPI } from '../../api/products';
 import RuntConsultaModal from '../workshop/RuntConsultaModal';
@@ -478,16 +479,13 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
                   Costo Promedio
                   <span className="ml-2 text-xs text-blue-600 font-normal">Ingresa el costo SIN IVA</span>
                 </label>
-                <input
-                  type="number"
-                  onWheel={(e) => e.target.blur()}
+                <NumericInput
                   name="average_cost"
                   value={formData.average_cost}
                   onChange={handleChange}
-                  step="0.01"
-                  min="0"
+                  decimals={2}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100"
-                  placeholder="0.00"
+                  placeholder="0,00"
                 />
                 <p className="mt-1 text-xs text-gray-500 dark:text-gray-500">Ejemplo: Si compras a $11,900 (con IVA 19%), ingresa $10,000</p>
                 <p className="mt-0.5 text-xs text-gray-400 dark:text-gray-500">Se actualiza automáticamente con las compras</p>
@@ -520,16 +518,13 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
                   Precio de Venta
                 </label>
                 <div className="flex gap-2">
-                  <input
-                    type="number"
-                    onWheel={(e) => e.target.blur()}
+                  <NumericInput
                     name="base_price"
                     value={formData.base_price}
                     onChange={handleChange}
-                    step="0.01"
-                    min="0"
+                    decimals={2}
                     className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100"
-                    placeholder="0.00"
+                    placeholder="0,00"
                   />
                   {calculatedPrice && (
                     <button

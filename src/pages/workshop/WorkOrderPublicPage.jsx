@@ -272,6 +272,24 @@ function ItemsAndQuoteSection({ order, diagrams, token, primaryColor, onResponde
         )}
 
         <div className="pt-2 border-t border-gray-100 dark:border-white/10 space-y-1">
+          {!order.hide_workorder_tax && (
+            <>
+              <div className="flex justify-between text-xs text-gray-400 dark:text-gray-500">
+                <span>Subtotal</span>
+                <span>{COP(order.subtotal)}</span>
+              </div>
+              <div className="flex justify-between text-xs text-gray-400 dark:text-gray-500">
+                <span>IVA</span>
+                <span>{COP(order.tax_amount)}</span>
+              </div>
+              {parseFloat(order.discount_amount) > 0 && (
+                <div className="flex justify-between text-xs text-red-400">
+                  <span>Descuento</span>
+                  <span>-{COP(order.discount_amount)}</span>
+                </div>
+              )}
+            </>
+          )}
           <div className="flex justify-between text-sm font-bold text-gray-900 dark:text-gray-100">
             <span>Total aprobado</span>
             <span>{COP(approvedTotal)}</span>

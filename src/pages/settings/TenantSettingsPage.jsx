@@ -55,8 +55,9 @@ const TenantSettingsPage = () => {
         const data = response.data.data;
         // Normalizar features con sus defaults
         const normalizedFeatures = {
-          hide_remision_tax: true,   // remisiones ocultan IVA por defecto
+          hide_remision_tax: true,   // remisiones (Ventas) ocultan IVA por defecto
           hide_invoice_tax: false,   // facturas muestran IVA por defecto
+          hide_workorder_tax: true,  // órdenes de trabajo (Taller) ocultan IVA por defecto — config independiente de remisiones
           ...(data.features || {}),
         };
         const normalizedBusinessConfig = {
@@ -407,6 +408,30 @@ const TenantSettingsPage = () => {
                   >
                     <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
                       config.features?.hide_remision_tax ? 'translate-x-6' : 'translate-x-1'
+                    }`} />
+                  </button>
+                </div>
+
+                {/* Toggle: Ocultar IVA en órdenes de trabajo (Taller) — config
+                    independiente de la de remisiones de Ventas de arriba, para
+                    que cambiar una no afecte la otra sin querer. */}
+                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
+                  <div className="flex-1 mr-4">
+                    <p className="font-medium text-gray-900 text-sm">Ocultar IVA en órdenes de trabajo</p>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      Aplica a la vista interna de la OT y al enlace público que ve el cliente: no se discrimina
+                      Subtotal/IVA, solo el total (IVA incluido). Es una configuración aparte de la de remisiones.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => toggleFeature('hide_workorder_tax')}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0 ${
+                      config.features?.hide_workorder_tax ? 'bg-blue-600' : 'bg-gray-300'
+                    }`}
+                  >
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                      config.features?.hide_workorder_tax ? 'translate-x-6' : 'translate-x-1'
                     }`} />
                   </button>
                 </div>

@@ -15,13 +15,16 @@ export default function WorkshopReportPage() {
   const firstOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
 
   const [filters, setFilters] = useState({ date_from: firstOfMonth, date_to: today });
+  const [includePending, setIncludePending] = useState(false);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
 
   const load = async () => {
     setLoading(true);
     try {
-      const res = await axios.get('/workshop/work-orders/report', { params: filters });
+      const res = await axios.get('/workshop/work-orders/report', {
+        params: { ...filters, include_pending: includePending },
+      });
       setData(res.data);
     } catch (e) {
       alert('Error al cargar reporte');
@@ -44,6 +47,7 @@ export default function WorkshopReportPage() {
       'Mano de obra':      r.labor_total,
       'Repuestos':         r.parts_total,
       'Total':             r.total_amount,
+      'Pendiente aprobar': r.pending_amount,
       'Costo repuestos':   r.parts_cost,
       'Costo M. obra':     r.labor_cost,
       'Origen costo M.O.': r.labor_cost_is_real ? 'Real' : 'Estimado',
@@ -95,6 +99,12 @@ export default function WorkshopReportPage() {
               onChange={e => setFilters(f => ({ ...f, date_to: e.target.value }))}
               className="px-3 py-2 border border-gray-300 rounded-lg text-sm" />
           </div>
+          <label className="flex items-center gap-2 text-sm text-gray-700 pb-2 cursor-pointer select-none">
+            <input type="checkbox" checked={includePending}
+              onChange={e => setIncludePending(e.target.checked)}
+              className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" />
+            Incluir cotizaciones pendientes de aprobación
+          </label>
           <button onClick={load} disabled={loading}
             className="px-5 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50">
             {loading ? 'Cargando...' : 'Generar reporte'}
@@ -118,10 +128,11 @@ export default function WorkshopReportPage() {
               { label: 'Completadas', value: s.completed, color: 'border-green-500', text: 'text-green-700' },
               { label: 'Mano de obra', value: fmt(s.total_labor), color: 'border-purple-500', text: 'text-purple-700' },
               { label: 'Repuestos', value: fmt(s.total_parts), color: 'border-teal-500', text: 'text-teal-700' },
-              { label: 'Ingresos totales', value: fmt(s.total_revenue), color: 'border-emerald-500', text: 'text-emerald-700' },
+              { label: data.include_pending ? 'Ingresos totales (con pendientes)' : 'Ingresos totales', value: fmt(s.total_revenue), color: 'border-emerald-500', text: 'text-emerald-700' },
               { label: 'Costo total', value: fmt(s.total_parts_cost + s.total_labor_cost), color: 'border-orange-500', text: 'text-orange-700' },
               { label: 'Margen neto', value: fmt(s.total_net_margin), color: 'border-green-600', text: 'text-green-700' },
               { label: 'Margen %', value: `${s.avg_margin_percentage.toFixed(1)}%`, color: 'border-green-400', text: 'text-green-700' },
+              { label: 'Cotizaciones pendientes', value: `${fmt(s.total_pending)} (${s.orders_with_pending} OT)`, color: 'border-amber-500', text: 'text-amber-700' },
               { label: 'OTs con costo estimado', value: s.orders_with_estimated_cost, color: 'border-amber-500', text: 'text-amber-700' },
               { label: 'En proceso', value: s.in_progress, color: 'border-amber-500', text: 'text-amber-700' },
               { label: 'Canceladas', value: s.cancelled, color: 'border-red-400', text: 'text-red-600' },
@@ -148,7 +159,7 @@ export default function WorkshopReportPage() {
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
-                      {['N° Orden','Estado','Cliente','Vehículo','Técnico','Creación','Entrega','Días','M. Obra','Repuestos','Total','Costo Repuestos','Costo M. Obra','Margen Neto','Margen %'].map(h => (
+                      {['N° Orden','Estado','Cliente','Vehículo','Técnico','Creación','Entrega','Días','M. Obra','Repuestos','Total','Pendiente','Costo Repuestos','Costo M. Obra','Margen Neto','Margen %'].map(h => (
                         <th key={h} className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">{h}</th>
                       ))}
                     </tr>
@@ -174,6 +185,7 @@ export default function WorkshopReportPage() {
                         <td className="px-3 py-2 text-sm text-right text-purple-700 font-medium">{fmt(r.labor_total)}</td>
                         <td className="px-3 py-2 text-sm text-right text-teal-700 font-medium">{fmt(r.parts_total)}</td>
                         <td className="px-3 py-2 text-sm text-right font-bold text-gray-900">{fmt(r.total_amount)}</td>
+                        <td className="px-3 py-2 text-sm text-right text-amber-600 font-medium">{r.pending_amount > 0 ? fmt(r.pending_amount) : '—'}</td>
                         <td className="px-3 py-2 text-sm text-right text-gray-500">{fmt(r.parts_cost)}</td>
                         <td className="px-3 py-2 text-sm text-right text-gray-500">
                           {fmt(r.labor_cost)}

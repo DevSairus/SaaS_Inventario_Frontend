@@ -20,9 +20,11 @@ const useTenantStore = create((set, get) => ({
       const res = await axios.get('/tenant/config');
       if (res.data.success) {
         const rawFeatures = res.data.data.features || {};
-        // Aplicar defaults: hide_remision_tax es true si nunca se configuró
+        // Aplicar defaults: hide_remision_tax (Ventas) y hide_workorder_tax
+        // (Taller) son independientes, cada una true si nunca se configuró.
         const features = {
           hide_remision_tax: true,
+          hide_workorder_tax: true,
           vehicle_field_enabled: true,
           technician_field_enabled: false, // default: deshabilitado (igual que placa)
           ...rawFeatures,
@@ -43,7 +45,7 @@ const useTenantStore = create((set, get) => ({
       // enabledModules queda null (no [] ) para no ocultarle todo el menú a un
       // usuario válido por un simple error de red — TenantRoute/Sidebar tratan
       // null como "todavía no se sabe, no bloquear todavía".
-      set({ features: { hide_remision_tax: true }, loading: false });
+      set({ features: { hide_remision_tax: true, hide_workorder_tax: true }, loading: false });
     }
   },
 
@@ -51,6 +53,7 @@ const useTenantStore = create((set, get) => ({
   setFeatures: (rawFeatures) => {
     const features = {
       hide_remision_tax: true,
+      hide_workorder_tax: true,
       vehicle_field_enabled: true,
       technician_field_enabled: false,
       ...rawFeatures,

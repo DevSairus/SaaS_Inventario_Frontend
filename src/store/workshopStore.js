@@ -149,9 +149,23 @@ const useWorkshopStore = create((set, get) => ({
 
   updateItem: async (orderId, itemId, data) => {
     try {
-      await workOrdersApiOffline.updateItem(orderId, itemId, data);
-      toast.success('Ítem actualizado');
-      await get().fetchOrder(orderId);
+      const res = await workOrdersApiOffline.updateItem(orderId, itemId, data);
+      if (res?.data?.data?._pendingSync) {
+        // Sin red: reflejar el cambio localmente (optimista) -- un
+        // fetchOrder acá pegaría al servidor, fallaría en silencio y
+        // dejaría la UI mostrando los valores viejos hasta reconectar.
+        set(state => ({
+          currentOrder: state.currentOrder ? {
+            ...state.currentOrder,
+            items: (state.currentOrder.items || []).map(i => i.id === itemId ? { ...i, ...data } : i),
+            _pendingSync: true,
+          } : state.currentOrder
+        }));
+        toast.success('Cambios guardados sin conexión — se sincronizarán automáticamente');
+      } else {
+        toast.success('Ítem actualizado');
+        await get().fetchOrder(orderId);
+      }
     } catch (err) {
       const msg = err?.response?.data?.message || 'No se pudo editar el ítem.';
       toast.error(msg);

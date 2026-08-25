@@ -193,6 +193,11 @@ export default function WorkOrdersPage() {
                       {!hidePrices && (
                         <div className="font-semibold text-gray-900 text-sm">{COP(order.total_amount)}</div>
                       )}
+                      {!hidePrices && parseFloat(order.pending_items_total) > 0 && (
+                        <div className="text-[11px] text-amber-600 font-medium">
+                          + {COP(order.pending_items_total)} por aprobar
+                        </div>
+                      )}
                       <div className="text-xs text-gray-400 flex items-center gap-1 justify-end">
                         <Clock size={10} />
                         {new Date(order.received_at).toLocaleDateString('es-CO')}

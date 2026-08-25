@@ -43,8 +43,9 @@ async function offlineAware(apiCallFn, queueSpec) {
   }
 }
 
-// Alcance offline: create/update/changeStatus/addItem/removeItem/updateChecklist
-// de Órdenes de Trabajo, y create/update de Vehículos (ver plan PWA Fase 4).
+// Alcance offline: create/update/changeStatus/addItem/updateItem/removeItem/
+// updateChecklist de Órdenes de Trabajo, y create/update de Vehículos (ver
+// plan PWA Fase 4).
 // Todo lo demás (getPDF, generateSale, fotos, share/whatsapp, remove) NO pasa
 // por aquí — se sigue llamando a workOrdersApi/vehiclesApi directamente y
 // requiere conexión real.
@@ -102,6 +103,16 @@ export const workOrdersApiOffline = {
       method: 'DELETE',
       url: `/workshop/work-orders/${id}/items/${itemId}`,
       payload: null,
+      localEntityId: id,
+    }),
+
+  updateItem: (id, itemId, data) =>
+    offlineAware(() => workOrdersApi.updateItem(id, itemId, data), {
+      entity: 'work_order',
+      operation: 'updateItem',
+      method: 'PATCH',
+      url: `/workshop/work-orders/${id}/items/${itemId}`,
+      payload: data,
       localEntityId: id,
     }),
 

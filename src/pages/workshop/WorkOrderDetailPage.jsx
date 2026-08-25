@@ -59,7 +59,10 @@ export default function WorkOrderDetailPage() {
   } = useWorkshopStore();
   const { searchProducts } = useProductsStore();
   const { features, fetchFeatures } = useTenantStore();
-  const hideRemisionTax = features?.hide_remision_tax === true;
+  // Config propia de la OT, separada de hide_remision_tax (que solo aplica a
+  // remisiones/facturas de Ventas) para que activar/desactivar una no afecte
+  // a la otra por accidente.
+  const hideWorkOrderTax = features?.hide_workorder_tax === true;
   const { user } = useAuthStore();
   // El técnico ve/opera la OT (diagnóstico, checklist, ítems) pero no debe
   // ver ningún valor monetario -- ni de repuestos, mano de obra, servicios
@@ -117,6 +120,13 @@ export default function WorkOrderDetailPage() {
   const [editingItemId, setEditingItemId] = useState(null);
   const [editItemVals, setEditItemVals]   = useState({ product_name: '', quantity: '', unit_price: '' });
   const [savingEditItem, setSavingEditItem] = useState(false);
+  // Ref además del state: el guard tiene que ser SÍNCRONO. `savingEditItem`
+  // (state) no bloquea un doble-click/doble-tap disparado antes de que React
+  // repinte el botón como disabled -- eso mandaba dos PATCH casi simultáneos
+  // y, si el segundo llegaba al backend con datos de formulario obsoletos,
+  // el resultado en pantalla podía verse como si el valor se hubiera sumado
+  // en vez de reemplazado.
+  const savingEditItemRef = useRef(false);
 
   const startEditItem = (item) => {
     setEditingItemId(item.id);
@@ -124,6 +134,8 @@ export default function WorkOrderDetailPage() {
   };
   const cancelEditItem = () => setEditingItemId(null);
   const saveEditItem = async (item) => {
+    if (savingEditItemRef.current) return;
+    savingEditItemRef.current = true;
     setSavingEditItem(true);
     try {
       const payload = { quantity: editItemVals.quantity, unit_price: editItemVals.unit_price };
@@ -131,7 +143,10 @@ export default function WorkOrderDetailPage() {
       await updateItem(id, item.id, payload);
       setEditingItemId(null);
     } catch { /* el store ya muestra el toast de error */ }
-    finally { setSavingEditItem(false); }
+    finally {
+      savingEditItemRef.current = false;
+      setSavingEditItem(false);
+    }
   };
 
   const [generatingSale, setGeneratingSale] = useState(false);
@@ -928,7 +943,7 @@ export default function WorkOrderDetailPage() {
                     </div>
                   ) : (
                   /* Búsqueda */
-                  <div>
+                  <div className="relative">
                     <label className="text-xs font-medium text-gray-600 mb-1 block">Buscar producto</label>
                     <div className="flex gap-2">
                       <div className="relative flex-1">
@@ -975,9 +990,11 @@ export default function WorkOrderDetailPage() {
                       <p className="text-xs text-gray-400 text-center py-3">No se encontraron productos</p>
                     )}
 
-                    {/* Lista de resultados */}
+                    {/* Lista de resultados — overlay más ancho que el campo de búsqueda
+                        (se sale de la columna de 2/3 del grid en pantallas grandes) para
+                        que quepa cómodo el costo interno junto al precio y el stock. */}
                     {!newItem.product_id && searchResults.length > 0 && (
-                      <div className="mt-1 max-h-52 overflow-y-auto border border-gray-200 rounded-lg bg-white shadow-sm divide-y divide-gray-50">
+                      <div className="absolute z-20 mt-1 left-0 w-full xl:w-[150%] max-h-72 overflow-y-auto border border-gray-200 rounded-lg bg-white shadow-lg divide-y divide-gray-50">
                         {searchResults.map(p => (
                           <button key={p.id} onClick={() => handleSelectProduct(p)}
                             className="w-full text-left px-3 py-2.5 hover:bg-blue-50 transition">
@@ -1021,7 +1038,14 @@ export default function WorkOrderDetailPage() {
                                   </button>
                                 )}
                                 {!hidePrices && (
-                                  <span className="text-sm font-semibold text-blue-600">{COP(p.base_price)}</span>
+                                  <div className="text-right leading-tight">
+                                    <span className="block text-sm font-semibold text-blue-600">{COP(p.base_price)}</span>
+                                    {/* Costo registrado — solo informativo para quien agrega el
+                                        ítem (visibilidad de margen), no se guarda en el ítem de la OT. */}
+                                    {p.average_cost > 0 && (
+                                      <span className="block text-[11px] text-gray-400">Costo: {COP(p.average_cost)}</span>
+                                    )}
+                                  </div>
                                 )}
                               </div>
                             </div>
@@ -1176,6 +1200,9 @@ export default function WorkOrderDetailPage() {
                         {!isEditingThis && (
                           <p className="text-xs text-gray-400 mt-0.5">
                             {hidePrices ? `Cantidad: ${item.quantity}` : <>{item.quantity} × {COP(item.unit_price)}</>}
+                            {!hidePrices && !hideWorkOrderTax && parseFloat(item.tax_amount) > 0 && (
+                              <> · IVA {COP(item.tax_amount)}</>
+                            )}
                             {item.item_technician && (
                               <span className="ml-2 text-blue-500">
                                 · {item.item_technician.first_name} {item.item_technician.last_name}
@@ -1246,7 +1273,7 @@ export default function WorkOrderDetailPage() {
 
                 return (
                 <div className="mt-3 pt-3 border-t border-gray-100 space-y-1">
-                  {hideRemisionTax ? (
+                  {hideWorkOrderTax ? (
                     /* IVA oculto: mostrar solo total (IVA incluido, no discriminado) */
                     <>
                       {parseFloat(order.discount_amount) > 0 && (
