@@ -88,6 +88,7 @@ const CustomerDetailPage = lazy(() => import('./pages/crm/CustomerDetailPage'));
 const PipelinePage = lazy(() => import('./pages/crm/PipelinePage'));
 const FollowUpsPage = lazy(() => import('./pages/crm/FollowUpsPage'));
 const CrmDashboardPage = lazy(() => import('./pages/crm/CrmDashboardPage'));
+const WhatsAppInboxPage = lazy(() => import('./pages/crm/WhatsAppInboxPage'));
 const MetaIntegrationSettingsPage = lazy(() => import('./pages/crm/MetaIntegrationSettingsPage'));
 const CrmSettingsPage = lazy(() => import('./pages/crm/CrmSettingsPage'));
 const WarehousesPage = lazy(() => import('./pages/warehouses/WarehousesPage'));
@@ -394,6 +395,7 @@ function App() {
             Ventas (ver SaleFormPage: isCrmQuoteMode) -- reusa el mismo
             componente que /sales/new para no duplicar ~800 líneas. */}
         <Route path="crm/quotes/new" element={<TenantRoute module={["sales", "workshop", "crm"]}><Suspense fallback={<Loading fullScreen />}><SaleFormPage /></Suspense></TenantRoute>} />
+        <Route path="crm/whatsapp"  element={<TenantRoute module="crm"><Suspense fallback={<Loading fullScreen />}><WhatsAppInboxPage /></Suspense></TenantRoute>} />
         <Route path="crm/pipeline"  element={<TenantRoute module="crm"><Suspense fallback={<Loading fullScreen />}><PipelinePage /></Suspense></TenantRoute>} />
         <Route path="crm/followups" element={<TenantRoute module="crm"><Suspense fallback={<Loading fullScreen />}><FollowUpsPage /></Suspense></TenantRoute>} />
         <Route path="crm/dashboard" element={<TenantRoute module="crm"><Suspense fallback={<Loading fullScreen />}><CrmDashboardPage /></Suspense></TenantRoute>} />

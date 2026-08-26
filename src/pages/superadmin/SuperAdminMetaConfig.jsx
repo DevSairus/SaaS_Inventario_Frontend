@@ -27,6 +27,7 @@ const SuperAdminMetaConfig = () => {
     webhook_verify_token: '',
     shared_page_id: '',
     shared_waba_id: '',
+    embedded_signup_config_id: '',
     shared_system_user_token: '',
     is_active: false,
   });
@@ -60,6 +61,7 @@ const SuperAdminMetaConfig = () => {
           webhook_verify_token: '',
           shared_page_id: data.config.shared_page_id || '',
           shared_waba_id: data.config.shared_waba_id || '',
+          embedded_signup_config_id: data.config.embedded_signup_config_id || '',
           shared_system_user_token: '',
           is_active: data.config.is_active,
         });
@@ -226,10 +228,22 @@ const SuperAdminMetaConfig = () => {
                 type="text"
                 value={config.shared_waba_id}
                 onChange={(e) => setConfig({ ...config, shared_waba_id: e.target.value })}
-                placeholder="Fase WhatsApp Cloud API -- todavía no operativo"
+                placeholder="WhatsApp Business Account ID (modo compartido)"
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100 dark:placeholder-gray-600"
               />
             </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">Embedded Signup Config ID</label>
+            <input
+              type="text"
+              value={config.embedded_signup_config_id}
+              onChange={(e) => setConfig({ ...config, embedded_signup_config_id: e.target.value })}
+              placeholder="Config ID de Facebook Login for Business / Embedded Signup (coexistencia)"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100 dark:placeholder-gray-600"
+            />
+            <p className="text-xs text-gray-400 mt-1 dark:text-gray-500">Necesario para el botón QR de conexión WhatsApp en cada tenant.</p>
           </div>
 
           <div>

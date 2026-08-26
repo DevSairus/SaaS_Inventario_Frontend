@@ -46,6 +46,42 @@ const crmApi = {
   connectMetaPitboxMode: () => api.post('/crm/meta-integration/connect/pitbox'),
   disconnectMetaIntegration: () => api.delete('/crm/meta-integration/disconnect'),
 
+  // ── WhatsApp Cloud API + coexistencia ────────────────────────────────────
+  getWhatsAppCloudStatus: () => api.get('/crm/whatsapp/status'),
+  completeWhatsAppEmbeddedSignup: (data) => api.post('/crm/whatsapp/embedded-signup/complete', data),
+  disconnectWhatsAppCloud: () => api.post('/crm/whatsapp/disconnect'),
+  setWhatsAppDemoMode: (enabled = true) => api.post('/crm/whatsapp/demo-mode', { enabled }),
+  simulateWaInbound: (data) => api.post('/crm/whatsapp/demo/simulate-inbound', data),
+  getWaWorkspacePrefs: () => api.get('/crm/whatsapp/workspace-prefs'),
+  updateWaWorkspacePrefs: (prefs) => api.put('/crm/whatsapp/workspace-prefs', { prefs }),
+  updateWaConversation: (id, data) => api.patch(`/crm/whatsapp/conversations/${id}`, data),
+  sendWhatsAppTemplate: (data) => api.post('/crm/whatsapp/send-template', data),
+  sendWhatsAppText: (data) => api.post('/crm/whatsapp/send-text', data),
+  listWaConversations: (params = {}) => api.get('/crm/whatsapp/conversations', { params }),
+  getWaConversation: (id) => api.get(`/crm/whatsapp/conversations/${id}`),
+  listWaMessages: (id, params = {}) => api.get(`/crm/whatsapp/conversations/${id}/messages`, { params }),
+  sendWaConversationText: (id, data) => api.post(`/crm/whatsapp/conversations/${id}/messages`, data),
+  sendWaConversationMedia: (id, formData) => api.post(`/crm/whatsapp/conversations/${id}/media`, formData, {
+    timeout: 60000,
+    transformRequest: [(data, headers) => {
+      if (typeof FormData !== 'undefined' && data instanceof FormData) {
+        delete headers['Content-Type'];
+      }
+      return data;
+    }],
+  }),
+  markWaConversationRead: (id) => api.post(`/crm/whatsapp/conversations/${id}/read`),
+  assignWaConversation: (id, data) => api.post(`/crm/whatsapp/conversations/${id}/assign`, data),
+  suggestWaReply: (id) => api.post(`/crm/whatsapp/conversations/${id}/ai/suggest`),
+  summarizeWaConversation: (id) => api.post(`/crm/whatsapp/conversations/${id}/ai/summarize`),
+  syncWaTemplates: () => api.post('/crm/whatsapp/templates/sync'),
+  listWaTemplates: (params = {}) => api.get('/crm/whatsapp/templates', { params }),
+  listWaReminders: (params = {}) => api.get('/crm/whatsapp/reminders', { params }),
+  createWaReminder: (data) => api.post('/crm/whatsapp/reminders', data),
+  listWaCampaigns: () => api.get('/crm/whatsapp/campaigns'),
+  createWaCampaign: (data) => api.post('/crm/whatsapp/campaigns', data),
+  startWaCampaign: (id) => api.post(`/crm/whatsapp/campaigns/${id}/start`),
+
   // ── Etapas de pipeline configurables (Fase B.4) ──────────────────────────
   listPipelineStages: () => api.get('/crm/pipeline-stages'),
   createPipelineStage: (data) => api.post('/crm/pipeline-stages', data),

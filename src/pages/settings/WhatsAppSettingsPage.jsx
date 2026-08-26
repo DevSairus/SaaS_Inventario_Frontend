@@ -1,7 +1,8 @@
 // frontend/src/pages/settings/WhatsAppSettingsPage.jsx
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import Layout from '../../components/layout/Layout';
 import api from '../../api/axios';
+import crmApi from '../../api/crm';
 import toast from 'react-hot-toast';
 
 function WhatsAppIcon({ className }) {
@@ -28,9 +29,56 @@ function XIcon({ className }) {
   );
 }
 
+function loadFacebookSdk(appId) {
+  return new Promise((resolve, reject) => {
+    if (window.FB) {
+      resolve(window.FB);
+      return;
+    }
+    window.fbAsyncInit = function () {
+      window.FB.init({
+        appId,
+        cookie: true,
+        xfbml: false,
+        version: 'v21.0',
+      });
+      resolve(window.FB);
+    };
+    const script = document.createElement('script');
+    script.src = 'https://connect.facebook.net/es_LA/sdk.js';
+    script.async = true;
+    script.defer = true;
+    script.onerror = () => reject(new Error('No se pudo cargar el SDK de Facebook'));
+    document.body.appendChild(script);
+  });
+}
+
 export default function WhatsAppSettingsPage() {
-  const [testing, setTesting]     = useState(false);
-  const [testResult, setTestResult] = useState(null); // null | { success, message, diagnosis }
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState(null);
+  const [waStatus, setWaStatus] = useState(null);
+  const [loadingWa, setLoadingWa] = useState(true);
+  const [connecting, setConnecting] = useState(false);
+  const [manual, setManual] = useState({
+    code: '',
+    waba_id: '',
+    phone_number_id: '',
+    display_phone: '',
+  });
+
+  const loadWa = useCallback(async () => {
+    setLoadingWa(true);
+    try {
+      const res = await crmApi.getWhatsAppCloudStatus();
+      setWaStatus(res.data.data);
+    } catch {
+      setWaStatus(null);
+    } finally {
+      setLoadingWa(false);
+    }
+  }, []);
+
+  useEffect(() => { loadWa(); }, [loadWa]);
 
   const handleTestCloudinary = async () => {
     setTesting(true);
@@ -49,6 +97,108 @@ export default function WhatsAppSettingsPage() {
     }
   };
 
+  const submitEmbeddedComplete = async (payload) => {
+    setConnecting(true);
+    try {
+      await crmApi.completeWhatsAppEmbeddedSignup({
+        ...payload,
+        coexistence: true,
+      });
+      toast.success('WhatsApp Cloud API conectado');
+      loadWa();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'No se pudo completar la conexión');
+    } finally {
+      setConnecting(false);
+    }
+  };
+
+  const handleEmbeddedSignup = async () => {
+    if (!waStatus?.app_id) {
+      toast.error('Falta App ID de Meta en configuración de Pitbox (superadmin)');
+      return;
+    }
+    if (!waStatus?.embedded_signup_config_id) {
+      toast.error('Falta embedded_signup_config_id en Meta Config. Mientras tanto usa el formulario manual abajo.');
+      return;
+    }
+    try {
+      setConnecting(true);
+      const FB = await loadFacebookSdk(waStatus.app_id);
+      FB.login(
+        (response) => {
+          const code = response?.authResponse?.code;
+          if (!code) {
+            toast.error('No se recibió code de Meta');
+            setConnecting(false);
+            return;
+          }
+          // Tras Embedded Signup, Meta también entrega waba_id / phone_number_id
+          // vía sessionInfoListener. Si no llega, el admin completa el form manual.
+          const wabaId = window.__pitboxWaSession?.waba_id;
+          const phoneId = window.__pitboxWaSession?.phone_number_id;
+          if (!wabaId || !phoneId) {
+            toast(
+              'Autorización OK. Completa WABA ID y Phone Number ID en el formulario (sesión Embedded Signup).',
+              { duration: 6000 }
+            );
+            setManual((m) => ({ ...m, code }));
+            setConnecting(false);
+            return;
+          }
+          submitEmbeddedComplete({
+            code,
+            waba_id: wabaId,
+            phone_number_id: phoneId,
+            display_phone: window.__pitboxWaSession?.display_phone,
+          });
+        },
+        {
+          config_id: waStatus.embedded_signup_config_id,
+          response_type: 'code',
+          override_default_response_type: true,
+          extras: {
+            setup: {},
+            featureType: 'whatsapp_business_app_onboarding',
+            sessionInfoVersion: '3',
+          },
+        }
+      );
+    } catch (err) {
+      toast.error(err.message || 'Error al abrir Embedded Signup');
+      setConnecting(false);
+    }
+  };
+
+  useEffect(() => {
+    const handler = (event) => {
+      if (!event.origin.includes('facebook.com')) return;
+      try {
+        const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+        if (data?.type === 'WA_EMBEDDED_SIGNUP') {
+          window.__pitboxWaSession = {
+            waba_id: data.data?.waba_id,
+            phone_number_id: data.data?.phone_number_id,
+            display_phone: data.data?.display_phone_number,
+          };
+        }
+      } catch (_) { /* ignore */ }
+    };
+    window.addEventListener('message', handler);
+    return () => window.removeEventListener('message', handler);
+  }, []);
+
+  const handleManualSubmit = async (e) => {
+    e.preventDefault();
+    if (!manual.code || !manual.waba_id || !manual.phone_number_id) {
+      toast.error('code, waba_id y phone_number_id son obligatorios');
+      return;
+    }
+    await submitEmbeddedComplete(manual);
+  };
+
+  const cloudConnected = !!waStatus?.connected;
+
   return (
     <Layout>
       <div className="max-w-2xl mx-auto px-4 py-8 space-y-6">
@@ -56,22 +206,159 @@ export default function WhatsAppSettingsPage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900 mb-1">WhatsApp</h1>
           <p className="text-sm text-gray-500">
-            Envío de facturas y órdenes de trabajo directamente a tus clientes.
+            Cloud API con coexistencia (mismo número en la app del celular y en Pitbox) + fallback wa.me.
           </p>
         </div>
 
-        {/* Estado */}
+        {/* Cloud API status */}
+        <div className={`flex items-start gap-4 p-5 border rounded-xl ${
+          cloudConnected ? 'bg-green-50 border-green-200' : 'bg-amber-50 border-amber-200'
+        }`}>
+          <div className={`w-3 h-3 mt-1.5 rounded-full shrink-0 ${cloudConnected ? 'bg-green-500' : 'bg-amber-500'}`} />
+          <div className="flex-1 space-y-1">
+            {loadingWa ? (
+              <p className="text-sm text-gray-600">Cargando estado Cloud API…</p>
+            ) : cloudConnected ? (
+              <>
+                <p className="font-semibold text-green-800 text-sm">Cloud API conectada</p>
+                <p className="text-xs text-green-700">
+                  {waStatus.own_display_phone || waStatus.own_phone_number_id}
+                  {waStatus.wa_coexistence ? ' · Coexistencia activa' : ''}
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="font-semibold text-amber-800 text-sm">Cloud API no conectada</p>
+                <p className="text-xs text-amber-700">
+                  Escanea el QR en WhatsApp Business App vía Embedded Signup, o completa el formulario cuando Meta entregue los IDs.
+                </p>
+              </>
+            )}
+            {waStatus?.last_error && (
+              <p className="text-xs text-red-600 mt-1">{waStatus.last_error}</p>
+            )}
+            {cloudConnected && (
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!window.confirm('¿Desconectar WhatsApp Cloud API de este tenant?')) return;
+                  try {
+                    await crmApi.disconnectWhatsAppCloud();
+                    toast.success('WhatsApp desconectado');
+                    loadWa();
+                  } catch (err) {
+                    toast.error(err.response?.data?.message || 'No se pudo desconectar');
+                  }
+                }}
+                className="mt-2 text-xs font-medium text-red-600 hover:underline"
+              >
+                Desconectar
+              </button>
+            )}
+          </div>
+        </div>
+
+        {!cloudConnected && (
+          <div className="p-5 bg-white border border-gray-200 rounded-xl space-y-4">
+            <div className="flex items-center gap-2">
+              <WhatsAppIcon className="w-5 h-5 text-green-600" />
+              <h2 className="font-semibold text-gray-800 text-sm">Conectar WhatsApp (coexistencia)</h2>
+            </div>
+            <p className="text-xs text-gray-500">
+              El número sigue usable en WhatsApp Business App. Pitbox envía plantillas y recibe mensajes por Cloud API.
+            </p>
+            <button
+              type="button"
+              onClick={handleEmbeddedSignup}
+              disabled={connecting}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white text-xs font-semibold rounded-lg"
+            >
+              {connecting ? 'Conectando…' : 'Abrir Embedded Signup (QR)'}
+            </button>
+
+            <form onSubmit={handleManualSubmit} className="pt-3 border-t border-gray-100 space-y-3">
+              <p className="text-xs font-medium text-gray-700">Completar a mano (code + IDs de Meta)</p>
+              {['code', 'waba_id', 'phone_number_id', 'display_phone'].map((field) => (
+                <input
+                  key={field}
+                  className="w-full text-xs border border-gray-200 rounded-lg px-3 py-2"
+                  placeholder={field}
+                  value={manual[field]}
+                  onChange={(e) => setManual((m) => ({ ...m, [field]: e.target.value }))}
+                />
+              ))}
+              <button
+                type="submit"
+                disabled={connecting}
+                className="px-4 py-2 bg-gray-900 text-white text-xs font-semibold rounded-lg disabled:opacity-50"
+              >
+                Guardar conexión
+              </button>
+            </form>
+          </div>
+        )}
+
+        {cloudConnected && (
+          <div className="p-5 bg-white border border-gray-200 rounded-xl space-y-3">
+            <h2 className="font-semibold text-gray-800 text-sm">Plantillas Meta</h2>
+            <p className="text-xs text-gray-500">
+              Sincroniza las plantillas APPROVED del WABA para recordatorios y campañas.
+            </p>
+            <button
+              type="button"
+              onClick={async () => {
+                try {
+                  const res = await crmApi.syncWaTemplates();
+                  toast.success(`Sincronizadas: ${res.data.data?.synced ?? 0}`);
+                } catch (err) {
+                  toast.error(err.response?.data?.message || 'No se pudo sincronizar');
+                }
+              }}
+              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg"
+            >
+              Sincronizar plantillas
+            </button>
+            <a href="/crm/whatsapp" className="block text-xs text-emerald-700 hover:underline">
+              Ir al inbox WhatsApp →
+            </a>
+          </div>
+        )}
+
+        {!cloudConnected && (
+          <div className="p-5 bg-white border border-amber-200 rounded-xl space-y-3">
+            <h2 className="font-semibold text-gray-800 text-sm">Modo demo (sin Meta)</h2>
+            <p className="text-xs text-gray-500">
+              Activa un inbox realista en Empresa de Pruebas para demos a clientes. Los mensajes no salen a WhatsApp.
+            </p>
+            <button
+              type="button"
+              onClick={async () => {
+                try {
+                  await crmApi.setWhatsAppDemoMode(true);
+                  toast.success('Modo demo activado');
+                  loadWa();
+                } catch (err) {
+                  toast.error(err.response?.data?.message || 'No se pudo activar');
+                }
+              }}
+              className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold rounded-lg"
+            >
+              Activar modo demo
+            </button>
+          </div>
+        )}
+
+        {/* wa.me fallback */}
         <div className="flex items-start gap-4 p-5 bg-green-50 border border-green-200 rounded-xl">
           <div className="w-3 h-3 mt-1.5 rounded-full bg-green-500 shrink-0" />
           <div>
-            <p className="font-semibold text-green-800 text-sm">Activo — Modo wa.me</p>
+            <p className="font-semibold text-green-800 text-sm">Fallback — Modo wa.me</p>
             <p className="text-xs text-green-700 mt-0.5">
-              No requiere escanear QR ni mantener sesión abierta. Compatible con Vercel y cualquier hosting serverless.
+              Si Cloud API no está conectada, ventas y OT siguen abriendo WhatsApp con el mensaje prellenado.
             </p>
           </div>
         </div>
 
-        {/* Cómo funciona */}
         <div className="p-5 bg-white border border-gray-200 rounded-xl">
           <div className="flex items-center gap-2 mb-4">
             <WhatsAppIcon className="w-5 h-5 text-green-600" />
@@ -79,15 +366,10 @@ export default function WhatsAppSettingsPage() {
           </div>
           <ol className="text-sm text-gray-600 space-y-3 list-decimal list-inside">
             <li>Abre una venta o una orden de trabajo y haz clic en <strong>Enviar por WhatsApp</strong>.</li>
-            <li>El sistema prepara el mensaje con los datos del documento (y el PDF si Cloudinary está activo).</li>
-            <li>Se abre WhatsApp Web o la app con el mensaje listo. Solo presiona <strong className="text-green-700">Enviar ↑</strong>.</li>
+            <li>Con Cloud API: se envía plantilla/API. Sin Cloud API: se abre wa.me.</li>
           </ol>
-          <p className="text-xs text-gray-400 mt-4">
-            * El mensaje se envía desde <strong>tu propio WhatsApp</strong>.
-          </p>
         </div>
 
-        {/* Cloudinary — PDF */}
         <div className="p-5 bg-white border border-gray-200 rounded-xl space-y-4">
           <div className="flex items-center justify-between">
             <div>
@@ -99,104 +381,29 @@ export default function WhatsAppSettingsPage() {
             <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium shrink-0">Opcional</span>
           </div>
 
-          <div className="bg-gray-50 rounded-lg p-3 text-xs font-mono text-gray-700 space-y-1">
-            <p>CLOUDINARY_CLOUD_NAME=<span className="text-blue-600">tu_cloud_name</span></p>
-            <p>CLOUDINARY_API_KEY=<span className="text-blue-600">tu_api_key</span></p>
-            <p>CLOUDINARY_API_SECRET=<span className="text-blue-600">tu_api_secret</span></p>
-          </div>
+          <button
+            onClick={handleTestCloudinary}
+            disabled={testing}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-900 disabled:opacity-50 text-white text-xs font-semibold rounded-lg transition-colors"
+          >
+            {testing ? 'Probando…' : 'Probar conexión con Cloudinary'}
+          </button>
 
-          <p className="text-xs text-gray-400">
-            Sin estas variables el botón funciona igual pero envía un resumen de texto en lugar del PDF.
-            Crea tu cuenta gratis en{' '}
-            <a href="https://cloudinary.com" target="_blank" rel="noopener noreferrer" className="text-blue-500 underline">
-              cloudinary.com
-            </a>
-            {' '}(plan gratuito: 25 GB).
-          </p>
-
-          {/* Botón de prueba */}
-          <div className="pt-1">
-            <button
-              onClick={handleTestCloudinary}
-              disabled={testing}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-900 disabled:opacity-50 text-white text-xs font-semibold rounded-lg transition-colors"
-            >
-              {testing ? (
-                <>
-                  <svg className="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
-                  </svg>
-                  Probando conexión...
-                </>
-              ) : 'Probar conexión con Cloudinary'}
-            </button>
-          </div>
-
-          {/* Resultado del test */}
           {testResult && (
             <div className={`rounded-lg border p-4 space-y-3 text-xs ${
-              testResult.success
-                ? 'bg-green-50 border-green-200'
-                : 'bg-red-50 border-red-200'
+              testResult.success ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'
             }`}>
               <div className="flex items-center gap-2">
                 {testResult.success
                   ? <CheckIcon className="w-4 h-4 text-green-600" />
-                  : <XIcon className="w-4 h-4 text-red-600" />
-                }
+                  : <XIcon className="w-4 h-4 text-red-600" />}
                 <span className={`font-semibold ${testResult.success ? 'text-green-800' : 'text-red-800'}`}>
                   {testResult.message}
                 </span>
               </div>
-
-              {testResult.diagnosis && (
-                <div className="space-y-1 font-mono text-gray-600">
-                  <p className="font-sans font-medium text-gray-700 mb-1">Variables de entorno:</p>
-                  {Object.entries(testResult.diagnosis.env || {}).map(([key, val]) => (
-                    key !== 'cloud_name_value' && (
-                      <div key={key} className="flex items-center gap-2">
-                        {val
-                          ? <CheckIcon className="w-3 h-3 text-green-500 shrink-0" />
-                          : <XIcon className="w-3 h-3 text-red-500 shrink-0" />
-                        }
-                        <span className={val ? 'text-green-700' : 'text-red-700'}>{key}</span>
-                      </div>
-                    )
-                  ))}
-                  {testResult.diagnosis.env?.cloud_name_value && (
-                    <p className="text-gray-500 mt-1">
-                      Cloud name: <span className="text-gray-800">{testResult.diagnosis.env.cloud_name_value}</span>
-                    </p>
-                  )}
-                  {testResult.diagnosis.upload && (
-                    <div className="mt-2 pt-2 border-t border-gray-200">
-                      <p className="font-sans text-green-700">Archivo de prueba subido y eliminado correctamente.</p>
-                      <p className="text-gray-500 mt-0.5 break-all">URL: {testResult.diagnosis.upload.secure_url}</p>
-                    </div>
-                  )}
-                  {testResult.diagnosis.error && (
-                    <p className="mt-2 text-red-700 font-sans">Error: {testResult.diagnosis.error}</p>
-                  )}
-                </div>
-              )}
             </div>
           )}
         </div>
-
-        {/* Recordatorios */}
-        <div className="p-5 bg-white border border-gray-200 rounded-xl">
-          <h2 className="font-semibold text-gray-800 text-sm mb-1">Recordatorios automáticos (SOAT / Tecno)</h2>
-          <p className="text-xs text-gray-500">
-            Los recordatorios se envían por <strong>email</strong> automáticamente 15, 7 y 3 días antes del vencimiento.
-            Requiere <code className="bg-gray-100 px-1 rounded">GMAIL_USER</code> y{' '}
-            <code className="bg-gray-100 px-1 rounded">GMAIL_APP_PASSWORD</code> en las variables de entorno.
-          </p>
-          <p className="text-xs text-gray-400 mt-2">
-            Integración con WhatsApp para recordatorios automáticos disponible próximamente (Meta Cloud API).
-          </p>
-        </div>
-
       </div>
     </Layout>
   );
