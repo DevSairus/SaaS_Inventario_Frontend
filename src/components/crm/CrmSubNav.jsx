@@ -5,10 +5,11 @@
 // sensación de estar en un módulo, no en pantallas aisladas, y deja un
 // lugar natural para las notificaciones (badges) que hoy no existen.
 import { NavLink } from 'react-router-dom';
-import { Target, ListTodo, BarChart3, Settings } from 'lucide-react';
+import { Target, ListTodo, BarChart3, Settings, MessageCircle } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
 
 const ITEMS = [
+  { to: '/crm/whatsapp', label: 'WhatsApp', icon: MessageCircle, key: 'whatsapp' },
   { to: '/crm/pipeline', label: 'Pipeline', icon: Target, key: 'pipeline' },
   { to: '/crm/followups', label: 'Seguimientos', icon: ListTodo, key: 'followups' },
   { to: '/crm/dashboard', label: 'Dashboard', icon: BarChart3, key: 'dashboard' },

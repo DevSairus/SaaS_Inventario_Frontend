@@ -56,6 +56,7 @@ import CustomerDetailPage from './pages/crm/CustomerDetailPage';
 import PipelinePage from './pages/crm/PipelinePage';
 import FollowUpsPage from './pages/crm/FollowUpsPage';
 import CrmDashboardPage from './pages/crm/CrmDashboardPage';
+import WhatsAppInboxPage from './pages/crm/WhatsAppInboxPage';
 import MetaIntegrationSettingsPage from './pages/crm/MetaIntegrationSettingsPage';
 import CrmSettingsPage from './pages/crm/CrmSettingsPage';
 import WarehousesPage from './pages/warehouses/WarehousesPage';
@@ -322,6 +323,7 @@ function App() {
         <Route path="customers/:id" element={<TenantRoute module="sales"><CustomerDetailPage /></TenantRoute>} />
 
         {/* CRM — pipeline, seguimiento y dashboard */}
+        <Route path="crm/whatsapp"  element={<TenantRoute module="crm"><WhatsAppInboxPage /></TenantRoute>} />
         <Route path="crm/pipeline"  element={<TenantRoute module="crm"><PipelinePage /></TenantRoute>} />
         <Route path="crm/followups" element={<TenantRoute module="crm"><FollowUpsPage /></TenantRoute>} />
         <Route path="crm/dashboard" element={<TenantRoute module="crm"><CrmDashboardPage /></TenantRoute>} />
