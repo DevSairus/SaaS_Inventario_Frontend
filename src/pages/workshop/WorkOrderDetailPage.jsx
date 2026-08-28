@@ -54,7 +54,7 @@ export default function WorkOrderDetailPage() {
   const navigate = useNavigate();
   const {
     currentOrder: order, orderLoading,
-    fetchOrder, patchCurrentOrder, changeStatus, addItem, updateItem, removeItem, generateSale, uploadPhotos, deletePhoto,
+    fetchOrder, patchCurrentOrder, changeStatus, revertStatus, addItem, updateItem, removeItem, generateSale, uploadPhotos, deletePhoto,
     sendQuoteRequest, resendQuoteRequest, applyApprovedItems,
   } = useWorkshopStore();
   const { searchProducts } = useProductsStore();
@@ -68,6 +68,38 @@ export default function WorkOrderDetailPage() {
   // ver ningún valor monetario -- ni de repuestos, mano de obra, servicios
   // ni totales -- para que no negocie precios con el cliente en el taller.
   const hidePrices = user?.role === 'technician';
+
+  // Reversar estado (solo admin) — OT bloqueada en 'listo'/'entregado'
+  const [showRevertModal, setShowRevertModal] = useState(false);
+  const [revertTarget, setRevertTarget] = useState('en_proceso');
+  const [revertReason, setRevertReason] = useState('');
+  const [reverting, setReverting] = useState(false);
+  const canRevert = ['admin', 'super_admin'].includes(user?.role);
+
+  const openRevertModal = () => {
+    setRevertTarget('en_proceso');
+    setRevertReason('');
+    setShowRevertModal(true);
+  };
+
+  const confirmRevert = async () => {
+    if (!revertReason.trim()) {
+      toast.error('Indica el motivo de la reversión');
+      return;
+    }
+    setReverting(true);
+    try {
+      const result = await revertStatus(id, revertTarget, revertReason.trim());
+      if (result?.document_voided?.method === 'nota_credito') {
+        toast.success('Factura anulada mediante nota crédito — revisa el estado del envío a DIAN', { duration: 6000 });
+      }
+      setShowRevertModal(false);
+    } catch {
+      // el store ya muestra el toast de error
+    } finally {
+      setReverting(false);
+    }
+  };
 
   // Descuento global de la OT
   const [editingDiscount, setEditingDiscount] = useState(false);
@@ -647,7 +679,10 @@ export default function WorkOrderDetailPage() {
   }
 
   const sc         = STATUS_CONFIG[order.status] || STATUS_CONFIG.recibido;
-  const isClosed   = ['entregado', 'cancelado'].includes(order.status);
+  // 'listo' ahora también bloquea edición (ver revertStatus en el backend) --
+  // solo se puede seguir editando en recibido/en_proceso/en_espera.
+  const isClosed   = ['listo', 'entregado', 'cancelado'].includes(order.status);
+  const isLocked   = ['listo', 'entregado'].includes(order.status); // reversable por admin
   const StatusIcon = sc.icon;
   const nextStatuses = STATUS_TRANSITIONS[order.status] || [];
 
@@ -682,7 +717,9 @@ export default function WorkOrderDetailPage() {
           </div>
 
           <div className="flex gap-2 flex-wrap items-center">
-            {!isClosed && nextStatuses.map(s => (
+            {/* listo->entregado sigue permitido aunque 'listo' ya esté bloqueada para
+                edición -- isClosed no aplica acá, solo el terminal real (entregado/cancelado) */}
+            {!['entregado', 'cancelado'].includes(order.status) && nextStatuses.map(s => (
               <button key={s} onClick={() => {
                 if (s === 'listo') {
                   const hasAnyItem = order.items?.some(
@@ -723,6 +760,12 @@ export default function WorkOrderDetailPage() {
               <button onClick={() => navigate(`/sales/${order.sale_id}`)}
                 className="px-4 py-1.5 text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200 rounded-lg hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800/40 dark:hover:bg-blue-900/50 flex items-center gap-1.5 transition">
                 <FileText size={13} /> Ver Remisión {order.sale?.sale_number}
+              </button>
+            )}
+            {isLocked && canRevert && (
+              <button onClick={openRevertModal}
+                className="px-4 py-1.5 text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200 rounded-lg hover:bg-amber-100 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800/40 dark:hover:bg-amber-900/50 flex items-center gap-1.5 transition">
+                <AlertTriangle size={13} /> Reversar estado
               </button>
             )}
 
@@ -2180,6 +2223,69 @@ export default function WorkOrderDetailPage() {
             </div>
           </div>
         )}
+
+      {showRevertModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <div className="bg-white dark:bg-graphite-2 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+            <div className="p-6 border-b border-gray-100 dark:border-white/10">
+              <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">Reversar estado de la OT</h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                La OT está bloqueada en <strong>{STATUS_CONFIG[order.status]?.label}</strong>. Al reversar podrás
+                volver a editarla.
+                {order.sale_id && (
+                  <>
+                    {' '}Tiene un documento generado
+                    {order.sale?.document_type === 'factura' ? ' (factura)' : ' (remisión)'} — se anulará
+                    automáticamente{order.sale?.document_type === 'factura' && order.sale?.dian_status === 'accepted'
+                      ? ' mediante una nota crédito, porque ya fue aceptada por DIAN' : ''}.
+                  </>
+                )}
+              </p>
+            </div>
+            <div className="p-5 space-y-4">
+              <div>
+                <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Volver a estado</label>
+                <select
+                  value={revertTarget}
+                  onChange={e => setRevertTarget(e.target.value)}
+                  className={inputCls}
+                >
+                  <option value="recibido">Recibido</option>
+                  <option value="en_proceso">En Proceso</option>
+                  <option value="en_espera">En Espera</option>
+                  {order.status === 'entregado' && <option value="listo">Listo</option>}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Motivo (obligatorio)</label>
+                <textarea
+                  value={revertReason}
+                  onChange={e => setRevertReason(e.target.value)}
+                  rows={3}
+                  placeholder="Ej: el cliente pidió agregar un repuesto adicional antes de facturar"
+                  className={inputCls}
+                />
+              </div>
+            </div>
+            <div className="p-5 pt-0 flex gap-2">
+              <button
+                onClick={() => setShowRevertModal(false)}
+                disabled={reverting}
+                className="flex-1 py-2.5 border border-gray-200 dark:border-white/10 rounded-xl text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5 transition disabled:opacity-60"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={confirmRevert}
+                disabled={reverting || !revertReason.trim()}
+                className="flex-1 py-2.5 bg-amber-600 text-white rounded-xl text-sm font-medium hover:bg-amber-700 transition disabled:opacity-60"
+              >
+                {reverting ? 'Reversando...' : 'Reversar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <CompleteCustomerDianModal
         open={!!dianIncompleteModal}

@@ -17,6 +17,9 @@ export const workOrdersApi = {
   create: (data) => axios.post('/workshop/work-orders', data),
   update: (id, data) => axios.put(`/workshop/work-orders/${id}`, data),
   changeStatus: (id, data) => axios.patch(`/workshop/work-orders/${id}/status`, data),
+  // Reversar OT bloqueada (solo admin) -- requiere conexión, no pasa por el
+  // wrapper offline: anular un documento/factura no debe quedar en cola.
+  revertStatus: (id, data) => axios.post(`/workshop/work-orders/${id}/revert-status`, data),
   addItem: (id, data) => axios.post(`/workshop/work-orders/${id}/items`, data),
   updateItem: (id, itemId, data) => axios.patch(`/workshop/work-orders/${id}/items/${itemId}`, data),
   removeItem: (id, itemId) => axios.delete(`/workshop/work-orders/${id}/items/${itemId}`),

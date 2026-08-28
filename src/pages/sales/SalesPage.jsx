@@ -21,9 +21,11 @@ const PAYMENT_LABELS = {
 };
 
 const DOC_LABELS = {
-  remision:   'Remisión',
-  factura:    'Factura',
-  cotizacion: 'Cotización',
+  remision:     'Remisión',
+  factura:      'Factura',
+  cotizacion:   'Cotización',
+  nota_credito: 'Nota Crédito',
+  nota_debito:  'Nota Débito',
 };
 
 export default function SalesPage() {
@@ -157,6 +159,8 @@ export default function SalesPage() {
                 <option value="remision">Remisión</option>
                 <option value="factura">Factura</option>
                 <option value="cotizacion">Cotización</option>
+                <option value="nota_credito">Nota Crédito</option>
+                <option value="nota_debito">Nota Débito</option>
               </select>
               <input
                 type="date"
@@ -254,7 +258,7 @@ export default function SalesPage() {
                           <span className={`inline-flex text-xs font-medium px-2 py-0.5 rounded-full ${st.cls}`}>{st.label}</span>
                         </td>
                         <td className="px-4 py-3">
-                          {sale.document_type === 'factura' ? (
+                          {['factura', 'nota_credito', 'nota_debito'].includes(sale.document_type) ? (
                             <DianStatusBadge sale={sale} />
                           ) : (
                             <span className="text-xs text-gray-300 dark:text-gray-700">—</span>

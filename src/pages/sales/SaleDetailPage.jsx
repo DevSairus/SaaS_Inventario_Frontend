@@ -81,6 +81,30 @@ export default function SaleDetailPage() {
     }
   }, [id]);
 
+  // El envío a la DIAN al guardar la venta corre en segundo plano en el
+  // backend (no bloquea la respuesta) -- esta pantalla puede cargar
+  // "Pendiente"/"Enviando" y quedarse así aunque la DIAN ya haya
+  // respondido segundos después. Se refresca sola unas cuantas veces
+  // mientras el estado siga en curso, para no obligar al usuario a
+  // recargar manualmente para ver el resultado real.
+  useEffect(() => {
+    const dianPendingTypes = ['factura', 'nota_credito', 'nota_debito'];
+    const isDianPending = currentSale
+      && dianPendingTypes.includes(currentSale.document_type)
+      && ['pending', 'sending'].includes(currentSale.dian_status);
+
+    if (!isDianPending) return;
+
+    let attempts = 0;
+    const interval = setInterval(() => {
+      attempts += 1;
+      fetchSaleById(id);
+      if (attempts >= 8) clearInterval(interval);
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [id, currentSale?.dian_status, currentSale?.document_type]);
+
   useEffect(() => {
     const loadMovements = async () => {
       if (currentSale && (currentSale.status === 'pending' || currentSale.status === 'completed') && id) {

@@ -6,7 +6,15 @@
 import { useState } from 'react';
 import toast from 'react-hot-toast';
 import { Clock, Minus, Send, CheckCircle2, XCircle, RefreshCw, ExternalLink } from 'lucide-react';
-import { sendInvoice, checkDianStatus } from '../../api/dian';
+import { sendInvoice, sendCreditNoteRetry, sendDebitNoteRetry, checkDianStatus } from '../../api/dian';
+
+const DIAN_DOCUMENT_TYPES = ['factura', 'nota_credito', 'nota_debito'];
+
+function sendByDocType(sale) {
+  if (sale.document_type === 'nota_credito') return sendCreditNoteRetry(sale.id);
+  if (sale.document_type === 'nota_debito')  return sendDebitNoteRetry(sale.id);
+  return sendInvoice(sale.id);
+}
 
 // Nota: 'test_set' se deja solo para mostrar el estado histórico de ventas
 // que ya se enviaron al set de pruebas de habilitación -- esa acción no se
@@ -79,8 +87,9 @@ export default function DianStatusBadge({
   const [loading, setLoading] = useState(false);
   const [tooltip, setTooltip] = useState(false);
 
-  // Solo se muestra para facturas
-  if (sale.document_type !== 'factura') return null;
+  // Se muestra para facturas y notas crédito/débito — todos son documentos
+  // electrónicos que la DIAN valida.
+  if (!DIAN_DOCUMENT_TYPES.includes(sale.document_type)) return null;
 
   const status = sale.dian_status || 'pending';
   const config = STATUS_CONFIG[status] || STATUS_CONFIG.pending;
@@ -90,7 +99,7 @@ export default function DianStatusBadge({
   async function handleSend() {
     setLoading(true);
     try {
-      await sendInvoice(sale.id);
+      await sendByDocType(sale);
       onUpdate?.();
     } catch (e) {
       toast.error(e.response?.data?.message || 'Error al enviar a DIAN');
@@ -175,11 +184,11 @@ export function DianDetailPanel({ sale, onUpdate, onCustomerIncomplete }) {
   const [loading, setLoading] = useState(false);
   const [showErrorDetail, setShowErrorDetail] = useState(false);
 
-  if (sale.document_type !== 'factura') {
+  if (!DIAN_DOCUMENT_TYPES.includes(sale.document_type)) {
     return (
       <div className="bg-gray-50 rounded-xl p-4 text-sm text-gray-500">
         Este documento es una <strong>{sale.document_type}</strong> y no se envía a la DIAN.
-        Solo las <strong>facturas</strong> se reportan electrónicamente.
+        Solo las <strong>facturas y notas crédito/débito</strong> se reportan electrónicamente.
       </div>
     );
   }
@@ -273,13 +282,13 @@ export function DianDetailPanel({ sale, onUpdate, onCustomerIncomplete }) {
           {(status === 'pending' || status === 'rejected') && (
             <button disabled={loading}
               onClick={() => handleAction(
-                () => sendInvoice(sale.id),
-                (res) => res?.data?.message || (res?.data?.data?.accepted ? 'Factura aceptada por la DIAN' : 'Factura enviada (pendiente de aceptación)')
+                () => sendByDocType(sale),
+                (res) => res?.data?.message || (res?.data?.data?.accepted ? 'Documento aceptado por la DIAN' : 'Documento enviado (pendiente de aceptación)')
               )}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs rounded-lg
                 hover:bg-blue-700 disabled:opacity-50 font-medium">
               <Send className="w-3.5 h-3.5" />
-              {status === 'rejected' ? 'Reenviar factura' : 'Enviar a DIAN'}
+              {status === 'rejected' ? 'Reenviar' : 'Enviar a DIAN'}
             </button>
           )}
           {(status === 'sent' || status === 'sending') && (

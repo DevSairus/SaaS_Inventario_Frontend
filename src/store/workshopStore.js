@@ -132,6 +132,19 @@ const useWorkshopStore = create((set, get) => ({
     }
   },
 
+  revertStatus: async (id, target_status, reason) => {
+    try {
+      const res = await workOrdersApi.revertStatus(id, { target_status, reason });
+      await get().fetchOrder(id);
+      toast.success(res.data.message || 'OT revertida');
+      return res.data;
+    } catch (err) {
+      const msg = err?.response?.data?.message || 'No se pudo reversar el estado de la OT.';
+      toast.error(msg);
+      throw err;
+    }
+  },
+
   addItem: async (id, data) => {
     // Sin toast propio en el catch: el único caller (WorkOrderDetailPage)
     // ya distingue mensajes de stock/bodega y muestra alternativas de

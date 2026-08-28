@@ -3,7 +3,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   getDianConfig, updateDianConfig,
-  getDianResolutions, createDianResolution, deactivateResolution,
+  getDianResolutions, createDianResolution, updateDianResolution,
+  deactivateResolution, reactivateResolution, deleteResolution,
   testDianConnection, testDianConnectionProd, getHabilitacionStatus,
   sendAutoTestDocuments, sendFullHabilitacionSet,
   diagnoseCert,
@@ -25,6 +26,12 @@ import {
   ExclamationTriangleIcon,
   InboxIcon,
 } from '@heroicons/react/24/outline';
+
+// Factura Electrónica y Documento Soporte son documentos ORIGINALES: la DIAN
+// les otorga su propia resolución de numeración (número, fecha, vigencia).
+// Notas crédito/débito NO -- son ajustes que reutilizan la numeración de la
+// factura que referencian, así que solo definen prefijo y rango propios.
+const REQUIRES_DIAN_RESOLUTION = ['invoice', 'support_document'];
 
 /* ── Status badge ────────────────────────────────────────────────── */
 const StepBadge = ({ done }) => (
@@ -77,16 +84,21 @@ export default function DianConfigPage() {
   const [testing, setTesting] = useState(false);
   const [sendingTest, setSendingTest] = useState(false);
   const [testResults, setTestResults] = useState(null);
+  const [testDocType, setTestDocType] = useState('invoice');
   const [diagnosing, setDiagnosing] = useState(false);
   const [certDiag, setCertDiag] = useState(null);
+  const [numberingRanges, setNumberingRanges] = useState(null);
   const [toast, setToast] = useState(null);
   const [showResForm, setShowResForm] = useState(false);
-  const [resForm, setResForm] = useState({
+  const [editingResId, setEditingResId] = useState(null);
+  const emptyResForm = {
     branch_id: '',
     resolution_number: '', resolution_date: '', prefix: '',
-    from_number: '', to_number: '', valid_from: '', valid_to: '',
+    from_number: '', to_number: '', current_number: '', valid_from: '', valid_to: '',
     document_type: 'invoice', is_test: true, notes: '',
-  });
+    technical_key: '', test_set_id: '', _technical_key_set: false,
+  };
+  const [resForm, setResForm] = useState(emptyResForm);
 
   const showToast = (msg, type = 'success') => {
     setToast({ msg, type });
@@ -102,7 +114,7 @@ export default function DianConfigPage() {
       const [cfgRes, resRes, habRes, branchesRes] = await Promise.all([
         getDianConfig(),
         getDianResolutions(),
-        getHabilitacionStatus(),
+        getHabilitacionStatus(testDocType),
         branchesService.getAll(),
       ]);
       const raw = cfgRes.data.data || {};
@@ -152,21 +164,60 @@ export default function DianConfigPage() {
 
   async function handleTestConnection() {
     setTesting(true);
+    setNumberingRanges(null);
     try {
       const r = await testDianConnection();
       showToast(r.data.message || 'Conexión exitosa con DIAN');
+      setNumberingRanges(r.data.data?.ranges || []);
     } catch (e) {
       showToast(e.response?.data?.message || 'Error de conexión con DIAN', 'error');
+      setNumberingRanges(e.response?.data?.ranges || null);
     } finally {
       setTesting(false);
     }
   }
 
+  // Si el rango de la DIAN quedó emparejado con una resolución de un tipo
+  // distinto a factura (ej. Documento Soporte), su llave técnica pertenece
+  // a ESA resolución, no a la configuración global de facturación — guardarla
+  // ahí directamente evita que un clic aquí sobrescriba por error la llave
+  // de facturación con la de otro tipo de documento.
+  // La habilitación es por tipo de documento -- al cambiar el selector hay
+  // que volver a consultar el checklist para ESE tipo, si no el panel de
+  // envío queda oculto (o mal mostrado) con el estado del tipo anterior.
+  async function handleTestDocTypeChange(newType) {
+    setTestDocType(newType);
+    setTestResults(null);
+    try {
+      const habRes = await getHabilitacionStatus(newType);
+      setHabilitacion(habRes.data.data);
+    } catch (e) {
+      showToast('Error consultando estado de habilitación', 'error');
+    }
+  }
+
+  async function handleUseThisTechnicalKey(range) {
+    if (range.matchedResolutionId && range.matchedDocumentType && range.matchedDocumentType !== 'invoice') {
+      try {
+        await updateDianResolution(range.matchedResolutionId, { technical_key: range.technicalKey });
+        showToast('Llave técnica guardada en la resolución correspondiente');
+        await loadAll();
+      } catch (e) {
+        showToast(e.response?.data?.message || 'Error al guardar la llave técnica en la resolución', 'error');
+      }
+      return;
+    }
+    setCfg(p => ({ ...p, technical_key: range.technicalKey }));
+    showToast('Llave técnica cargada en el formulario — recuerda hacer clic en "Guardar Configuración"');
+  }
+
   async function handleTestConnectionProd() {
     setTesting(true);
+    setNumberingRanges(null);
     try {
       const r = await testDianConnectionProd();
       showToast(r.data.message || '✅ Producción OK');
+      setNumberingRanges(r.data.data?.ranges || []);
     } catch (e) {
       const d = e.response?.data;
       const msg = d?.diagnostico ? `${d.message} — ${d.diagnostico}` : (d?.message || 'Error');
@@ -183,20 +234,54 @@ export default function DianConfigPage() {
       return;
     }
     try {
-      await createDianResolution(resForm);
-      showToast('Resolución creada exitosamente');
+      const { _technical_key_set, ...toSend } = resForm;
+      if (editingResId) {
+        await updateDianResolution(editingResId, toSend);
+        showToast('Resolución actualizada exitosamente');
+      } else {
+        await createDianResolution(toSend);
+        showToast('Resolución creada exitosamente');
+      }
       setShowResForm(false);
+      setEditingResId(null);
       const mainBranch = branches.find(b => b.is_main) || branches[0];
-      setResForm({
-        branch_id: mainBranch?.id || '',
-        resolution_number: '', resolution_date: '', prefix: '',
-        from_number: '', to_number: '', valid_from: '', valid_to: '',
-        document_type: 'invoice', is_test: true, notes: '',
-      });
+      setResForm({ ...emptyResForm, branch_id: mainBranch?.id || '' });
       await loadAll();
     } catch (e) {
-      showToast(e.response?.data?.message || 'Error al crear resolución', 'error');
+      showToast(e.response?.data?.message || (editingResId ? 'Error al actualizar resolución' : 'Error al crear resolución'), 'error');
     }
+  }
+
+  function handleEditResolution(r) {
+    setEditingResId(r.id);
+    setResForm({
+      branch_id: r.branch_id || '',
+      resolution_number: r.resolution_number || '',
+      resolution_date: r.resolution_date || '',
+      prefix: r.prefix || '',
+      from_number: r.from_number ?? '',
+      to_number: r.to_number ?? '',
+      current_number: r.current_number ?? '',
+      valid_from: r.valid_from || '',
+      valid_to: r.valid_to || '',
+      document_type: r.document_type || 'invoice',
+      is_test: r.is_test,
+      notes: r.notes || '',
+      // technical_key llega enmascarado ('[CONFIGURADO]') si ya existía —
+      // se limpia el input y se guarda el flag para mostrar el placeholder,
+      // igual que ya hace loadAll() con cfg.technical_key.
+      technical_key: r.technical_key === '[CONFIGURADO]' ? '' : (r.technical_key || ''),
+      _technical_key_set: r.technical_key === '[CONFIGURADO]',
+      test_set_id: r.test_set_id || '',
+    });
+    setShowResForm(true);
+  }
+
+  function handleCancelResForm() {
+    setShowResForm(false);
+    setEditingResId(null);
+    const mainBranch = branches.find(b => b.is_main) || branches[0];
+    setResForm({ ...emptyResForm, branch_id: mainBranch?.id || '' });
   }
 
   async function handleDeactivate(id) {
@@ -210,16 +295,38 @@ export default function DianConfigPage() {
     }
   }
 
+  async function handleReactivate(id) {
+    if (!confirm('¿Reactivar esta resolución? Se desactivará cualquier otra resolución activa del mismo tipo en esta sede.')) return;
+    try {
+      await reactivateResolution(id);
+      showToast('Resolución reactivada');
+      await loadAll();
+    } catch (e) {
+      showToast(e.response?.data?.message || 'Error al reactivar resolución', 'error');
+    }
+  }
+
+  async function handleDeletePermanent(id) {
+    if (!confirm('¿Eliminar esta resolución definitivamente? Esta acción no se puede deshacer.')) return;
+    try {
+      await deleteResolution(id);
+      showToast('Resolución eliminada');
+      await loadAll();
+    } catch (e) {
+      showToast(e.response?.data?.message || 'Error al eliminar resolución', 'error');
+    }
+  }
+
   async function handleAutoTest(count) {
     setSendingTest(true);
     setTestResults(null);
     try {
-      const r = await sendAutoTestDocuments(count);
+      const r = await sendAutoTestDocuments(count, testDocType);
       const results = r.data.data || [];
       setTestResults(results);
       const allOk = results.every(d => d.accepted);
       showToast(allOk
-        ? `${count} factura(s) de prueba aceptadas por DIAN`
+        ? `${count} documento(s) de prueba aceptados por DIAN`
         : `Documentos enviados. Revise los resultados.`,
         allOk ? 'success' : 'error');
       await loadAll();
@@ -458,6 +565,72 @@ export default function DianConfigPage() {
               {saving ? 'Guardando...' : 'Guardar Configuración'}
             </button>
           </div>
+
+          {/* Rangos de numeración autorizados según la DIAN (GetNumberingRange) —
+              incluye la llave técnica vigente por resolución, para detectar
+              si la que tienes configurada quedó desactualizada. */}
+          {numberingRanges && (
+            <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-3">
+              <h3 className="font-semibold text-gray-900">Rangos de numeración según la DIAN</h3>
+              {numberingRanges.length === 0 ? (
+                <p className="text-sm text-gray-500">La DIAN no devolvió ningún rango autorizado para este NIT.</p>
+              ) : (
+                <div className="space-y-3">
+                  {numberingRanges.map((r, i) => (
+                    <div key={i} className={`rounded-lg border p-3 text-sm
+                      ${!r.technicalKey ? 'bg-gray-50 border-gray-200' : r.technicalKeyMatches ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+                      <p className="text-gray-800">
+                        Resolución <strong>{r.resolutionNumber}</strong> ({r.resolutionDate}) &nbsp;|&nbsp;
+                        Prefijo <strong>{r.prefix}</strong> &nbsp;|&nbsp;
+                        Rango {r.fromNumber}–{r.toNumber} &nbsp;|&nbsp;
+                        Vigencia {r.validFrom} a {r.validTo}
+                        {r.matchedDocumentType && (
+                          <>
+                            &nbsp;|&nbsp;
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-medium">
+                              {{ invoice: 'Factura', credit_note: 'Nota Crédito', debit_note: 'Nota Débito', support_document: 'Documento Soporte', support_document_adjustment: 'Ajuste Doc. Soporte' }[r.matchedDocumentType] || r.matchedDocumentType}
+                            </span>
+                          </>
+                        )}
+                      </p>
+                      {!r.matchedResolutionId && (
+                        <p className="text-xs text-amber-700 mt-1">
+                          No se encontró una resolución local con este prefijo/número — la comparación usa la llave técnica global de facturación. Verifique que el prefijo de la resolución coincida exactamente con el reportado por la DIAN.
+                        </p>
+                      )}
+                      {!r.technicalKey ? (
+                        // La DIAN no siempre asigna una llave técnica propia por
+                        // resolución (viene nil) -- no es un error, significa que
+                        // ese rango usa la llave técnica global. Mostrar el botón
+                        // "usar esta llave" aquí solo confundiría: guardaría un
+                        // valor vacío que el backend ignora silenciosamente.
+                        <p className="text-xs text-gray-500 mt-1">
+                          La DIAN no asignó una llave técnica propia para esta resolución — usa la llave técnica global (Configuración → Llave Técnica).
+                        </p>
+                      ) : r.technicalKeyMatches ? (
+                        <p className="text-xs text-green-700 mt-1 flex items-center gap-1">
+                          <CheckCircleIcon className="w-3.5 h-3.5" /> Llave técnica configurada coincide con la vigente
+                        </p>
+                      ) : (
+                        <div className="mt-1.5 space-y-1">
+                          <p className="text-xs text-red-700 font-medium">
+                            ⚠️ La llave técnica configurada NO coincide con la que la DIAN reporta como vigente para esta resolución.
+                          </p>
+                          <p className="text-xs text-gray-600 font-mono break-all bg-white border border-gray-200 rounded px-2 py-1">
+                            {r.technicalKey}
+                          </p>
+                          <button type="button" onClick={() => handleUseThisTechnicalKey(r)}
+                            className="text-xs text-blue-600 hover:text-blue-800 underline">
+                            Usar esta llave técnica
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </form>
       )}
 
@@ -471,7 +644,7 @@ export default function DianConfigPage() {
                 de las facturas electrónicas se tomará de aquí.
               </p>
             </div>
-            <button onClick={() => setShowResForm(true)}
+            <button onClick={() => { setEditingResId(null); setShowResForm(true); }}
               disabled={branches.length === 0}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed">
               + Nueva Resolución
@@ -502,7 +675,9 @@ export default function DianConfigPage() {
           {showResForm && (
             <form onSubmit={handleCreateResolution}
               className="bg-blue-50 border border-blue-200 rounded-xl p-5 space-y-4">
-              <h4 className="font-semibold text-gray-900">Nueva Resolución DIAN</h4>
+              <h4 className="font-semibold text-gray-900">
+                {editingResId ? 'Editar Resolución DIAN' : 'Nueva Resolución DIAN'}
+              </h4>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <Field label="Sede" required hint="Cada resolución pertenece a una sola sede">
                   <select className={selectCls} required value={resForm.branch_id}
@@ -513,18 +688,22 @@ export default function DianConfigPage() {
                     ))}
                   </select>
                 </Field>
-                <Field label="Número de Resolución" required>
-                  <input className={inputCls} required value={resForm.resolution_number}
-                    placeholder="18760000001"
-                    onChange={e => setResForm(p => ({ ...p, resolution_number: e.target.value }))} />
-                </Field>
-                <Field label="Fecha Resolución" required>
-                  <input type="date" className={inputCls} required value={resForm.resolution_date}
-                    onChange={e => setResForm(p => ({ ...p, resolution_date: e.target.value }))} />
-                </Field>
-                <Field label="Prefijo" required>
+                {REQUIRES_DIAN_RESOLUTION.includes(resForm.document_type) && (
+                  <>
+                    <Field label="Número de Resolución" required>
+                      <input className={inputCls} required value={resForm.resolution_number}
+                        placeholder="18760000001"
+                        onChange={e => setResForm(p => ({ ...p, resolution_number: e.target.value }))} />
+                    </Field>
+                    <Field label="Fecha Resolución" required>
+                      <input type="date" className={inputCls} required value={resForm.resolution_date}
+                        onChange={e => setResForm(p => ({ ...p, resolution_date: e.target.value }))} />
+                    </Field>
+                  </>
+                )}
+                <Field label="Prefijo" required hint="Máximo 4 caracteres (regla DIAN)">
                   <input className={inputCls} required value={resForm.prefix}
-                    placeholder="SETP" maxLength={10}
+                    placeholder="SETP" maxLength={4}
                     onChange={e => setResForm(p => ({ ...p, prefix: e.target.value.toUpperCase() }))} />
                 </Field>
                 <Field label="Desde" required>
@@ -537,6 +716,21 @@ export default function DianConfigPage() {
                     placeholder="995000000"
                     onChange={e => setResForm(p => ({ ...p, to_number: e.target.value }))} />
                 </Field>
+                <Field label="Consecutivo actual"
+                  hint="Déjalo vacío para empezar desde 'Desde'. Útil si la numeración ya se venía usando en otro sistema.">
+                  <input type="number" className={inputCls} value={resForm.current_number}
+                    placeholder={resForm.from_number || 'Ej: 990000123'}
+                    onChange={e => setResForm(p => ({ ...p, current_number: e.target.value }))} />
+                </Field>
+                <Field label="Aplica a" required hint="Factura y Documento Soporte tienen resolución propia de la DIAN. Las notas crédito/débito no la requieren — solo definen su propio prefijo y rango de numeración">
+                  <select className={selectCls} required value={resForm.document_type}
+                    onChange={e => setResForm(p => ({ ...p, document_type: e.target.value }))}>
+                    <option value="invoice">Factura Electrónica</option>
+                    <option value="credit_note">Nota Crédito</option>
+                    <option value="debit_note">Nota Débito</option>
+                    <option value="support_document">Documento Soporte (adquisiciones)</option>
+                  </select>
+                </Field>
                 <Field label="Tipo de Resolución">
                   <select className={selectCls} value={resForm.is_test}
                     onChange={e => setResForm(p => ({ ...p, is_test: e.target.value === 'true' }))}>
@@ -544,14 +738,34 @@ export default function DianConfigPage() {
                     <option value="false">Producción</option>
                   </select>
                 </Field>
-                <Field label="Válida Desde" required>
-                  <input type="date" className={inputCls} required value={resForm.valid_from}
-                    onChange={e => setResForm(p => ({ ...p, valid_from: e.target.value }))} />
-                </Field>
-                <Field label="Válida Hasta" required>
-                  <input type="date" className={inputCls} required value={resForm.valid_to}
-                    onChange={e => setResForm(p => ({ ...p, valid_to: e.target.value }))} />
-                </Field>
+                {resForm.document_type !== 'invoice' && (
+                  <>
+                    <Field label="Llave Técnica propia (opcional)"
+                      hint="Solo si la DIAN te dio una habilitación separada para este tipo de documento (ej. Documento Soporte) — su clave técnica NO es la misma que la de Facturación Electrónica DIAN → Configuración. Déjalo vacío para usar la llave técnica global.">
+                      <input type="password" className={inputCls} value={resForm.technical_key}
+                        placeholder={resForm._technical_key_set ? 'Ya configurada — dejar vacío para no cambiar' : 'Clave técnica de esta habilitación'}
+                        onChange={e => setResForm(p => ({ ...p, technical_key: e.target.value }))} />
+                    </Field>
+                    <Field label="TestSetId propio (opcional)"
+                      hint="Set de pruebas de esta habilitación específica, si es distinto al global.">
+                      <input className={inputCls} value={resForm.test_set_id}
+                        placeholder="ID del set de pruebas"
+                        onChange={e => setResForm(p => ({ ...p, test_set_id: e.target.value }))} />
+                    </Field>
+                  </>
+                )}
+                {REQUIRES_DIAN_RESOLUTION.includes(resForm.document_type) && (
+                  <>
+                    <Field label="Válida Desde" required>
+                      <input type="date" className={inputCls} required value={resForm.valid_from}
+                        onChange={e => setResForm(p => ({ ...p, valid_from: e.target.value }))} />
+                    </Field>
+                    <Field label="Válida Hasta" required>
+                      <input type="date" className={inputCls} required value={resForm.valid_to}
+                        onChange={e => setResForm(p => ({ ...p, valid_to: e.target.value }))} />
+                    </Field>
+                  </>
+                )}
                 <Field label="Notas">
                   <input className={inputCls} value={resForm.notes}
                     placeholder="Notas opcionales"
@@ -559,13 +773,13 @@ export default function DianConfigPage() {
                 </Field>
               </div>
               <div className="flex gap-2 justify-end">
-                <button type="button" onClick={() => setShowResForm(false)}
+                <button type="button" onClick={handleCancelResForm}
                   className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50">
                   Cancelar
                 </button>
                 <button type="submit"
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">
-                  Guardar Resolución
+                  {editingResId ? 'Guardar Cambios' : 'Guardar Resolución'}
                 </button>
               </div>
             </form>
@@ -585,6 +799,14 @@ export default function DianConfigPage() {
                   <div className="space-y-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-semibold text-gray-900">Res. {r.resolution_number}</span>
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-medium">
+                        {{ invoice: 'Factura', credit_note: 'Nota Crédito', debit_note: 'Nota Débito', support_document: 'Documento Soporte', support_document_adjustment: 'Ajuste Doc. Soporte' }[r.document_type] || r.document_type}
+                      </span>
+                      {r.technical_key === '[CONFIGURADO]' && (
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 font-medium">
+                          Llave técnica propia
+                        </span>
+                      )}
                       {r.branch_id && (
                         <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 font-medium">
                           {branches.find(b => b.id === r.branch_id)?.name || 'Sede'}
@@ -605,16 +827,33 @@ export default function DianConfigPage() {
                       Rango: {r.from_number.toLocaleString()} – {r.to_number.toLocaleString()} &nbsp;|&nbsp;
                       Consecutivo actual: <strong className="text-blue-700">{r.current_number}</strong>
                     </p>
-                    <p className="text-xs text-gray-400">
-                      Vigencia: {r.valid_from} al {r.valid_to}
-                    </p>
+                    {r.valid_from && r.valid_to && (
+                      <p className="text-xs text-gray-400">
+                        Vigencia: {r.valid_from} al {r.valid_to}
+                      </p>
+                    )}
                   </div>
-                  {r.is_active && (
-                    <button onClick={() => handleDeactivate(r.id)}
-                      className="text-sm text-red-600 hover:text-red-800 ml-4 flex-shrink-0">
-                      Desactivar
+                  <div className="flex flex-col items-end gap-1.5 ml-4 flex-shrink-0">
+                    <button onClick={() => handleEditResolution(r)}
+                      className="text-sm text-blue-600 hover:text-blue-800">
+                      Editar
                     </button>
-                  )}
+                    {r.is_active ? (
+                      <button onClick={() => handleDeactivate(r.id)}
+                        className="text-sm text-red-600 hover:text-red-800">
+                        Desactivar
+                      </button>
+                    ) : (
+                      <button onClick={() => handleReactivate(r.id)}
+                        className="text-sm text-green-600 hover:text-green-800">
+                        Reactivar
+                      </button>
+                    )}
+                    <button onClick={() => handleDeletePermanent(r.id)}
+                      className="text-sm text-gray-400 hover:text-red-700">
+                      Eliminar
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -737,7 +976,29 @@ export default function DianConfigPage() {
             )}
           </div>
 
-          {/* Panel de envío automático de documentos de prueba */}
+          {/* Tipo de documento a probar -- SIEMPRE visible, incluso si la
+              habilitación de facturación ya está completa: cada tipo de
+              documento (ej. Documento Soporte) tiene su propio checklist de
+              habilitación y puede seguir pendiente aunque el de factura ya
+              esté 100%. */}
+          <div className="bg-white border border-gray-200 rounded-xl p-5 space-y-4">
+            <div className="flex items-center gap-3">
+              <label className="text-sm font-medium text-gray-700">Tipo de documento a probar</label>
+              <select
+                className={selectCls}
+                value={testDocType}
+                onChange={e => handleTestDocTypeChange(e.target.value)}>
+                <option value="invoice">Factura Electrónica</option>
+                <option value="support_document">Documento Soporte (adquisiciones)</option>
+              </select>
+            </div>
+            <p className="text-xs text-gray-500">
+              Usa la resolución de habilitación (pruebas) activa de este tipo — y su llave técnica propia si la tiene configurada.
+            </p>
+          </div>
+
+          {/* Panel de envío automático de documentos de prueba -- oculto solo
+              cuando la habilitación del tipo SELECCIONADO ya está completa */}
           {!habilitacion.all_complete && (
             <div className="bg-white border border-gray-200 rounded-xl p-5 space-y-4">
               <div>
@@ -750,7 +1011,8 @@ export default function DianConfigPage() {
                 </p>
               </div>
 
-              {/* Set completo — recomendado */}
+              {/* Set completo — recomendado (solo disponible para Factura Electrónica) */}
+              {testDocType === 'invoice' && (
               <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4 space-y-3">
                 <div className="flex items-start justify-between gap-4">
                   <div>
@@ -772,6 +1034,7 @@ export default function DianConfigPage() {
                   </button>
                 </div>
               </div>
+              )}
 
               {/* Parciales — prueba rápida */}
               <div className="flex gap-3 flex-wrap">
@@ -782,7 +1045,7 @@ export default function DianConfigPage() {
                     text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-colors flex items-center gap-2">
                   {sendingTest
                     ? <><ClockIcon className="w-4 h-4 animate-pulse" /> Enviando...</>
-                    : <><DocumentTextIcon className="w-4 h-4" /> Prueba rápida — 1 factura</>}
+                    : <><DocumentTextIcon className="w-4 h-4" /> Prueba rápida — 1 documento</>}
                 </button>
                 <button
                   onClick={() => handleAutoTest(2)}
@@ -791,7 +1054,7 @@ export default function DianConfigPage() {
                     text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-colors flex items-center gap-2">
                   {sendingTest
                     ? <><ClockIcon className="w-4 h-4 animate-pulse" /> Enviando...</>
-                    : <><DocumentTextIcon className="w-4 h-4" /> Prueba rápida — 2 facturas</>}
+                    : <><DocumentTextIcon className="w-4 h-4" /> Prueba rápida — 2 documentos</>}
                 </button>
               </div>
               {sendingTest && (
@@ -813,11 +1076,11 @@ export default function DianConfigPage() {
                   </div>
 
                   {/* Agrupado por tipo */}
-                  {['factura', 'nota_credito', 'nota_debito'].map(tipo => {
+                  {['factura', 'documento_soporte', 'nota_credito', 'nota_debito'].map(tipo => {
                     const grupo = testResults.filter(r => r.type === tipo || (!r.type && tipo === 'factura'));
                     if (!grupo.length) return null;
-                    const tipoLabel = tipo === 'factura' ? 'Facturas' : tipo === 'nota_credito' ? 'Notas Crédito' : 'Notas Débito';
-                    const tipoColor = tipo === 'factura' ? 'blue' : tipo === 'nota_credito' ? 'purple' : 'orange';
+                    const tipoLabel = { factura: 'Facturas', documento_soporte: 'Documentos Soporte', nota_credito: 'Notas Crédito', nota_debito: 'Notas Débito' }[tipo];
+                    const tipoColor = { factura: 'blue', documento_soporte: 'teal', nota_credito: 'purple', nota_debito: 'orange' }[tipo];
                     return (
                       <div key={tipo}>
                         <p className={`text-xs font-semibold text-${tipoColor}-700 mb-1 mt-3`}>{tipoLabel}</p>
@@ -837,7 +1100,7 @@ export default function DianConfigPage() {
                                 </p>
                                 {r.accepted && r.cufe && (
                                   <p className="text-xs text-green-600 font-mono mt-0.5">
-                                    {tipo === 'factura' ? 'CUFE' : 'CUDE'}: {r.cufe?.substring(0, 32)}...
+                                    {tipo === 'factura' ? 'CUFE' : tipo === 'documento_soporte' ? 'CUDS' : 'CUDE'}: {r.cufe?.substring(0, 32)}...
                                   </p>
                                 )}
                                 {!r.accepted && (
@@ -850,6 +1113,22 @@ export default function DianConfigPage() {
                                     )}
                                     {!r.error && !r.statusCode && !r.statusDescription && !r.statusMessage && (
                                       <p className="text-xs text-red-600">Rechazado — verifique NIT, Llave Técnica y certificado</p>
+                                    )}
+                                    {/* La DIAN suele responder con un mensaje genérico
+                                        ("Validación contiene errores en campos mandatorios")
+                                        y el detalle real de qué campo(s) fallaron viene acá,
+                                        en `errors` — sin esto no hay forma de saber cuál dato
+                                        corregir. */}
+                                    {r.errors?.length > 0 && (
+                                      <div className="mt-1 bg-red-100 border border-red-200 rounded p-2 space-y-0.5">
+                                        <p className="text-xs font-semibold text-red-800 uppercase tracking-wide">Detalle del error</p>
+                                        {r.errors.map((err, i) => (
+                                          <p key={i} className="text-xs text-red-700">
+                                            {err.code && <strong>{err.code}: </strong>}
+                                            {err.description || err.message || JSON.stringify(err)}
+                                          </p>
+                                        ))}
+                                      </div>
                                     )}
                                   </div>
                                 )}

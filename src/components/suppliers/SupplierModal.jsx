@@ -27,6 +27,11 @@ const SupplierModal = ({ supplier, onClose }) => {
     notes: '',
     is_active: true,
     retention_config: {},
+    // Clasificación fiscal (Documento Soporte DIAN)
+    person_type: '',
+    tax_regime: '',
+    fiscal_responsibilities: '',
+    is_obligated_to_invoice: true,
   });
 
   const [errors, setErrors] = useState({});
@@ -54,6 +59,14 @@ const SupplierModal = ({ supplier, onClose }) => {
         notes: supplier.notes || '',
         is_active: supplier.is_active !== undefined ? supplier.is_active : true,
         retention_config: supplier.retention_config || {},
+        person_type: supplier.person_type || '',
+        tax_regime: supplier.tax_regime || '',
+        fiscal_responsibilities: Array.isArray(supplier.fiscal_responsibilities)
+          ? supplier.fiscal_responsibilities.join(', ')
+          : (supplier.fiscal_responsibilities || ''),
+        is_obligated_to_invoice: supplier.is_obligated_to_invoice !== undefined
+          ? supplier.is_obligated_to_invoice
+          : true,
       });
     }
   }, [supplier]);
@@ -98,7 +111,12 @@ const SupplierModal = ({ supplier, onClose }) => {
 
     const dataToSend = {
       ...formData,
-      credit_limit: parseFloat(formData.credit_limit) || 0
+      credit_limit: parseFloat(formData.credit_limit) || 0,
+      person_type: formData.person_type || null,
+      tax_regime: formData.tax_regime || null,
+      fiscal_responsibilities: formData.fiscal_responsibilities
+        ? formData.fiscal_responsibilities.split(',').map(s => s.trim()).filter(Boolean)
+        : [],
     };
 
     const success = supplier
@@ -366,6 +384,78 @@ const SupplierModal = ({ supplier, onClose }) => {
                 />
               </div>
             </div>
+          </div>
+
+          {/* Clasificación Fiscal (Documento Soporte DIAN) — sin esto el
+              sistema no sabe automáticamente cuándo una compra a este
+              proveedor requiere Documento Soporte en vez de esperar una
+              factura de él (Resolución DIAN 000167 de 2021). */}
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">Clasificación Fiscal (DIAN)</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Tipo de Persona
+                </label>
+                <select
+                  name="person_type"
+                  value={formData.person_type}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="">Sin especificar</option>
+                  <option value="natural">Persona Natural</option>
+                  <option value="juridica">Persona Jurídica</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Régimen Tributario
+                </label>
+                <select
+                  name="tax_regime"
+                  value={formData.tax_regime}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="">Sin especificar</option>
+                  <option value="comun">Régimen Común</option>
+                  <option value="simple">Régimen Simple</option>
+                  <option value="no_responsable">No Responsable de IVA</option>
+                </select>
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Responsabilidades Fiscales DIAN
+                </label>
+                <input
+                  type="text"
+                  value={formData.fiscal_responsibilities}
+                  onChange={(e) => setFormData(prev => ({ ...prev, fiscal_responsibilities: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Ej: R-99-PN (separadas por coma si hay más de una)"
+                />
+              </div>
+            </div>
+
+            <label className="flex items-start mt-4 bg-amber-50 border border-amber-200 rounded-lg p-3">
+              <input
+                type="checkbox"
+                checked={!formData.is_obligated_to_invoice}
+                onChange={(e) => setFormData(prev => ({ ...prev, is_obligated_to_invoice: !e.target.checked }))}
+                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 h-4 w-4 mt-0.5"
+              />
+              <span className="ml-2 text-sm text-gray-700">
+                Este proveedor NO está obligado a facturar
+                <span className="block text-xs text-gray-500 mt-0.5">
+                  Márcalo si es una persona natural del régimen simplificado histórico, informal, o
+                  cualquier proveedor sin resolución de facturación propia. Las compras a este proveedor
+                  van a requerir que emitas un Documento Soporte en vez de esperar su factura.
+                </span>
+              </span>
+            </label>
           </div>
 
           {/* Términos Comerciales */}
