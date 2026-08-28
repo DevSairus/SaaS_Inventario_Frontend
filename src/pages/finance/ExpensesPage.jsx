@@ -1,6 +1,7 @@
 // frontend/src/pages/finance/ExpensesPage.jsx
 import React, { useState, useEffect } from 'react';
 import { expensesAPI, EXPENSE_CATEGORIES } from '../../api/expenses';
+import { suppliersAPI } from '../../api/suppliers';
 import Layout from '../../components/layout/Layout';
 import toast from 'react-hot-toast';
 import {
@@ -8,10 +9,14 @@ import {
   CurrencyDollarIcon,
   ArrowPathIcon,
   TrashIcon,
-  BanknotesIcon
+  BanknotesIcon,
+  DocumentCheckIcon
 } from '@heroicons/react/24/outline';
 import { formatCurrency } from '../../utils/formatters';
 import NumericInput from '../../components/inputs/NumericInput';
+import SupportDocumentPanel from '../../components/dian/SupportDocumentPanel';
+
+const IVA_RATE_OPTIONS = [0, 5, 19];
 
 const emptyForm = {
   category: 'otro',
@@ -22,7 +27,17 @@ const emptyForm = {
   payment_method: 'Efectivo',
   is_recurring: false,
   notes: '',
-  paid_now: true
+  paid_now: true,
+  // Documento Soporte DIAN — solo se envían al backend cuando
+  // showFiscalDetail está activo (ver handleCreate); si no, el gasto se
+  // registra exactamente igual que antes (compatibilidad, ver LEEME Fase 2).
+  supplier_id: '',
+  subtotal: '',
+  tax_rate: 19,
+  requires_support_document: false,
+  retefuente_rate: 0,
+  reteiva_rate: 0,
+  reteica_rate: 0,
 };
 
 const ExpensesPage = () => {
@@ -32,13 +47,19 @@ const ExpensesPage = () => {
   const [filters, setFilters] = useState({ category: '', payment_status: '', search: '' });
   const [showFormModal, setShowFormModal] = useState(false);
   const [form, setForm] = useState(emptyForm);
+  const [showFiscalDetail, setShowFiscalDetail] = useState(false);
+  const [suppliers, setSuppliers] = useState([]);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedExpense, setSelectedExpense] = useState(null);
   const [paymentAmount, setPaymentAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('Efectivo');
+  const [supportDocExpense, setSupportDocExpense] = useState(null);
 
   useEffect(() => {
     loadData();
+    suppliersAPI.getAll({ is_active: true, limit: 200 })
+      .then(res => setSuppliers(res.data || []))
+      .catch(() => {});
   }, [filters.category, filters.payment_status]);
 
   const loadData = async () => {
@@ -62,9 +83,42 @@ const ExpensesPage = () => {
       return;
     }
     try {
-      await expensesAPI.create({ ...form, total_amount: parseFloat(form.total_amount) });
+      const payload = { ...form, total_amount: parseFloat(form.total_amount) };
+      if (showFiscalDetail) {
+        const subtotal = parseFloat(form.subtotal || form.total_amount) || 0;
+        const taxRate = parseFloat(form.tax_rate) || 0;
+        const taxAmount = round2(subtotal * taxRate / 100);
+        const retefuenteAmount = round2(subtotal * (parseFloat(form.retefuente_rate) || 0) / 100);
+        const reteivaAmount = round2(taxAmount * (parseFloat(form.reteiva_rate) || 0) / 100);
+        const reteicaAmount = round2(subtotal * (parseFloat(form.reteica_rate) || 0) / 100);
+        Object.assign(payload, {
+          supplier_id: form.supplier_id || null,
+          subtotal,
+          tax_rate: taxRate,
+          tax_amount: taxAmount,
+          requires_support_document: !!form.requires_support_document,
+          retefuente_rate: parseFloat(form.retefuente_rate) || 0,
+          retefuente_amount: retefuenteAmount,
+          reteiva_rate: parseFloat(form.reteiva_rate) || 0,
+          reteiva_amount: reteivaAmount,
+          reteica_rate: parseFloat(form.reteica_rate) || 0,
+          reteica_amount: reteicaAmount,
+        });
+      } else {
+        // Compatibilidad: sin detalle fiscal, no se envían subtotal/tax_*
+        // ni retenciones — el backend mantiene el comportamiento anterior.
+        delete payload.supplier_id;
+        delete payload.subtotal;
+        delete payload.tax_rate;
+        delete payload.requires_support_document;
+        delete payload.retefuente_rate;
+        delete payload.reteiva_rate;
+        delete payload.reteica_rate;
+      }
+      await expensesAPI.create(payload);
       toast.success('Gasto registrado');
       setShowFormModal(false);
+      setShowFiscalDetail(false);
       setForm(emptyForm);
       loadData();
     } catch (error) {
@@ -109,6 +163,20 @@ const ExpensesPage = () => {
     return isNaN(d.getTime()) ? '—' : d.toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' });
   };
 
+  const round2 = (n) => Math.round((n + Number.EPSILON) * 100) / 100;
+
+  const handleSelectSupplier = (supplierId) => {
+    const supplier = suppliers.find(s => s.id === supplierId);
+    setForm(f => ({
+      ...f,
+      supplier_id: supplierId,
+      // Precarga el flag igual que ya hace purchases.controller.js para
+      // compras — el usuario lo puede destildar si al final sí llega
+      // factura del proveedor.
+      requires_support_document: supplier ? supplier.is_obligated_to_invoice === false : f.requires_support_document,
+    }));
+  };
+
   const categoryLabel = (value) => EXPENSE_CATEGORIES.find(c => c.value === value)?.label || value;
 
   const searchLower = filters.search.toLowerCase().trim();
@@ -135,7 +203,7 @@ const ExpensesPage = () => {
               <ArrowPathIcon className="w-4 h-4" /> Actualizar
             </button>
             <button
-              onClick={() => { setForm(emptyForm); setShowFormModal(true); }}
+              onClick={() => { setForm(emptyForm); setShowFiscalDetail(false); setShowFormModal(true); }}
               className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
             >
               <PlusIcon className="w-4 h-4" /> Nuevo Gasto
@@ -233,6 +301,15 @@ const ExpensesPage = () => {
                         </span>
                       </td>
                       <td className="px-4 py-3 text-right whitespace-nowrap">
+                        {e.requires_support_document && (
+                          <button
+                            onClick={() => setSupportDocExpense(e)}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 mr-2"
+                            title="Documento Soporte DIAN"
+                          >
+                            <DocumentCheckIcon className="w-4 h-4" /> Doc. Soporte
+                          </button>
+                        )}
                         {e.payment_status !== 'paid' && (
                           <button
                             onClick={() => { setSelectedExpense(e); setPaymentAmount(String(balance)); setShowPaymentModal(true); }}
@@ -350,9 +427,112 @@ const ExpensesPage = () => {
               <label htmlFor="is_recurring" className="text-sm text-gray-700">Gasto recurrente (arriendo, nómina, servicios...)</label>
             </div>
 
+            {/* Documento Soporte DIAN — oculto por defecto para no
+                complicar el registro rápido de un gasto normal (con
+                factura). Se activa solo cuando el pago es a alguien que
+                no factura. */}
+            <div className="border-t border-gray-200 pt-3">
+              <button
+                type="button"
+                onClick={() => setShowFiscalDetail(v => !v)}
+                className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+              >
+                {showFiscalDetail ? '− Ocultar' : '+ Agregar'} datos fiscales / Documento Soporte
+              </button>
+
+              {showFiscalDetail && (
+                <div className="mt-3 space-y-3 bg-gray-50 rounded-lg p-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Proveedor</label>
+                    <select
+                      value={form.supplier_id}
+                      onChange={e => handleSelectSupplier(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    >
+                      <option value="">Sin proveedor (capturar datos al generar)</option>
+                      {suppliers.map(s => (
+                        <option key={s.id} value={s.id}>{s.name}{s.is_obligated_to_invoice === false ? ' — no factura' : ''}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Base gravable (subtotal)</label>
+                      <NumericInput
+                        value={form.subtotal}
+                        onChange={e => setForm(f => ({ ...f, subtotal: e.target.value }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                        placeholder={form.total_amount || '0'}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">% IVA</label>
+                      <select
+                        value={form.tax_rate}
+                        onChange={e => setForm(f => ({ ...f, tax_rate: e.target.value }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                      >
+                        {IVA_RATE_OPTIONS.map(r => <option key={r} value={r}>{r}%</option>)}
+                      </select>
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    IVA calculado: {formatCurrency(round2((parseFloat(form.subtotal || form.total_amount) || 0) * (parseFloat(form.tax_rate) || 0) / 100))}
+                    {' · '}Total: {formatCurrency((parseFloat(form.subtotal || form.total_amount) || 0) + round2((parseFloat(form.subtotal || form.total_amount) || 0) * (parseFloat(form.tax_rate) || 0) / 100))}
+                  </p>
+
+                  <label className="flex items-start bg-amber-50 border border-amber-200 rounded-lg p-2">
+                    <input
+                      type="checkbox"
+                      checked={form.requires_support_document}
+                      onChange={e => setForm(f => ({ ...f, requires_support_document: e.target.checked }))}
+                      className="mt-0.5"
+                    />
+                    <span className="ml-2 text-xs text-gray-700">
+                      Requiere Documento Soporte (el vendedor no está obligado a facturar)
+                    </span>
+                  </label>
+
+                  <details className="text-sm">
+                    <summary className="cursor-pointer text-gray-600">Retenciones (opcional)</summary>
+                    <div className="grid grid-cols-3 gap-2 mt-2">
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">ReteFuente %</label>
+                        <NumericInput
+                          value={form.retefuente_rate}
+                          onChange={e => setForm(f => ({ ...f, retefuente_rate: e.target.value }))}
+                          className="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">ReteIVA %</label>
+                        <NumericInput
+                          value={form.reteiva_rate}
+                          onChange={e => setForm(f => ({ ...f, reteiva_rate: e.target.value }))}
+                          className="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">ReteICA %</label>
+                        <NumericInput
+                          value={form.reteica_rate}
+                          onChange={e => setForm(f => ({ ...f, reteica_rate: e.target.value }))}
+                          className="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm"
+                        />
+                      </div>
+                    </div>
+                    <p className="text-xs text-gray-400 mt-1">
+                      ReteFuente/ReteICA sobre la base gravable; ReteIVA sobre el IVA calculado.
+                    </p>
+                  </details>
+                </div>
+              )}
+            </div>
+
             <div className="flex justify-end gap-2 pt-2">
               <button
-                onClick={() => setShowFormModal(false)}
+                onClick={() => { setShowFormModal(false); setShowFiscalDetail(false); }}
                 className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200"
               >
                 Cancelar
@@ -412,6 +592,33 @@ const ExpensesPage = () => {
                 Registrar Pago
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Documento Soporte DIAN */}
+      {supportDocExpense && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl w-full max-w-lg p-5 space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Documento Soporte</h3>
+                <p className="text-sm text-gray-500">{supportDocExpense.description}</p>
+              </div>
+              <button
+                onClick={() => setSupportDocExpense(null)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                ✕
+              </button>
+            </div>
+            <SupportDocumentPanel
+              sourceType="expense"
+              sourceId={supportDocExpense.id}
+              requiresSupportDocument={!!supportDocExpense.requires_support_document}
+              hasSupplier={!!supportDocExpense.supplier_id}
+              onSellerLinked={() => loadData()}
+            />
           </div>
         </div>
       )}

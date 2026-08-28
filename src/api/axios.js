@@ -157,6 +157,19 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
 
+    if (status === 409 && errorCode === 'NO_BRANCHES_CONFIGURED') {
+      // El tenant (admin) no tiene ninguna Branch activa -- branchMiddleware
+      // rechaza CUALQUIER endpoint que dependa de sede antes de llegar al
+      // controller. Sin esto, el admin ve un 409 "conflicto" pelado en la
+      // pantalla que estaba usando (ej. horarios de citas) sin entender que
+      // el problema es que le falta crear una sede.
+      if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/branches')) {
+        toast.error('Tu empresa no tiene sedes configuradas. Crea una sede para continuar.', { duration: 8000 });
+        window.location.href = '/branches';
+      }
+      return Promise.reject(error);
+    }
+
     if (status === 403 && errorCode === 'BRANCH_NOT_ALLOWED') {
       // La sede activa guardada localmente ya no es válida para este usuario:
       // se limpia para forzar la resolución automática de una sede permitida.

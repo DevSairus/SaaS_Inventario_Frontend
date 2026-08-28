@@ -50,6 +50,25 @@ export const sendToTestSet        = (saleId) => api.post(`/dian/test-set/${saleI
 export const createCreditNote = (saleId, data) => api.post(`/dian/create-credit-note/${saleId}`, data);
 export const createDebitNote  = (saleId, data) => api.post(`/dian/create-debit-note/${saleId}`, data);
 
+// ── Documento Soporte (Purchase/Expense — Fase 3) ─────────────
+// sourceType: 'purchase' | 'expense'. `seller` (opcional) sólo aplica a
+// expense sin supplier_id — datos ad-hoc capturados en el modal (ver
+// AdHocSellerModal.jsx); se ignora si el origen ya tiene proveedor.
+export const sendSupportDocument = (sourceType, sourceId, seller = null) =>
+  api.post(`/dian/send-support-document/${sourceType}/${sourceId}`, seller ? { seller } : {});
+export const getSupportDocumentStatus = (sourceType, sourceId) =>
+  api.get(`/dian/support-document/${sourceType}/${sourceId}`);
+export const checkSupportDocumentStatus = (sourceType, sourceId) =>
+  api.post(`/dian/check-status-support-document/${sourceType}/${sourceId}`);
+
+// ── Nota de Ajuste al Documento Soporte (tipo DIAN 95 — Fase 4) ─────
+// Solo aplica sobre un Documento Soporte ya aceptado por la DIAN
+// (supportDocumentId, no sourceId/sourceType).
+export const createSupportDocumentAdjustment = (supportDocumentId, data) =>
+  api.post(`/dian/support-document/${supportDocumentId}/adjustment`, data);
+export const getSupportDocumentAdjustments = (supportDocumentId) =>
+  api.get(`/dian/support-document/${supportDocumentId}/adjustments`);
+
 // ── Default export (compatibilidad con DianSettingsPage) ─────
 const dianAPI = {
   getConfig:            getDianConfig,
@@ -74,6 +93,9 @@ const dianAPI = {
   sendToTestSet,
   createCreditNote,
   createDebitNote,
+  sendSupportDocument,
+  getSupportDocumentStatus,
+  checkSupportDocumentStatus,
 };
 
 export default dianAPI;

@@ -2,6 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { useSuppliersStore } from '../../store/suppliersStore';
 import toast from 'react-hot-toast';
 import NumericInput from '../inputs/NumericInput';
+import DivipolaCitySelect from '../common/DivipolaCitySelect';
+
+const DOCUMENT_TYPE_OPTIONS = [
+  { value: '13', label: 'Cédula de ciudadanía' },
+  { value: '31', label: 'NIT' },
+  { value: '22', label: 'Cédula de extranjería' },
+  { value: '41', label: 'Pasaporte' },
+  { value: '12', label: 'Tarjeta de identidad' },
+  { value: '91', label: 'NUIP' },
+];
 
 const SupplierModal = ({ supplier, onClose }) => {
   const { createSupplier, updateSupplier, isLoading } = useSuppliersStore();
@@ -32,6 +42,8 @@ const SupplierModal = ({ supplier, onClose }) => {
     tax_regime: '',
     fiscal_responsibilities: '',
     is_obligated_to_invoice: true,
+    city_code: '',
+    document_type: '',
   });
 
   const [errors, setErrors] = useState({});
@@ -67,6 +79,8 @@ const SupplierModal = ({ supplier, onClose }) => {
         is_obligated_to_invoice: supplier.is_obligated_to_invoice !== undefined
           ? supplier.is_obligated_to_invoice
           : true,
+        city_code: supplier.city_code || '',
+        document_type: supplier.document_type || '',
       });
     }
   }, [supplier]);
@@ -438,6 +452,45 @@ const SupplierModal = ({ supplier, onClose }) => {
                   placeholder="Ej: R-99-PN (separadas por coma si hay más de una)"
                 />
               </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Tipo de Identificación
+                </label>
+                <select
+                  name="document_type"
+                  value={formData.document_type}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="">Sin especificar</option>
+                  {DOCUMENT_TYPE_OPTIONS.map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Ciudad DIVIPOLA — sin esto el Documento Soporte cae en el
+                fallback hardcodeado de Bogotá D.C./Cundinamarca (ver
+                LEEME.md Fase 2, mismo bug ya corregido para Customer). */}
+            <div className="mt-4">
+              <DivipolaCitySelect
+                departmentCode={formData.city_code ? formData.city_code.substring(0, 2) : ''}
+                cityCode={formData.city_code}
+                onChange={({ cityCode, cityName, departmentName }) => {
+                  setFormData(prev => ({
+                    ...prev,
+                    city_code: cityCode,
+                    city: cityName || prev.city,
+                    state: departmentName || prev.state,
+                  }));
+                }}
+              />
+              <p className="text-xs text-gray-400 mt-1">
+                Necesaria para emitir Documento Soporte a este proveedor — independiente del campo
+                "Ciudad" de texto libre en Dirección.
+              </p>
             </div>
 
             <label className="flex items-start mt-4 bg-amber-50 border border-amber-200 rounded-lg p-3">

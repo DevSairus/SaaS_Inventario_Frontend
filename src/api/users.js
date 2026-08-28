@@ -40,7 +40,12 @@ export const usersAPI = {
           passwordRequirements: data?.passwordRequirements ?? [],
         };
       }
-      throw { type: 'SERVER_ERROR', message: 'Error del servidor. Intenta nuevamente.' };
+      if (status === 409 || status === 400) {
+        // Email duplicado u otro rechazo de validación puntual del backend:
+        // usar el mensaje que ya viene armado ahí en vez del genérico de abajo.
+        throw { type: 'CONFLICT', message: data?.message || 'No se pudo crear el usuario' };
+      }
+      throw { type: 'SERVER_ERROR', message: data?.message || 'Error del servidor. Intenta nuevamente.' };
     }
   },
 

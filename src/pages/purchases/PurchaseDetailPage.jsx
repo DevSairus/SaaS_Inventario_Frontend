@@ -4,6 +4,7 @@ import { usePurchasesStore } from '../../store/purchasesStore';
 import useProductsStore from '../../store/productsStore';
 import Layout from '../../components/layout/Layout';
 import ConfirmPurchaseWithPaymentModal from '../../components/purchases/ConfirmPurchaseWithPaymentModal';
+import SupportDocumentPanel from '../../components/dian/SupportDocumentPanel';
 import toast from 'react-hot-toast';
 import { formatCurrency } from '../../utils/formatters';
 
@@ -361,6 +362,16 @@ const PurchaseDetailPage = () => {
               )}
             </div>
           </div>
+
+          {/* Documento Soporte DIAN — solo si la compra está marcada como
+              tal (proveedor no obligado a facturar, ver purchases.controller.js).
+              No se muestra para compras normales con factura del proveedor. */}
+          <SupportDocumentPanel
+            sourceType="purchase"
+            sourceId={purchase.id}
+            requiresSupportDocument={!!purchase.requires_support_document}
+            hasSupplier={!!purchase.supplier}
+          />
 
           {/* Additional Info */}
           <div className="bg-white rounded-lg shadow p-6">

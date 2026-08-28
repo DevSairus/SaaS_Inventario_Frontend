@@ -729,6 +729,7 @@ export default function DianConfigPage() {
                     <option value="credit_note">Nota Crédito</option>
                     <option value="debit_note">Nota Débito</option>
                     <option value="support_document">Documento Soporte (adquisiciones)</option>
+                    <option value="support_document_adjustment">Nota de Ajuste Doc. Soporte</option>
                   </select>
                 </Field>
                 <Field label="Tipo de Resolución">
