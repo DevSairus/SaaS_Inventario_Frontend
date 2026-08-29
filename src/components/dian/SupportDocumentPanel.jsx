@@ -136,6 +136,15 @@ export default function SupportDocumentPanel({
 
   const status = doc?.dian_status || 'none';
   const config = STATUS_CONFIG[status] || STATUS_CONFIG.none;
+  // La nota más reciente (adjustments viene ordenado DESC por created_at,
+  // ver listSupportDocumentAdjustments): si sigue sin aceptar, "Nota de
+  // Ajuste" debe REENVIAR esa misma nota (mismo adjustment_number/id) en vez
+  // de abrir el modal de creación -- si no, cada reintento del usuario tras
+  // un rechazo crea una fila SupportDocumentAdjustment nueva y el historial
+  // se llena de "notas" que en realidad son el mismo intento repetido.
+  const pendingAdjustment = adjustments[0] && adjustments[0].dian_status !== 'accepted'
+    ? adjustments[0]
+    : null;
   const { Icon } = config;
   const primaryReason = getPrimaryDianReason(doc?.dian_error_message);
   const hasExtraDetail = !!doc?.dian_error_message && doc.dian_error_message.trim() !== primaryReason.trim();
@@ -271,7 +280,15 @@ export default function SupportDocumentPanel({
                   Consultar Estado
                 </button>
               )}
-              {status === 'accepted' && (
+              {status === 'accepted' && pendingAdjustment && (
+                <button disabled={resendingAdjId === pendingAdjustment.id}
+                  onClick={() => handleResendAdjustment(pendingAdjustment.id)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 text-gray-700 text-xs rounded-lg hover:bg-gray-50 disabled:opacity-50 font-medium">
+                  <RefreshCw className={`w-3.5 h-3.5 ${resendingAdjId === pendingAdjustment.id ? 'animate-spin' : ''}`} />
+                  Reintentar Nota de Ajuste
+                </button>
+              )}
+              {status === 'accepted' && !pendingAdjustment && (
                 <button disabled={acting} onClick={() => setShowAdjustmentModal(true)}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 text-gray-700 text-xs rounded-lg hover:bg-gray-50 disabled:opacity-50 font-medium">
                   <PlusCircle className="w-3.5 h-3.5" />
