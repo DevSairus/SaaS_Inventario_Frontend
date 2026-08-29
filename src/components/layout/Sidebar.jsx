@@ -104,6 +104,7 @@ const NAV = [
     children: [
       { label: "Cuentas por Pagar",   path: "/accounts-payable" },
       { label: "Gastos Operativos",   path: "/expenses" },
+      { label: "Documentos Soporte DIAN", path: "/support-documents" },
       { label: "Flujo de Caja",       path: "/cashflow" },
       { label: "Cajas",               path: "/cash-sessions" },
       { label: "Recibos",             path: "/receipts" },

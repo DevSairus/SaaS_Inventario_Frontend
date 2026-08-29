@@ -60,6 +60,10 @@ export const getSupportDocumentStatus = (sourceType, sourceId) =>
   api.get(`/dian/support-document/${sourceType}/${sourceId}`);
 export const checkSupportDocumentStatus = (sourceType, sourceId) =>
   api.post(`/dian/check-status-support-document/${sourceType}/${sourceId}`);
+// Listado plano de todos los Documentos Soporte del tenant (pantalla
+// dedicada en Tesorería — antes solo se veían entrando a la compra/gasto).
+export const getSupportDocuments = (params = {}) =>
+  api.get('/dian/support-documents', { params });
 
 // ── Nota de Ajuste al Documento Soporte (tipo DIAN 95 — Fase 4) ─────
 // Solo aplica sobre un Documento Soporte ya aceptado por la DIAN
@@ -96,6 +100,7 @@ const dianAPI = {
   sendSupportDocument,
   getSupportDocumentStatus,
   checkSupportDocumentStatus,
+  getSupportDocuments,
 };
 
 export default dianAPI;

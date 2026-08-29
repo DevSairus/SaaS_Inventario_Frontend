@@ -32,6 +32,7 @@ const CustomerAdvancesPage = lazy(() => import('./pages/finance/CustomerAdvances
 const CustomerAdvanceAlertsPage = lazy(() => import('./pages/customer-advance-alerts/CustomerAdvanceAlertsPage'));
 const AccountsPayablePage = lazy(() => import('./pages/finance/AccountsPayablePage'));
 const ExpensesPage = lazy(() => import('./pages/finance/ExpensesPage'));
+const SupportDocumentsPage = lazy(() => import('./pages/finance/SupportDocumentsPage'));
 const CashFlowPage = lazy(() => import('./pages/finance/CashFlowPage'));
 const CashSessionsPage = lazy(() => import('./pages/finance/CashSessionsPage'));
 const ReceiptsPage = lazy(() => import('./pages/finance/ReceiptsPage'));
@@ -332,6 +333,7 @@ function App() {
         <Route path="accounts-payable" element={<TenantRoute module="treasury"><Suspense fallback={<Loading fullScreen />}><AccountsPayablePage /></Suspense></TenantRoute>} />
         <Route path="payable-alerts"   element={<TenantRoute module="treasury"><Suspense fallback={<Loading fullScreen />}><PayableAlertsPage /></Suspense></TenantRoute>} />
         <Route path="expenses"         element={<TenantRoute module="treasury"><Suspense fallback={<Loading fullScreen />}><ExpensesPage /></Suspense></TenantRoute>} />
+        <Route path="support-documents" element={<TenantRoute module="treasury"><Suspense fallback={<Loading fullScreen />}><SupportDocumentsPage /></Suspense></TenantRoute>} />
         <Route path="cashflow"         element={<TenantRoute module="treasury"><Suspense fallback={<Loading fullScreen />}><CashFlowPage /></Suspense></TenantRoute>} />
         <Route path="accounting/chart-of-accounts" element={<TenantRoute module="accounting" roles={['admin', 'manager']}><Suspense fallback={<Loading fullScreen />}><ChartOfAccountsPage /></Suspense></TenantRoute>} />
         <Route path="accounting/journal-entries"   element={<TenantRoute module="accounting" roles={['admin', 'manager']}><Suspense fallback={<Loading fullScreen />}><JournalEntriesPage /></Suspense></TenantRoute>} />
