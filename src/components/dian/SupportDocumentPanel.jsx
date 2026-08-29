@@ -28,6 +28,7 @@ import {
   getSupportDocumentStatus,
   checkSupportDocumentStatus,
   getSupportDocumentAdjustments,
+  resendSupportDocumentAdjustment,
 } from '../../api/dian';
 import AdHocSellerModal from './AdHocSellerModal';
 import SupportDocumentAdjustmentModal from './SupportDocumentAdjustmentModal';
@@ -87,6 +88,23 @@ export default function SupportDocumentPanel({
       if (next.has(id)) next.delete(id); else next.add(id);
       return next;
     });
+  };
+  // Reintento de una Nota de Ajuste en 'rejected' (ej. tras un error de red
+  // transitorio con el webservice DIAN, ver resendSupportDocumentAdjustment)
+  // -- se guarda el id en vez de un booleano porque puede haber varias notas
+  // a la vez, mismo criterio que expandedAdjErrors arriba.
+  const [resendingAdjId, setResendingAdjId] = useState(null);
+  const handleResendAdjustment = async (adjustmentId) => {
+    setResendingAdjId(adjustmentId);
+    try {
+      const res = await resendSupportDocumentAdjustment(adjustmentId);
+      toast.success(res.data?.message || 'Nota de Ajuste reenviada');
+      loadAdjustments(doc?.id);
+    } catch (e) {
+      toast.error(e.response?.data?.message || 'Error al reenviar la Nota de Ajuste');
+    } finally {
+      setResendingAdjId(null);
+    }
   };
 
   const load = useCallback(() => {
@@ -307,6 +325,14 @@ export default function SupportDocumentPanel({
                             </>
                           )}
                         </div>
+                      )}
+                      {(adj.dian_status === 'rejected' || adj.dian_status === 'pending') && (
+                        <button type="button" disabled={resendingAdjId === adj.id}
+                          onClick={() => handleResendAdjustment(adj.id)}
+                          className="mt-2 inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 underline disabled:opacity-50">
+                          <RefreshCw className={`w-3 h-3 ${resendingAdjId === adj.id ? 'animate-spin' : ''}`} />
+                          Reintentar
+                        </button>
                       )}
                     </div>
                   );

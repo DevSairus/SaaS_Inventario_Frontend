@@ -72,6 +72,11 @@ export const createSupportDocumentAdjustment = (supportDocumentId, data) =>
   api.post(`/dian/support-document/${supportDocumentId}/adjustment`, data);
 export const getSupportDocumentAdjustments = (supportDocumentId) =>
   api.get(`/dian/support-document/${supportDocumentId}/adjustments`);
+// Reintenta el envío de una Nota de Ajuste en 'rejected'/'pending' (ej. tras
+// un error de red transitorio con el webservice DIAN) reutilizando el mismo
+// registro/número, sin crear una nueva.
+export const resendSupportDocumentAdjustment = (adjustmentId) =>
+  api.post(`/dian/support-document-adjustment/${adjustmentId}/resend`);
 
 // ── Default export (compatibilidad con DianSettingsPage) ─────
 const dianAPI = {
