@@ -4,8 +4,70 @@ import { X, Upload, FileText, CheckCircle, AlertCircle, Package, Trash2, Truck, 
 import api from '../../api/axios';
 import { productsAPI } from '../../api/products';
 import NumericInput from '../inputs/NumericInput';
+import useCategoriesStore from '../../store/categoriesStore';
 
 const fmt = (val) => parseFloat(val || 0).toLocaleString('es-CO');
+
+const UNIT_OPTIONS = [
+  { value: 'unit', label: 'Unidad' },
+  { value: 'kg', label: 'Kilogramo' },
+  { value: 'g', label: 'Gramo' },
+  { value: 'l', label: 'Litro' },
+  { value: 'ml', label: 'Mililitro' },
+  { value: 'm', label: 'Metro' },
+  { value: 'cm', label: 'Centímetro' },
+  { value: 'pack', label: 'Paquete' },
+  { value: 'box', label: 'Caja' },
+];
+
+// Panel compacto que aparece bajo un ítem marcado "Crear producto nuevo" para
+// que el usuario defina de una vez código, referencia, categoría, marca y
+// unidad -- así no tiene que ir luego a editar el producto recién creado.
+const NewProductFieldsPanel = ({ data, onChange, categories }) => {
+  const set = (field) => (e) => onChange({ ...data, [field]: e.target.value });
+  const inputClass = 'w-full px-2 py-1.5 border border-gray-300 dark:border-white/10 dark:bg-graphite-2 rounded text-xs text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-amber-400 focus:border-transparent';
+  const labelClass = 'block text-[10px] text-gray-500 dark:text-gray-400 mb-0.5';
+
+  return (
+    <div className="mt-2 p-3 bg-amber-50/60 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/40 rounded-lg grid grid-cols-2 gap-2">
+      <div>
+        <label className={labelClass}>Código (SKU)</label>
+        <input type="text" value={data.sku} onChange={set('sku')} placeholder="Autogenerado si se deja vacío" className={inputClass} />
+      </div>
+      <div>
+        <label className={labelClass}>Referencia / cód. barras</label>
+        <input type="text" value={data.barcode} onChange={set('barcode')} placeholder="Opcional" className={inputClass} />
+      </div>
+      <div className="col-span-2">
+        <label className={labelClass}>Nombre</label>
+        <input type="text" value={data.name} onChange={set('name')} className={inputClass} />
+      </div>
+      <div>
+        <label className={labelClass}>Categoría</label>
+        <select value={data.category_id} onChange={set('category_id')} className={inputClass}>
+          <option value="">Sin categoría</option>
+          {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+        </select>
+      </div>
+      <div>
+        <label className={labelClass}>Marca</label>
+        <input type="text" value={data.brand} onChange={set('brand')} placeholder="Opcional" className={inputClass} />
+      </div>
+      <div>
+        <label className={labelClass}>Unidad de medida</label>
+        <select value={data.unit_of_measure} onChange={set('unit_of_measure')} className={inputClass}>
+          {UNIT_OPTIONS.map((u) => <option key={u.value} value={u.value}>{u.label}</option>)}
+        </select>
+      </div>
+      <div className="flex items-end">
+        <label className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-300">
+          <input type="checkbox" checked={data.price_includes_tax} onChange={(e) => onChange({ ...data, price_includes_tax: e.target.checked })} />
+          El precio ya incluye IVA
+        </label>
+      </div>
+    </div>
+  );
+};
 
 // Selector compacto para vincular un ítem de factura a un producto del
 // catálogo (búsqueda con debounce) o marcarlo para crear como producto nuevo.
@@ -119,6 +181,7 @@ const ProductLinkPicker = ({ value, productName, onChange }) => {
 };
 
 const InvoiceImportModal = ({ isOpen, onClose, onSuccess }) => {
+  const { categories, fetchCategories } = useCategoriesStore();
   const [file, setFile]                 = useState(null);
   const [isDragging, setIsDragging]     = useState(false);
   const [loading, setLoading]           = useState(false);
@@ -138,6 +201,11 @@ const InvoiceImportModal = ({ isOpen, onClose, onSuccess }) => {
   // editable por el usuario — es lo único que confirma y guarda un mapeo
   // código-proveedor → producto para la próxima importación de este proveedor.
   const [manualLinks, setManualLinks] = useState({});
+  // Datos editables del producto a crear, por ítem marcado CREATE_NEW:
+  // { índice: { sku, barcode, name, category_id, brand, unit_of_measure, price_includes_tax } }
+  const [newProductData, setNewProductData] = useState({});
+
+  useEffect(() => { fetchCategories(); }, [fetchCategories]);
 
   const handleDragOver  = (e) => { e.preventDefault(); setIsDragging(true); };
   const handleDragLeave = () => setIsDragging(false);
@@ -155,7 +223,7 @@ const InvoiceImportModal = ({ isOpen, onClose, onSuccess }) => {
   };
 
   const handlePreview = async (selectedFile) => {
-    setLoading(true); setError(null); setPreview(null); setRemovedItems([]); setShippingCost(''); setItemTaxOverrides({}); setManualLinks({});
+    setLoading(true); setError(null); setPreview(null); setRemovedItems([]); setShippingCost(''); setItemTaxOverrides({}); setManualLinks({}); setNewProductData({});
     try {
       const fd = new FormData();
       fd.append('file', selectedFile);
@@ -189,6 +257,16 @@ const InvoiceImportModal = ({ isOpen, onClose, onSuccess }) => {
     if (manualLinks[idx] !== undefined) return count;
     return count + 1;
   }, 0);
+
+  const getNewProductData = (idx, item) => newProductData[idx] || {
+    sku: item.sku && !item.sku.startsWith('TEMP-') ? item.sku : '',
+    barcode: '',
+    name: item.name || '',
+    category_id: '',
+    brand: '',
+    unit_of_measure: 'unit',
+    price_includes_tax: false,
+  };
 
   const toggleRemoveItem = (idx) =>
     setRemovedItems(prev => prev.includes(idx) ? prev.filter(i => i !== idx) : [...prev, idx]);
@@ -224,6 +302,7 @@ const InvoiceImportModal = ({ isOpen, onClose, onSuccess }) => {
       fd.append('discount_amount', discountAmount || 0);
       fd.append('items_tax_overrides', JSON.stringify(itemTaxOverrides));
       fd.append('manual_links', JSON.stringify(manualLinks));
+      fd.append('new_product_data', JSON.stringify(newProductData));
       const res = await api.post('/invoice-import/import', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
       if (res.data.success) {
         setResult(res.data.data);
@@ -237,7 +316,7 @@ const InvoiceImportModal = ({ isOpen, onClose, onSuccess }) => {
   const handleClose = () => {
     setFile(null); setPreview(null); setError(null); setResult(null);
     setIsDragging(false); setProfitMargin(30); setSupplierName('');
-    setRemovedItems([]); setShippingCost(''); setDiscountAmount(''); setItemTaxOverrides({}); setManualLinks({});
+    setRemovedItems([]); setShippingCost(''); setDiscountAmount(''); setItemTaxOverrides({}); setManualLinks({}); setNewProductData({});
     setFileInputKey(k => k + 1);
     onClose();
   };
@@ -395,7 +474,7 @@ const InvoiceImportModal = ({ isOpen, onClose, onSuccess }) => {
                                       <CheckCircle className="w-3 h-3" /> Vinculado: {item.suggestion.product_name}
                                     </span>
                                   ) : (
-                                    <div className="max-w-[220px]">
+                                    <div className="max-w-[280px]">
                                       {item.suggestion?.match_type === 'name_fuzzy' && manualLinks[idx] === item.suggestion.product_id && (
                                         <p className="text-[10px] text-blue-500 dark:text-blue-400 mb-0.5">Sugerido por nombre — confirmar</p>
                                       )}
@@ -405,8 +484,20 @@ const InvoiceImportModal = ({ isOpen, onClose, onSuccess }) => {
                                       <ProductLinkPicker
                                         value={manualLinks[idx]}
                                         productName={item.suggestion?.product_name}
-                                        onChange={(val) => setManualLinks(prev => ({ ...prev, [idx]: val }))}
+                                        onChange={(val) => {
+                                          setManualLinks(prev => ({ ...prev, [idx]: val }));
+                                          if (val === 'CREATE_NEW') {
+                                            setNewProductData(prev => ({ ...prev, [idx]: prev[idx] || getNewProductData(idx, item) }));
+                                          }
+                                        }}
                                       />
+                                      {manualLinks[idx] === 'CREATE_NEW' && (
+                                        <NewProductFieldsPanel
+                                          data={getNewProductData(idx, item)}
+                                          categories={categories}
+                                          onChange={(data) => setNewProductData(prev => ({ ...prev, [idx]: data }))}
+                                        />
+                                      )}
                                     </div>
                                   )}
                                 </div>
@@ -574,7 +665,7 @@ const InvoiceImportModal = ({ isOpen, onClose, onSuccess }) => {
               {/* Botones */}
               <div className="flex gap-3 pt-1">
                 <button
-                  onClick={() => { setFile(null); setPreview(null); setRemovedItems([]); setShippingCost(''); setDiscountAmount(''); setItemTaxOverrides({}); setManualLinks({}); setFileInputKey(k => k + 1); }}
+                  onClick={() => { setFile(null); setPreview(null); setRemovedItems([]); setShippingCost(''); setDiscountAmount(''); setItemTaxOverrides({}); setManualLinks({}); setNewProductData({}); setFileInputKey(k => k + 1); }}
                   className="flex-1 px-6 py-3 border border-gray-300 dark:border-white/10 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-white/5 transition-colors font-medium">
                   Cancelar
                 </button>
