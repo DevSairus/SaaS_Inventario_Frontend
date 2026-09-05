@@ -143,6 +143,19 @@ const SuperAdminNcfConfig = () => {
     }
   };
 
+  const handleToggleSyncEnabled = async (tenant) => {
+    const next = !tenant.ncf_sync_enabled;
+    // Optimista -- el toggle vive en una tabla con varias filas, esperar el
+    // roundtrip completo antes de reflejar el cambio se siente lento acá.
+    setTenants((prev) => prev.map((t) => (t.id === tenant.id ? { ...t, ncf_sync_enabled: next } : t)));
+    try {
+      await api.patch(`/superadmin/ncf-config/tenants/${tenant.id}`, { ncf_sync_enabled: next });
+    } catch (error) {
+      setTenants((prev) => prev.map((t) => (t.id === tenant.id ? { ...t, ncf_sync_enabled: !next } : t)));
+      toast.error(error.response?.data?.error || 'No se pudo actualizar');
+    }
+  };
+
   const handleSync = async () => {
     try {
       setSyncing(true);
@@ -285,7 +298,9 @@ const SuperAdminNcfConfig = () => {
             <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Sincronización por sistema</h3>
             <p className="text-sm text-gray-500 dark:text-gray-500">
               Corre sola todos los días (7am) y genera la prefactura de cada tenant 7 días antes de su fecha de
-              corte -- para que le alcance el tiempo de pagar. Este botón dispara lo mismo manualmente.
+              corte -- para que le alcance el tiempo de pagar. Este botón dispara lo mismo manualmente. Solo se
+              procesan los tenants marcados como "Listo" en la columna de la tabla (checkbox) -- márcalo después de
+              cargarle ciudad y revisar tarifa/fecha de cobro, para no facturarle a alguien sin configurar.
             </p>
           </div>
           <div className="flex flex-col items-end gap-2">
@@ -332,6 +347,7 @@ const SuperAdminNcfConfig = () => {
           <table className="min-w-full text-sm">
             <thead>
               <tr className="text-left text-xs uppercase tracking-wide text-gray-500 border-b border-gray-200 dark:text-gray-500 dark:border-white/10">
+                <th className="py-2 pr-4">Listo</th>
                 <th className="py-2 pr-4">Tenant</th>
                 <th className="py-2 pr-4">NIT</th>
                 <th className="py-2 pr-4">Ciudad NCF</th>
@@ -344,6 +360,15 @@ const SuperAdminNcfConfig = () => {
             <tbody className="divide-y divide-gray-100 dark:divide-white/10">
               {tenants.map((t) => (
                 <tr key={t.id}>
+                  <td className="py-2 pr-4">
+                    <input
+                      type="checkbox"
+                      checked={!!t.ncf_sync_enabled}
+                      onChange={() => handleToggleSyncEnabled(t)}
+                      title="Listo a sincronizar -- solo los tenants marcados se incluyen en la sincronización NCF (cron o botón manual)"
+                      className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 dark:border-white/10"
+                    />
+                  </td>
                   <td className="py-2 pr-4 text-gray-800 dark:text-gray-200">{t.business_name || t.company_name}</td>
                   <td className="py-2 pr-4 text-gray-500 dark:text-gray-500">{t.tax_id || '--'}</td>
                   <td className="py-2 pr-4 text-gray-500 dark:text-gray-500">
@@ -389,7 +414,7 @@ const SuperAdminNcfConfig = () => {
               ))}
               {tenants.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="py-6 text-center text-gray-400 dark:text-gray-500">
+                  <td colSpan={8} className="py-6 text-center text-gray-400 dark:text-gray-500">
                     No hay tenants activos todavía
                   </td>
                 </tr>
