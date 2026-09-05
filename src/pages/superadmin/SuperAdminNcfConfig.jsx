@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import {
   Save,
   Eye,
@@ -337,6 +338,7 @@ const SuperAdminNcfConfig = () => {
                 <th className="py-2 pr-4">Última sincronización</th>
                 <th className="py-2 pr-4">Estado NCF</th>
                 <th className="py-2 pr-4">Detalle</th>
+                <th className="py-2 pr-4">Suscripción</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-white/10">
@@ -375,11 +377,19 @@ const SuperAdminNcfConfig = () => {
                       </a>
                     ))}
                   </td>
+                  <td className="py-2 pr-4">
+                    <Link
+                      to={`/superadmin/tenants/${t.id}/subscription`}
+                      className="text-xs text-emerald-600 underline dark:text-emerald-400"
+                    >
+                      Editar fecha/monto
+                    </Link>
+                  </td>
                 </tr>
               ))}
               {tenants.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="py-6 text-center text-gray-400 dark:text-gray-500">
+                  <td colSpan={7} className="py-6 text-center text-gray-400 dark:text-gray-500">
                     No hay tenants activos todavía
                   </td>
                 </tr>
