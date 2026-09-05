@@ -31,9 +31,24 @@ const SubscriptionManagement = () => {
   const [selectedStatus, setSelectedStatus] = useState('');
   const [showStatusModal, setShowStatusModal] = useState(false);
 
+  const [billingDate, setBillingDate] = useState('');
+  const [billingCycleEdit, setBillingCycleEdit] = useState('');
+  const [billingAmount, setBillingAmount] = useState('');
+
   useEffect(() => {
     fetchData();
   }, [id]);
+
+  useEffect(() => {
+    if (!subscription) return;
+    setBillingDate(
+      subscription.next_billing_date
+        ? new Date(subscription.next_billing_date).toISOString().split('T')[0]
+        : ''
+    );
+    setBillingCycleEdit(subscription.billing_cycle || 'monthly');
+    setBillingAmount(subscription.amount ?? '');
+  }, [subscription]);
 
   const fetchData = async () => {
     try {
@@ -94,6 +109,20 @@ const SubscriptionManagement = () => {
       fetchData();
     } catch (error) {
       toast.error(error.response?.data?.message || 'No se pudo extender el periodo de prueba.');
+    }
+  };
+
+  const handleUpdateBillingConfig = async () => {
+    try {
+      await api.put(`/superadmin/tenants/${id}/billing-config`, {
+        next_billing_date: billingDate || undefined,
+        billing_cycle: billingCycleEdit || undefined,
+        amount: billingAmount === '' ? undefined : billingAmount,
+      });
+      toast.success('Configuración de facturación actualizada.');
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'No se pudo actualizar la facturación.');
     }
   };
 
@@ -232,6 +261,50 @@ const SubscriptionManagement = () => {
                   </div>
                 </div>
               )}
+            </div>
+          </Card>
+
+          {/* Editar Facturación */}
+          <Card title="Editar Facturación">
+            <div className="space-y-4">
+              <p className="text-sm text-gray-600">
+                Fecha de próximo cobro y monto a facturar para este tenant, independientes de la fecha de activación y del precio de lista del plan.
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="label">Próximo cobro</label>
+                  <input
+                    type="date"
+                    value={billingDate}
+                    onChange={(e) => setBillingDate(e.target.value)}
+                    className="input w-full"
+                  />
+                </div>
+                <div>
+                  <label className="label">Ciclo</label>
+                  <select
+                    value={billingCycleEdit}
+                    onChange={(e) => setBillingCycleEdit(e.target.value)}
+                    className="input w-full"
+                  >
+                    <option value="monthly">Mensual</option>
+                    <option value="yearly">Anual</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="label">Monto a facturar (COP)</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={billingAmount}
+                  onChange={(e) => setBillingAmount(e.target.value)}
+                  className="input w-full"
+                />
+              </div>
+              <Button variant="primary" onClick={handleUpdateBillingConfig} className="w-full">
+                Guardar Facturación
+              </Button>
             </div>
           </Card>
 
