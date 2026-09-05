@@ -27,6 +27,7 @@ const NCF_STATUS_LABEL = {
   expired: 'Vencida',
   error: 'Error',
   sent: 'Enviada',
+  cancelled: 'Anulada',
 };
 
 const SuperAdminNcfConfig = () => {
@@ -387,6 +388,7 @@ const SuperAdminNcfConfig = () => {
                       <span className={`px-2 py-0.5 rounded-full text-xs ${
                         ['paid', 'invoiced'].includes(t.ncf_last_status) ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300' :
                         ['rejected', 'expired', 'error'].includes(t.ncf_last_status) ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' :
+                        t.ncf_last_status === 'cancelled' ? 'bg-gray-100 text-gray-600 dark:bg-white/10 dark:text-gray-400' :
                         'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'
                       }`}>
                         {NCF_STATUS_LABEL[t.ncf_last_status] || t.ncf_last_status}
