@@ -19,6 +19,11 @@ import Combobox from './Combobox';
  *                   cambiar cualquiera de los dos selectores
  *  disabled
  *  required
+ *  fetchCatalog   — opcional, por si el catálogo no se puede pedir por la
+ *                   ruta tenant-scoped por defecto (GET /api/dian/divipola,
+ *                   requiere tenantMiddleware). Ej: el panel superadmin no
+ *                   está atado a ningún tenant, usa GET /api/superadmin/divipola.
+ *                   Debe devolver la misma forma que getDivipola().
  */
 export default function DivipolaCitySelect({
   departmentCode,
@@ -26,6 +31,7 @@ export default function DivipolaCitySelect({
   onChange,
   disabled = false,
   required = false,
+  fetchCatalog,
 }) {
   const [catalog, setCatalog] = useState({ departments: [], cities: [] });
   const [loading, setLoading] = useState(true);
@@ -33,7 +39,7 @@ export default function DivipolaCitySelect({
 
   useEffect(() => {
     let mounted = true;
-    getDivipola()
+    (fetchCatalog || getDivipola)()
       .then(res => {
         if (!mounted) return;
         const data = res.data?.data || { departments: [], cities: [] };

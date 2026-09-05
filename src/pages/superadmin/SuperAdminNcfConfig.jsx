@@ -15,6 +15,7 @@ import api from '@api/axios';
 import Card from '@components/common/Card';
 import Button from '@components/common/Button';
 import Loading from '@components/common/Loading';
+import TenantNcfCiudadModal from '@components/superadmin/TenantNcfCiudadModal';
 import toast from 'react-hot-toast';
 
 const NCF_STATUS_LABEL = {
@@ -45,6 +46,7 @@ const SuperAdminNcfConfig = () => {
   const [lastTest, setLastTest] = useState(null);
   const [tenants, setTenants] = useState([]);
   const [syncResults, setSyncResults] = useState(null);
+  const [editingCiudadTenant, setEditingCiudadTenant] = useState(null);
 
   useEffect(() => {
     fetchConfig();
@@ -331,6 +333,7 @@ const SuperAdminNcfConfig = () => {
               <tr className="text-left text-xs uppercase tracking-wide text-gray-500 border-b border-gray-200 dark:text-gray-500 dark:border-white/10">
                 <th className="py-2 pr-4">Tenant</th>
                 <th className="py-2 pr-4">NIT</th>
+                <th className="py-2 pr-4">Ciudad NCF</th>
                 <th className="py-2 pr-4">Última sincronización</th>
                 <th className="py-2 pr-4">Estado NCF</th>
                 <th className="py-2 pr-4">Detalle</th>
@@ -341,6 +344,14 @@ const SuperAdminNcfConfig = () => {
                 <tr key={t.id}>
                   <td className="py-2 pr-4 text-gray-800 dark:text-gray-200">{t.business_name || t.company_name}</td>
                   <td className="py-2 pr-4 text-gray-500 dark:text-gray-500">{t.tax_id || '--'}</td>
+                  <td className="py-2 pr-4 text-gray-500 dark:text-gray-500">
+                    <button
+                      onClick={() => setEditingCiudadTenant(t)}
+                      className="underline decoration-dotted hover:text-emerald-600 dark:hover:text-emerald-400"
+                    >
+                      {t.ncf_ciudad || 'Sin ciudad -- editar'}
+                    </button>
+                  </td>
                   <td className="py-2 pr-4 text-gray-500 dark:text-gray-500">
                     {t.ncf_last_sync_at ? new Date(t.ncf_last_sync_at).toLocaleString('es-CO') : 'Nunca'}
                   </td>
@@ -368,7 +379,7 @@ const SuperAdminNcfConfig = () => {
               ))}
               {tenants.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="py-6 text-center text-gray-400 dark:text-gray-500">
+                  <td colSpan={6} className="py-6 text-center text-gray-400 dark:text-gray-500">
                     No hay tenants activos todavía
                   </td>
                 </tr>
@@ -377,6 +388,14 @@ const SuperAdminNcfConfig = () => {
           </table>
         </div>
       </Card>
+
+      {editingCiudadTenant && (
+        <TenantNcfCiudadModal
+          tenant={editingCiudadTenant}
+          onClose={() => setEditingCiudadTenant(null)}
+          onSaved={fetchTenants}
+        />
+      )}
     </div>
   );
 };
