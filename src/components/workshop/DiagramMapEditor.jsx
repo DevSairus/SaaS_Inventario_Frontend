@@ -16,6 +16,7 @@ const SYSTEM_LABELS = {
   suspension_trasera: 'Suspensión trasera',
   frenos_delanteros: 'Frenos delanteros',
   frenos_traseros: 'Frenos traseros',
+  vista_general: 'Vista general',
 };
 
 const SEVERITY_OPTIONS = [
