@@ -1,12 +1,9 @@
 import { useState, useEffect } from 'react';
 import Sidebar from './Sidebar';
 import WorkshopBottomNav from './WorkshopBottomNav';
-import StockAlerts from '../common/StockAlerts';
-import PayableAlerts from '../common/PayableAlerts';
-import AdvanceAlerts from '../common/AdvanceAlerts';
-import CrmNotifications from '../common/CrmNotifications';
-import QuoteNotificationsBell from '../common/QuoteNotificationsBell';
+import NotificationsCenter from '../common/NotificationsCenter';
 import AppointmentNotificationsBell from '../common/AppointmentNotificationsBell';
+import QuoteNotificationsBell from '../common/QuoteNotificationsBell';
 import BranchSelector from './BranchSelector';
 import NexaChatWidget from '../common/NexaChatWidget';
 import { useTicketNotifications } from '../../hooks/useTicketNotifications';
@@ -39,11 +36,10 @@ function Layout({ children }) {
   useTicketNotifications();
   useQuoteNotifications();
   useAppointmentNotifications();
-  // Un solo timer de 30 min para las 6 campanas del header (StockAlerts,
-  // PayableAlerts, AdvanceAlerts, CrmNotifications, QuoteNotificationsBell,
-  // AppointmentNotificationsBell) en vez de que cada una tenga el suyo.
-  // startPolling es idempotente — Layout se monta dos veces en pantallas
-  // móviles/desktop pero solo arranca un timer.
+  // Un solo timer de 30 min que alimenta el bundle consolidado que usa
+  // NotificationsCenter (antes 6 campanas independientes, cada una con su
+  // propio timer). startPolling es idempotente — Layout se monta dos veces
+  // en pantallas móviles/desktop pero solo arranca un timer.
   const startPolling = useNotificationsBundleStore((s) => s.startPolling);
   useEffect(() => {
     startPolling();
@@ -117,24 +113,14 @@ function Layout({ children }) {
 
           <div className="flex items-center gap-2">
             <BranchSelector />
-            <AppointmentNotificationsBell />
-            <QuoteNotificationsBell />
-            <CrmNotifications />
-            <StockAlerts />
-            <PayableAlerts />
-            <AdvanceAlerts />
+            <NotificationsCenter />
           </div>
         </header>
 
         {/* Barra desktop con alertas */}
         <div className="hidden lg:flex sticky top-0 z-30 items-center justify-end gap-3 bg-gray-50 dark:bg-[#0D0D0D] px-6 pt-4 pb-1 flex-shrink-0">
           <BranchSelector />
-          <AppointmentNotificationsBell />
-          <QuoteNotificationsBell />
-          <CrmNotifications />
-          <StockAlerts />
-          <PayableAlerts />
-          <AdvanceAlerts />
+          <NotificationsCenter />
         </div>
 
         {/* Contenido principal */}
