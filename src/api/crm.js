@@ -49,6 +49,8 @@ const crmApi = {
   // ── WhatsApp Cloud API + coexistencia ────────────────────────────────────
   getWhatsAppCloudStatus: () => api.get('/crm/whatsapp/status'),
   completeWhatsAppEmbeddedSignup: (data) => api.post('/crm/whatsapp/embedded-signup/complete', data),
+  connectWhatsAppWithToken: (data) => api.post('/crm/whatsapp/connect-token', data),
+  setWhatsAppWebhookVerifyToken: (webhookVerifyToken) => api.put('/crm/whatsapp/webhook-verify-token', { webhook_verify_token: webhookVerifyToken }),
   disconnectWhatsAppCloud: () => api.post('/crm/whatsapp/disconnect'),
   setWhatsAppDemoMode: (enabled = true) => api.post('/crm/whatsapp/demo-mode', { enabled }),
   simulateWaInbound: (data) => api.post('/crm/whatsapp/demo/simulate-inbound', data),

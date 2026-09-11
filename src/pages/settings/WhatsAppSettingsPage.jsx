@@ -65,6 +65,31 @@ export default function WhatsAppSettingsPage() {
     phone_number_id: '',
     display_phone: '',
   });
+  const [tokenForm, setTokenForm] = useState({
+    access_token: '',
+    waba_id: '',
+    phone_number_id: '',
+    display_phone: '',
+    token_source: 'system_user',
+  });
+  const [webhookVerifyToken, setWebhookVerifyToken] = useState('');
+  const [savingWebhookToken, setSavingWebhookToken] = useState(false);
+
+  const handleSaveWebhookVerifyToken = async (e) => {
+    e.preventDefault();
+    if (!webhookVerifyToken.trim()) return;
+    setSavingWebhookToken(true);
+    try {
+      await crmApi.setWhatsAppWebhookVerifyToken(webhookVerifyToken.trim());
+      toast.success('Verify token guardado. Ya puedes pegarlo en Meta (mismo texto).');
+      setWebhookVerifyToken('');
+      loadWa();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'No se pudo guardar el verify token');
+    } finally {
+      setSavingWebhookToken(false);
+    }
+  };
 
   const loadWa = useCallback(async () => {
     setLoadingWa(true);
@@ -197,6 +222,25 @@ export default function WhatsAppSettingsPage() {
     await submitEmbeddedComplete(manual);
   };
 
+  const handleTokenSubmit = async (e) => {
+    e.preventDefault();
+    if (!tokenForm.access_token || !tokenForm.waba_id || !tokenForm.phone_number_id) {
+      toast.error('Token, WABA ID y Phone Number ID son obligatorios');
+      return;
+    }
+    setConnecting(true);
+    try {
+      const res = await crmApi.connectWhatsAppWithToken({ ...tokenForm, coexistence: true });
+      toast.success(res.data.message || 'WhatsApp conectado');
+      setTokenForm((f) => ({ ...f, access_token: '' }));
+      loadWa();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'No se pudo conectar');
+    } finally {
+      setConnecting(false);
+    }
+  };
+
   const cloudConnected = !!waStatus?.connected;
 
   return (
@@ -225,6 +269,13 @@ export default function WhatsAppSettingsPage() {
                   {waStatus.own_display_phone || waStatus.own_phone_number_id}
                   {waStatus.wa_coexistence ? ' · Coexistencia activa' : ''}
                 </p>
+                {waStatus.token_is_permanent ? (
+                  <p className="text-xs text-green-700">Token permanente · no requiere reconexión</p>
+                ) : waStatus.token_expires_at && (
+                  <p className={`text-xs ${waStatus.token_expired ? 'text-red-600 font-medium' : 'text-amber-700'}`}>
+                    {waStatus.token_expired ? 'Token expirado — reconecta' : `Token vence: ${new Date(waStatus.token_expires_at).toLocaleString()}`}
+                  </p>
+                )}
               </>
             ) : (
               <>
@@ -258,6 +309,42 @@ export default function WhatsAppSettingsPage() {
           </div>
         </div>
 
+        {/* Verify token del webhook -- propio de este tenant, NO se toca en Superadmin */}
+        <div className="p-5 bg-white border border-gray-200 rounded-xl space-y-3">
+          <div>
+            <h2 className="font-semibold text-gray-800 text-sm">Webhook de mensajes entrantes</h2>
+            <p className="text-[11px] text-gray-500 mt-0.5">
+              Este es el verify token que pegas en Meta (Paso 2 → Configurar webhooks) junto con la URL
+              <code className="mx-1 px-1 bg-gray-100 rounded">{waStatus?.webhook_callback_path || '/api/webhooks/meta'}</code>
+              de tu backend público. Debe ser idéntico en los dos lados.
+            </p>
+          </div>
+          <p className="text-xs">
+            Estado:{' '}
+            {waStatus?.has_webhook_verify_token ? (
+              <span className="text-green-700 font-medium">configurado</span>
+            ) : (
+              <span className="text-amber-700 font-medium">sin configurar</span>
+            )}
+          </p>
+          <form onSubmit={handleSaveWebhookVerifyToken} className="flex gap-2">
+            <input
+              type="text"
+              placeholder="Verify token (cualquier texto, ej. un hex al azar)"
+              value={webhookVerifyToken}
+              onChange={(e) => setWebhookVerifyToken(e.target.value)}
+              className="flex-1 text-xs border border-gray-200 rounded-lg px-3 py-2"
+            />
+            <button
+              type="submit"
+              disabled={savingWebhookToken || !webhookVerifyToken.trim()}
+              className="px-3 py-2 bg-gray-800 hover:bg-gray-900 disabled:opacity-50 text-white text-xs font-semibold rounded-lg"
+            >
+              {savingWebhookToken ? 'Guardando…' : 'Guardar'}
+            </button>
+          </form>
+        </div>
+
         {!cloudConnected && (
           <div className="p-5 bg-white border border-gray-200 rounded-xl space-y-4">
             <div className="flex items-center gap-2">
@@ -275,6 +362,49 @@ export default function WhatsAppSettingsPage() {
             >
               {connecting ? 'Conectando…' : 'Abrir Embedded Signup (QR)'}
             </button>
+
+            <form onSubmit={handleTokenSubmit} className="pt-3 border-t border-gray-100 space-y-3">
+              <div>
+                <p className="text-xs font-medium text-gray-700">Conectar con token propio</p>
+                <p className="text-[11px] text-gray-500 mt-0.5">
+                  Usa un <strong>System User</strong> de Meta Business para un token permanente (no expira),
+                  o el token del número de prueba para validar el flujo (dura 24h).
+                </p>
+              </div>
+
+              <select
+                className="w-full text-xs border border-gray-200 rounded-lg px-3 py-2 bg-white"
+                value={tokenForm.token_source}
+                onChange={(e) => setTokenForm((f) => ({ ...f, token_source: e.target.value }))}
+              >
+                <option value="system_user">System User — token permanente (producción)</option>
+                <option value="test_number">Número de prueba — token temporal (24h)</option>
+              </select>
+
+              <textarea
+                className="w-full text-xs border border-gray-200 rounded-lg px-3 py-2 font-mono"
+                rows={3}
+                placeholder="Access token (EAAG...)"
+                value={tokenForm.access_token}
+                onChange={(e) => setTokenForm((f) => ({ ...f, access_token: e.target.value }))}
+              />
+              {['waba_id', 'phone_number_id', 'display_phone'].map((field) => (
+                <input
+                  key={field}
+                  className="w-full text-xs border border-gray-200 rounded-lg px-3 py-2"
+                  placeholder={field === 'display_phone' ? 'display_phone (opcional)' : field}
+                  value={tokenForm[field]}
+                  onChange={(e) => setTokenForm((f) => ({ ...f, [field]: e.target.value }))}
+                />
+              ))}
+              <button
+                type="submit"
+                disabled={connecting}
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg disabled:opacity-50"
+              >
+                {connecting ? 'Verificando con Meta…' : 'Conectar con token'}
+              </button>
+            </form>
 
             <form onSubmit={handleManualSubmit} className="pt-3 border-t border-gray-100 space-y-3">
               <p className="text-xs font-medium text-gray-700">Completar a mano (code + IDs de Meta)</p>
