@@ -101,6 +101,19 @@ const ReportsPage = lazy(() => import('./pages/reports/ReportsPage'));
 const ProfilePage = lazy(() => import('./pages/profile/ProfilePage'));
 const NexaApprovalsPage = lazy(() => import('./pages/nexa/NexaApprovalsPage'));
 
+// Módulo Nómina Electrónica
+const EmployeesPage = lazy(() => import('./pages/payroll/EmployeesPage'));
+const ContractAlertsPage = lazy(() => import('./pages/payroll/ContractAlertsPage'));
+const PayrollConceptsPage = lazy(() => import('./pages/payroll/PayrollConceptsPage'));
+const PayrollPeriodsPage = lazy(() => import('./pages/payroll/PayrollPeriodsPage'));
+const PayrollPeriodDetailPage = lazy(() => import('./pages/payroll/PayrollPeriodDetailPage'));
+const PayrollDocumentsPage = lazy(() => import('./pages/payroll/PayrollDocumentsPage'));
+const PayrollDocumentDetailPage = lazy(() => import('./pages/payroll/PayrollDocumentDetailPage'));
+const PayrollCertificatesPage = lazy(() => import('./pages/payroll/PayrollCertificatesPage'));
+const EmployeeTerminationPage = lazy(() => import('./pages/payroll/EmployeeTerminationPage'));
+const PayrollCostsDashboardPage = lazy(() => import('./pages/payroll/PayrollCostsDashboardPage'));
+const PayrollSettingsPage = lazy(() => import('./pages/payroll/PayrollSettingsPage'));
+
 // Movimientos Avanzados
 const CustomerReturnsPage = lazy(() => import('./pages/sales/CustomerReturnsPage'));
 const CustomerReturnFormPage = lazy(() => import('./pages/sales/CustomerReturnFormPage'));
@@ -343,6 +356,19 @@ function App() {
         <Route path="accounting/fiscal-periods"    element={<TenantRoute module="accounting" roles={['admin', 'manager']}><Suspense fallback={<Loading fullScreen />}><FiscalPeriodsPage /></Suspense></TenantRoute>} />
         <Route path="accounting/health"            element={<TenantRoute module="accounting" roles={['admin', 'manager']}><Suspense fallback={<Loading fullScreen />}><AccountingHealthPage /></Suspense></TenantRoute>} />
         <Route path="accounting/opening-balances"  element={<TenantRoute module="accounting" roles={['admin', 'manager']}><Suspense fallback={<Loading fullScreen />}><OpeningBalancesPage /></Suspense></TenantRoute>} />
+
+        {/* ── Nómina Electrónica ─────────────────────── */}
+        <Route path="payroll/employees"      element={<TenantRoute module="payroll"><Suspense fallback={<Loading fullScreen />}><EmployeesPage /></Suspense></TenantRoute>} />
+        <Route path="payroll/contract-alerts" element={<TenantRoute module="payroll"><Suspense fallback={<Loading fullScreen />}><ContractAlertsPage /></Suspense></TenantRoute>} />
+        <Route path="payroll/concepts"       element={<TenantRoute module="payroll"><Suspense fallback={<Loading fullScreen />}><PayrollConceptsPage /></Suspense></TenantRoute>} />
+        <Route path="payroll/periods"        element={<TenantRoute module="payroll"><Suspense fallback={<Loading fullScreen />}><PayrollPeriodsPage /></Suspense></TenantRoute>} />
+        <Route path="payroll/periods/:id"    element={<TenantRoute module="payroll"><Suspense fallback={<Loading fullScreen />}><PayrollPeriodDetailPage /></Suspense></TenantRoute>} />
+        <Route path="payroll/documents"      element={<TenantRoute module="payroll"><Suspense fallback={<Loading fullScreen />}><PayrollDocumentsPage /></Suspense></TenantRoute>} />
+        <Route path="payroll/documents/:id"  element={<TenantRoute module="payroll"><Suspense fallback={<Loading fullScreen />}><PayrollDocumentDetailPage /></Suspense></TenantRoute>} />
+        <Route path="payroll/certificates"   element={<TenantRoute module="payroll"><Suspense fallback={<Loading fullScreen />}><PayrollCertificatesPage /></Suspense></TenantRoute>} />
+        <Route path="payroll/termination"    element={<TenantRoute module="payroll"><Suspense fallback={<Loading fullScreen />}><EmployeeTerminationPage /></Suspense></TenantRoute>} />
+        <Route path="payroll/costs-dashboard" element={<TenantRoute module="payroll"><Suspense fallback={<Loading fullScreen />}><PayrollCostsDashboardPage /></Suspense></TenantRoute>} />
+        <Route path="payroll/settings"       element={<TenantRoute module="payroll" roles={[ROLES.ADMIN]}><Suspense fallback={<Loading fullScreen />}><PayrollSettingsPage /></Suspense></TenantRoute>} />
         <Route path="cash-sessions"    element={<TenantRoute module="treasury"><Suspense fallback={<Loading fullScreen />}><CashSessionsPage /></Suspense></TenantRoute>} />
         <Route path="receipts"         element={<TenantRoute module="treasury"><Suspense fallback={<Loading fullScreen />}><ReceiptsPage /></Suspense></TenantRoute>} />
 

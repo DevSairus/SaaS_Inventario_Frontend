@@ -129,6 +129,20 @@ const NAV = [
     ],
   },
   {
+    id: "payroll", label: "Nómina", icon: "users", module: "payroll",
+    children: [
+      { label: "Empleados",           path: "/payroll/employees" },
+      { label: "Alertas de contrato", path: "/payroll/contract-alerts" },
+      { label: "Conceptos",           path: "/payroll/concepts" },
+      { label: "Periodos",            path: "/payroll/periods" },
+      { label: "Documentos",          path: "/payroll/documents" },
+      { label: "Certificados",        path: "/payroll/certificates" },
+      { label: "Liquidación definitiva", path: "/payroll/termination" },
+      { label: "Dashboard de costos", path: "/payroll/costs-dashboard" },
+      { label: "Configuración",        path: "/payroll/settings", roles: ["admin", "super_admin"] },
+    ],
+  },
+  {
     id: "inventory", label: "Inventario", icon: "box", module: "inventory",
     children: [
       { label: "Productos",         path: "/products" },

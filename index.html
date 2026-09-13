@@ -12,8 +12,10 @@
     <meta name="facebook-domain-verification" content="6queyndxmmhrbxucuzitd908sucb03" />
 
     <!-- SEO básico -->
-    <meta name="description" content="Pitbox — plataforma todo-en-uno para talleres automotrices y de motos: gestión de taller, ventas y facturación electrónica DIAN, inventario, contabilidad y NEXA (asistente con IA). Por ESC DataCore." />
+    <meta name="description" content="Pitbox — plataforma todo-en-uno para talleres automotrices y de motos: gestión de taller, ventas y facturación electrónica DIAN, nómina electrónica, CRM, inventario, contabilidad y NEXA (asistente con IA). Por ESC DataCore." />
+    <meta name="keywords" content="software para talleres, gestión de taller automotriz, facturación electrónica DIAN, nómina electrónica Colombia, CRM para talleres, ERP taller de motos, inventario multi-bodega, contabilidad automatizada, asistente de IA contable" />
     <meta name="robots" content="index, follow" />
+    <meta name="author" content="ESC DataCore" />
     <link rel="canonical" href="https://pitbox.esc-datacore.com/" />
 
     <!-- Open Graph (vista previa al compartir en WhatsApp/Facebook/LinkedIn) -->
@@ -22,13 +24,19 @@
     <meta property="og:locale" content="es_CO" />
     <meta property="og:url" content="https://pitbox.esc-datacore.com/" />
     <meta property="og:title" content="Pitbox — Software de gestión para talleres automotrices" />
-    <meta property="og:description" content="Gestión de taller, ventas y facturación electrónica DIAN, inventario, contabilidad y NEXA (asistente con IA), todo en un solo lugar." />
+    <meta property="og:description" content="Taller, ventas y facturación electrónica DIAN, nómina electrónica, CRM, inventario, contabilidad y NEXA (asistente con IA), todo en un solo lugar." />
+    <!-- pitbox-og.png es actualmente 128x128 — funcional para "summary" pero
+         demasiado pequeña para el formato "summary_large_image" (min. recomendado
+         1200x630). Pendiente: reemplazar por una imagen 1200x630 para mejorar
+         la vista previa al compartir en redes/WhatsApp. -->
     <meta property="og:image" content="https://pitbox.esc-datacore.com/brand/pitbox-og.png" />
+    <meta property="og:image:width" content="128" />
+    <meta property="og:image:height" content="128" />
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:title" content="Pitbox — Software de gestión para talleres automotrices" />
-    <meta name="twitter:description" content="Gestión de taller, ventas y facturación electrónica DIAN, inventario, contabilidad y NEXA (asistente con IA), todo en un solo lugar." />
+    <meta name="twitter:description" content="Taller, ventas y facturación electrónica DIAN, nómina electrónica, CRM, inventario, contabilidad y NEXA (asistente con IA), todo en un solo lugar." />
     <meta name="twitter:image" content="https://pitbox.esc-datacore.com/brand/pitbox-og.png" />
 
     <meta name="theme-color" content="#0B0C10" />
@@ -51,6 +59,42 @@
       rel="stylesheet"
     />
     <title>Pitbox — Software de gestión para talleres automotrices | DataCore</title>
+
+    <!-- Datos estructurados (rich results en Google): identifica a Pitbox como
+         software SaaS + a ESC DataCore como la organización que lo desarrolla. -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "Pitbox",
+      "applicationCategory": "BusinessApplication",
+      "applicationSubCategory": "ERP",
+      "operatingSystem": "Web",
+      "url": "https://pitbox.esc-datacore.com/",
+      "image": "https://pitbox.esc-datacore.com/brand/pitbox-og.png",
+      "description": "Plataforma todo-en-uno para talleres automotrices y de motos: gestión de taller, ventas y facturación electrónica DIAN, nómina electrónica, CRM, inventario, contabilidad y NEXA (asistente con IA).",
+      "inLanguage": "es-CO",
+      "offers": {
+        "@type": "Offer",
+        "priceCurrency": "COP",
+        "availability": "https://schema.org/InStock"
+      },
+      "featureList": [
+        "Gestión de taller y órdenes de trabajo",
+        "Ventas y facturación electrónica DIAN",
+        "Nómina electrónica DIAN",
+        "CRM y seguimiento de clientes",
+        "Inventario multi-bodega",
+        "Contabilidad automatizada",
+        "NEXA — asistente de inteligencia artificial"
+      ],
+      "publisher": {
+        "@type": "Organization",
+        "name": "ESC DataCore",
+        "url": "https://pitbox.esc-datacore.com/"
+      }
+    }
+    </script>
   </head>
   <body>
     <div id="root"></div>

@@ -20,7 +20,20 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import NexaIcon from '../components/common/NexaIcon';
+
+const CONTACT_EMAIL = 'info@esc-datacore.com';
+
+/* Copia el correo al portapapeles en vez de usar mailto: — un mailto: hace
+   que el navegador pregunte "¿Abrir Outlook?" cada vez (o falle en silencio
+   si no hay cliente de correo configurado), lo cual es una experiencia mala
+   en un landing público. Copiar + toast de confirmación es más confiable. */
+function copyEmail() {
+  navigator.clipboard?.writeText(CONTACT_EMAIL)
+    .then(() => toast.success(`Correo copiado: ${CONTACT_EMAIL}`))
+    .catch(() => toast(`Escríbenos a ${CONTACT_EMAIL}`));
+}
 
 /* ─────────────────────────────────────────
    PALETA — dirección premium (grafito + rojo + violeta NEXA)
@@ -89,6 +102,7 @@ const icons = {
   fileDown:    <><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><path d="M9 14l3 3 3-3"/><path d="M12 11v6"/></>,
   clipboard:   <><rect x="6" y="4" width="12" height="17" rx="2"/><path d="M9 4V3a1 1 0 011-1h4a1 1 0 011 1v1"/><path d="M9 11h6M9 15h6"/></>,
   smartphone:  <><rect x="6" y="2" width="12" height="20" rx="2"/><line x1="11" y1="18" x2="13" y2="18"/></>,
+  target:      <><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.8"/><circle cx="12" cy="12" r="1.1"/></>,
 };
 
 /* ─────────────────────────────────────────
@@ -396,12 +410,60 @@ function ScreenNexa() {
   );
 }
 
+function ScreenNomina() {
+  const rows = [
+    ['Juan Pérez','Operativo','$1.850.000','Aceptada',C.signal],
+    ['Ana Torres','Administrativo','$2.400.000','Aceptada',C.signal],
+    ['Carlos Ruiz','Técnico','$1.950.000','En validación',C.caution],
+    ['María Díaz','Técnico','$1.950.000','Aceptada',C.signal],
+  ];
+  return (
+    <svg viewBox="0 0 560 340" style={{ width: '100%', height: 'auto', borderRadius: 12 }}>
+      <rect width="560" height="340" fill="#101114"/>
+      <rect width="160" height="340" fill="#0A0A0C"/>
+      {[['Empleados',52,false],['Nómina',84,true],['Certificados',116,false]].map(([lbl,y,act]) => (
+        <g key={lbl}>
+          <rect x="12" y={y} width="136" height="26" rx="6" fill={act?C.accent:'transparent'}/>
+          <text x="28" y={y+17} fill={act?'#fff':'#7A7C82'} fontSize="11" fontFamily="system-ui">{lbl}</text>
+        </g>
+      ))}
+      <text x="180" y="28" fill="#F3F1EA" fontSize="16" fontWeight="700" fontFamily="system-ui">Periodo · Septiembre 2026</text>
+      {[[180,40,'Empleados activos','24',C.signalL],[302,40,'Devengado total','$46.2M',C.accentL],[424,40,'Comprobantes DIAN','23/24',C.signal]].map(([x,y,l,v,c])=>(
+        <g key={l}>
+          <rect x={x} y={y} width="116" height="50" rx="8" fill="#1B1C20" stroke="#2A2B30" strokeWidth="1"/>
+          <text x={x+10} y={y+16} fill="#7A7C82" fontSize="8" fontFamily="system-ui">{l}</text>
+          <text x={x+10} y={y+38} fill={c} fontSize="18" fontWeight="700" fontFamily="system-ui">{v}</text>
+        </g>
+      ))}
+      <rect x="180" y="100" width="360" height="22" fill="#0A0A0C"/>
+      {['EMPLEADO','CARGO','DEVENGADO','DIAN'].map((h,i)=>(
+        <text key={h} x={[188,308,398,478][i]} y="115" fill="#5C5E64" fontSize="8" fontWeight="700" fontFamily="system-ui">{h}</text>
+      ))}
+      {rows.map(([n,cargo,total,e,c],i)=>(
+        <g key={i}>
+          <rect x="180" y={122+i*27} width="360" height="26" rx="3" fill={i%2?'#161719':'#101114'}/>
+          <text x="188" y={139+i*27} fill="#CBD5E1" fontSize="9" fontFamily="system-ui">{n}</text>
+          <text x="308" y={139+i*27} fill="#8B8D94" fontSize="9" fontFamily="system-ui">{cargo}</text>
+          <text x="398" y={139+i*27} fill="#CBD5E1" fontSize="9" fontFamily="system-ui">{total}</text>
+          <rect x="478" y={130+i*27} width="70" height="13" rx="6" fill={c+'22'}/>
+          <text x="513" y={140+i*27} fill={c} fontSize="8" fontWeight="600" textAnchor="middle" fontFamily="system-ui">{e}</text>
+        </g>
+      ))}
+      <rect x="180" y="248" width="360" height="60" rx="8" fill="#1B1C20" stroke="#2A2B30" strokeWidth="1"/>
+      <Ico d={icons.bell} size={14} color={C.caution} />
+      <text x="204" y="266" fill="#CBD5E1" fontSize="9" fontWeight="600" fontFamily="system-ui">Alerta de vencimiento de contrato</text>
+      <text x="204" y="280" fill="#5C5E64" fontSize="8" fontFamily="system-ui">Carlos Ruiz · contrato a término fijo vence en 12 días</text>
+    </svg>
+  );
+}
+
 const SLIDES = [
   { id: 0, label: 'Taller', desc: 'Órdenes de trabajo, comisiones y seguimiento del vehículo, con un enlace público para que el cliente vea su estado sin iniciar sesión.', Screen: ScreenTaller },
   { id: 1, label: 'Ventas y facturación DIAN', desc: 'Cada venta se factura electrónicamente con validación DIAN integrada, sin exportar a otro sistema.', Screen: ScreenFacturacion },
-  { id: 2, label: 'Contabilidad', desc: 'Plan de cuentas, asientos y estados financieros que se generan solos a partir de tu operación diaria.', Screen: ScreenContabilidad },
-  { id: 3, label: 'NEXA · IA', desc: 'Tu asistente de inteligencia artificial: propone gastos, pagos y asientos contables listos para aprobar.', Screen: ScreenNexa },
-  { id: 4, label: 'Inventario', desc: 'Control multi-bodega con transferencias trazables y alertas automáticas de stock bajo.', Screen: ScreenInventario },
+  { id: 2, label: 'Nómina electrónica', desc: 'Liquidación automática, comprobantes electrónicos ante la DIAN y alertas de vencimiento de contrato, sin hojas de cálculo.', Screen: ScreenNomina },
+  { id: 3, label: 'Contabilidad', desc: 'Plan de cuentas, asientos y estados financieros que se generan solos a partir de tu operación diaria.', Screen: ScreenContabilidad },
+  { id: 4, label: 'NEXA · IA', desc: 'Tu asistente de inteligencia artificial: propone gastos, pagos y asientos contables listos para aprobar.', Screen: ScreenNexa },
+  { id: 5, label: 'Inventario', desc: 'Control multi-bodega con transferencias trazables y alertas automáticas de stock bajo.', Screen: ScreenInventario },
 ];
 
 function AppCarousel() {
@@ -671,7 +733,7 @@ function Hero({ onCta }) {
           }}>
             <div style={{ width: 6, height: 6, borderRadius: '50%', background: C.accentL, animation: 'pbPulse 2s infinite' }} />
             <span style={{ fontSize: 12, color: C.accentL, fontWeight: 600, letterSpacing: '0.04em' }}>
-              Taller · Ventas ·  NEXA IA
+              Taller · Ventas · Nómina · NEXA IA
             </span>
           </div>
 
@@ -777,7 +839,7 @@ function Hero({ onCta }) {
 ───────────────────────────────────────── */
 function StatsBar() {
   const [ref, visible] = useInView();
-  const d1 = useCounter(12, 1200, visible);
+  const d1 = useCounter(14, 1200, visible);
   const d2 = useCounter(100, 1500, visible);
   const d3 = useCounter(24, 1000, visible);
 
@@ -1144,7 +1206,7 @@ function AppShowcase() {
           Diseñado para quienes operan<br />todos los días, sin pausas
         </h2>
         <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: 15, maxWidth: 540, margin: '0 auto' }}>
-          Una interfaz clara y rápida para gestionar taller, ventas, contabilidad e inventario en un solo lugar.
+          Una interfaz clara y rápida para gestionar taller, ventas, nómina, contabilidad e inventario en un solo lugar.
         </p>
       </div>
       <AppCarousel />
@@ -1280,6 +1342,18 @@ function ModulesSection() {
       bullets: ['Cuentas por pagar a proveedores', 'Gastos operativos por categoría', 'Flujo de caja en tiempo real', 'Cajas por sede con arqueo'],
     },
     {
+      name: 'Nómina electrónica', isNew: true,
+      icon: icons.users, accent: C.signal,
+      desc: 'Liquidación automática de tu equipo y comprobantes electrónicos de nómina ante la DIAN, sin hojas de cálculo ni doble digitación.',
+      bullets: ['Liquidación automática por periodo', 'Comprobantes electrónicos DIAN', 'Alertas de vencimiento de contrato', 'Certificados laborales y de ingresos'],
+    },
+    {
+      name: 'CRM', isNew: true,
+      icon: icons.target, accent: C.accent,
+      desc: 'Pipeline de oportunidades y vista 360° del cliente, para que ningún seguimiento comercial se pierda entre WhatsApp, llamadas y correos.',
+      bullets: ['Pipeline de oportunidades por etapa', 'Vista 360° del cliente', 'Tareas de seguimiento con alertas', 'Etiquetas y automatizaciones'],
+    },
+    {
       name: 'NEXA · IA',
       icon: icons.sparkle, accent: C.ai,
       desc: 'Tu asistente de inteligencia artificial: analiza tu operación y propone gastos, pagos y asientos contables listos para aprobar.',
@@ -1324,8 +1398,9 @@ function ModulesSection() {
         </div>
 
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center', marginBottom: 32 }}>
-          {modules.map(({ name, icon }, i) => (
+          {modules.map(({ name, icon, isNew }, i) => (
             <button key={name} onClick={() => setActive(i)} style={{
+              position: 'relative',
               display: 'flex', alignItems: 'center', gap: 8,
               padding: '10px 20px', borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: 'pointer',
               border: `1.5px solid ${active === i ? C.accent : C.gray200}`,
@@ -1335,6 +1410,14 @@ function ModulesSection() {
             }}>
               <Ico d={icon} size={15} color={active === i ? 'white' : C.gray500} />
               {name}
+              {isNew && (
+                <span style={{
+                  position: 'absolute', top: -9, right: -8,
+                  background: C.signal, color: 'white', fontSize: 9, fontWeight: 700,
+                  letterSpacing: '0.03em', borderRadius: 100, padding: '2px 7px',
+                  boxShadow: '0 2px 6px rgba(0,0,0,0.18)', pointerEvents: 'none',
+                }}>NUEVO</span>
+              )}
             </button>
           ))}
         </div>
@@ -1395,6 +1478,7 @@ function Sectors() {
     { icon: icons.package, title: 'Almacenes de repuestos', desc: 'Inventario por referencia con alertas de stock y escaneo de código de barras.' },
     { icon: icons.warehouse, title: 'Distribuidoras', desc: 'Multi-bodega con transferencias trazables entre sedes y control de compras.' },
     { icon: icons.building, title: 'Ferreterías y comercio', desc: 'Ventas, facturación electrónica y reportes al día para negocios de uno o varios puntos.' },
+    { icon: icons.motorcycle, title: 'Concesionarios y ensambladoras', desc: 'Alistamiento, entrega, garantías y liquidaciones sincronizadas con el Core Ensambladora, con consulta RUNT integrada.' },
   ];
 
   return (
@@ -1426,7 +1510,7 @@ function Sectors() {
             </button>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px,1fr))', gap: 16 }}>
             {segs.map(({ icon, title, desc }, i) => (
               <div key={i} style={{
                 background: C.gray50, border: `1px solid ${C.gray100}`,
@@ -1475,7 +1559,7 @@ function FinalCta({ onCta }) {
           lineHeight: 1.7, marginBottom: 36,
           opacity: visible ? 1 : 0, transition: 'opacity 0.5s 0.15s',
         }}>
-          Agenda una demo y te mostramos cómo Pitbox controla tu taller, ventas, tesorería y contabilidad — con NEXA proponiendo cada registro por ti.
+          Agenda una demo y te mostramos cómo Pitbox controla tu taller, ventas, nómina, tesorería y contabilidad — con NEXA proponiendo cada registro por ti.
         </p>
         <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap', opacity: visible ? 1 : 0, transition: 'opacity 0.5s 0.25s' }}>
           <button onClick={onCta} style={{
@@ -1507,12 +1591,67 @@ function FinalCta({ onCta }) {
 /* ─────────────────────────────────────────
    FOOTER
 ───────────────────────────────────────── */
-function Footer() {
+function ContactBanner({ onCta }) {
+  const [ref, visible] = useInView();
+  return (
+    <div ref={ref} style={{
+      maxWidth: 1240, margin: '0 auto 48px',
+      display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(280px,1fr))',
+      gap: '2rem', alignItems: 'center',
+      background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)',
+      borderRadius: 20, padding: 'clamp(1.75rem,4vw,3rem)',
+      opacity: visible ? 1 : 0, transform: visible ? 'translateY(0)' : 'translateY(16px)',
+      transition: 'opacity 0.6s, transform 0.6s',
+    }}>
+      <div>
+        <div style={{ display: 'inline-block', background: 'rgba(207,58,11,0.12)', border: '1px solid rgba(207,58,11,0.3)', borderRadius: 100, padding: '6px 16px', marginBottom: 16 }}>
+          <span style={{ fontSize: 12, color: C.accentL, fontWeight: 700, letterSpacing: '0.05em' }}>Contacto</span>
+        </div>
+        <h2 style={{
+          fontFamily: "'Space Grotesk', sans-serif",
+          fontSize: 'clamp(1.5rem,3vw,2rem)', fontWeight: 700, color: C.white,
+          letterSpacing: '-0.02em', lineHeight: 1.2, marginBottom: 12,
+        }}>
+          ¿Hablamos de tu operación?
+        </h2>
+        <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 14.5, lineHeight: 1.7, maxWidth: 440 }}>
+          Cuéntanos cómo trabaja tu taller o negocio y te mostramos Pitbox funcionando con tus propios datos, sin compromiso.
+        </p>
+        <button onClick={copyEmail} style={{
+          display: 'inline-flex', alignItems: 'center', gap: 8, marginTop: 20,
+          color: C.accentL, background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+          fontSize: 15, fontWeight: 600, fontFamily: "'Inter', sans-serif",
+        }} title="Copiar correo">
+          <Ico d={icons.mail} size={16} color={C.accentL} /> {CONTACT_EMAIL}
+          <Ico d={icons.clipboard} size={13} color="rgba(255,255,255,0.35)" strokeWidth={1.8} />
+        </button>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'flex-start' }}>
+        <button onClick={onCta} style={{
+          background: C.accent, color: C.white, border: 'none', borderRadius: 11,
+          padding: '14px 30px', fontSize: 15, fontWeight: 600, cursor: 'pointer',
+          fontFamily: "'Space Grotesk', sans-serif",
+          display: 'flex', alignItems: 'center', gap: 8,
+          boxShadow: '0 8px 30px rgba(207,58,11,0.32)',
+          transition: 'transform 0.2s',
+        }}
+          onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
+          onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
+        >
+          Solicitar demo <Ico d={icons.arrow} size={16} color="#fff" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function Footer({ onCta }) {
   return (
     <footer id="contacto" style={{
       background: C.inkD, borderTop: '1px solid rgba(255,255,255,0.06)',
       padding: 'clamp(2.5rem,5vw,4rem) clamp(1.5rem,5vw,4rem) 2rem',
     }}>
+      <ContactBanner onCta={onCta} />
       <div style={{ maxWidth: 1240, margin: '0 auto' }}>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '3rem 6rem', marginBottom: 40 }}>
           <div style={{ flex: '1 1 260px' }}>
@@ -1521,32 +1660,50 @@ function Footer() {
               <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 18, fontWeight: 700, color: C.white }}>Pitbox</span>
             </div>
             <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)', lineHeight: 1.7, maxWidth: 280 }}>
-              Plataforma de taller, ventas, facturación electrónica, tesorería y contabilidad para negocios colombianos, con NEXA como asistente de IA. Desarrollado por DataCore.
+              Plataforma de taller, ventas, facturación electrónica, nómina electrónica, CRM, tesorería y contabilidad para negocios colombianos, con NEXA como asistente de IA. Desarrollado por ESC DataCore.
             </p>
-            <a href="mailto:contacto@datacore.com.co" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'rgba(255,255,255,0.45)', textDecoration: 'none', fontSize: 13, marginTop: 16, transition: 'color 0.2s' }}
+            <button onClick={copyEmail} title="Copiar correo" style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              color: 'rgba(255,255,255,0.45)', background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+              fontSize: 13, marginTop: 16, transition: 'color 0.2s', fontFamily: "'Inter', sans-serif",
+            }}
               onMouseEnter={e => e.currentTarget.style.color = C.accentL}
               onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.45)'}>
-              <Ico d={icons.mail} size={14} color="currentColor" /> info@esc-datacore.com
-            </a>
+              <Ico d={icons.mail} size={14} color="currentColor" /> {CONTACT_EMAIL}
+            </button>
           </div>
           {[
-            { title: 'Producto', links: ['Taller', 'NEXA · IA', 'Módulos', 'Sectores'] },
-            { title: 'Empresa', links: ['Acerca de', 'Contacto', 'Iniciar sesión'] },
+            { title: 'Producto', links: [
+              { label: 'Taller', href: '#taller' },
+              { label: 'NEXA · IA', href: '#nexa' },
+              { label: 'Módulos', href: '#modulos' },
+              { label: 'Sectores', href: '#sectores' },
+            ] },
+            { title: 'Empresa', links: [
+              { label: 'Acerca de', href: '#producto' },
+              { label: 'Contacto', href: '#contacto' },
+              { label: 'Iniciar sesión', to: '/login' },
+            ] },
           ].map(({ title, links }) => (
             <div key={title} style={{ flex: '0 0 auto' }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 14 }}>{title}</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {links.map(l => (
-                  <a key={l} href="#" style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', textDecoration: 'none', transition: 'color 0.2s' }}
-                    onMouseEnter={e => e.currentTarget.style.color = C.white}
-                    onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.5)'}>{l}</a>
-                ))}
+                {links.map(({ label, href, to }) => {
+                  const linkStyle = { fontSize: 13, color: 'rgba(255,255,255,0.5)', textDecoration: 'none', transition: 'color 0.2s' };
+                  const hoverIn  = e => e.currentTarget.style.color = C.white;
+                  const hoverOut = e => e.currentTarget.style.color = 'rgba(255,255,255,0.5)';
+                  return to ? (
+                    <Link key={label} to={to} style={linkStyle} onMouseEnter={hoverIn} onMouseLeave={hoverOut}>{label}</Link>
+                  ) : (
+                    <a key={label} href={href} style={linkStyle} onMouseEnter={hoverIn} onMouseLeave={hoverOut}>{label}</a>
+                  );
+                })}
               </div>
             </div>
           ))}
         </div>
         <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: 20, display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
-          <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)' }}>© {new Date().getFullYear()} DataCore. Todos los derechos reservados.</span>
+          <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)' }}>© {new Date().getFullYear()} ESC DataCore. Todos los derechos reservados.</span>
           <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.2)' }}>Hecho en Colombia 🇨🇴</span>
         </div>
       </div>
@@ -1830,7 +1987,7 @@ export default function LandingPage() {
       <ModulesSection />
       <Sectors />
       <FinalCta onCta={() => setShowModal(true)} />
-      <Footer />
+      <Footer onCta={() => setShowModal(true)} />
       {showModal && <OnboardingModal onClose={() => setShowModal(false)} />}
     </div>
   );

@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /login
+Disallow: /reset-password
+Disallow: /sin-sede
+
+Sitemap: https://pitbox.esc-datacore.com/sitemap.xml
