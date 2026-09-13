@@ -454,29 +454,43 @@ export default function WhatsAppSettingsPage() {
           </div>
         )}
 
-        {!cloudConnected && (
-          <div className="p-5 bg-white border border-amber-200 rounded-xl space-y-3">
-            <h2 className="font-semibold text-gray-800 text-sm">Modo demo (sin Meta)</h2>
-            <p className="text-xs text-gray-500">
-              Activa un inbox realista en Empresa de Pruebas para demos a clientes. Los mensajes no salen a WhatsApp.
-            </p>
-            <button
-              type="button"
-              onClick={async () => {
-                try {
-                  await crmApi.setWhatsAppDemoMode(true);
-                  toast.success('Modo demo activado');
-                  loadWa();
-                } catch (err) {
-                  toast.error(err.response?.data?.message || 'No se pudo activar');
-                }
-              }}
-              className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold rounded-lg"
-            >
-              Activar modo demo
-            </button>
-          </div>
-        )}
+        {(() => {
+          const demoOn = !!waStatus?.demo_mode;
+          return (
+            <div className={`p-5 bg-white border rounded-xl space-y-3 ${demoOn ? 'border-amber-300' : 'border-gray-200'}`}>
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="font-semibold text-gray-800 text-sm">Modo demo (sin Meta)</h2>
+                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${demoOn ? 'bg-amber-100 text-amber-800' : 'bg-gray-100 text-gray-500'}`}>
+                  {demoOn ? 'Activo' : 'Inactivo'}
+                </span>
+              </div>
+              <p className="text-xs text-gray-500">
+                {demoOn
+                  ? cloudConnected
+                    ? 'El modo demo está prendido y tiene prioridad sobre la conexión real de arriba: todos los envíos (OT, inbox, citas) se simulan localmente y no salen a WhatsApp. Desactívalo para volver a usar la conexión real.'
+                    : 'Los mensajes se guardan en Pitbox y se simulan localmente — no salen a WhatsApp. Ideal para mostrarle el producto a un cliente sin arriesgar un número real.'
+                  : 'Activa un inbox realista en Empresa de Pruebas para demos a clientes. Los mensajes no salen a WhatsApp.'}
+              </p>
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    await crmApi.setWhatsAppDemoMode(!demoOn);
+                    toast.success(demoOn ? 'Modo demo desactivado' : 'Modo demo activado');
+                    loadWa();
+                  } catch (err) {
+                    toast.error(err.response?.data?.message || 'No se pudo cambiar el modo demo');
+                  }
+                }}
+                className={`px-4 py-2 text-white text-xs font-semibold rounded-lg ${
+                  demoOn ? 'bg-gray-700 hover:bg-gray-800' : 'bg-amber-600 hover:bg-amber-700'
+                }`}
+              >
+                {demoOn ? 'Desactivar modo demo' : 'Activar modo demo'}
+              </button>
+            </div>
+          );
+        })()}
 
         {/* wa.me fallback */}
         <div className="flex items-start gap-4 p-5 bg-green-50 border border-green-200 rounded-xl">

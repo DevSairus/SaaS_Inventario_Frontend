@@ -536,6 +536,17 @@ export default function WhatsAppInboxPage() {
     }
   };
 
+  const disableDemo = async () => {
+    try {
+      const res = await crmApi.setWhatsAppDemoMode(false);
+      setWaStatus(res.data.data);
+      toast.success('Modo demo desactivado');
+      loadConversations();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'No se pudo desactivar demo');
+    }
+  };
+
   const simulateInbound = async () => {
     if (!selectedId || !simBody.trim()) return;
     try {
@@ -589,13 +600,28 @@ export default function WhatsAppInboxPage() {
 
         {demoMode && (
           <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-            <strong>Demo comercial.</strong> Los mensajes se guardan en Pitbox sin salir a Meta.
-            Ideal para mostrar el comportamiento a clientes. Cuando Meta esté listo, se desactiva el demo y se conecta Cloud API.
-            {canAssignOthers && (
-              <span className="block mt-1 text-xs text-amber-800">
-                Tip: entra también como vendedor para ver que solo ve sus chats + cola.
-              </span>
-            )}
+            <div className="flex items-start justify-between gap-3 flex-wrap">
+              <div>
+                <strong>Demo comercial.</strong> Los mensajes se guardan en Pitbox sin salir a Meta.
+                {waStatus?.connected
+                  ? ' Este tenant también tiene una conexión real, pero el demo tiene prioridad mientras esté activo — nada sale a Meta hasta que lo desactives.'
+                  : ' Ideal para mostrar el comportamiento a clientes. Cuando Meta esté listo, se desactiva el demo y se conecta Cloud API.'}
+                {canAssignOthers && (
+                  <span className="block mt-1 text-xs text-amber-800">
+                    Tip: entra también como vendedor para ver que solo ve sus chats + cola.
+                  </span>
+                )}
+              </div>
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={disableDemo}
+                  className="shrink-0 px-3 py-1.5 rounded-lg bg-white border border-amber-300 text-amber-800 text-xs font-semibold hover:bg-amber-100"
+                >
+                  Desactivar demo
+                </button>
+              )}
+            </div>
           </div>
         )}
 
