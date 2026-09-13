@@ -9,11 +9,14 @@ import Loading from '../../components/common/Loading';
 import Layout from '../../components/layout/Layout';
 import toast from 'react-hot-toast';
 import useTenantStore from '../../store/tenantStore';
+import useAuthStore from '../../store/authStore';
 import TaxConfigSection from '../../components/settings/TaxConfigSection';
-import { Building2, Receipt, ShoppingCart, Wrench, Landmark } from 'lucide-react';
+import { Building2, Receipt, ShoppingCart, Wrench, Landmark, MessageCircle } from 'lucide-react';
 
 const TenantSettingsPage = () => {
   const navigate = useNavigate();
+  const { user } = useAuthStore();
+  const isAdmin = user?.role === 'admin';
   const { setFeatures, setTaxConfig } = useTenantStore();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -375,6 +378,35 @@ const TenantSettingsPage = () => {
               </div>
             </div>
           </Card>
+
+          {/* WhatsApp Business — solo administradores del tenant pueden
+              ver y tocar la conexión (Embedded Signup, token, webhook,
+              desconectar). El resto de roles ni siquiera ve la tarjeta. */}
+          {isAdmin && (
+            <Card>
+              <div className="p-6 flex items-center justify-between">
+                <div className="flex items-start gap-4">
+                  <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-green-50 flex items-center justify-center text-green-600">
+                    <MessageCircle size={20} strokeWidth={2} />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-gray-900">WhatsApp Business</p>
+                    <p className="text-sm text-gray-500 mt-0.5">
+                      Conecta el número de WhatsApp del negocio (Embedded Signup o token propio),
+                      administra el webhook y el modo demo.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => navigate('/settings/whatsapp')}
+                  className="flex-shrink-0 ml-4 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition-colors"
+                >
+                  Configurar →
+                </button>
+              </div>
+            </Card>
+          )}
           </>
           )}
 

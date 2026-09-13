@@ -76,6 +76,7 @@ const NAV = [
   {
     id: "crm", label: "CRM", icon: "target", module: "crm",
     children: [
+      { label: "WhatsApp",           path: "/crm/whatsapp" },
       { label: "Pipeline",           path: "/crm/pipeline" },
       { label: "Seguimientos",       path: "/crm/followups" },
       { label: "Dashboard CRM",      path: "/crm/dashboard" },

@@ -121,8 +121,15 @@ export default function AppointmentsPage() {
     .filter(a => !statusFilter || a.status === statusFilter)
     .sort((a, b) => new Date(a.scheduled_at) - new Date(b.scheduled_at));
 
-  const openWaLink = (waLink) => {
-    if (waLink) window.open(waLink, '_blank');
+  // Si el tenant tiene WhatsApp Cloud API conectado el mensaje ya salió
+  // directo (channel: 'cloud_api', sin waLink); si no, abre el link wa.me
+  // para que el asesor lo mande desde su propio WhatsApp.
+  const openWaLink = (wa) => {
+    if (wa?.channel === 'cloud_api') {
+      toast.success('Mensaje enviado por WhatsApp Cloud API');
+    } else if (wa?.waLink) {
+      window.open(wa.waLink, '_blank');
+    }
   };
 
   const handleConfirm = async (appointment) => {
@@ -130,7 +137,7 @@ export default function AppointmentsPage() {
     try {
       await appointmentsApi.confirm(appointment.id);
       const wa = await appointmentsApi.sendWhatsApp(appointment.id, 'confirmacion');
-      openWaLink(wa.data.waLink);
+      openWaLink(wa.data);
       toast.success('Cita confirmada');
       loadMonth();
     } catch (e) {
@@ -146,7 +153,7 @@ export default function AppointmentsPage() {
     try {
       await appointmentsApi.cancel(appointment.id, reason);
       const wa = await appointmentsApi.sendWhatsApp(appointment.id, 'cancelacion');
-      openWaLink(wa.data.waLink);
+      openWaLink(wa.data);
       toast.success('Cita cancelada');
       loadMonth();
     } catch (e) {
@@ -160,7 +167,7 @@ export default function AppointmentsPage() {
     setBusyId(appointment.id);
     try {
       const wa = await appointmentsApi.sendWhatsApp(appointment.id, 'recordatorio');
-      openWaLink(wa.data.waLink);
+      openWaLink(wa.data);
       loadMonth();
     } catch (e) {
       toast.error(e.response?.data?.message || 'Error al generar el recordatorio');

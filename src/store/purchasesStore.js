@@ -222,6 +222,12 @@ export const usePurchasesStore = create((set, get) => ({
     set({ pagination: { ...get().pagination, page } });
   },
 
+  // Cambiar cuántas compras se muestran por página -- vuelve a página 1
+  // porque el total de páginas cambia con el límite.
+  setLimit: (limit) => {
+    set({ pagination: { ...get().pagination, limit, page: 1 } });
+  },
+
   // Limpiar errores
   clearError: () => {
     set({ error: null });

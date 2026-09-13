@@ -170,8 +170,12 @@ export default function SaleDetailPage() {
     try {
       setSendingWA(true);
       const res = await salesApi.sendWhatsApp(id);
-      const { waLink } = res.data;
-      if (waLink && win) {
+      const { channel, waLink, message } = res.data;
+      if (channel === 'cloud_api') {
+        // Ya se envió directo por WhatsApp Cloud API -- no hay enlace que abrir.
+        win?.close();
+        toast.success(message || 'Documento enviado por WhatsApp Cloud API.', { duration: 5000 });
+      } else if (waLink && win) {
         win.location.href = waLink;
         toast.success('Se abrió WhatsApp con el mensaje listo. Presiona Enviar ↑', { duration: 5000 });
       } else {

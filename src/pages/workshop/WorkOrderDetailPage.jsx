@@ -206,8 +206,12 @@ export default function WorkOrderDetailPage() {
     setSendingWA(true);
     try {
       const res = await workOrdersApi.sendWhatsApp(id);
-      const { waLink } = res.data;
-      if (waLink && win) {
+      const { channel, waLink, message } = res.data;
+      if (channel === 'cloud_api') {
+        // Ya se envió directo por WhatsApp Cloud API -- no hay enlace que abrir.
+        win?.close();
+        toast.success(message || 'Orden enviada por WhatsApp Cloud API.', { duration: 5000 });
+      } else if (waLink && win) {
         win.location.href = waLink;
         toast.success('Se abrió WhatsApp con el enlace de la OT. Presiona Enviar ↑', { duration: 5000 });
       } else {
@@ -252,7 +256,10 @@ export default function WorkOrderDetailPage() {
     setSendingQuote(true);
     try {
       const data = await sendQuoteRequest(id);
-      if (data?.whatsapp_url && win) {
+      if (data?.channel === 'cloud_api') {
+        win?.close();
+        toast.success('Cotización enviada por WhatsApp Cloud API');
+      } else if (data?.whatsapp_url && win) {
         win.location.href = data.whatsapp_url;
       } else {
         win?.close();
@@ -269,7 +276,10 @@ export default function WorkOrderDetailPage() {
     setResendingQuoteId(quoteRequestId);
     try {
       const data = await resendQuoteRequest(id, quoteRequestId);
-      if (data?.whatsapp_url && win) {
+      if (data?.channel === 'cloud_api') {
+        win?.close();
+        toast.success('Cotización reenviada por WhatsApp Cloud API');
+      } else if (data?.whatsapp_url && win) {
         win.location.href = data.whatsapp_url;
       } else {
         win?.close();

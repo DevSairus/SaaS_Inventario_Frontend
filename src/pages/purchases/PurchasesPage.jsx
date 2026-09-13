@@ -44,7 +44,7 @@ const Chip = ({ status }) => {
 const PurchasesPage = () => {
   const navigate = useNavigate();
 
-  const { purchases, stats, isLoading, pagination, filters, fetchPurchases, fetchStats, setFilters, setPage, deletePurchase } = usePurchasesStore();
+  const { purchases, stats, isLoading, pagination, filters, fetchPurchases, fetchStats, setFilters, setPage, setLimit, deletePurchase } = usePurchasesStore();
   const { fetchSuppliers, suppliers } = useSuppliersStore();
   const { branches, fetchBranches } = useBranchStore();
 
@@ -62,7 +62,7 @@ const PurchasesPage = () => {
   useEffect(() => {
     setFilters(serverFilters);
     fetchPurchases(serverFilters);
-  }, [serverFilters, pagination.page]);
+  }, [serverFilters, pagination.page, pagination.limit]);
 
   /* filtrado local */
   const filtered = useMemo(() => {
@@ -321,27 +321,44 @@ const PurchasesPage = () => {
           )}
 
           {/* Paginación */}
-          {!isLoading && pagination.total > pagination.limit && (
-            <div className="px-4 py-3 border-t border-gray-100 flex items-center justify-between text-sm">
-              <span className="text-gray-500">
-                {((pagination.page - 1) * pagination.limit) + 1}–{Math.min(pagination.page * pagination.limit, pagination.total)} de {pagination.total}
-              </span>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setPage(pagination.page - 1)}
-                  disabled={pagination.page === 1}
-                  className="px-3 py-1.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  ← Anterior
-                </button>
-                <button
-                  onClick={() => setPage(pagination.page + 1)}
-                  disabled={pagination.page >= pagination.totalPages}
-                  className="px-3 py-1.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  Siguiente →
-                </button>
+          {!isLoading && pagination.total > 0 && (
+            <div className="px-4 py-3 border-t border-gray-100 flex flex-wrap items-center justify-between gap-3 text-sm">
+              <div className="flex items-center gap-3 text-gray-500">
+                <span>
+                  {((pagination.page - 1) * pagination.limit) + 1}–{Math.min(pagination.page * pagination.limit, pagination.total)} de {pagination.total}
+                </span>
+                <label className="flex items-center gap-1.5">
+                  Mostrar
+                  <select
+                    value={pagination.limit}
+                    onChange={(e) => setLimit(Number(e.target.value))}
+                    className="border border-gray-300 rounded-lg px-2 py-1 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    {[10, 25, 50, 100, 200].map((n) => (
+                      <option key={n} value={n}>{n}</option>
+                    ))}
+                  </select>
+                  por página
+                </label>
               </div>
+              {pagination.total > pagination.limit && (
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setPage(pagination.page - 1)}
+                    disabled={pagination.page === 1}
+                    className="px-3 py-1.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    ← Anterior
+                  </button>
+                  <button
+                    onClick={() => setPage(pagination.page + 1)}
+                    disabled={pagination.page >= pagination.pages}
+                    className="px-3 py-1.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    Siguiente →
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
