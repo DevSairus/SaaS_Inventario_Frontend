@@ -94,6 +94,7 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
   const [showScanner, setShowScanner] = useState(false);
   const [saveError, setSaveError] = useState('');
   const [pendingImageFile, setPendingImageFile] = useState(null);
+  const [currentImageUrl, setCurrentImageUrl] = useState(null);
 
   const fmtNum = (v) => {
     if (v === '' || v === null || v === undefined) return '';
@@ -128,6 +129,7 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
 
   useEffect(() => {
     if (product) {
+      setCurrentImageUrl(product.image_url || null);
       const productTaxPercentage = product.tax_percentage !== null && product.tax_percentage !== undefined
         ? parseFloat(product.tax_percentage)
         : 19;
@@ -206,6 +208,7 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
       setVehicleData(EMPTY_VEHICLE_DATA);
       setCalculatedPrice(null);
       setSaveError('');
+      setCurrentImageUrl(null);
     }
   }, [product, isOpen]);
 
@@ -401,13 +404,18 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
               <div className="md:col-span-2">
                 <ProductImageUpload
                   productId={product?.id}
-                  imageUrl={product?.image_url}
+                  imageUrl={currentImageUrl}
                   onImageChange={(val) => {
                     if (val && typeof val === 'object' && val.file) {
                       // Producto nuevo: guardar archivo para subir después del create
                       setPendingImageFile(val.file);
+                    } else {
+                      // Producto existente: el componente ya subió/eliminó la imagen
+                      // en el backend -- acá solo reflejamos la nueva URL (o null)
+                      // para que la vista previa no dependa de `product` (prop que
+                      // no se actualiza sola tras el upload).
+                      setCurrentImageUrl(val || null);
                     }
-                    // Para producto existente, el componente sube directamente
                   }}
                 />
               </div>
