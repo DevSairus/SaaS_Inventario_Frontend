@@ -1702,8 +1702,18 @@ function Footer({ onCta }) {
             </div>
           ))}
         </div>
-        <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: 20, display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
-          <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)' }}>© {new Date().getFullYear()} ESC DataCore. Todos los derechos reservados.</span>
+        <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px 16px' }}>
+            <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)' }}>© {new Date().getFullYear()} ESC DataCore. Todos los derechos reservados.</span>
+            <a href="https://www.comparasoftware.co/pitbox" target="_blank" rel="noopener noreferrer" title="Ver verificación en ComparaSoftware" style={{
+              display: 'inline-flex', alignItems: 'center', gap: 5,
+              fontSize: 12, color: 'rgba(255,255,255,0.3)', textDecoration: 'none', transition: 'color 0.2s',
+            }}
+              onMouseEnter={e => e.currentTarget.style.color = C.accentL}
+              onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.3)'}>
+              <Ico d={icons.check} size={12} color="currentColor" /> Verificado en ComparaSoftware
+            </a>
+          </div>
           <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.2)' }}>Hecho en Colombia 🇨🇴</span>
         </div>
       </div>
