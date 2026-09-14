@@ -7,19 +7,69 @@ import { useParams } from 'react-router-dom';
 import api from '../../api/axios';
 
 // Miniatura de producto — placeholder gris con ícono cuando no hay imagen,
-// para que la fila no "salte" de tamaño según tenga o no foto.
-function ItemThumb({ src, alt }) {
-  return (
-    <div className="w-11 h-11 rounded-lg shrink-0 overflow-hidden bg-gray-100 dark:bg-graphite-2 flex items-center justify-center">
-      {src ? (
-        <img src={src} alt={alt} className="w-full h-full object-cover" loading="lazy" />
-      ) : (
+// para que la fila no "salte" de tamaño según tenga o no foto. Si hay imagen,
+// es clicable para ampliarla (una miniatura de 44px no sirve para ver
+// detalles reales del producto que se está cotizando).
+function ItemThumb({ src, alt, onClick }) {
+  if (!src) {
+    return (
+      <div className="w-11 h-11 rounded-lg shrink-0 overflow-hidden bg-gray-100 dark:bg-graphite-2 flex items-center justify-center">
         <svg viewBox="0 0 24 24" className="w-5 h-5 text-gray-300 dark:text-gray-600" fill="none" stroke="currentColor" strokeWidth="1.5">
           <rect x="3" y="3" width="18" height="18" rx="2" />
           <circle cx="9" cy="9" r="1.5" />
           <path d="M21 15l-5-5-9 9" />
         </svg>
-      )}
+      </div>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="relative w-11 h-11 rounded-lg shrink-0 overflow-hidden bg-gray-100 dark:bg-graphite-2 group"
+      title="Ver imagen completa"
+    >
+      <img src={src} alt={alt} className="w-full h-full object-cover" loading="lazy" />
+      <span className="absolute inset-0 bg-black/0 group-hover:bg-black/40 flex items-center justify-center transition-colors">
+        <svg viewBox="0 0 24 24" className="w-4 h-4 text-white opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" strokeWidth="2">
+          <circle cx="11" cy="11" r="7" />
+          <path d="M21 21l-4.3-4.3M11 8v6M8 11h6" />
+        </svg>
+      </span>
+    </button>
+  );
+}
+
+// Visor a pantalla completa para la imagen ampliada — se cierra con click
+// afuera, la X o Escape.
+function ImageLightbox({ src, alt, onClose }) {
+  useEffect(() => {
+    const handler = (e) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [onClose]);
+
+  return (
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+      onClick={onClose}
+    >
+      <button
+        type="button"
+        onClick={onClose}
+        className="absolute top-4 right-4 p-2 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-colors"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-6 h-6">
+          <path d="M18 6L6 18M6 6l12 12" />
+        </svg>
+      </button>
+      <img
+        src={src}
+        alt={alt}
+        className="max-h-[85vh] max-w-full object-contain rounded-lg"
+        onClick={(e) => e.stopPropagation()}
+      />
     </div>
   );
 }
@@ -50,7 +100,7 @@ const docLabelOf = (documentType) => DOC_LABELS[documentType] || 'Cotización';
 // El cliente aprueba/rechaza cada ítem por separado (mismo patrón que
 // QuoteApprovalSection en WorkOrderPublicPage.jsx) — mezclar aprobados y
 // rechazados deja la cotización en 'parcial'.
-function ApprovalForm({ token, items, onResponded }) {
+function ApprovalForm({ token, items, onResponded, onImageClick }) {
   const [checks, setChecks] = useState(() =>
     Object.fromEntries(items.map(i => [i.id, true]))
   );
@@ -100,7 +150,11 @@ function ApprovalForm({ token, items, onResponded }) {
               onChange={() => toggle(item.id)}
               className="mt-0.5 w-4 h-4 rounded border-gray-300 dark:border-white/10"
             />
-            <ItemThumb src={item.image_url} alt={item.product_name} />
+            <ItemThumb
+              src={item.image_url}
+              alt={item.product_name}
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); onImageClick(item); }}
+            />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{item.product_name}</p>
               <p className="text-xs text-gray-400 dark:text-gray-500">{item.quantity} × {COP(item.unit_price)}</p>
@@ -151,6 +205,7 @@ export default function QuotePublicPage() {
   const [quote, setQuote]   = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState(null);
+  const [viewerItem, setViewerItem] = useState(null);
 
   useEffect(() => {
     fetchQuote();
@@ -227,7 +282,12 @@ export default function QuotePublicPage() {
         </div>
 
         {quote.quote_status === 'enviada' && (
-          <ApprovalForm token={token} items={quote.items || []} onResponded={fetchQuote} />
+          <ApprovalForm
+            token={token}
+            items={quote.items || []}
+            onResponded={fetchQuote}
+            onImageClick={setViewerItem}
+          />
         )}
 
         {['aprobada', 'parcial', 'rechazada'].includes(quote.quote_status) && (
@@ -245,7 +305,11 @@ export default function QuotePublicPage() {
               {quote.items.map((item, i) => (
                 <div key={i} className="flex items-center justify-between py-2 border-b border-gray-50 dark:border-white/10 last:border-0">
                   <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <ItemThumb src={item.image_url} alt={item.product_name} />
+                    <ItemThumb
+                      src={item.image_url}
+                      alt={item.product_name}
+                      onClick={() => setViewerItem(item)}
+                    />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{item.product_name}</p>
                       <p className="text-xs text-gray-400 dark:text-gray-500">
@@ -299,6 +363,14 @@ export default function QuotePublicPage() {
         </div>
 
       </div>
+
+      {viewerItem && (
+        <ImageLightbox
+          src={viewerItem.image_url}
+          alt={viewerItem.product_name}
+          onClose={() => setViewerItem(null)}
+        />
+      )}
     </div>
   );
 }
