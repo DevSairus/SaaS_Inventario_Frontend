@@ -5,10 +5,11 @@ import useProductsStore from '../../store/productsStore';
 import useEquivalencesStore from '../../store/equivalencesStore';
 import useCategoriesStore from '../../store/categoriesStore';
 import ProductFormModal from '../../components/products/ProductFormModal';
+import ProductImageViewer from '../../components/products/ProductImageViewer';
 import EquivalencesSection from '../../components/products/EquivalencesSection';
 import VehicleApplicationsSection from '../../components/products/VehicleApplicationsSection';
 import MovementsSection from '../../components/products/MovementsSection';
-import { ArrowLeft, Package, Users, Truck, Car, Activity, Edit3 } from 'lucide-react';
+import { ArrowLeft, Package, Users, Truck, Car, Activity, Edit3, ZoomIn } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const COP = (n) =>
@@ -28,6 +29,7 @@ export default function ProductDetailPage() {
   const { categories, fetchCategories } = useCategoriesStore();
   const [activeTab, setActiveTab] = useState('general');
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showImageViewer, setShowImageViewer] = useState(false);
 
   useEffect(() => {
     if (id) fetchProductById(id);
@@ -80,11 +82,21 @@ export default function ProductDetailPage() {
             <div>
               <div className="flex items-center gap-3">
                 {product.image_url && (
-                  <img
-                    src={product.image_url}
-                    alt={product.name}
-                    className="w-12 h-12 rounded-lg object-cover border border-gray-200"
-                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowImageViewer(true)}
+                    className="relative w-12 h-12 rounded-lg overflow-hidden border border-gray-200 group shrink-0"
+                    title="Ver imagen completa"
+                  >
+                    <img
+                      src={product.image_url}
+                      alt={product.name}
+                      className="w-full h-full object-cover"
+                    />
+                    <span className="absolute inset-0 bg-black/0 group-hover:bg-black/40 flex items-center justify-center transition-colors">
+                      <ZoomIn className="w-4 h-4 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </span>
+                  </button>
                 )}
                 <div>
                   <h1 className="text-2xl font-bold text-gray-900">{product.name}</h1>
@@ -232,6 +244,10 @@ export default function ProductDetailPage() {
           fetchProductById(id);
         }}
       />
+
+      {showImageViewer && (
+        <ProductImageViewer product={product} onClose={() => setShowImageViewer(false)} />
+      )}
     </Layout>
   );
 }
