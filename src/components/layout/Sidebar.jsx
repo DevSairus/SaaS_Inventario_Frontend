@@ -323,7 +323,7 @@ export default function Sidebar({ isCollapsed, setIsCollapsed, isMobileOpen, set
           )}
         </div>
 
-        <nav className="flex-1 overflow-y-auto overflow-x-hidden py-1">
+        <nav className="sidebar-scroll flex-1 overflow-y-auto overflow-x-hidden py-1">
           <NavContent />
         </nav>
 
@@ -378,7 +378,7 @@ export default function Sidebar({ isCollapsed, setIsCollapsed, isMobileOpen, set
               </button>
             </div>
 
-            <nav className="flex-1 overflow-y-auto py-1">
+            <nav className="sidebar-scroll flex-1 overflow-y-auto py-1">
               <NavContent inMobile />
             </nav>
 

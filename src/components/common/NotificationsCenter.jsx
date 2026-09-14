@@ -24,6 +24,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Bell, ArrowUpRight, PackageX, Wallet, Landmark,
   AlertTriangle, Megaphone, FileCheck2, CalendarClock, CheckCircle2,
+  ChevronDown, ChevronUp,
 } from 'lucide-react';
 import { getStockAlerts } from '../../api/stockAlerts';
 import { getPayableAlerts } from '../../api/payableAlerts';
@@ -88,14 +89,41 @@ function NotificationRow({ icon, iconClass, title, subtitle, tag, tagClass, onGo
   );
 }
 
-function Section({ title, count, children }) {
-  if (!count) return null;
+// Sección con acordeón: muestra `initialCount` filas y, si hay más,
+// un botón para expandir/contraer -- así una categoría con muchos items
+// (p.ej. 100+ productos con stock bajo) no empuja a las demás categorías
+// (cartera por pagar/cobrar) hasta el fondo del panel.
+// Acepta dos formas de uso:
+//   - items + renderItem: habilita el acordeón (Stock, Cartera, Citas, Cotizaciones)
+//   - count + children: sin acordeón, para secciones con pocas filas posibles (CRM)
+function Section({ title, count, items, renderItem, initialCount = 4, children }) {
+  const [expanded, setExpanded] = useState(false);
+  const total = items ? items.length : (count || 0);
+  if (!total) return null;
+
+  const visibleItems = items ? (expanded ? items : items.slice(0, initialCount)) : null;
+  const hasMore = items && items.length > initialCount;
+
   return (
     <div className="border-b border-gray-100 dark:border-white/10 last:border-b-0 pb-1">
       <div className="px-4 pt-3 pb-1 text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">
-        {title} · {count}
+        {title} · {total}
       </div>
-      <div className="px-1 space-y-0.5">{children}</div>
+      <div className="px-1 space-y-0.5">
+        {visibleItems ? visibleItems.map(renderItem) : children}
+      </div>
+      {hasMore && (
+        <button
+          onClick={() => setExpanded(v => !v)}
+          className="w-full flex items-center justify-center gap-1 py-1.5 text-[11px] font-medium text-gray-400 hover:text-accent dark:text-gray-500 dark:hover:text-accent"
+        >
+          {expanded ? (
+            <>Ver menos <ChevronUp size={12} /></>
+          ) : (
+            <>Ver {items.length - initialCount} más <ChevronDown size={12} /></>
+          )}
+        </button>
+      )}
     </div>
   );
 }
@@ -146,8 +174,31 @@ function NotificationsCenter() {
       jobs.push(crmApi.getNotificationsSummary().then(r => setCrmSummary(r.data.data)).catch(() => {}));
     }
     if (hasWorkshop) {
-      jobs.push(workOrdersApi.getPendingQuoteNotifications().then(r => setQuotes(r.data.data || [])).catch(() => {}));
-      jobs.push(appointmentsApi.getPending().then(r => setAppointments(r.data.data || [])).catch(() => {}));
+      jobs.push(
+        workOrdersApi.getPendingQuoteNotifications()
+          .then(r => {
+            const data = r.data.data || [];
+            setQuotes(data);
+            // Se marcan como vistas apenas se abre el panel (no hace falta
+            // que el staff haga clic en "Ir" a cada una) -- las cotizaciones
+            // respondidas son informativas, no una cola de trabajo, así que
+            // no tiene sentido que sigan sumando al contador la próxima vez.
+            if (data.length > 0) workOrdersApi.markAllQuoteNotificationsSeen().catch(() => {});
+          })
+          .catch(() => {})
+      );
+      jobs.push(
+        appointmentsApi.getPending()
+          .then(r => {
+            const data = r.data.data || [];
+            setAppointments(data);
+            // Misma idea: ver la cita en la campana ya cuenta como "enterado".
+            // La cita sigue intacta y sin confirmar en /workshop/appointments
+            // hasta que alguien la gestione ahí -- esto solo baja el contador.
+            if (data.length > 0) appointmentsApi.markPendingSeen().catch(() => {});
+          })
+          .catch(() => {})
+      );
     }
     await Promise.allSettled(jobs);
     setRefreshing(false);
@@ -231,8 +282,10 @@ function NotificationsCenter() {
                 </div>
               ) : (
                 <>
-                  <Section title="Citas de taller" count={appointments.length}>
-                    {appointments.map(item => (
+                  <Section
+                    title="Citas de taller"
+                    items={appointments}
+                    renderItem={(item) => (
                       <NotificationRow
                         key={item.id}
                         icon={<CalendarClock size={14} />}
@@ -242,11 +295,13 @@ function NotificationsCenter() {
                         onGo={() => go('/workshop/appointments')}
                         goLabel="Ver cita"
                       />
-                    ))}
-                  </Section>
+                    )}
+                  />
 
-                  <Section title="Cotizaciones respondidas" count={quotes.length}>
-                    {quotes.map(item => {
+                  <Section
+                    title="Cotizaciones respondidas"
+                    items={quotes}
+                    renderItem={(item) => {
                       const s = QUOTE_STATUS_LABEL[item.status] || QUOTE_STATUS_LABEL.aprobada;
                       return (
                         <NotificationRow
@@ -261,8 +316,8 @@ function NotificationsCenter() {
                           goLabel="Ver OT"
                         />
                       );
-                    })}
-                  </Section>
+                    }}
+                  />
 
                   <Section title="CRM" count={crmOverdue + crmLeads}>
                     {crmOverdue > 0 && (
@@ -287,8 +342,10 @@ function NotificationsCenter() {
                     )}
                   </Section>
 
-                  <Section title="Stock" count={stockAlerts.length}>
-                    {stockAlerts.map(product => (
+                  <Section
+                    title="Stock"
+                    items={stockAlerts}
+                    renderItem={(product) => (
                       <NotificationRow
                         key={product.id}
                         icon={<PackageX size={14} />}
@@ -302,11 +359,13 @@ function NotificationsCenter() {
                         onGo={() => go('/stock-alerts')}
                         goLabel="Gestionar stock"
                       />
-                    ))}
-                  </Section>
+                    )}
+                  />
 
-                  <Section title="Cuentas por pagar" count={payable.length}>
-                    {payable.map(alert => (
+                  <Section
+                    title="Cuentas por pagar"
+                    items={payable}
+                    renderItem={(alert) => (
                       <NotificationRow
                         key={alert.id}
                         icon={<Wallet size={14} />}
@@ -320,11 +379,13 @@ function NotificationsCenter() {
                         onGo={() => go('/payable-alerts')}
                         goLabel="Gestionar cuentas por pagar"
                       />
-                    ))}
-                  </Section>
+                    )}
+                  />
 
-                  <Section title="Anticipos sin aplicar" count={advance.length}>
-                    {advance.map(alert => (
+                  <Section
+                    title="Anticipos sin aplicar"
+                    items={advance}
+                    renderItem={(alert) => (
                       <NotificationRow
                         key={alert.id}
                         icon={<Landmark size={14} />}
@@ -338,8 +399,8 @@ function NotificationsCenter() {
                         onGo={() => go('/customer-advance-alerts')}
                         goLabel="Gestionar anticipos"
                       />
-                    ))}
-                  </Section>
+                    )}
+                  />
                 </>
               )}
             </div>

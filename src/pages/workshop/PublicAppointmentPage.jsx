@@ -5,6 +5,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { publicAppointmentsApi } from '../../api/workshopAppointments';
+import PhoneCountryCodeSelect, { DEFAULT_COUNTRY_CODE } from '../../components/common/PhoneCountryCodeSelect';
 
 function todayStr() {
   const d = new Date();
@@ -29,6 +30,7 @@ export default function PublicAppointmentPage() {
   const [selectedSlot, setSelectedSlot] = useState(null);
 
   const [form, setForm] = useState({ customer_name: '', customer_phone: '', customer_email: '', vehicle_plate: '', vehicle_brand: '', vehicle_model: '', service_description: '' });
+  const [phoneCountryCode, setPhoneCountryCode] = useState(DEFAULT_COUNTRY_CODE);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
   const [confirmation, setConfirmation] = useState(null);
@@ -66,8 +68,15 @@ export default function PublicAppointmentPage() {
     }
     setSubmitting(true);
     try {
+      // Meta/WhatsApp exige el número completo en E.164 -- se antepone el
+      // indicativo elegido (Colombia por defecto) a los dígitos del celular
+      // antes de guardarlo, ya que este campo es justamente el que se usa
+      // para contactar al cliente por WhatsApp (ver sendWhatsApp en
+      // workshopAppointments.controller.js).
+      const phoneDigits = form.customer_phone.replace(/\D/g, '');
       const res = await publicAppointmentsApi.create(slug, branchId, {
         ...form,
+        customer_phone: phoneDigits ? `${phoneCountryCode}${phoneDigits}` : phoneDigits,
         scheduled_at: selectedSlot.scheduled_at,
       });
       setConfirmation(res.data.data);
@@ -191,9 +200,12 @@ export default function PublicAppointmentPage() {
             <input type="text" placeholder="Nombre completo" value={form.customer_name}
               onChange={e => setForm({ ...form, customer_name: e.target.value })}
               className="w-full border border-gray-200 dark:border-white/10 dark:bg-graphite-2 dark:text-gray-100 dark:placeholder-gray-600 rounded-lg px-3 py-2 text-sm" />
-            <input type="tel" placeholder="Teléfono (WhatsApp)" value={form.customer_phone}
-              onChange={e => setForm({ ...form, customer_phone: e.target.value })}
-              className="w-full border border-gray-200 dark:border-white/10 dark:bg-graphite-2 dark:text-gray-100 dark:placeholder-gray-600 rounded-lg px-3 py-2 text-sm" />
+            <div className="flex gap-2">
+              <PhoneCountryCodeSelect value={phoneCountryCode} onChange={e => setPhoneCountryCode(e.target.value)} />
+              <input type="tel" placeholder="Teléfono (WhatsApp)" value={form.customer_phone}
+                onChange={e => setForm({ ...form, customer_phone: e.target.value })}
+                className="flex-1 border border-gray-200 dark:border-white/10 dark:bg-graphite-2 dark:text-gray-100 dark:placeholder-gray-600 rounded-lg px-3 py-2 text-sm" />
+            </div>
             <input type="email" placeholder="Email (opcional)" value={form.customer_email}
               onChange={e => setForm({ ...form, customer_email: e.target.value })}
               className="w-full border border-gray-200 dark:border-white/10 dark:bg-graphite-2 dark:text-gray-100 dark:placeholder-gray-600 rounded-lg px-3 py-2 text-sm" />

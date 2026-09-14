@@ -8,6 +8,7 @@ export const appointmentsApi = {
 
   list: (params) => axios.get('/workshop/appointments', { params }),
   getPending: () => axios.get('/workshop/appointments/pending'),
+  markPendingSeen: () => axios.post('/workshop/appointments/pending/seen'),
   create: (data) => axios.post('/workshop/appointments', data),
 
   confirm: (id) => axios.patch(`/workshop/appointments/${id}/confirm`),

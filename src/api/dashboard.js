@@ -22,5 +22,10 @@ export const dashboardAPI = {
   getWorkshopKPIs: async () => {
     const response = await axios.get('/dashboard/workshop');
     return response.data;
+  },
+
+  getSuggestions: async () => {
+    const response = await axios.get('/dashboard/suggestions');
+    return response.data;
   }
 };

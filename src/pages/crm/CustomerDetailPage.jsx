@@ -21,6 +21,7 @@ import {
 } from '@heroicons/react/24/outline';
 import Modal from '../../components/common/Modal';
 import Input from '../../components/common/Input';
+import PhoneCountryCodeSelect, { DEFAULT_COUNTRY_CODE } from '../../components/common/PhoneCountryCodeSelect';
 import Button from '../../components/common/Button';
 import toast from 'react-hot-toast';
 import { customerAdvancesAPI } from '../../api/customerAdvances';
@@ -161,6 +162,7 @@ export default function CustomerDetailPage() {
       tax_id:        customer.tax_id || '',
       phone:         customer.phone || '',
       mobile:        customer.mobile || '',
+      mobile_country_code: customer.mobile_country_code || DEFAULT_COUNTRY_CODE,
       email:         customer.email || '',
       address:       customer.address || '',
       city:          customer.city || '',
@@ -731,6 +733,18 @@ export default function CustomerDetailPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input label="Teléfono" value={editForm.phone} onChange={e => setEditForm(f => ({ ...f, phone: e.target.value }))} />
             <Input label="Ciudad" value={editForm.city} onChange={e => setEditForm(f => ({ ...f, city: e.target.value }))} />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Celular</label>
+            <div className="flex gap-2">
+              <PhoneCountryCodeSelect value={editForm.mobile_country_code}
+                onChange={e => setEditForm(f => ({ ...f, mobile_country_code: e.target.value }))} />
+              <input type="tel" value={editForm.mobile}
+                onChange={e => setEditForm(f => ({ ...f, mobile: e.target.value }))}
+                placeholder="Ej: 3001234567"
+                className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+            </div>
+            <p className="text-xs text-gray-400 mt-1">Se usa para WhatsApp — el indicativo es obligatorio para enviar por Meta.</p>
           </div>
           <Input label="Dirección" value={editForm.address} onChange={e => setEditForm(f => ({ ...f, address: e.target.value }))} />
           <div>

@@ -6,6 +6,24 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import api from '../../api/axios';
 
+// Miniatura de producto — placeholder gris con ícono cuando no hay imagen,
+// para que la fila no "salte" de tamaño según tenga o no foto.
+function ItemThumb({ src, alt }) {
+  return (
+    <div className="w-11 h-11 rounded-lg shrink-0 overflow-hidden bg-gray-100 dark:bg-graphite-2 flex items-center justify-center">
+      {src ? (
+        <img src={src} alt={alt} className="w-full h-full object-cover" loading="lazy" />
+      ) : (
+        <svg viewBox="0 0 24 24" className="w-5 h-5 text-gray-300 dark:text-gray-600" fill="none" stroke="currentColor" strokeWidth="1.5">
+          <rect x="3" y="3" width="18" height="18" rx="2" />
+          <circle cx="9" cy="9" r="1.5" />
+          <path d="M21 15l-5-5-9 9" />
+        </svg>
+      )}
+    </div>
+  );
+}
+
 const COP = (n) =>
   new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(n || 0);
 
@@ -82,6 +100,7 @@ function ApprovalForm({ token, items, onResponded }) {
               onChange={() => toggle(item.id)}
               className="mt-0.5 w-4 h-4 rounded border-gray-300 dark:border-white/10"
             />
+            <ItemThumb src={item.image_url} alt={item.product_name} />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{item.product_name}</p>
               <p className="text-xs text-gray-400 dark:text-gray-500">{item.quantity} × {COP(item.unit_price)}</p>
@@ -225,11 +244,14 @@ export default function QuotePublicPage() {
             <div className="space-y-2">
               {quote.items.map((item, i) => (
                 <div key={i} className="flex items-center justify-between py-2 border-b border-gray-50 dark:border-white/10 last:border-0">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{item.product_name}</p>
-                    <p className="text-xs text-gray-400 dark:text-gray-500">
-                      {item.quantity} × {COP(item.unit_price)}{parseFloat(item.tax_amount) > 0 ? ` · IVA ${COP(item.tax_amount)}` : ''}
-                    </p>
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <ItemThumb src={item.image_url} alt={item.product_name} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{item.product_name}</p>
+                      <p className="text-xs text-gray-400 dark:text-gray-500">
+                        {item.quantity} × {COP(item.unit_price)}{parseFloat(item.tax_amount) > 0 ? ` · IVA ${COP(item.tax_amount)}` : ''}
+                      </p>
+                    </div>
                   </div>
                   <div className="text-right shrink-0">
                     <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{COP(item.total)}</p>

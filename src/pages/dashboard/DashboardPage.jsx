@@ -40,15 +40,64 @@ const fmtCompact = (v) => {
 
 const fmtNum = (v) => new Intl.NumberFormat('es-CO').format(v || 0);
 
+/* ── Saludo dinámico ─────────────────────────────────────────
+   Junta, en un solo lugar, los hechos más urgentes disponibles
+   (alertas unificadas de dashboard.controller.js + OTs listas sin
+   facturar) y devuelve como máximo 3, ordenados por prioridad.
+   Objetivo: que el saludo informe algo real en vez de ser solo
+   decorativo ("¡Bienvenido!" sin contenido). */
+const PRIORITY_RANK = { critical: 0, high: 1, medium: 2, low: 3 };
+
+function buildGreetingFacts(alerts, pendingBilling, canSeeSalesFinance) {
+  const facts = [];
+
+  // "Facturar" es una tarea comercial: si el rol no maneja cifras de
+  // ventas (técnico, bodeguero), este hecho no le corresponde -- mismo
+  // criterio que ya se usa para las tarjetas KPI y para getSuggestions().
+  if (pendingBilling > 0 && canSeeSalesFinance) {
+    facts.push({
+      text: `${pendingBilling} OT${pendingBilling > 1 ? 's' : ''} lista${pendingBilling > 1 ? 's' : ''} para facturar`,
+      priority: 'critical',
+      url: '/workshop/work-orders?status=listo',
+    });
+  }
+
+  // Las alertas ya llegan filtradas por rol desde el backend (getAlerts),
+  // así que acá no hace falta volver a filtrarlas.
+  (alerts || []).forEach((a) => {
+    facts.push({ text: a.title, priority: a.priority || 'medium', url: a.action_url });
+  });
+
+  return facts
+    .sort((a, b) => (PRIORITY_RANK[a.priority] ?? 9) - (PRIORITY_RANK[b.priority] ?? 9))
+    .slice(0, 3);
+}
+
+/* ── Indicador de tendencia (↑/↓ % vs. período anterior) ───── */
+function TrendBadge({ pct }) {
+  // `null`/`undefined` = sin base de comparación (período anterior en $0);
+  // no mostramos nada en vez de un falso "+100%" o un "0%" engañoso.
+  if (pct === null || pct === undefined) return null;
+  const isUp = pct >= 0;
+  return (
+    <span className={`inline-flex items-center gap-0.5 text-xs font-semibold px-1.5 py-0.5 rounded-full bg-white/20`}>
+      {isUp ? '↑' : '↓'} {Math.abs(pct)}%
+    </span>
+  );
+}
+
 /* ── KPI Card ────────────────────────────────────────────── */
-function KpiCard({ icon, from, to, labelCls, label, value, sub, onClick }) {
+function KpiCard({ icon, from, to, labelCls, label, value, sub, onClick, trendPct }) {
   return (
     <div
       onClick={onClick}
       className={`bg-gradient-to-br ${from} ${to} rounded-xl p-4 sm:p-5 text-white shadow-md flex flex-col gap-2 min-w-0 ${onClick ? 'cursor-pointer hover:shadow-lg transition-shadow' : ''}`}
     >
-      <div className="w-9 h-9 rounded-lg bg-white/20 flex items-center justify-center text-lg flex-shrink-0">
-        {icon}
+      <div className="flex items-center justify-between">
+        <div className="w-9 h-9 rounded-lg bg-white/20 flex items-center justify-center text-lg flex-shrink-0">
+          {icon}
+        </div>
+        <TrendBadge pct={trendPct} />
       </div>
       <div className="min-w-0">
         <p className={`${labelCls} text-xs font-medium truncate`}>{label}</p>
@@ -58,6 +107,32 @@ function KpiCard({ icon, from, to, labelCls, label, value, sub, onClick }) {
     </div>
   );
 }
+
+/* ── Definición de accesos directos, con los roles a los que aplica
+   cada uno. Solo se usan como respaldo cuando "Para ti ahora" no tiene
+   ninguna sugerencia real que mostrar (ver sección PARA_TI_AHORA). ── */
+const QUICK_ACCESS = [
+  { icon: <ShoppingCartIcon className="w-7 h-7" />, label: 'Nueva Venta',   path: '/sales/new',               bg: 'bg-blue-50   hover:bg-blue-100',   text: 'text-blue-900',   roles: ['admin', 'manager', 'seller'] },
+  { icon: <WrenchScrewdriverIcon className="w-7 h-7" />, label: 'Nueva OT', path: '/workshop/work-orders/new', bg: 'bg-sky-50    hover:bg-sky-100',    text: 'text-sky-900',    roles: ['admin', 'manager', 'seller', 'technician'] },
+  { icon: <CubeIcon className="w-7 h-7" />, label: 'Productos',             path: '/products',                bg: 'bg-purple-50 hover:bg-purple-100', text: 'text-purple-900', roles: ['admin', 'manager', 'warehouse_keeper', 'seller'] },
+  { icon: <ChartBarIcon className="w-7 h-7" />, label: 'Reportes',          path: '/reports',                 bg: 'bg-green-50  hover:bg-green-100',  text: 'text-green-900',  roles: ['admin', 'manager', 'accountant'] },
+  { icon: <TruckIcon className="w-7 h-7" />, label: 'Nueva Compra',         path: '/purchases/new',           bg: 'bg-orange-50 hover:bg-orange-100', text: 'text-orange-900', roles: ['admin', 'manager', 'warehouse_keeper', 'accountant'] },
+  { icon: <CarIcon className="w-7 h-7" />, label: 'Vehículos',              path: '/workshop/vehicles',       bg: 'bg-teal-50   hover:bg-teal-100',   text: 'text-teal-900',   roles: ['admin', 'manager', 'seller', 'technician'] },
+];
+
+const SUGGESTION_PRIORITY_STYLE = {
+  critical: { bg: 'bg-red-50 hover:bg-red-100 border-red-100 dark:bg-red-900/30 dark:hover:bg-red-900/40 dark:border-red-800/40', text: 'text-red-800 dark:text-red-300', icon: <ExclamationCircleIcon className="w-6 h-6" /> },
+  high:     { bg: 'bg-amber-50 hover:bg-amber-100 border-amber-100 dark:bg-amber-900/30 dark:hover:bg-amber-900/40 dark:border-amber-800/40', text: 'text-amber-800 dark:text-amber-300', icon: <ExclamationTriangleIcon className="w-6 h-6" /> },
+  medium:   { bg: 'bg-blue-50 hover:bg-blue-100 border-blue-100 dark:bg-blue-900/30 dark:hover:bg-blue-900/40 dark:border-blue-800/40', text: 'text-blue-800 dark:text-blue-300', icon: <BoltIcon className="w-6 h-6" /> },
+};
+
+/* ── Personalización por rol ──────────────────────────────────
+   Roles que necesitan ver cifras de ventas/ganancia/cartera vs.
+   roles cuyo trabajo no pasa por ahí (técnico, bodeguero). Un
+   'super_admin' siempre ve todo. */
+const SALES_FINANCE_ROLES = ['admin', 'manager', 'seller', 'accountant'];
+const INVENTORY_VALUE_ROLES = ['admin', 'manager', 'seller', 'warehouse_keeper', 'accountant'];
+const roleCan = (role, allowed) => role === 'super_admin' || allowed.includes(role);
 
 const OT_STATUS = {
   recibido:   { label: 'Recibido',   bg: 'bg-blue-100',   text: 'text-blue-700' },
@@ -77,14 +152,35 @@ function DashboardPage() {
   const [workshopStats, setWorkshopStats] = useState(null);
   const [workshopLoading, setWorkshopLoading] = useState(false);
   const [receivableStats, setReceivableStats] = useState(null);
+  const [suggestions, setSuggestions] = useState([]);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(true);
+
+  const canSeeSalesFinance = roleCan(user?.role, SALES_FINANCE_ROLES);
+  const canSeeInventoryValue = roleCan(user?.role, INVENTORY_VALUE_ROLES);
 
   useEffect(() => {
     fetchAll(period);
     loadWorkshopStats();
-    loadReceivableStats();
+    // La cartera por cobrar es información financiera de ventas -- no tiene
+    // sentido pedirla (ni mostrarla) para roles que no la necesitan, como
+    // técnico o bodeguero.
+    if (canSeeSalesFinance) loadReceivableStats();
+    loadSuggestions();
     const t = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(t);
   }, []);
+
+  const loadSuggestions = async () => {
+    setSuggestionsLoading(true);
+    try {
+      const res = await axios.get('/dashboard/suggestions');
+      setSuggestions(res.data?.data?.suggestions || []);
+    } catch {
+      setSuggestions([]);
+    } finally {
+      setSuggestionsLoading(false);
+    }
+  };
 
   const loadWorkshopStats = async () => {
     setWorkshopLoading(true);
@@ -100,6 +196,9 @@ function DashboardPage() {
         avgResolutionDays: d.avg_resolution_days || 0,
         byStatus: d.by_status || {},
         pendingBilling: (d.by_status?.listo || 0),
+        // Bug fix: antes no se copiaba este campo de la respuesta, así que
+        // la sección "Últimas órdenes" nunca tenía datos que mostrar.
+        recentOrders: d.recent_orders || [],
       });
     } catch {
       setWorkshopStats(null);
@@ -142,6 +241,8 @@ function DashboardPage() {
     count:   parseInt(d.count)     || 0,
   }));
 
+  const greetingFacts = buildGreetingFacts(alerts, workshopStats?.pendingBilling || 0, canSeeSalesFinance);
+
   return (
     <Layout>
       <div className="space-y-5">
@@ -156,6 +257,29 @@ function DashboardPage() {
               {now.toLocaleDateString('es-CO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
               {' · '}
               {now.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}
+            </p>
+            <p className="text-xs sm:text-sm mt-1.5">
+              {greetingFacts.length === 0 ? (
+                <span className="text-gray-400 dark:text-gray-600">Todo al día. Buen momento para revisar reportes.</span>
+              ) : (
+                greetingFacts.map((f, i) => (
+                  <span key={i}>
+                    {i > 0 && <span className="mx-1.5 text-gray-300 dark:text-gray-700">·</span>}
+                    <button
+                      onClick={() => f.url && navigate(f.url)}
+                      className={`font-medium hover:underline ${
+                        f.priority === 'critical'
+                          ? 'text-red-600 dark:text-red-400'
+                          : f.priority === 'high'
+                          ? 'text-amber-600 dark:text-amber-400'
+                          : 'text-gray-500 dark:text-gray-500'
+                      }`}
+                    >
+                      {f.text}
+                    </button>
+                  </span>
+                ))
+              )}
             </p>
           </div>
           <div className="flex gap-1.5 flex-shrink-0 self-start sm:self-auto">
@@ -190,34 +314,51 @@ function DashboardPage() {
           </div>
         )}
 
-        {/* KPI Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-          <KpiCard
-            icon={<CurrencyDollarIcon className="w-5 h-5 text-white" />} from="from-blue-500" to="to-blue-600" labelCls="text-blue-100"
-            label={`Ventas (${period}d)`} value={fmtCompact(salesKPI.revenue)}
-            sub={`${fmtNum(salesKPI.count)} transacciones`}
-            onClick={() => navigate('/sales')}
-          />
-          <KpiCard
-            icon={<ArrowTrendingUpIcon className="w-5 h-5 text-white" />} from="from-green-500" to="to-green-600" labelCls="text-green-100"
-            label="Ganancia" value={fmtCompact(salesKPI.profit)}
-            sub={`Margen: ${salesKPI.margin ?? 0}%`}
-          />
-          <KpiCard
-            icon={<BoltIcon className="w-5 h-5 text-white" />} from="from-purple-500" to="to-purple-600" labelCls="text-purple-100"
-            label="Ventas de hoy" value={fmtCompact(todayKPI.revenue)}
-            sub={`${fmtNum(todayKPI.count)} ventas`}
-            onClick={() => navigate('/sales')}
-          />
-          <KpiCard
-            icon={<CubeIcon className="w-5 h-5 text-white" />} from="from-orange-500" to="to-orange-600" labelCls="text-orange-100"
-            label="Valor inventario" value={fmtCompact(inventoryKPI.total_value)}
-            sub={`${fmtNum(inventoryKPI.total_products)} productos`}
-            onClick={() => navigate('/products')}
-          />
-        </div>
+        {/* KPI Cards — Ventas/Ganancia/Ventas de hoy solo para roles que
+            manejan cifras comerciales; Valor inventario también para
+            bodeguero. Si el rol no ve ninguna, no se renderiza la fila. */}
+        {(canSeeSalesFinance || canSeeInventoryValue) && (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            {canSeeSalesFinance && (
+              <KpiCard
+                icon={<CurrencyDollarIcon className="w-5 h-5 text-white" />} from="from-blue-500" to="to-blue-600" labelCls="text-blue-100"
+                label={`Ventas (${period}d)`} value={fmtCompact(salesKPI.revenue)}
+                sub={`${fmtNum(salesKPI.count)} transacciones`}
+                trendPct={salesKPI.trend?.revenue_change_pct}
+                onClick={() => navigate('/sales')}
+              />
+            )}
+            {canSeeSalesFinance && (
+              <KpiCard
+                icon={<ArrowTrendingUpIcon className="w-5 h-5 text-white" />} from="from-green-500" to="to-green-600" labelCls="text-green-100"
+                label="Ganancia" value={fmtCompact(salesKPI.profit)}
+                sub={`Margen: ${salesKPI.margin ?? 0}%`}
+                trendPct={salesKPI.trend?.profit_change_pct}
+              />
+            )}
+            {canSeeSalesFinance && (
+              <KpiCard
+                icon={<BoltIcon className="w-5 h-5 text-white" />} from="from-purple-500" to="to-purple-600" labelCls="text-purple-100"
+                label="Ventas de hoy" value={fmtCompact(todayKPI.revenue)}
+                sub={`${fmtNum(todayKPI.count)} ventas`}
+                onClick={() => navigate('/sales')}
+              />
+            )}
+            {canSeeInventoryValue && (
+              <KpiCard
+                icon={<CubeIcon className="w-5 h-5 text-white" />} from="from-orange-500" to="to-orange-600" labelCls="text-orange-100"
+                label="Valor inventario" value={fmtCompact(inventoryKPI.total_value)}
+                sub={`${fmtNum(inventoryKPI.total_products)} productos`}
+                onClick={() => navigate('/products')}
+              />
+            )}
+          </div>
+        )}
 
-        {/* Gráficas */}
+        {/* Gráficas — ambas están construidas sobre ingresos/ganancia de
+            ventas, así que se ocultan para los roles que no manejan esa
+            información (técnico, bodeguero). */}
+        {canSeeSalesFinance && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <div className="bg-white rounded-xl p-4 sm:p-5 shadow-sm border border-gray-100 dark:bg-graphite dark:border-white/10">
             <div className="flex items-center justify-between mb-4">
@@ -275,6 +416,7 @@ function DashboardPage() {
             )}
           </div>
         </div>
+        )}
 
         {/* ── Taller ── */}
         <div className="bg-white rounded-xl p-4 sm:p-5 shadow-sm border border-gray-100 dark:bg-graphite dark:border-white/10">
@@ -371,8 +513,8 @@ function DashboardPage() {
           )}
         </div>
 
-        {/* ── Cartera ── */}
-        {receivableStats && (
+        {/* ── Cartera ── (financiera/ventas, mismo criterio de rol que arriba) */}
+        {canSeeSalesFinance && receivableStats && (
           <div className="bg-white rounded-xl p-4 sm:p-5 shadow-sm border border-gray-100 dark:bg-graphite dark:border-white/10">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm sm:text-base font-semibold text-gray-800 dark:text-gray-100">Cartera por cobrar</h3>
@@ -396,32 +538,55 @@ function DashboardPage() {
           </div>
         )}
 
-        {/* Accesos rápidos */}
+        {/* Para ti ahora — reemplaza los Accesos Rápidos estáticos por
+            sugerencias reales (o, si no hay ninguna pendiente, cae de
+            vuelta a los accesos directos ya filtrados por rol) */}
         <div className="bg-white rounded-xl p-4 sm:p-5 shadow-sm border border-gray-100 dark:bg-graphite dark:border-white/10">
-          <h3 className="text-sm sm:text-base font-semibold text-gray-800 mb-4 flex items-center gap-2 dark:text-gray-100"><BoltIcon className="w-4 h-4 text-gray-500 dark:text-gray-500" /> Accesos Rápidos</h3>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-            {[
-              { icon: <ShoppingCartIcon className="w-7 h-7" />, label: 'Nueva Venta',   path: '/sales/new',               bg: 'bg-blue-50   hover:bg-blue-100',   text: 'text-blue-900'   },
-              { icon: <WrenchScrewdriverIcon className="w-7 h-7" />, label: 'Nueva OT', path: '/workshop/work-orders/new', bg: 'bg-sky-50    hover:bg-sky-100',    text: 'text-sky-900'    },
-              { icon: <CubeIcon className="w-7 h-7" />, label: 'Productos',             path: '/products',                bg: 'bg-purple-50 hover:bg-purple-100', text: 'text-purple-900' },
-              { icon: <ChartBarIcon className="w-7 h-7" />, label: 'Reportes',          path: '/reports',                 bg: 'bg-green-50  hover:bg-green-100',  text: 'text-green-900'  },
-              { icon: <TruckIcon className="w-7 h-7" />, label: 'Nueva Compra',         path: '/purchases/new',           bg: 'bg-orange-50 hover:bg-orange-100', text: 'text-orange-900' },
-              { icon: <CarIcon className="w-7 h-7" />, label: 'Vehículos',              path: '/workshop/vehicles',       bg: 'bg-teal-50   hover:bg-teal-100',   text: 'text-teal-900'   },
-            ].map(({ icon, label, path, bg, text }) => (
-              <button
-                key={path}
-                onClick={() => navigate(path)}
-                className={`p-3 sm:p-4 ${bg} border border-gray-100 dark:border-white/10 rounded-xl hover:shadow-md transition-all text-center group`}
-              >
-                <div className={`flex justify-center mb-1.5 group-hover:scale-110 transition-transform ${text}`}>{icon}</div>
-                <div className={`text-xs sm:text-sm font-semibold ${text}`}>{label}</div>
-              </button>
-            ))}
-          </div>
+          <h3 className="text-sm sm:text-base font-semibold text-gray-800 mb-4 flex items-center gap-2 dark:text-gray-100">
+            <BoltIcon className="w-4 h-4 text-gray-500 dark:text-gray-500" /> Para ti ahora
+          </h3>
+
+          {suggestionsLoading ? (
+            <div className="h-20 flex items-center justify-center">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-400" />
+            </div>
+          ) : suggestions.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {suggestions.map((s) => {
+                const style = SUGGESTION_PRIORITY_STYLE[s.priority] || SUGGESTION_PRIORITY_STYLE.medium;
+                return (
+                  <button
+                    key={s.id}
+                    onClick={() => navigate(s.action_url)}
+                    className={`flex items-center gap-3 p-3 sm:p-4 border rounded-xl text-left transition-all hover:shadow-md ${style.bg}`}
+                  >
+                    <span className={`flex-shrink-0 ${style.text}`}>{style.icon}</span>
+                    <span className={`text-sm font-semibold ${style.text}`}>{s.title}</span>
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+              {QUICK_ACCESS
+                .filter(q => !q.roles || q.roles.includes(user?.role) || user?.role === 'super_admin')
+                .map(({ icon, label, path, bg, text }) => (
+                  <button
+                    key={path}
+                    onClick={() => navigate(path)}
+                    className={`p-3 sm:p-4 ${bg} border border-gray-100 dark:border-white/10 rounded-xl hover:shadow-md transition-all text-center group`}
+                  >
+                    <div className={`flex justify-center mb-1.5 group-hover:scale-110 transition-transform ${text}`}>{icon}</div>
+                    <div className={`text-xs sm:text-sm font-semibold ${text}`}>{label}</div>
+                  </button>
+                ))}
+            </div>
+          )}
         </div>
 
-        {/* Stock bajo */}
-        {inventoryKPI.low_stock_count > 0 && (
+        {/* Stock bajo — inventario, mismo criterio de rol que la tarjeta
+            "Valor inventario" (incluye bodeguero, excluye técnico) */}
+        {canSeeInventoryValue && inventoryKPI.low_stock_count > 0 && (
           <div className="bg-white rounded-xl p-4 sm:p-5 shadow-sm border border-yellow-200 dark:bg-graphite dark:border-yellow-800/40">
             <div className="flex items-center justify-between flex-wrap gap-2">
               <h3 className="text-sm sm:text-base font-semibold text-gray-800 flex items-center gap-2 dark:text-gray-100"><ExclamationTriangleIcon className="w-4 h-4 text-yellow-500 dark:text-yellow-400" /> Productos con Stock Bajo</h3>

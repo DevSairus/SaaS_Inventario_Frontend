@@ -157,14 +157,16 @@ const TenantUsers = () => {
   };
 
   const confirmResetPassword = async () => {
-    if (!newPassword || newPassword.length < 6) {
-      toast('La contraseña debe tener al menos 6 caracteres');
+    if (!newPassword || newPassword.length < 8) {
+      toast('La contraseña debe tener al menos 8 caracteres');
       return;
     }
     const success = await resetTenantUserPassword(id, passwordDialog.user.id, newPassword);
     if (success) {
       setPasswordDialog({ open: false, user: null });
       setNewPassword('');
+    } else {
+      toast.error(useSuperAdminStore.getState().error || 'No se pudo resetear la contraseña');
     }
   };
 
@@ -530,8 +532,8 @@ const TenantUsers = () => {
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 className="input"
-                placeholder="Mínimo 6 caracteres"
-                minLength={6}
+                placeholder="Mínimo 8 caracteres"
+                minLength={8}
               />
             </div>
 

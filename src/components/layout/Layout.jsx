@@ -29,9 +29,26 @@ const WATERMARK_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="260" heigh
 </svg>`;
 const WATERMARK_BG = `url("data:image/svg+xml,${encodeURIComponent(WATERMARK_SVG)}")`;
 
+const SIDEBAR_COLLAPSED_KEY = 'pitbox:sidebarCollapsed';
+
 function Layout({ children }) {
-  const [isCollapsed, setIsCollapsed]           = useState(false);
+  // Persistido en localStorage: Layout se remonta en cada cambio de ruta
+  // (cada página envuelve su contenido en <Layout>), así que sin esto el
+  // usuario tendría que volver a colapsar el sidebar al navegar.
+  const [isCollapsed, setIsCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === '1';
+    } catch {
+      return false;
+    }
+  });
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(SIDEBAR_COLLAPSED_KEY, isCollapsed ? '1' : '0');
+    } catch { /* ignore */ }
+  }, [isCollapsed]);
   const { user } = useAuthStore();
   useTicketNotifications();
   useQuoteNotifications();

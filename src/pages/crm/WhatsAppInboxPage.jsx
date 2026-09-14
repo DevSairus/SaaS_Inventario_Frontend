@@ -605,7 +605,7 @@ export default function WhatsAppInboxPage() {
                 <strong>Demo comercial.</strong> Los mensajes se guardan en Pitbox sin salir a Meta.
                 {waStatus?.connected
                   ? ' Este tenant también tiene una conexión real, pero el demo tiene prioridad mientras esté activo — nada sale a Meta hasta que lo desactives.'
-                  : ' Ideal para mostrar el comportamiento a clientes. Cuando Meta esté listo, se desactiva el demo y se conecta Cloud API.'}
+                  : ' Cuando Meta esté listo, se desactiva el demo y se conecta Cloud API.'}
                 {canAssignOthers && (
                   <span className="block mt-1 text-xs text-amber-800">
                     Tip: entra también como vendedor para ver que solo ve sus chats + cola.

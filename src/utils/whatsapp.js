@@ -5,13 +5,20 @@
 // sesión que gestionar, es el mismo patrón "clic → WhatsApp Web/App").
 import crmApi from '../api/crm';
 
-/** Normaliza número colombiano → "573001234567" */
+/**
+ * Normaliza un número que ya viene con indicativo (vía bestPhone) →
+ * "573001234567". Se mantiene el nombre por compatibilidad, pero ya no
+ * asume Colombia a fuego: si el número entra con 11+ dígitos se respeta tal
+ * cual (indicativo real, sea cual sea); solo se antepone "57" cuando llega
+ * como celular colombiano de 10 dígitos sin indicativo (dato legado o
+ * teléfono fijo sin mobile_country_code asociado).
+ */
 export const formatColombianPhone = (phone) => {
   const digits = String(phone || '').replace(/\D/g, '');
   if (!digits) return '';
-  if (digits.startsWith('57') && digits.length >= 12) return digits;
-  if (digits.startsWith('3') && digits.length === 10) return `57${digits}`;
-  return `57${digits}`;
+  if (digits.length >= 11) return digits;
+  if (digits.length === 10) return `57${digits}`;
+  return digits;
 };
 
 /** Construye un enlace wa.me con mensaje pre-cargado (o vacío) */
@@ -21,10 +28,19 @@ export const buildWaLink = (phone, text = '') => {
   return `https://wa.me/${formatted}${text ? `?text=${encodeURIComponent(text)}` : ''}`;
 };
 
-/** Mejor teléfono disponible para contacto directo (celular > fijo) */
+/**
+ * Mejor teléfono disponible para contacto directo (celular > fijo), ya con
+ * el indicativo de país antepuesto cuando es el celular (mobile_country_code,
+ * "57" Colombia por defecto) — Meta/WhatsApp exige el número completo E.164.
+ */
 export const bestPhone = (customerOrEntity) => {
   if (!customerOrEntity) return '';
-  return customerOrEntity.mobile || customerOrEntity.phone || '';
+  const mobileDigits = String(customerOrEntity.mobile || '').replace(/\D/g, '');
+  if (mobileDigits) {
+    const code = String(customerOrEntity.mobile_country_code || '57').replace(/\D/g, '') || '57';
+    return mobileDigits.startsWith(code) ? mobileDigits : `${code}${mobileDigits}`;
+  }
+  return customerOrEntity.phone || '';
 };
 
 // C.4 — "Registro automático de interacción al enviar WhatsApp". No hay API

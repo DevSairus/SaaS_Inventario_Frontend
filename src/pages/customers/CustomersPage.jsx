@@ -12,6 +12,7 @@ import ConfirmDialog from '../../components/common/ConfirmDialog';
 import Layout from '../../components/layout/Layout';
 import RuesNitButton from '../../components/common/RuesNitButton';
 import DivipolaCitySelect from '../../components/common/DivipolaCitySelect';
+import PhoneCountryCodeSelect, { DEFAULT_COUNTRY_CODE } from '../../components/common/PhoneCountryCodeSelect';
 import LibroAuxiliarModal from '../../components/accounting/LibroAuxiliarModal';
 import toast from 'react-hot-toast';
 
@@ -29,7 +30,7 @@ const DOCUMENT_TYPE_OPTIONS = [
 const FORM_EMPTY = {
   customer_type: 'individual', full_name: '', business_name: '', tax_id: '',
   document_type: '13',
-  email: '', phone: '', mobile: '', address: '',
+  email: '', phone: '', mobile: '', mobile_country_code: DEFAULT_COUNTRY_CODE, address: '',
   city: '', state: '', city_code: '',
   customer_category: '', notes: '',
   retention_config: {},
@@ -83,6 +84,7 @@ export default function CustomersPage() {
         business_name: customer.business_name || '', tax_id: customer.tax_id || '',
         document_type: customer.document_type || (customer.customer_type === 'company' ? '31' : '13'),
         email: customer.email || '', phone: customer.phone || '', mobile: customer.mobile || '',
+        mobile_country_code: customer.mobile_country_code || DEFAULT_COUNTRY_CODE,
         address: customer.address || '',
         city: customer.city || '', state: customer.state || '', city_code: customer.city_code || '',
         customer_category: customer.customer_category || '', notes: customer.notes || '',
@@ -264,7 +266,16 @@ export default function CustomersPage() {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Input label="Celular" type="tel" value={formData.mobile} onChange={set('mobile')} />
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">Celular</label>
+                <div className="flex gap-2">
+                  <PhoneCountryCodeSelect value={formData.mobile_country_code} onChange={set('mobile_country_code')} />
+                  <input type="tel" value={formData.mobile} onChange={set('mobile')}
+                    placeholder="Ej: 3001234567"
+                    className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100 dark:placeholder-gray-600" />
+                </div>
+                <p className="text-xs text-gray-400 mt-1 dark:text-gray-500">Se usa para WhatsApp — el indicativo es obligatorio para enviar por Meta.</p>
+              </div>
               <Input label="Dirección" value={formData.address} onChange={set('address')} />
             </div>
 
