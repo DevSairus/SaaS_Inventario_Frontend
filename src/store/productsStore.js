@@ -120,7 +120,7 @@ const useProductsStore = create((set, get) => ({
       if (response && response.success) {
         await get().fetchProducts(true);
         set({ isLoading: false });
-        return true;
+        return response.data;
       } else {
         set({ isLoading: false });
         return false;
