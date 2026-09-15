@@ -5,3 +5,4 @@ Disallow: /reset-password
 Disallow: /sin-sede
 
 Sitemap: https://pitbox.esc-datacore.com/sitemap.xml
+Sitemap: https://pitbox.esc-datacore.com/sitemap-blog.xml

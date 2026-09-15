@@ -642,6 +642,11 @@ function Navbar({ onCta }) {
               }}>{label}</a>
             );
           })}
+          <Link to="/blog" style={{
+            color: 'rgba(255,255,255,0.68)', fontSize: 14, fontWeight: 500, textDecoration: 'none',
+            transition: 'color 0.2s', letterSpacing: '0.01em',
+            borderBottom: '2px solid transparent', paddingBottom: 2,
+          }}>Blog</Link>
         </div>
 
         <div style={{ display: 'flex', gap: 12, alignItems: 'center' }} className="pb-nav-ctas">
@@ -676,6 +681,10 @@ function Navbar({ onCta }) {
               textDecoration: 'none', borderBottom: '1px solid rgba(255,255,255,0.07)',
             }}>{label}</a>
           ))}
+          <Link to="/blog" onClick={() => setOpen(false)} style={{
+            display: 'block', color: 'rgba(255,255,255,0.8)', fontSize: 15, padding: '10px 0',
+            textDecoration: 'none', borderBottom: '1px solid rgba(255,255,255,0.07)',
+          }}>Blog</Link>
           <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
             <button onClick={() => { setOpen(false); onCta(); }} style={{
               textAlign: 'center', padding: 12, borderRadius: 9,
@@ -748,6 +757,16 @@ function Hero({ onCta }) {
             El sistema operativo<br />
             de tu taller <span style={{ color: C.accentL }}>— y de tu negocio.</span>
           </h1>
+
+          <p style={{
+            fontSize: 13, color: 'rgba(255,255,255,0.5)', fontWeight: 600,
+            letterSpacing: '0.02em', marginBottom: 18, marginTop: -8,
+            fontFamily: "'Inter', sans-serif", textTransform: 'uppercase',
+            opacity: mounted ? 1 : 0, transform: mounted ? 'translateY(0)' : 'translateY(10px)',
+            transition: 'opacity 0.55s 0.15s, transform 0.55s 0.15s',
+          }}>
+            Software de gestión para talleres automotrices y de motos
+          </p>
 
           <p style={{
             fontSize: 'clamp(1rem, 2vw, 1.12rem)', color: 'rgba(255,255,255,0.62)',
@@ -1681,6 +1700,7 @@ function Footer({ onCta }) {
             ] },
             { title: 'Empresa', links: [
               { label: 'Acerca de', href: '#producto' },
+              { label: 'Blog', to: '/blog' },
               { label: 'Contacto', href: '#contacto' },
               { label: 'Iniciar sesión', to: '/login' },
             ] },

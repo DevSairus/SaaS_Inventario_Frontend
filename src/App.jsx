@@ -148,6 +148,10 @@ const SuperAdminMetaConfig = lazy(() => import('./pages/superadmin/SuperAdminMet
 const SuperAdminEnsambladoraConfig = lazy(() => import('./pages/superadmin/SuperAdminEnsambladoraConfig'));
 const TenantMigrationStatus = lazy(() => import('./pages/superadmin/TenantMigrationStatus'));
 const AnnouncementsManagement = lazy(() => import('./pages/superadmin/AnnouncementsManagement'));
+const BlogManagement = lazy(() => import('./pages/superadmin/BlogManagement'));
+const BlogPostForm = lazy(() => import('./pages/superadmin/BlogPostForm'));
+const BlogListPage = lazy(() => import('./pages/BlogListPage'));
+const BlogPostPage = lazy(() => import('./pages/BlogPostPage'));
 import AnnouncementsModal from './components/common/AnnouncementsModal';
 
 // ✅ DIAN — Facturación Electrónica
@@ -268,6 +272,8 @@ function App() {
         <Route path="/ot/:token"      element={<WorkOrderPublicPage />} />
         <Route path="/public/quote/:token" element={<QuotePublicPage />} />
         <Route path="/agendar/:slug"       element={<PublicAppointmentPage />} />
+        <Route path="/blog"           element={<Suspense fallback={<Loading fullScreen />}><BlogListPage /></Suspense>} />
+        <Route path="/blog/:slug"     element={<Suspense fallback={<Loading fullScreen />}><BlogPostPage /></Suspense>} />
         <Route path="/ensambladora/seguimiento/:tipo/:token" element={<SeguimientoPublicoPage />} />
         <Route path="/sin-sede"       element={<NoBranchAssignedPage />} />
 
@@ -294,6 +300,9 @@ function App() {
           <Route path="ensambladora-config" element={<Suspense fallback={<Loading fullScreen />}><SuperAdminEnsambladoraConfig /></Suspense>} />
           <Route path="tenant-migration"    element={<Suspense fallback={<Loading fullScreen />}><TenantMigrationStatus /></Suspense>} />
           <Route path="announcements"       element={<Suspense fallback={<Loading fullScreen />}><AnnouncementsManagement /></Suspense>} />
+          <Route path="blog"                element={<Suspense fallback={<Loading fullScreen />}><BlogManagement /></Suspense>} />
+          <Route path="blog/nuevo"          element={<Suspense fallback={<Loading fullScreen />}><BlogPostForm /></Suspense>} />
+          <Route path="blog/:id"            element={<Suspense fallback={<Loading fullScreen />}><BlogPostForm /></Suspense>} />
           <Route path="analytics"           element={<Suspense fallback={<Loading fullScreen />}><Analytics /></Suspense>} />
           <Route path="permissions"         element={<Suspense fallback={<Loading fullScreen />}><RolePermissionsPage /></Suspense>} />
         </Route>

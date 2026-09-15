@@ -15,6 +15,7 @@ import {
   DollarSign,
   Settings,
   Megaphone, // ✅ NUEVO: Icono para Anuncios
+  Newspaper, // ✅ NUEVO: Icono para Blog
   Link2,
   Headphones,
   Inbox,
@@ -139,6 +140,13 @@ const SuperAdminSidebar = ({ isOpen, toggleSidebar }) => {
       name: 'Anuncios',
       href: '/superadmin/announcements',
       icon: Megaphone,
+    },
+
+    // ✅ NUEVO: Blog (SEO)
+    {
+      name: 'Blog',
+      href: '/superadmin/blog',
+      icon: Newspaper,
     },
 
     {
