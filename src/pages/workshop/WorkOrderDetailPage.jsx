@@ -1726,7 +1726,8 @@ export default function WorkOrderDetailPage() {
                   <p className="font-medium text-gray-900">
                     {order.customer.business_name || `${order.customer.first_name} ${order.customer.last_name}`}
                   </p>
-                  {order.customer.phone && <p className="text-gray-500 text-xs mt-1">{order.customer.phone}</p>}
+                  {order.customer.tax_id && <p className="text-gray-500 text-xs mt-1">Doc: {order.customer.tax_id}</p>}
+                  {order.customer.phone && <p className="text-gray-500 text-xs">{order.customer.phone}</p>}
                   {order.customer.email && <p className="text-gray-500 text-xs">{order.customer.email}</p>}
                 </div>
               ) : (

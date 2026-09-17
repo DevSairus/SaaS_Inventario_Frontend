@@ -36,16 +36,31 @@ const FORM_EMPTY = {
   retention_config: {},
 };
 
+const PAGE_SIZE = 50;
+
 export default function CustomersPage() {
-  const { customers, loading, error, fetchCustomers, createCustomer, updateCustomer, deleteCustomer } = useCustomersStore();
+  const { customers, customersTotal, loading, error, fetchCustomers, createCustomer, updateCustomer, deleteCustomer } = useCustomersStore();
   const [showModal, setShowModal] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState(null);
   const [deleteDialog, setDeleteDialog] = useState({ show: false, customer: null });
   const [searchTerm, setSearchTerm] = useState('');
+  const [page, setPage] = useState(1);
   const [formData, setFormData] = useState(FORM_EMPTY);
   const [ledgerCustomer, setLedgerCustomer] = useState(null);
 
-  useEffect(() => { fetchCustomers(); }, []);
+  // La búsqueda va al backend (no solo sobre lo ya cargado) para que un
+  // cliente creado por fuera de este formulario (p. ej. desde el formato
+  // rápido de Taller/Ventas) siempre aparezca, sin importar cuántos clientes
+  // haya antes en orden alfabético. Debounce para no disparar una request
+  // por cada tecla.
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchCustomers({ search: searchTerm || undefined, limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE });
+    }, searchTerm ? 300 : 0);
+    return () => clearTimeout(timer);
+  }, [searchTerm, page]);
+
+  const handleSearchChange = (value) => { setSearchTerm(value); setPage(1); };
 
   const handleRuesResult = (data) => {
     setFormData(prev => ({
@@ -102,27 +117,23 @@ export default function CustomersPage() {
 
   const handleCloseModal = () => { setShowModal(false); setEditingCustomer(null); };
 
+  const reload = () => fetchCustomers({ search: searchTerm || undefined, limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE });
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
       if (editingCustomer) { await updateCustomer(editingCustomer.id, formData); toast.success('Cliente actualizado exitosamente'); }
       else { await createCustomer(formData); toast.success('Cliente creado exitosamente'); }
-      handleCloseModal(); fetchCustomers();
+      handleCloseModal(); reload();
     } catch (err) { toast.error('Error guardando cliente: ' + (err.response?.data?.message || err.message)); }
   };
 
   const handleDelete = async () => {
-    try { await deleteCustomer(deleteDialog.customer.id); setDeleteDialog({ show: false, customer: null }); fetchCustomers(); }
+    try { await deleteCustomer(deleteDialog.customer.id); setDeleteDialog({ show: false, customer: null }); reload(); }
     catch (err) { toast.error('Error eliminando cliente: ' + (err.response?.data?.message || err.message)); }
   };
 
   const set = (field) => (e) => setFormData(prev => ({ ...prev, [field]: e.target.value }));
-
-  const filteredCustomers = customers.filter(c =>
-    c.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    c.tax_id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    c.email?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
 
   if (loading && !customers.length) return <Loading />;
 
@@ -142,7 +153,7 @@ export default function CustomersPage() {
         <div className="bg-white rounded-lg shadow p-4 mb-6 dark:bg-graphite">
           <div className="relative">
             <input type="text" placeholder="Buscar por nombre, NIT o email..." value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => handleSearchChange(e.target.value)}
               className="w-full border border-gray-300 rounded-lg pl-10 pr-4 py-2 dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100 dark:placeholder-gray-600" />
             <MagnifyingGlassIcon className="h-5 w-5 text-gray-400 absolute left-3 top-3 dark:text-gray-500" />
           </div>
@@ -161,11 +172,11 @@ export default function CustomersPage() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200 dark:bg-graphite dark:divide-white/10">
-                {filteredCustomers.length === 0 ? (
+                {customers.length === 0 ? (
                   <tr><td colSpan="6" className="px-6 py-12 text-center text-gray-500 dark:text-gray-500">
                     {searchTerm ? 'No se encontraron clientes' : 'No hay clientes registrados'}
                   </td></tr>
-                ) : filteredCustomers.map((customer) => (
+                ) : customers.map((customer) => (
                   <tr key={customer.id} className="hover:bg-gray-50 dark:hover:bg-white/5">
                     <td className="px-6 py-4">
                       <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{customer.full_name}</div>
@@ -203,6 +214,19 @@ export default function CustomersPage() {
               </tbody>
             </table>
           </div>
+          {customersTotal > PAGE_SIZE && (
+            <div className="flex items-center justify-between px-6 py-3 border-t border-gray-200 dark:border-white/10">
+              <span className="text-xs text-gray-500 dark:text-gray-500">
+                {customersTotal} clientes en total — página {page} de {Math.ceil(customersTotal / PAGE_SIZE)}
+              </span>
+              <div className="flex gap-2">
+                <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
+                  className="px-3 py-1.5 text-sm border rounded-lg disabled:opacity-40 hover:bg-gray-50 dark:border-white/10 dark:hover:bg-white/5">← Anterior</button>
+                <button onClick={() => setPage(p => p + 1)} disabled={page * PAGE_SIZE >= customersTotal}
+                  className="px-3 py-1.5 text-sm border rounded-lg disabled:opacity-40 hover:bg-gray-50 dark:border-white/10 dark:hover:bg-white/5">Siguiente →</button>
+              </div>
+            </div>
+          )}
         </div>
 
         <Modal isOpen={showModal} onClose={handleCloseModal} title={editingCustomer ? 'Editar Cliente' : 'Nuevo Cliente'} size="lg">

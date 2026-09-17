@@ -5,17 +5,23 @@ import customersApi from '../api/customers';
 
 const useCustomersStore = create((set, get) => ({
   customers: [],
+  customersTotal: 0,
   currentCustomer: null,
   loading: false,
   error: null,
   searchResults: [],
 
-  // Cargar todos los clientes
+  // Cargar todos los clientes. Sin `params.search` ni `limit` explícito, el
+  // backend solo trae los primeros 50 (orden alfabético) -- por eso la
+  // pantalla de listado SIEMPRE debe pasar `search`/`limit`/`offset` en vez
+  // de filtrar sobre lo ya cargado, o un cliente fuera de ese primer bloque
+  // (p. ej. uno creado desde el formato rápido de Taller/Ventas) queda
+  // invisible aunque exista en la BD.
   fetchCustomers: async (params = {}) => {
     set({ loading: true, error: null });
     try {
       const response = await customersApi.getAll(params);
-      set({ customers: response.data.data, loading: false });
+      set({ customers: response.data.data, customersTotal: response.data.pagination?.total ?? response.data.data.length, loading: false });
     } catch (error) {
       set({ 
         error: error.response?.data?.message || 'Error cargando clientes', 

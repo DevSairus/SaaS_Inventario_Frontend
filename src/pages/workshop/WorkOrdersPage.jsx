@@ -3,7 +3,9 @@ import Layout from '../../components/layout/Layout';
 import { useNavigate } from 'react-router-dom';
 import useWorkshopStore from '../../store/workshopStore';
 import useAuthStore from '../../store/authStore';
-import { Wrench, Plus, Search, Car, User, Clock, ChevronRight } from 'lucide-react';
+import { workOrdersApi } from '../../api/workshop';
+import toast from 'react-hot-toast';
+import { Wrench, Plus, Search, Car, User, Clock, ChevronRight, Share2 } from 'lucide-react';
 import {
   InboxArrowDownIcon,
   WrenchScrewdriverIcon,
@@ -74,6 +76,33 @@ export default function WorkOrdersPage() {
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('activas'); // activas = excluye entregado/cancelado
   const [page, setPage] = useState(1);
+  const [sendingId, setSendingId] = useState(null);
+
+  const handleSendWhatsApp = async (e, orderId) => {
+    e.stopPropagation();
+    const win = window.open('', '_blank');
+    setSendingId(orderId);
+    try {
+      const res = await workOrdersApi.sendWhatsApp(orderId);
+      const { channel, waLink, message } = res.data;
+      if (channel === 'cloud_api') {
+        win?.close();
+        toast.success(message || 'Orden enviada por WhatsApp Cloud API.', { duration: 5000 });
+      } else if (waLink && win) {
+        win.location.href = waLink;
+        toast.success('Se abrió WhatsApp con el enlace de la OT. Presiona Enviar ↑', { duration: 5000 });
+      } else {
+        win?.close();
+        toast.error('No se pudo generar el enlace de WhatsApp.');
+      }
+    } catch (err) {
+      win?.close();
+      const msg = err.response?.data?.message || err.message || 'Error al generar enlace de WhatsApp';
+      toast.error(msg, { duration: 6000 });
+    } finally {
+      setSendingId(null);
+    }
+  };
 
   const activeStatuses = ['recibido','en_proceso','en_espera','listo'];
   useEffect(() => {
@@ -203,6 +232,14 @@ export default function WorkOrdersPage() {
                         {new Date(order.received_at).toLocaleDateString('es-CO')}
                       </div>
                     </div>
+                    <button
+                      onClick={(e) => handleSendWhatsApp(e, order.id)}
+                      disabled={sendingId === order.id}
+                      title="Enviar por WhatsApp"
+                      className="p-2 rounded-lg text-green-600 hover:bg-green-50 disabled:opacity-40 flex-shrink-0"
+                    >
+                      <Share2 size={16} />
+                    </button>
                     <ChevronRight size={16} className="text-gray-300" />
                   </div>
                 </div>

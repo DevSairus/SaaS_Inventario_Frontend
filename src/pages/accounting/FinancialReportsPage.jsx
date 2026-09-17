@@ -4,7 +4,7 @@ import { financialReportsAPI, SOURCE_TYPE_LABELS } from '../../api/accounting';
 import useBranchStore from '../../store/branchStore';
 import Layout from '../../components/layout/Layout';
 import toast from 'react-hot-toast';
-import { DocumentArrowDownIcon, TableCellsIcon } from '@heroicons/react/24/outline';
+import { DocumentArrowDownIcon, TableCellsIcon, InformationCircleIcon } from '@heroicons/react/24/outline';
 import { formatCurrency } from '../../utils/formatters';
 
 const toLocalDateString = (date) => {
@@ -290,7 +290,21 @@ const FinancialReportsPage = () => {
             </div>
             <table className="min-w-full divide-y divide-gray-200 dark:divide-white/10">
               <thead className="bg-gray-50 dark:bg-graphite-2">
-                <tr>{['Código', 'Cuenta', 'Periodo Actual', 'Periodo Anterior', 'Variación', 'Var %'].map((h) => <th key={h} className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-500 uppercase">{h}</th>)}</tr>
+                <tr>
+                  {['Código', 'Cuenta'].map((h) => <th key={h} className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-500 uppercase">{h}</th>)}
+                  {['Periodo Actual', 'Periodo Anterior'].map((h) => (
+                    <th key={h} className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-500 uppercase">
+                      <span
+                        className="inline-flex items-center gap-1 cursor-help"
+                        title="Saldo = débito − crédito, sin ajustar por naturaleza contable (balance de comprobación clásico). Por eso las cuentas de ingreso, pasivo y patrimonio -- de naturaleza crédito -- aparecen aquí en negativo aunque su saldo real sea positivo. Para ver el saldo con el signo habitual de negocio, consulta el Estado de Resultados o el Balance General."
+                      >
+                        {h}
+                        <InformationCircleIcon className="h-3.5 w-3.5 text-gray-400" />
+                      </span>
+                    </th>
+                  ))}
+                  {['Variación', 'Var %'].map((h) => <th key={h} className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-500 uppercase">{h}</th>)}
+                </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-white/10">
                 {data.accounts.length === 0 && <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-400 dark:text-gray-500">Sin movimientos en ninguno de los dos periodos</td></tr>}
