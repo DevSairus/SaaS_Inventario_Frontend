@@ -44,12 +44,14 @@ const NAV = [
       },
       { label: "Vehículos",             path: "/workshop/vehicles" },
       { label: "Agenda de citas",       path: "/workshop/appointments" },
-      { label: "Configurar horarios",   path: "/workshop/appointments/settings" },
+      // appointments.routes.js: GET /config solo admin/manager (ni siquiera super_admin).
+      { label: "Configurar horarios",   path: "/workshop/appointments/settings", roles: ["admin", "manager"] },
       { label: "Productividad",         path: "/workshop/productivity" },
       { label: "Reporte Taller",        path: "/workshop/report" },
       { label: "Liquidación Servicios", path: "/workshop/commission-settlements" },
       { label: "Comisiones Productos",  path: "/workshop/commission-products" },
-      { label: "Calibrar diagramas",    path: "/workshop/diagram-points-editor" },
+      // diagramTemplates.routes.js: PATCH /:id/points solo admin/super_admin.
+      { label: "Calibrar diagramas",    path: "/workshop/diagram-points-editor", roles: ["admin", "super_admin"] },
     ],
   },
   {
@@ -93,7 +95,11 @@ const NAV = [
   {
     id: "cartera", label: "Cartera", icon: "wallet", module: "receivables",
     children: [
-      { label: "Cuentas por Cobrar",   path: "/accounts-receivable" },
+      // Resumen/antigüedad de cartera -- accounts-receivable.routes.js solo
+      // permite admin/manager/accountant en /summary y /aging-report (el
+      // resto de rutas de ese módulo sí admite "seller", pero esta pantalla
+      // carga el resumen al entrar).
+      { label: "Cuentas por Cobrar",   path: "/accounts-receivable", roles: ["admin", "super_admin", "manager", "accountant"] },
       { label: "Anticipos",            path: "/customer-advances" },
       { label: "Antigüedad de Anticipos", path: "/customer-advance-alerts" },
       { label: "Devoluciones Clientes", path: "/sales/customer-returns" },
@@ -103,10 +109,14 @@ const NAV = [
   {
     id: "treasury", label: "Tesorería", icon: "bank", module: "treasury",
     children: [
-      { label: "Cuentas por Pagar",   path: "/accounts-payable" },
-      { label: "Gastos Operativos",   path: "/expenses" },
+      // accounts-payable/expenses/cashflow: admin/manager/accountant only en
+      // el backend -- "seller" no debe ver estas opciones (era el origen de
+      // los 403 al cargar el dashboard/menú).
+      { label: "Cuentas por Pagar",   path: "/accounts-payable", roles: ["admin", "super_admin", "manager", "accountant"] },
+      { label: "Gastos Operativos",   path: "/expenses", roles: ["admin", "super_admin", "manager", "accountant"] },
       { label: "Documentos Soporte DIAN", path: "/support-documents" },
-      { label: "Flujo de Caja",       path: "/cashflow" },
+      { label: "Flujo de Caja",       path: "/cashflow", roles: ["admin", "super_admin", "manager", "accountant"] },
+      // Cajas y Recibos sí admiten "seller" (cashSessions.routes.js / receipts.routes.js).
       { label: "Cajas",               path: "/cash-sessions" },
       { label: "Recibos",             path: "/receipts" },
     ],
@@ -126,6 +136,10 @@ const NAV = [
       { label: "Períodos Fiscales",    path: "/accounting/fiscal-periods" },
       { label: "Salud Contable",       path: "/accounting/health" },
       { label: "Saldos Iniciales",     path: "/accounting/opening-balances" },
+      { label: "Activos Fijos",        path: "/accounting/fixed-assets" },
+      { label: "Créditos",             path: "/accounting/loans" },
+      { label: "Cuentas Bancarias",    path: "/accounting/bank-accounts" },
+      { label: "Exógena DIAN",         path: "/accounting/exogena" },
     ],
   },
   {
@@ -167,7 +181,8 @@ const NAV = [
       { label: "Mis Tickets",     path: "/support/tickets" },
     ],
   },
-  { id: "users",    label: "Usuarios",  icon: "users", path: "/users" },
+  // user.routes.js: GET /users solo admin/super_admin/manager/seller.
+  { id: "users",    label: "Usuarios",  icon: "users", path: "/users", roles: ["admin", "super_admin", "manager", "seller"] },
   { id: "settings", label: "Ajustes",   icon: "gear",  path: "/settings" },
 ];
 
@@ -192,9 +207,15 @@ export default function Sidebar({ isCollapsed, setIsCollapsed, isMobileOpen, set
 
   // Un child con `module` propio (ej. "Integración Meta" bajo CRM) se
   // filtra aparte de su grupo -- el grupo puede estar habilitado (crm)
-  // mientras el sub-módulo específico no lo esté todavía.
+  // mientras el sub-módulo específico no lo esté todavía. Mismo criterio
+  // para `roles`: grupos como "Cartera" o "Tesorería" mezclan hijos con
+  // distinto permiso en el backend (ej. "Cajas"/"Recibos" sí son de
+  // vendedor, "Cuentas por Pagar"/"Gastos" no), así que el rol también se
+  // filtra por hijo, no solo a nivel de grupo.
   const visibleChildren = (item) =>
-    (item.children || []).filter((child) => hasModule(child.module));
+    (item.children || []).filter(
+      (child) => hasModule(child.module) && (!child.roles || child.roles.includes(user?.role))
+    );
 
   const childIsActive = (child) => {
     const base = currentPath === child.path || currentPath.startsWith(child.path + "/");

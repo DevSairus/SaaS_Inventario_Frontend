@@ -7,6 +7,7 @@ import { accountsReceivableAPI } from '../../api/accountsReceivable';
 import { exportReceivablesToExcel } from '../../utils/excelExport';
 import useCustomersStore from '../../store/customersStore';
 import useBranchStore from '../../store/branchStore';
+import useAuthStore from '../../store/authStore';
 import CustomerSearchInput from '../../components/common/CustomerSearchInput';
 import {
   ChartBarIcon,
@@ -139,7 +140,14 @@ const DateFilterBar = ({ dateMode, setDateMode, periodMonths, setPeriodMonths, c
 };
 
 // ─── Main Component ───────────────────────────────────────────────────────────
+// accounts-receivable/summary solo admin/manager/accountant (ver
+// accounts-receivable.routes.js) -- mismo criterio que RECEIVABLES_ROLES
+// en DashboardPage.jsx.
+const RECEIVABLES_ROLES = ['admin', 'super_admin', 'manager', 'accountant'];
+
 const ReportsPage = () => {
+  const { user } = useAuthStore();
+  const canSeeReceivables = RECEIVABLES_ROLES.includes(user?.role);
   const { customers, fetchCustomers } = useCustomersStore();
   const { branches, fetchBranches } = useBranchStore();
   const [tab, setTab] = useState('movements');
@@ -192,7 +200,9 @@ const ReportsPage = () => {
         reportsAPI.getValuation(),
         reportsAPI.getProfitReport(dateAndBranchParams),
         reportsAPI.getRotationReport(dateAndBranchParams),
-        accountsReceivableAPI.getSummary(cleanReceivablesFilters),
+        canSeeReceivables
+          ? accountsReceivableAPI.getSummary(cleanReceivablesFilters)
+          : Promise.reject({ response: { status: 403 }, message: 'No tienes permisos para ver la cartera' }),
         reportsAPI.getProfitabilityReport(dateAndBranchParams)
       ]);
 

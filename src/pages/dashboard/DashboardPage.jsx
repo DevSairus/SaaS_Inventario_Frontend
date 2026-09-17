@@ -132,6 +132,11 @@ const SUGGESTION_PRIORITY_STYLE = {
    'super_admin' siempre ve todo. */
 const SALES_FINANCE_ROLES = ['admin', 'manager', 'seller', 'accountant'];
 const INVENTORY_VALUE_ROLES = ['admin', 'manager', 'seller', 'warehouse_keeper', 'accountant'];
+// Cartera por cobrar (accounts-receivable/summary) NO incluye "seller" en el
+// backend (ver accounts-receivable.routes.js) -- a diferencia de las demás
+// cifras de venta, que sí. Antes se reutilizaba SALES_FINANCE_ROLES para
+// ambas cosas y un vendedor recibía un 403 en cada carga del dashboard.
+const RECEIVABLES_ROLES = ['admin', 'manager', 'accountant'];
 const roleCan = (role, allowed) => role === 'super_admin' || allowed.includes(role);
 
 const OT_STATUS = {
@@ -157,14 +162,15 @@ function DashboardPage() {
 
   const canSeeSalesFinance = roleCan(user?.role, SALES_FINANCE_ROLES);
   const canSeeInventoryValue = roleCan(user?.role, INVENTORY_VALUE_ROLES);
+  const canSeeReceivables = roleCan(user?.role, RECEIVABLES_ROLES);
 
   useEffect(() => {
     fetchAll(period);
     loadWorkshopStats();
-    // La cartera por cobrar es información financiera de ventas -- no tiene
-    // sentido pedirla (ni mostrarla) para roles que no la necesitan, como
-    // técnico o bodeguero.
-    if (canSeeSalesFinance) loadReceivableStats();
+    // La cartera por cobrar solo la puede consultar el backend para
+    // admin/manager/accountant (accounts-receivable.routes.js) -- pedirla
+    // para "seller" devuelve 403.
+    if (canSeeReceivables) loadReceivableStats();
     loadSuggestions();
     const t = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(t);
@@ -514,7 +520,7 @@ function DashboardPage() {
         </div>
 
         {/* ── Cartera ── (financiera/ventas, mismo criterio de rol que arriba) */}
-        {canSeeSalesFinance && receivableStats && (
+        {canSeeReceivables && receivableStats && (
           <div className="bg-white rounded-xl p-4 sm:p-5 shadow-sm border border-gray-100 dark:bg-graphite dark:border-white/10">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm sm:text-base font-semibold text-gray-800 dark:text-gray-100">Cartera por cobrar</h3>
