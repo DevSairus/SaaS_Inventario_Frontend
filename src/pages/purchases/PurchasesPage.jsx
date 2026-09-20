@@ -6,6 +6,7 @@ import { useSuppliersStore } from '../../store/suppliersStore';
 import useBranchStore from '../../store/branchStore';
 import Layout from '../../components/layout/Layout';
 import InvoiceImportModal from '../../components/purchases/InvoiceImportModal';
+import { formatDate } from '../../utils/formatters';
 import {
   PlusIcon,
   EyeIcon,
@@ -25,7 +26,10 @@ import {
 
 /* ─── helpers ─────────────────────────────────────────────── */
 const fmtCOP  = (v) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(v || 0);
-const fmtDate = (d) => d ? new Date(d).toLocaleDateString('es-CO', { year: 'numeric', month: 'short', day: 'numeric' }) : '—';
+// purchase_date es un campo "solo fecha" (medianoche UTC) -- se usa el
+// formatDate ya corregido de utils/formatters.js (ver comentario ahí),
+// no new Date(...).toLocaleDateString() que en UTC-5 muestra un día menos.
+const fmtDate = (d) => d ? formatDate(d) : '—';
 const normalizeQ = (s) => (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
 const STATUS = {

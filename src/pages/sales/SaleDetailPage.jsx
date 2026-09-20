@@ -28,6 +28,8 @@ import VoidSaleModal from '../../components/sales/VoidSaleModal';
 import CreditDebitNoteModal from '../../components/sales/CreditDebitNoteModal';
 import CompleteCustomerDianModal from '../../components/dian/CompleteCustomerDianModal';
 import { DianDetailPanel } from '../../components/dian/DianStatusBadge';
+import SaleRadianPanel from '../../components/sales/SaleRadianPanel';
+import SaleCirculationPanel from '../../components/sales/SaleCirculationPanel';
 import useTenantStore from '../../store/tenantStore';
 import toast from 'react-hot-toast';
 import DiagramMapEditor from '../../components/workshop/DiagramMapEditor';
@@ -490,6 +492,14 @@ export default function SaleDetailPage() {
                 setDianIncompleteModal({ customerId: data.customerId, missingFields: data.missingFields || [], paymentData: null })
               }
             />
+          </div>
+        )}
+
+        {/* ── Eventos RADIAN (solo facturas con CUFE) ── */}
+        {sale.document_type === 'factura' && sale.cufe && (
+          <div className="no-print space-y-4">
+            <SaleRadianPanel sale={sale} />
+            <SaleCirculationPanel sale={sale} onUpdate={() => fetchSaleById(id)} />
           </div>
         )}
 

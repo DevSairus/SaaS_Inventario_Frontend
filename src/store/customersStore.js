@@ -2,6 +2,7 @@
 import { create } from 'zustand';
 import toast from 'react-hot-toast';
 import customersApi from '../api/customers';
+import { notifyGoalMilestones } from './goalMilestoneStore';
 
 const useCustomersStore = create((set, get) => ({
   customers: [],
@@ -54,6 +55,12 @@ const useCustomersStore = create((set, get) => ({
         currentCustomer: response.data.data,
         loading: false 
       });
+      // Gamificación CRM §4 — creación de cliente (módulo Ventas) puede
+      // mover la métrica new_customers si el tenant tiene una meta activa;
+      // el backend solo anexa `gamification` cuando aplica (ver
+      // customers.controller.js → create), así que esto es un no-op para
+      // tenants sin CRM/gamificación.
+      notifyGoalMilestones(response.data.gamification);
       return response.data.data;
     } catch (error) {
       set({ 

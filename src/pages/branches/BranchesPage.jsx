@@ -150,7 +150,7 @@ const BranchesPage = () => {
     try {
       const [assignedRes, usersRes] = await Promise.all([
         branchesService.listUsers(branch.id),
-        usersAPI.getAll({ limit: 200 }),
+        usersAPI.getAll({ limit: 200, has_system_access: true }),
       ]);
       setAssignedUsers(assignedRes.data || []);
       setTenantUsers(usersRes.data?.users || []);

@@ -21,7 +21,7 @@ export const usePurchasesStore = create((set, get) => ({
     start_date: '',
     end_date: '',
     branch_id: '',
-    sort_by: 'purchase_date',
+    sort_by: 'purchase_number',
     sort_order: 'DESC'
   },
 

@@ -324,6 +324,11 @@ export default function WorkOrderDetailPage() {
           vehicleParams.applies_to_line = order.vehicle.model;
           if (order.vehicle.year) vehicleParams.applies_to_year = order.vehicle.year;
         }
+        // La OT ya existe (siempre es el caso en esta página): que no se
+        // reste a sí misma del disponible real (cantidad en trámite).
+        if (id) {
+          vehicleParams.exclude_work_order_id = id;
+        }
         let results = await searchProducts(searchTerm, vehicleParams);
         results = Array.isArray(results) ? results : [];
 
@@ -1070,6 +1075,11 @@ export default function WorkOrderDetailPage() {
                                     ? <span className="text-purple-600">Servicio</span>
                                     : <span className={p.current_stock > 0 ? 'text-green-600' : 'text-red-500'}>
                                         Stock: {p.current_stock || 0}
+                                        {p.in_process_qty > 0 && (
+                                          <span className="text-amber-600">
+                                            {' '}· En trámite: {parseFloat(p.in_process_qty)} · Disp.: {parseFloat(p.available_real ?? (p.current_stock - p.in_process_qty))}
+                                          </span>
+                                        )}
                                       </span>
                                   }
                                   {p._equivalentsWithStock > 0 && (
@@ -1197,7 +1207,7 @@ export default function WorkOrderDetailPage() {
                           >
                             <div>
                               <p className="text-sm font-medium text-gray-900">{alt.name}</p>
-                              <p className="text-xs text-gray-500">{alt.sku} · Stock: <span className="text-green-600 font-medium">{alt.available_stock}</span></p>
+                              <p className="text-xs text-gray-500">{alt.sku} · Stock: <span className="text-green-600 font-medium">{alt.available_real ?? alt.available_stock}</span></p>
                             </div>
                             <span className="text-xs font-medium text-blue-600">Seleccionar</span>
                           </button>
@@ -1247,6 +1257,11 @@ export default function WorkOrderDetailPage() {
                           {item.approval_status === 'rechazado' && (
                             <span className="text-xs px-1.5 py-0.5 rounded font-medium bg-red-100 text-red-700">
                               Rechazado por el cliente
+                            </span>
+                          )}
+                          {item.commission_category && (
+                            <span className="text-xs px-1.5 py-0.5 rounded font-medium bg-teal-100 text-teal-700">
+                              {item.commission_category.name} · {item.commission_category.default_percentage}%
                             </span>
                           )}
                         </div>

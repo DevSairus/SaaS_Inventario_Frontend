@@ -6,6 +6,7 @@ import AppointmentNotificationsBell from '../common/AppointmentNotificationsBell
 import QuoteNotificationsBell from '../common/QuoteNotificationsBell';
 import BranchSelector from './BranchSelector';
 import NexaChatWidget from '../common/NexaChatWidget';
+import GoalMilestoneCelebration from '../crm/GoalMilestoneCelebration';
 import { useTicketNotifications } from '../../hooks/useTicketNotifications';
 import { useQuoteNotifications } from '../../hooks/useQuoteNotifications';
 import { useAppointmentNotifications } from '../../hooks/useAppointmentNotifications';
@@ -149,6 +150,7 @@ function Layout({ children }) {
       </div>
 
       <NexaChatWidget />
+      <GoalMilestoneCelebration />
     </div>
   );
 }

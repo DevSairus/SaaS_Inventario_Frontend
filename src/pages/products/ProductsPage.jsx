@@ -529,6 +529,14 @@ function ProductsPage() {
                               Mín: {parseFloat(product.min_stock)} {product.unit}
                             </div>
                           )}
+                          {product.in_process_qty > 0 && (
+                            <div
+                              className="text-xs text-amber-600 mt-1 dark:text-amber-400 cursor-help"
+                              title="Cantidad comprometida por ventas en borrador u órdenes de trabajo aprobadas que aún no se descuentan del stock. Disponible real = Stock − En trámite."
+                            >
+                              En trámite: {parseFloat(product.in_process_qty)} · Disp.: {parseFloat(product.available_real ?? (product.current_stock - product.in_process_qty))}
+                            </div>
+                          )}
                         </td>
                         <td className="px-6 py-4">
                           <div className="text-sm font-medium text-gray-900 dark:text-gray-100">

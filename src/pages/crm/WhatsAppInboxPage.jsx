@@ -269,7 +269,7 @@ export default function WhatsAppInboxPage() {
 
   useEffect(() => {
     if (canAssignOthers) {
-      usersAPI.getAll({ limit: 200, is_active: true })
+      usersAPI.getAll({ limit: 200, is_active: true, has_system_access: true })
         .then((res) => setAdvisors((res.data?.users || []).filter((u) => !['technician'].includes(u.role))))
         .catch(() => {});
     }

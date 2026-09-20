@@ -35,6 +35,104 @@ export const accountingHealthAPI = {
     (await api.post('/accounting/health/missing-entries/generate-all', { items })).data,
 };
 
+export const fixedAssetsAPI = {
+  getAll: async (params = {}) => (await api.get('/accounting/fixed-assets', { params })).data,
+  getById: async (id) => (await api.get(`/accounting/fixed-assets/${id}`)).data,
+  getReport: async (params = {}) => (await api.get('/accounting/fixed-assets/report', { params })).data,
+  create: async (payload) => (await api.post('/accounting/fixed-assets', payload)).data,
+  update: async (id, payload) => (await api.put(`/accounting/fixed-assets/${id}`, payload)).data,
+  dispose: async (id, payload) => (await api.post(`/accounting/fixed-assets/${id}/dispose`, payload)).data,
+  runDepreciation: async (period) => (await api.post('/accounting/fixed-assets/run-depreciation', period ? { period } : {})).data,
+};
+
+export const FIXED_ASSET_CATEGORY_LABELS = {
+  vehiculo: 'Vehículo',
+  maquinaria: 'Maquinaria',
+  equipo_computo: 'Equipo de Cómputo',
+  muebles_enseres: 'Muebles y Enseres',
+  otro: 'Otro',
+};
+
+export const loansAPI = {
+  getAll: async (params = {}) => (await api.get('/accounting/loans', { params })).data,
+  getById: async (id) => (await api.get(`/accounting/loans/${id}`)).data,
+  getReport: async () => (await api.get('/accounting/loans/report')).data,
+  create: async (payload) => (await api.post('/accounting/loans', payload)).data,
+  payInstallment: async (loanId, installmentId, payload) => (await api.post(`/accounting/loans/${loanId}/installments/${installmentId}/pay`, payload)).data,
+};
+
+export const LOAN_TYPE_LABELS = {
+  bancario: 'Bancario',
+  tercero: 'Con Tercero',
+};
+
+// Conciliación Bancaria (Fase 3 del plan de Contabilidad Pitbox).
+export const bankAccountsAPI = {
+  getAll: async (params = {}) => (await api.get('/accounting/bank-accounts', { params })).data,
+  getById: async (id) => (await api.get(`/accounting/bank-accounts/${id}`)).data,
+  create: async (payload) => (await api.post('/accounting/bank-accounts', payload)).data,
+  update: async (id, payload) => (await api.put(`/accounting/bank-accounts/${id}`, payload)).data,
+
+  // Import: multipart/form-data. `columnMapping`/`amountFormat` solo hacen
+  // falta la primera vez que se ve el layout de un banco (si ya hay
+  // plantilla guardada para la firma detectada, se aplica sola).
+  previewImport: async (bankAccountId, file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return (await api.post(`/accounting/bank-accounts/${bankAccountId}/import/preview`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })).data;
+  },
+  runImport: async (bankAccountId, file, { columnMapping, dateFormat, amountFormat } = {}) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    if (columnMapping) formData.append('column_mapping', JSON.stringify(columnMapping));
+    if (dateFormat) formData.append('date_format', dateFormat);
+    if (amountFormat) formData.append('amount_format', JSON.stringify(amountFormat));
+    return (await api.post(`/accounting/bank-accounts/${bankAccountId}/import`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })).data;
+  },
+
+  getReconciliation: async (bankAccountId, params = {}) =>
+    (await api.get(`/accounting/bank-accounts/${bankAccountId}/reconciliation`, { params })).data,
+  runAutoMatch: async (bankAccountId, toleranceDays) =>
+    (await api.post(`/accounting/bank-accounts/${bankAccountId}/reconciliation/run-auto-match`, toleranceDays ? { tolerance_days: toleranceDays } : {})).data,
+  matchManually: async (bankAccountId, txId, journalEntryLineId) =>
+    (await api.post(`/accounting/bank-accounts/${bankAccountId}/reconciliation/${txId}/match`, { journal_entry_line_id: journalEntryLineId })).data,
+  unmatch: async (bankAccountId, txId) =>
+    (await api.post(`/accounting/bank-accounts/${bankAccountId}/reconciliation/${txId}/unmatch`)).data,
+  ignore: async (bankAccountId, txId) =>
+    (await api.post(`/accounting/bank-accounts/${bankAccountId}/reconciliation/${txId}/ignore`)).data,
+};
+
+export const RECONCILIATION_STATUS_LABELS = {
+  pendiente: { label: 'Pendiente', className: 'bg-amber-100 text-amber-800' },
+  conciliada: { label: 'Conciliada', className: 'bg-green-100 text-green-800' },
+  ignorada: { label: 'Ignorada', className: 'bg-gray-200 text-gray-700' },
+};
+
+// Información Exógena DIAN (Fase 4 del plan de Contabilidad Pitbox).
+export const exogenaAPI = {
+  getFormats: async () => (await api.get('/accounting/exogena/formats')).data,
+  toggleFormat: async (code, isEnabled) => (await api.put(`/accounting/exogena/formats/${code}`, { is_enabled: isEnabled })).data,
+  getConcepts: async (code, year) => (await api.get(`/accounting/exogena/formats/${code}/concepts`, { params: { year } })).data,
+  saveConcepts: async (code, mappings) => (await api.put(`/accounting/exogena/formats/${code}/concepts`, { mappings })).data,
+  getReadiness: async (code, year) => (await api.get(`/accounting/exogena/formats/${code}/readiness`, { params: { year } })).data,
+  generate: async (code, year) => api.get(`/accounting/exogena/formats/${code}/generate`, { params: { year }, responseType: 'blob' }),
+
+  getManualRecords: async (formatCode, year) =>
+    (await api.get('/accounting/exogena/manual-records', { params: { format_code: formatCode, year } })).data,
+  createManualRecord: async (payload) => (await api.post('/accounting/exogena/manual-records', payload)).data,
+  updateManualRecord: async (id, payload) => (await api.put(`/accounting/exogena/manual-records/${id}`, payload)).data,
+  deleteManualRecord: async (id) => (await api.delete(`/accounting/exogena/manual-records/${id}`)).data,
+
+  getShareholders: async (year) => (await api.get('/accounting/exogena/shareholders', { params: { year } })).data,
+  createShareholder: async (payload) => (await api.post('/accounting/exogena/shareholders', payload)).data,
+  updateShareholder: async (id, payload) => (await api.put(`/accounting/exogena/shareholders/${id}`, payload)).data,
+  deleteShareholder: async (id) => (await api.delete(`/accounting/exogena/shareholders/${id}`)).data,
+};
+
 export const fiscalPeriodsAPI = {
   getAll: async (params = {}) => (await api.get('/accounting/fiscal-periods', { params })).data,
   close: async (id) => (await api.patch(`/accounting/fiscal-periods/${id}/close`)).data,

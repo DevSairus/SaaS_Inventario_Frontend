@@ -5,6 +5,7 @@ import CrmSubNav from '../../components/crm/CrmSubNav';
 import FollowUpMiniCalendar from '../../components/crm/FollowUpMiniCalendar';
 import crmApi from '../../api/crm';
 import customersApi from '../../api/customers';
+import { notifyGoalMilestones } from '../../store/goalMilestoneStore';
 import { usersAPI } from '../../api/users';
 import useAuthStore from '../../store/authStore';
 import useTenantStore from '../../store/tenantStore';
@@ -169,7 +170,7 @@ export default function FollowUpsPage() {
     }
     if (canAssignOthers && advisors.length === 0) {
       try {
-        const res = await usersAPI.getAll({ limit: 200, is_active: true });
+        const res = await usersAPI.getAll({ limit: 200, is_active: true, has_system_access: true });
         setAdvisors((res.data?.users || []).filter(u => !['technician'].includes(u.role)));
       } catch { /* idem */ }
     }
@@ -207,8 +208,10 @@ export default function FollowUpsPage() {
   const handleComplete = async (id) => {
     setBusyId(id);
     try {
-      await crmApi.completeFollowUp(id);
+      const res = await crmApi.completeFollowUp(id);
       toast.success('Tarea marcada como hecha');
+      // Gamificación §4 — followup_completed puede mover followups_completed.
+      notifyGoalMilestones(res.data.gamification);
       refreshAfterAction();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Error al actualizar la tarea');

@@ -76,5 +76,12 @@ export const productsAPI = {
   deleteImage: async (id) => {
     const response = await api.delete(`/products/${id}/image`);
     return response.data;
+  },
+
+  // Documentos que comprometen actualmente el stock del producto (ventas en
+  // borrador y OT aprobadas sin aplicar) — ver "cantidad en trámite".
+  getInProcess: async (id) => {
+    const response = await api.get(`/products/${id}/in-process`);
+    return response.data;
   }
 };

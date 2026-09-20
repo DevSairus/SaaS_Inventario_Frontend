@@ -20,6 +20,7 @@ import Button from '../../components/common/Button';
 import CustomerSearchInput from '../../components/common/CustomerSearchInput';
 import toast from 'react-hot-toast';
 import confetti from 'canvas-confetti';
+import { notifyGoalMilestones } from '../../store/goalMilestoneStore';
 import {
   DndContext, DragOverlay, useDraggable, useDroppable,
   PointerSensor, TouchSensor, useSensor, useSensors, closestCenter,
@@ -406,7 +407,7 @@ export default function PipelinePage() {
 
   useEffect(() => {
     if (canFilterTeam) {
-      usersAPI.getAll({ limit: 200, is_active: true })
+      usersAPI.getAll({ limit: 200, is_active: true, has_system_access: true })
         .then(res => setAdvisors((res.data?.users || []).filter(u => !['technician'].includes(u.role))))
         .catch(() => {});
     }
@@ -517,6 +518,8 @@ export default function PipelinePage() {
         const res = await customersApi.create(newCustomerForm);
         customerId = res.data.data.id;
         setCustomers(c => [...c, res.data.data]);
+        // Gamificación §4 — customer_created puede mover new_customers.
+        notifyGoalMilestones(res.data.gamification);
       }
 
       await crmApi.createOpportunity({
@@ -535,11 +538,15 @@ export default function PipelinePage() {
 
   const moveStage = async (opportunity, stage, lost_reason) => {
     try {
-      await crmApi.updateOpportunityStage(opportunity.id, { stage, lost_reason });
+      const res = await crmApi.updateOpportunityStage(opportunity.id, { stage, lost_reason });
       setOpportunities(prev => prev.map(o => o.id === opportunity.id ? { ...o, stage, lost_reason: lost_reason || null } : o));
       if (stageTypeByKey[stage] === 'won') {
         celebrateWin();
         toast.success('🎉 ¡Oportunidad ganada! Bien hecho.', { duration: 4000 });
+        // Gamificación §4 — si el cierre cruzó un milestone de alguna meta
+        // activa, el banner de celebración se encarga de mostrarlo (no
+        // reemplaza el toast de arriba, es un reconocimiento aparte).
+        notifyGoalMilestones(res.data.gamification);
       }
     } catch (err) {
       toast.error(err.response?.data?.message || 'No se pudo mover la oportunidad');

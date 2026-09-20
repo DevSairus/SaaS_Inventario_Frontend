@@ -11,6 +11,7 @@ import VehicleApplicationsSection from '../../components/products/VehicleApplica
 import MovementsSection from '../../components/products/MovementsSection';
 import { ArrowLeft, Package, Users, Truck, Car, Activity, Edit3, ZoomIn } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { productsAPI } from '../../api/products';
 
 const COP = (n) =>
   new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(n || 0);
@@ -30,11 +31,31 @@ export default function ProductDetailPage() {
   const [activeTab, setActiveTab] = useState('general');
   const [showEditModal, setShowEditModal] = useState(false);
   const [showImageViewer, setShowImageViewer] = useState(false);
+  const [showInProcess, setShowInProcess] = useState(false);
+  const [inProcessDocs, setInProcessDocs] = useState(null);
+  const [inProcessLoading, setInProcessLoading] = useState(false);
 
   useEffect(() => {
     if (id) fetchProductById(id);
     fetchCategories();
   }, [id, fetchProductById, fetchCategories]);
+
+  const toggleInProcess = async () => {
+    const next = !showInProcess;
+    setShowInProcess(next);
+    if (next && inProcessDocs === null && id) {
+      setInProcessLoading(true);
+      try {
+        const { data } = await productsAPI.getInProcess(id);
+        setInProcessDocs(data || []);
+      } catch (err) {
+        toast.error('No se pudo cargar el detalle de cantidad en trámite');
+        setInProcessDocs([]);
+      } finally {
+        setInProcessLoading(false);
+      }
+    }
+  };
 
   if (isLoading && !product) {
     return (
@@ -202,13 +223,90 @@ export default function ProductDetailPage() {
                 <DetailRow label="Margen" value={`${product.profit_margin_percentage || 0}%`} />
                 <DetailRow label="Stock actual" value={product.current_stock} />
                 <DetailRow label="Stock reservado" value={product.reserved_stock} />
-                <DetailRow label="Stock disponible" value={product.available_stock} />
+                <DetailRow
+                  label="En trámite"
+                  value={parseFloat(product.in_process_qty || 0)}
+                  hint="Comprometido por ventas en borrador u órdenes de trabajo aprobadas que aún no se descuentan del stock"
+                />
+                <DetailRow
+                  label="Disponible real"
+                  value={product.available_real ?? (product.current_stock - (product.in_process_qty || 0))}
+                  hint="Stock actual menos la cantidad en trámite"
+                />
                 <DetailRow label="Punto de reorden" value={product.reorder_point || '—'} />
                 <DetailRow label="Stock mínimo" value={product.min_stock || '—'} />
                 <DetailRow label="Stock máximo" value={product.max_stock || '—'} />
                 <DetailRow label="Permitir stock negativo" value={product.allow_negative_stock ? 'Sí' : 'No'} />
               </div>
             </div>
+            {product.in_process_qty > 0 && (
+              <div className="mt-6 pt-4 border-t border-gray-100">
+                <button
+                  type="button"
+                  onClick={toggleInProcess}
+                  className="w-full flex items-center justify-between text-left"
+                >
+                  <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
+                    Documentos en trámite ({parseFloat(product.in_process_qty)})
+                  </h3>
+                  <svg
+                    className={`w-4 h-4 text-gray-400 shrink-0 transition-transform ${showInProcess ? 'rotate-180' : ''}`}
+                    fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                {showInProcess && (
+                  <div className="mt-3">
+                    {inProcessLoading ? (
+                      <p className="text-sm text-gray-500">Cargando...</p>
+                    ) : !inProcessDocs || inProcessDocs.length === 0 ? (
+                      <p className="text-sm text-gray-500">No hay documentos que comprometan este producto.</p>
+                    ) : (
+                      <table className="min-w-full text-sm">
+                        <thead>
+                          <tr className="text-left text-gray-500">
+                            <th className="py-1 pr-4 font-medium">Documento</th>
+                            <th className="py-1 pr-4 font-medium">Cliente</th>
+                            <th className="py-1 pr-4 font-medium">Cantidad</th>
+                            <th className="py-1 pr-4 font-medium">Estado</th>
+                            <th className="py-1 pr-4 font-medium">Fecha</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                          {inProcessDocs.map((doc, idx) => (
+                            <tr key={`${doc.tipo}-${doc.id}-${idx}`}>
+                              <td className="py-1.5 pr-4">
+                                <button
+                                  type="button"
+                                  onClick={() => navigate(
+                                    doc.tipo === 'venta'
+                                      ? `/sales/${doc.id}`
+                                      : `/workshop/work-orders/${doc.id}`
+                                  )}
+                                  className="text-blue-600 hover:underline font-medium"
+                                >
+                                  {doc.numero || doc.id}
+                                </button>
+                                <span className="ml-1 text-xs text-gray-400">
+                                  ({doc.tipo === 'venta' ? 'Venta' : 'OT'})
+                                </span>
+                              </td>
+                              <td className="py-1.5 pr-4 text-gray-700">{doc.cliente || '—'}</td>
+                              <td className="py-1.5 pr-4 text-gray-700">{parseFloat(doc.cantidad || 0)}</td>
+                              <td className="py-1.5 pr-4 text-gray-700">{doc.estado || '—'}</td>
+                              <td className="py-1.5 pr-4 text-gray-700">
+                                {doc.fecha ? new Date(doc.fecha).toLocaleDateString('es-CO') : '—'}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
             {(product.has_tax || product.tax_config) && (
               <div className="mt-6 pt-4 border-t border-gray-100 space-y-4">
                 <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Impuestos</h3>
@@ -252,10 +350,10 @@ export default function ProductDetailPage() {
   );
 }
 
-function DetailRow({ label, value, mono = false }) {
+function DetailRow({ label, value, mono = false, hint = null }) {
   return (
     <div className="flex justify-between items-baseline">
-      <span className="text-sm text-gray-500">{label}</span>
+      <span className="text-sm text-gray-500" title={hint || undefined}>{label}</span>
       <span className={`text-sm font-medium text-gray-900 ${mono ? 'font-mono' : ''}`}>{value}</span>
     </div>
   );

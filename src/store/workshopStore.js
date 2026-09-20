@@ -157,6 +157,13 @@ const useWorkshopStore = create((set, get) => ({
       toast.success('Ítem agregado a la OT');
       await get().fetchOrder(id);
     }
+    // Advertencia no bloqueante: la cantidad agregada supera el disponible
+    // real (otros documentos en trámite ya comprometen unidades) -- el
+    // ítem ya quedó agregado, esto es solo informativo.
+    const warnings = res?.data?.warnings || res?.data?.data?.warnings;
+    if (Array.isArray(warnings)) {
+      warnings.forEach((w) => toast(w.message || w, { icon: '⚠️', duration: 6000 }));
+    }
     return res?.data?.data;
   },
 

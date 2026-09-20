@@ -1,16 +1,28 @@
 import { useState, useEffect } from 'react';
 import Modal from '../common/Modal';
+import { commissionCategoriesApi } from '../../api/workshop';
 
 function CategoryFormModal({ isOpen, onClose, onSave, category, categories }) {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
     parent_id: '',
-    is_active: true
+    is_active: true,
+    commission_category_id: ''
   });
 
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [commissionCategories, setCommissionCategories] = useState([]);
+
+  // Categorías de comisión (Frenos, Suspensión...) para el mapeo de mano de
+  // obra -- ver plan-comisiones-tecnicos-por-sistema.md sección 4.1.
+  useEffect(() => {
+    if (!isOpen) return;
+    commissionCategoriesApi.list()
+      .then(r => setCommissionCategories(r.data.data || []))
+      .catch(() => {});
+  }, [isOpen]);
 
   // Cargar datos cuando se abre el modal para editar
   useEffect(() => {
@@ -19,14 +31,16 @@ function CategoryFormModal({ isOpen, onClose, onSave, category, categories }) {
         name: category.name || '',
         description: category.description || '',
         parent_id: category.parent_id || '',
-        is_active: category.is_active !== undefined ? category.is_active : true
+        is_active: category.is_active !== undefined ? category.is_active : true,
+        commission_category_id: category.commission_category_id || ''
       });
     } else {
       setFormData({
         name: '',
         description: '',
         parent_id: '',
-        is_active: true
+        is_active: true,
+        commission_category_id: ''
       });
     }
     setErrors({});
@@ -82,7 +96,8 @@ function CategoryFormModal({ isOpen, onClose, onSave, category, categories }) {
       name: formData.name.trim(),
       description: formData.description.trim() || null,
       parent_id: formData.parent_id || null,
-      is_active: formData.is_active
+      is_active: formData.is_active,
+      commission_category_id: formData.commission_category_id || null
     };
 
     await onSave(dataToSend);
@@ -218,6 +233,31 @@ function CategoryFormModal({ isOpen, onClose, onSave, category, categories }) {
           )}
           <p className="mt-1 text-xs text-gray-500">
             Si seleccionas una categoría padre, esta será una subcategoría
+          </p>
+        </div>
+
+        {/* Categoría de comisión (mano de obra) */}
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-2">
+            Categoría de comisión (Opcional)
+          </label>
+          <select
+            name="commission_category_id"
+            value={formData.commission_category_id}
+            onChange={handleChange}
+            className="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-all border-gray-300 focus:ring-purple-200 focus:border-purple-500"
+            disabled={isSubmitting}
+          >
+            <option value="">Sin categoría de comisión (usa "Otros")</option>
+            {commissionCategories.map((cc) => (
+              <option key={cc.id} value={cc.id}>
+                {cc.name} ({cc.default_percentage}%)
+              </option>
+            ))}
+          </select>
+          <p className="mt-1 text-xs text-gray-500">
+            Si esta categoría de catálogo es un servicio (ej. "Frenos"), mapeala a su categoría de
+            comisión para que el técnico gane el % correcto al agregarla a una OT.
           </p>
         </div>
 

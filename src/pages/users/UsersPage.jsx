@@ -30,7 +30,7 @@ const UsersPage = () => {
   // ── todos los hooks deben ir ANTES de cualquier return condicional ──
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
-  const [filters, setFilters] = useState({ role: '', is_active: undefined });
+  const [filters, setFilters] = useState({ role: '', is_active: undefined, has_system_access: undefined });
   const [showFilters, setShowFilters] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState({
     open: false,
@@ -209,6 +209,21 @@ const UsersPage = () => {
                   <option value="false">Inactivo</option>
                 </select>
               </div>
+
+              <div>
+                <label className="label">Acceso al sistema</label>
+                <select
+                  value={filters.has_system_access || ''}
+                  onChange={(e) =>
+                    handleFilterChange('has_system_access', e.target.value)
+                  }
+                  className="input"
+                >
+                  <option value="">Todos</option>
+                  <option value="true">Con acceso</option>
+                  <option value="false">Sin acceso</option>
+                </select>
+              </div>
             </div>
           )}
         </div>
@@ -263,15 +278,20 @@ const UsersPage = () => {
                               {user.first_name} {user.last_name}
                             </div>
                             <div className="text-sm text-gray-500">
-                              {user.email}
+                              {user.has_system_access === false ? '—' : user.email}
                             </div>
                           </div>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <Badge color={roleColors[user.role]}>
-                          {roleLabels[user.role]}
-                        </Badge>
+                        <div className="flex items-center gap-2">
+                          <Badge color={roleColors[user.role]}>
+                            {roleLabels[user.role]}
+                          </Badge>
+                          {user.has_system_access === false && (
+                            <Badge color="gray">Sin acceso</Badge>
+                          )}
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-gray-900">

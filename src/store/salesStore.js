@@ -59,15 +59,21 @@ const useSalesStore = create((set, get) => ({
     set({ loading: true, error: null });
     try {
       const response = await salesApi.create(data);
-      set({ 
-        currentSale: response.data.data, 
-        loading: false 
+      set({
+        currentSale: response.data.data,
+        loading: false
       });
+      // Advertencia no bloqueante del backend (p.ej. cantidad en trámite que
+      // supera el disponible real de algún producto) — la venta ya se creó.
+      const warnings = response.data.warnings || response.data.data?.warnings;
+      if (Array.isArray(warnings)) {
+        warnings.forEach((w) => toast(w.message || w, { icon: '⚠️', duration: 6000 }));
+      }
       return response.data.data;
     } catch (error) {
-      set({ 
-        error: error.response?.data?.message || 'Error creando venta', 
-        loading: false 
+      set({
+        error: error.response?.data?.message || 'Error creando venta',
+        loading: false
       });
       throw error;
     }
@@ -158,22 +164,26 @@ const useSalesStore = create((set, get) => ({
     set({ loading: true, error: null });
     try {
       const response = await salesApi.update(id, data);
-      
-      const updatedSales = get().sales.map(sale => 
+
+      const updatedSales = get().sales.map(sale =>
         sale.id === id ? response.data.data : sale
       );
-      
-      set({ 
+
+      set({
         sales: updatedSales,
         currentSale: response.data.data,
-        loading: false 
+        loading: false
       });
-      
+
+      const warnings = response.data.warnings || response.data.data?.warnings;
+      if (Array.isArray(warnings)) {
+        warnings.forEach((w) => toast(w.message || w, { icon: '⚠️', duration: 6000 }));
+      }
       return response.data.data;
     } catch (error) {
-      set({ 
-        error: error.response?.data?.message || 'Error actualizando venta', 
-        loading: false 
+      set({
+        error: error.response?.data?.message || 'Error actualizando venta',
+        loading: false
       });
       throw error;
     }

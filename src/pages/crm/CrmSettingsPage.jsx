@@ -1,8 +1,9 @@
 import { useEffect, useState, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import Layout from '../../components/layout/Layout';
 import CrmSubNav from '../../components/crm/CrmSubNav';
 import crmApi from '../../api/crm';
-import { Settings, Plus, Pencil, Trash2, ArrowUp, ArrowDown, MessageSquare, Zap, Power, GripVertical } from 'lucide-react';
+import { Settings, Plus, Pencil, Trash2, ArrowUp, ArrowDown, MessageSquare, Zap, Power, GripVertical, Trophy, X } from 'lucide-react';
 import Modal from '../../components/common/Modal';
 import Input from '../../components/common/Input';
 import Button from '../../components/common/Button';
@@ -30,11 +31,32 @@ const ACTION_TYPE_LABELS = {
   assign_round_robin: 'Asignar por ronda entre vendedores',
 };
 
+// Gamificación — catálogo cerrado de assets visuales (§5.1). El set real de
+// íconos/ilustraciones se define en Fase 3 (GoalPathWidget.jsx); acá solo
+// se guarda la clave para que el admin la elija de antemano.
+const ICON_STYLE_OPTIONS = [
+  { key: 'rocket', label: 'Cohete' },
+  { key: 'flag', label: 'Bandera de meta' },
+  { key: 'trophy', label: 'Trofeo' },
+  { key: 'star', label: 'Estrella' },
+  { key: 'car', label: 'Vehículo' },
+];
+
+const GOAL_TYPE_LABELS = { principal: 'Principal', secundaria: 'Secundaria' };
+const SCOPE_LABELS = { individual: 'Por vendedor', branch: 'Por sede', tenant: 'Todo el negocio' };
+const PERIOD_TYPE_LABELS = { weekly: 'Semanal', monthly: 'Mensual', custom: 'Fechas manuales' };
+const BOARD_VISIBILITY_LABELS = {
+  own_only: 'Cada quien ve solo lo suyo',
+  team: 'El equipo ve el tablero de su(s) sede(s)',
+  all: 'Todos ven el tablero completo',
+};
+
 const TABS = [
   { key: 'stages', label: 'Etapas' },
   { key: 'reasons', label: 'Motivos de pérdida' },
   { key: 'templates', label: 'Plantillas' },
   { key: 'automations', label: 'Automatizaciones' },
+  { key: 'goals', label: 'Metas' },
 ];
 
 function SortableStageRow({ s, i, total, onMove, onEdit, onDelete }) {
@@ -714,8 +736,348 @@ function AutomationRulesTab() {
   );
 }
 
+// ── Gamificación — configuración de visibilidad del tablero (§3.5, §5.3) ──
+function GamificationSettingsPanel({ settings, onSaved }) {
+  const [form, setForm] = useState({
+    board_visibility: settings?.board_visibility || 'own_only',
+    enabled: settings?.enabled ?? true,
+  });
+  const [saving, setSaving] = useState(false);
+  const dirty = form.board_visibility !== settings?.board_visibility || form.enabled !== settings?.enabled;
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const res = await crmApi.updateGamificationSettings(form);
+      toast.success('Configuración de gamificación actualizada');
+      onSaved(res.data.data);
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Error al guardar la configuración');
+    } finally { setSaving(false); }
+  };
+
+  return (
+    <div className="bg-white dark:bg-graphite border border-gray-100 dark:border-white/10 rounded-xl p-4 space-y-4">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200">Gamificación</h3>
+          <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+            Quién puede ver el tablero de los demás — el administrador siempre ve todo, sin importar esta opción.
+          </p>
+        </div>
+        <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 flex-shrink-0">
+          <input type="checkbox" checked={form.enabled}
+            onChange={e => setForm(f => ({ ...f, enabled: e.target.checked }))} />
+          Activada
+        </label>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Visibilidad del tablero</label>
+        <select value={form.board_visibility} disabled={!form.enabled}
+          onChange={e => setForm(f => ({ ...f, board_visibility: e.target.value }))}
+          className="w-full sm:w-96 border border-gray-300 dark:border-white/10 dark:bg-graphite-2 dark:text-gray-100 rounded-lg px-3 py-2 disabled:opacity-50">
+          {Object.entries(BOARD_VISIBILITY_LABELS).map(([k, label]) => <option key={k} value={k}>{label}</option>)}
+        </select>
+      </div>
+
+      {dirty && (
+        <div className="flex justify-end pt-2 border-t dark:border-white/10">
+          <Button variant="primary" size="sm" onClick={handleSave} disabled={saving}>
+            {saving ? 'Guardando...' : 'Guardar cambios'}
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MilestonesEditor({ milestones, onChange }) {
+  const update = (i, field, value) => {
+    const next = [...milestones];
+    next[i] = { ...next[i], [field]: value };
+    onChange(next);
+  };
+  const add = () => onChange([...milestones, { percent: '', message: '' }]);
+  const remove = (i) => onChange(milestones.filter((_, idx) => idx !== i));
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-1">
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Hitos</label>
+        <button type="button" onClick={add} className="text-xs text-accent hover:underline flex items-center gap-1">
+          <Plus size={12} /> Agregar hito
+        </button>
+      </div>
+      <p className="text-xs text-gray-400 dark:text-gray-500 mb-2">
+        Al cruzar cada porcentaje se dispara la celebración con este mensaje.
+      </p>
+      <div className="space-y-2">
+        {milestones.map((m, i) => (
+          <div key={i} className="flex items-center gap-2">
+            <input type="number" min="1" max="500" value={m.percent}
+              onChange={e => update(i, 'percent', e.target.value === '' ? '' : parseInt(e.target.value, 10))}
+              placeholder="%" className="w-16 border border-gray-300 dark:border-white/10 dark:bg-graphite-2 dark:text-gray-100 rounded-lg px-2 py-1.5 text-sm" />
+            <input type="text" value={m.message}
+              onChange={e => update(i, 'message', e.target.value)}
+              placeholder="Ej: 🏆 ¡Vas a mitad de camino!"
+              className="flex-1 border border-gray-300 dark:border-white/10 dark:bg-graphite-2 dark:text-gray-100 rounded-lg px-3 py-1.5 text-sm" />
+            <button type="button" onClick={() => remove(i)} className="p-1 text-gray-300 hover:text-red-500 flex-shrink-0"><X size={14} /></button>
+          </div>
+        ))}
+        {milestones.length === 0 && <p className="text-xs text-gray-300 dark:text-gray-600">Sin hitos configurados todavía</p>}
+      </div>
+    </div>
+  );
+}
+
+const emptyGoalForm = {
+  name: '', goal_type: 'secundaria', metric: '', scope: 'individual',
+  target_value: '', period_type: 'monthly', starts_at: '', ends_at: '',
+  milestones: [], icon_style: 'flag', active: true,
+};
+
+function GoalsTab() {
+  const [goals, setGoals] = useState([]);
+  const [metricsCatalog, setMetricsCatalog] = useState([]);
+  const [settings, setSettings] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [modal, setModal] = useState(null); // null | 'new' | goal object
+  const [form, setForm] = useState(emptyGoalForm);
+  const [saving, setSaving] = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [goalsRes, settingsRes] = await Promise.all([
+        crmApi.listGoals(),
+        crmApi.getGamificationSettings(),
+      ]);
+      setGoals(goalsRes.data.data || []);
+      setMetricsCatalog(goalsRes.data.metrics_catalog || []);
+      setSettings(settingsRes.data.data);
+    } catch { toast.error('Error cargando las metas'); }
+    finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const metricLabel = (key) => metricsCatalog.find(m => m.key === key)?.label || key;
+
+  const openNew = () => {
+    setForm({ ...emptyGoalForm, metric: metricsCatalog[0]?.key || '' });
+    setModal('new');
+  };
+
+  const openEdit = (goal) => {
+    setForm({
+      name: goal.name,
+      goal_type: goal.goal_type,
+      metric: goal.metric,
+      scope: goal.scope,
+      target_value: goal.target_value,
+      period_type: goal.period_type,
+      starts_at: goal.starts_at || '',
+      ends_at: goal.ends_at || '',
+      milestones: goal.milestones || [],
+      icon_style: goal.icon_style || 'flag',
+      active: goal.active,
+    });
+    setModal(goal);
+  };
+
+  const handleSave = async (e) => {
+    e.preventDefault();
+    if (!form.name.trim() || !form.metric || !form.target_value) {
+      toast.error('Completa nombre, métrica y objetivo');
+      return;
+    }
+    if (form.period_type === 'custom' && (!form.starts_at || !form.ends_at)) {
+      toast.error('Define fecha de inicio y de fin para una meta con fechas manuales');
+      return;
+    }
+    const cleanMilestones = form.milestones
+      .filter(m => m.percent !== '' && m.message.trim())
+      .map(m => ({ percent: parseInt(m.percent, 10), message: m.message.trim() }));
+
+    setSaving(true);
+    try {
+      const payload = {
+        name: form.name,
+        goal_type: form.goal_type,
+        metric: form.metric,
+        scope: form.scope,
+        target_value: parseFloat(form.target_value),
+        period_type: form.period_type,
+        starts_at: form.period_type === 'custom' ? form.starts_at : null,
+        ends_at: form.period_type === 'custom' ? form.ends_at : null,
+        milestones: cleanMilestones,
+        icon_style: form.icon_style,
+      };
+      if (modal === 'new') {
+        await crmApi.createGoal(payload);
+        toast.success('Meta creada');
+      } else {
+        await crmApi.updateGoal(modal.id, { ...payload, active: form.active });
+        toast.success('Meta actualizada');
+      }
+      setModal(null);
+      load();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Error al guardar la meta');
+    } finally { setSaving(false); }
+  };
+
+  const toggleActive = async (goal) => {
+    try {
+      await crmApi.updateGoal(goal.id, { active: !goal.active });
+      load();
+    } catch {
+      toast.error('No se pudo cambiar el estado de la meta');
+    }
+  };
+
+  const handleDelete = async (goal) => {
+    if (!window.confirm(`¿Desactivar la meta "${goal.name}"? El histórico de avance se conserva.`)) return;
+    try {
+      await crmApi.removeGoal(goal.id);
+      toast.success('Meta desactivada');
+      load();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'No se pudo desactivar la meta');
+    }
+  };
+
+  const describePeriod = (goal) => {
+    if (goal.period_type === 'custom') {
+      return `${goal.starts_at || '—'} → ${goal.ends_at || '—'}`;
+    }
+    return PERIOD_TYPE_LABELS[goal.period_type];
+  };
+
+  if (loading) return <div className="text-sm text-gray-400 dark:text-gray-500 py-8 text-center">Cargando metas...</div>;
+
+  return (
+    <div className="space-y-4">
+      <GamificationSettingsPanel settings={settings} onSaved={setSettings} />
+
+      <div className="flex justify-end">
+        <Button variant="primary" icon={Plus} onClick={openNew}>Nueva meta</Button>
+      </div>
+
+      <div className="bg-white dark:bg-graphite border border-gray-100 dark:border-white/10 rounded-xl divide-y divide-gray-50 dark:divide-white/10">
+        {goals.map(goal => (
+          <div key={goal.id} className="flex items-center justify-between px-4 py-3 gap-3">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <Trophy size={13} className={goal.active ? 'text-accent flex-shrink-0' : 'text-gray-300 flex-shrink-0'} />
+                <span className={`text-sm font-medium ${goal.active ? 'text-gray-800 dark:text-gray-200' : 'text-gray-400'}`}>{goal.name}</span>
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-accent/10 text-accent">{GOAL_TYPE_LABELS[goal.goal_type]}</span>
+                {!goal.active && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-400">Pausada</span>}
+              </div>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                {metricLabel(goal.metric)} · objetivo {parseFloat(goal.target_value)} · {SCOPE_LABELS[goal.scope]} · {describePeriod(goal)}
+                {goal.milestones?.length ? ` · ${goal.milestones.length} hito(s)` : ''}
+              </p>
+            </div>
+            <div className="flex items-center gap-1 flex-shrink-0">
+              <button onClick={() => toggleActive(goal)} title={goal.active ? 'Pausar' : 'Activar'}
+                className={`p-1.5 rounded-full hover:bg-gray-50 dark:hover:bg-white/5 ${goal.active ? 'text-accent' : 'text-gray-300'}`}>
+                <Power size={14} />
+              </button>
+              <button onClick={() => openEdit(goal)} className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-accent rounded-full hover:bg-gray-50 dark:hover:bg-white/5"><Pencil size={14} /></button>
+              <button onClick={() => handleDelete(goal)} className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-red-500 rounded-full hover:bg-gray-50 dark:hover:bg-white/5"><Trash2 size={14} /></button>
+            </div>
+          </div>
+        ))}
+        {goals.length === 0 && <p className="text-xs text-gray-300 dark:text-gray-600 text-center py-6">Sin metas configuradas</p>}
+      </div>
+
+      <Modal isOpen={!!modal} onClose={() => setModal(null)} title={modal === 'new' ? 'Nueva meta' : 'Editar meta'} size="md">
+        <form onSubmit={handleSave} className="space-y-4">
+          <Input label="Nombre" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+            placeholder='Ej: "Meta de ventas de septiembre"' required />
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tipo</label>
+              <select value={form.goal_type} onChange={e => setForm(f => ({ ...f, goal_type: e.target.value }))}
+                className="w-full border border-gray-300 dark:border-white/10 dark:bg-graphite-2 dark:text-gray-100 rounded-lg px-3 py-2">
+                {Object.entries(GOAL_TYPE_LABELS).map(([k, label]) => <option key={k} value={k}>{label}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Aplica a</label>
+              <select value={form.scope} onChange={e => setForm(f => ({ ...f, scope: e.target.value }))}
+                className="w-full border border-gray-300 dark:border-white/10 dark:bg-graphite-2 dark:text-gray-100 rounded-lg px-3 py-2">
+                {Object.entries(SCOPE_LABELS).map(([k, label]) => <option key={k} value={k}>{label}</option>)}
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Métrica</label>
+              <select value={form.metric} onChange={e => setForm(f => ({ ...f, metric: e.target.value }))}
+                className="w-full border border-gray-300 dark:border-white/10 dark:bg-graphite-2 dark:text-gray-100 rounded-lg px-3 py-2" required>
+                <option value="">Elige una métrica</option>
+                {metricsCatalog.map(m => <option key={m.key} value={m.key}>{m.label}</option>)}
+              </select>
+            </div>
+            <Input label="Objetivo" type="number" min="0" step="0.01" value={form.target_value}
+              onChange={e => setForm(f => ({ ...f, target_value: e.target.value }))} required />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Período</label>
+            <select value={form.period_type} onChange={e => setForm(f => ({ ...f, period_type: e.target.value }))}
+              className="w-full border border-gray-300 dark:border-white/10 dark:bg-graphite-2 dark:text-gray-100 rounded-lg px-3 py-2">
+              {Object.entries(PERIOD_TYPE_LABELS).map(([k, label]) => <option key={k} value={k}>{label}</option>)}
+            </select>
+          </div>
+
+          {form.period_type === 'custom' && (
+            <div className="grid grid-cols-2 gap-3">
+              <Input label="Fecha de inicio" type="date" value={form.starts_at}
+                onChange={e => setForm(f => ({ ...f, starts_at: e.target.value }))} required />
+              <Input label="Fecha de fin" type="date" value={form.ends_at}
+                onChange={e => setForm(f => ({ ...f, ends_at: e.target.value }))} required />
+            </div>
+          )}
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Ícono del camino</label>
+            <select value={form.icon_style} onChange={e => setForm(f => ({ ...f, icon_style: e.target.value }))}
+              className="w-full sm:w-64 border border-gray-300 dark:border-white/10 dark:bg-graphite-2 dark:text-gray-100 rounded-lg px-3 py-2">
+              {ICON_STYLE_OPTIONS.map(o => <option key={o.key} value={o.key}>{o.label}</option>)}
+            </select>
+          </div>
+
+          <MilestonesEditor milestones={form.milestones} onChange={(m) => setForm(f => ({ ...f, milestones: m }))} />
+
+          {modal !== 'new' && (
+            <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+              <input type="checkbox" checked={form.active} onChange={e => setForm(f => ({ ...f, active: e.target.checked }))} />
+              Meta activa
+            </label>
+          )}
+
+          <div className="flex justify-end gap-2 pt-4 border-t dark:border-white/10">
+            <Button type="button" variant="secondary" onClick={() => setModal(null)}>Cancelar</Button>
+            <Button type="submit" variant="primary" disabled={saving}>{saving ? 'Guardando...' : 'Guardar'}</Button>
+          </div>
+        </form>
+      </Modal>
+    </div>
+  );
+}
+
 export default function CrmSettingsPage() {
-  const [tab, setTab] = useState('stages');
+  // Permite enlazar directo a una pestaña (ej. el CTA de GoalPathWidget
+  // cuando todavía no hay metas configuradas: /crm/settings?tab=goals).
+  const [searchParams] = useSearchParams();
+  const initialTab = TABS.some(t => t.key === searchParams.get('tab')) ? searchParams.get('tab') : 'stages';
+  const [tab, setTab] = useState(initialTab);
 
   return (
     <Layout>
@@ -726,7 +1088,7 @@ export default function CrmSettingsPage() {
           </div>
           <div>
             <h1 className="text-xl font-bold text-gray-900 tracking-tight">Configuración del CRM</h1>
-            <p className="text-sm text-gray-500">Etapas, motivos de pérdida y plantillas de mensaje — propios de tu negocio</p>
+            <p className="text-sm text-gray-500">Etapas, motivos de pérdida, plantillas de mensaje y metas — propios de tu negocio</p>
           </div>
         </div>
 
@@ -745,6 +1107,7 @@ export default function CrmSettingsPage() {
         {tab === 'reasons' && <LossReasonsTab />}
         {tab === 'templates' && <TemplatesTab />}
         {tab === 'automations' && <AutomationRulesTab />}
+        {tab === 'goals' && <GoalsTab />}
       </div>
     </Layout>
   );

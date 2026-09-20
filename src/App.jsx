@@ -18,6 +18,9 @@ const PurchaseDetailPage = lazy(() => import('./pages/purchases/PurchaseDetailPa
 const AdjustmentsPage = lazy(() => import('./pages/adjustments/AdjustmentsPage'));
 const AdjustmentFormPage = lazy(() => import('./pages/adjustments/AdjustmentFormPage'));
 const AdjustmentDetailPage = lazy(() => import('./pages/adjustments/AdjustmentDetailPage'));
+const PhysicalCountsPage = lazy(() => import('./pages/inventory/PhysicalCountsPage'));
+const PhysicalCountPage = lazy(() => import('./pages/inventory/PhysicalCountPage'));
+const PhysicalCountDetailPage = lazy(() => import('./pages/inventory/PhysicalCountDetailPage'));
 const MovementsPage = lazy(() => import('./pages/movements/MovementsPage'));
 const StockAlertsPage = lazy(() => import('./pages/stock-alerts/StockAlertsPage'));
 const PayableAlertsPage = lazy(() => import('./pages/payable-alerts/PayableAlertsPage'));
@@ -43,6 +46,13 @@ const FinancialReportsPage = lazy(() => import('./pages/accounting/FinancialRepo
 const FiscalPeriodsPage = lazy(() => import('./pages/accounting/FiscalPeriodsPage'));
 const AccountingHealthPage = lazy(() => import('./pages/accounting/AccountingHealthPage'));
 const OpeningBalancesPage = lazy(() => import('./pages/accounting/OpeningBalancesPage'));
+const FixedAssetsPage = lazy(() => import('./pages/accounting/FixedAssetsPage'));
+const FixedAssetDetailPage = lazy(() => import('./pages/accounting/FixedAssetDetailPage'));
+const LoansPage = lazy(() => import('./pages/accounting/LoansPage'));
+const LoanDetailPage = lazy(() => import('./pages/accounting/LoanDetailPage'));
+const BankAccountsPage = lazy(() => import('./pages/accounting/BankAccountsPage'));
+const ExogenaPage = lazy(() => import('./pages/accounting/ExogenaPage'));
+const BankReconciliationPage = lazy(() => import('./pages/accounting/BankReconciliationPage'));
 // Lazy: son las únicas páginas dentro del alcance de la PWA "Taller" instalada
 // (offline + precache del Service Worker, ver frontend/src/pwa/sw.js). El resto
 // del módulo workshop (reportes, productividad, comisiones) sigue siendo eager.
@@ -79,6 +89,7 @@ const TechnicianProductivityPage = lazy(() => import('./pages/workshop/productiv
 const CommissionSettlementsPage = lazy(() => import('./pages/workshop/commissions/CommissionSettlementsPage'));
 const CommissionSettlementDetailPage = lazy(() => import('./pages/workshop/commissions/CommissionSettlementDetailPage'));
 const CommissionProductsReportPage = lazy(() => import('./pages/workshop/commissions/CommissionProductsReportPage'));
+const CommissionCategoriesPage = lazy(() => import('./pages/workshop/commissions/CommissionCategoriesPage'));
 const DiagramPointsEditorPage = lazy(() => import('./pages/workshop/DiagramPointsEditorPage'));
 const WorkshopReportPage = lazy(() => import('./pages/workshop/WorkshopReportPage'));
 const AppointmentsPage = lazy(() => import('./pages/workshop/AppointmentsPage'));
@@ -91,6 +102,7 @@ const FollowUpsPage = lazy(() => import('./pages/crm/FollowUpsPage'));
 const CrmDashboardPage = lazy(() => import('./pages/crm/CrmDashboardPage'));
 const WhatsAppInboxPage = lazy(() => import('./pages/crm/WhatsAppInboxPage'));
 const MetaIntegrationSettingsPage = lazy(() => import('./pages/crm/MetaIntegrationSettingsPage'));
+const RewardsPage = lazy(() => import('./pages/crm/RewardsPage'));
 const CrmSettingsPage = lazy(() => import('./pages/crm/CrmSettingsPage'));
 const WarehousesPage = lazy(() => import('./pages/warehouses/WarehousesPage'));
 const BranchesPage = lazy(() => import('./pages/branches/BranchesPage'));
@@ -337,6 +349,9 @@ function App() {
         <Route path="adjustments/new"      element={<TenantRoute module="inventory"><Suspense fallback={<Loading fullScreen />}><AdjustmentFormPage /></Suspense></TenantRoute>} />
         <Route path="adjustments/edit/:id" element={<TenantRoute module="inventory"><Suspense fallback={<Loading fullScreen />}><AdjustmentFormPage /></Suspense></TenantRoute>} />
         <Route path="adjustments/:id"      element={<TenantRoute module="inventory"><Suspense fallback={<Loading fullScreen />}><AdjustmentDetailPage /></Suspense></TenantRoute>} />
+        <Route path="inventory/physical-counts"     element={<TenantRoute module="inventory"><Suspense fallback={<Loading fullScreen />}><PhysicalCountsPage /></Suspense></TenantRoute>} />
+        <Route path="inventory/physical-counts/new" element={<TenantRoute module="inventory"><Suspense fallback={<Loading fullScreen />}><PhysicalCountPage /></Suspense></TenantRoute>} />
+        <Route path="inventory/physical-counts/:id" element={<TenantRoute module="inventory"><Suspense fallback={<Loading fullScreen />}><PhysicalCountDetailPage /></Suspense></TenantRoute>} />
 
         <Route path="movements"   element={<TenantRoute module="inventory"><Suspense fallback={<Loading fullScreen />}><MovementsPage /></Suspense></TenantRoute>} />
         <Route path="stock-alerts" element={<TenantRoute module="inventory"><Suspense fallback={<Loading fullScreen />}><StockAlertsPage /></Suspense></TenantRoute>} />
@@ -365,6 +380,13 @@ function App() {
         <Route path="accounting/fiscal-periods"    element={<TenantRoute module="accounting" roles={['admin', 'manager']}><Suspense fallback={<Loading fullScreen />}><FiscalPeriodsPage /></Suspense></TenantRoute>} />
         <Route path="accounting/health"            element={<TenantRoute module="accounting" roles={['admin', 'manager']}><Suspense fallback={<Loading fullScreen />}><AccountingHealthPage /></Suspense></TenantRoute>} />
         <Route path="accounting/opening-balances"  element={<TenantRoute module="accounting" roles={['admin', 'manager']}><Suspense fallback={<Loading fullScreen />}><OpeningBalancesPage /></Suspense></TenantRoute>} />
+        <Route path="accounting/fixed-assets"      element={<TenantRoute module="accounting" roles={['admin', 'manager']}><Suspense fallback={<Loading fullScreen />}><FixedAssetsPage /></Suspense></TenantRoute>} />
+        <Route path="accounting/fixed-assets/:id"  element={<TenantRoute module="accounting" roles={['admin', 'manager']}><Suspense fallback={<Loading fullScreen />}><FixedAssetDetailPage /></Suspense></TenantRoute>} />
+        <Route path="accounting/loans"             element={<TenantRoute module="accounting" roles={['admin', 'manager']}><Suspense fallback={<Loading fullScreen />}><LoansPage /></Suspense></TenantRoute>} />
+        <Route path="accounting/loans/:id"         element={<TenantRoute module="accounting" roles={['admin', 'manager']}><Suspense fallback={<Loading fullScreen />}><LoanDetailPage /></Suspense></TenantRoute>} />
+        <Route path="accounting/bank-accounts"                     element={<TenantRoute module="accounting" roles={['admin', 'manager']}><Suspense fallback={<Loading fullScreen />}><BankAccountsPage /></Suspense></TenantRoute>} />
+        <Route path="accounting/bank-accounts/:id/reconciliation"  element={<TenantRoute module="accounting" roles={['admin', 'manager']}><Suspense fallback={<Loading fullScreen />}><BankReconciliationPage /></Suspense></TenantRoute>} />
+        <Route path="accounting/exogena"                          element={<TenantRoute module="accounting" roles={['admin', 'manager', 'accountant']}><Suspense fallback={<Loading fullScreen />}><ExogenaPage /></Suspense></TenantRoute>} />
 
         {/* ── Nómina Electrónica ─────────────────────── */}
         <Route path="payroll/employees"      element={<TenantRoute module="payroll"><Suspense fallback={<Loading fullScreen />}><EmployeesPage /></Suspense></TenantRoute>} />
@@ -413,6 +435,7 @@ function App() {
         <Route path="workshop/commission-settlements"  element={<TenantRoute module="workshop"><Suspense fallback={<Loading fullScreen />}><CommissionSettlementsPage /></Suspense></TenantRoute>} />
         <Route path="workshop/commission-settlements/:id" element={<TenantRoute module="workshop"><Suspense fallback={<Loading fullScreen />}><CommissionSettlementDetailPage /></Suspense></TenantRoute>} />
         <Route path="workshop/commission-products"     element={<TenantRoute module="workshop"><Suspense fallback={<Loading fullScreen />}><CommissionProductsReportPage /></Suspense></TenantRoute>} />
+        <Route path="workshop/commission-categories"   element={<TenantRoute module="workshop"><Suspense fallback={<Loading fullScreen />}><CommissionCategoriesPage /></Suspense></TenantRoute>} />
         <Route path="workshop/diagram-points-editor"   element={<TenantRoute module="workshop"><Suspense fallback={<Loading fullScreen />}><DiagramPointsEditorPage /></Suspense></TenantRoute>} />
 
         {/* Customer Returns — ANTES de la ruta dinámica :id */}
@@ -436,6 +459,7 @@ function App() {
         <Route path="crm/pipeline"  element={<TenantRoute module="crm"><Suspense fallback={<Loading fullScreen />}><PipelinePage /></Suspense></TenantRoute>} />
         <Route path="crm/followups" element={<TenantRoute module="crm"><Suspense fallback={<Loading fullScreen />}><FollowUpsPage /></Suspense></TenantRoute>} />
         <Route path="crm/dashboard" element={<TenantRoute module="crm"><Suspense fallback={<Loading fullScreen />}><CrmDashboardPage /></Suspense></TenantRoute>} />
+        <Route path="crm/rewards"   element={<TenantRoute module="crm"><Suspense fallback={<Loading fullScreen />}><RewardsPage /></Suspense></TenantRoute>} />
         <Route path="crm/settings/meta" element={<TenantRoute module="crm_meta_leads"><Suspense fallback={<Loading fullScreen />}><MetaIntegrationSettingsPage /></Suspense></TenantRoute>} />
         <Route path="crm/settings" element={<TenantRoute module="crm"><Suspense fallback={<Loading fullScreen />}><CrmSettingsPage /></Suspense></TenantRoute>} />
 

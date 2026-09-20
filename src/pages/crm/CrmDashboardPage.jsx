@@ -4,9 +4,12 @@ import Layout from '../../components/layout/Layout';
 import CrmSubNav from '../../components/crm/CrmSubNav';
 import crmApi from '../../api/crm';
 import StatsCard from '../../components/common/StatsCard';
+import GoalPathWidget from '../../components/crm/GoalPathWidget';
+import GoalComplianceTable from '../../components/crm/GoalComplianceTable';
+import GoalDeadlineAlerts from '../../components/crm/GoalDeadlineAlerts';
 import {
   BarChart3, TrendingUp, TrendingDown, Clock, AlertTriangle, RefreshCw, ListTodo, Inbox, Target, Wallet, Megaphone,
-  Activity, UserPlus, CheckCircle2, MessageCircle, Trophy, XCircle, ArrowRightCircle,
+  Activity, UserPlus, CheckCircle2, MessageCircle, Trophy, XCircle, ArrowRightCircle, PartyPopper,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -57,6 +60,15 @@ function activityContent(item) {
       return { Icon: CheckCircle2, iconCls: 'text-emerald-500 bg-emerald-50 dark:bg-emerald-900/30 dark:text-emerald-300', text: `completó un seguimiento con ${item.customer}` };
     case 'interaction_logged':
       return { Icon: MessageCircle, iconCls: 'text-purple-500 bg-purple-50 dark:bg-purple-900/30 dark:text-purple-300', text: `registró ${INTERACTION_TYPE_LABEL[item.interaction_type] || 'una interacción'} con ${item.customer}` };
+    // Gamificación §5.2 — hito de meta cruzado, mostrado en el feed cuando
+    // board_visibility es 'team'/'all' (ver dashboard.controller.js →
+    // loadGoalMilestoneActivity). Sin customer_id: no navega a nada al hacer clic.
+    case 'goal_milestone_reached':
+      return {
+        Icon: PartyPopper,
+        iconCls: 'text-amber-500 bg-amber-50 dark:bg-amber-900/30 dark:text-amber-300',
+        text: `alcanzó ${item.milestone_percent}% de "${item.goal_name}"`,
+      };
     default:
       return { Icon: Activity, iconCls: 'text-gray-400 bg-gray-50 dark:text-gray-500 dark:bg-white/5', text: `actualizó a ${item.customer}` };
   }
@@ -201,6 +213,25 @@ export default function CrmDashboardPage() {
             color={followUps.vencida > 0 ? 'red' : 'gray'}
             subtitle={`${followUps.pendiente || 0} pendientes`} />
         </div>
+
+        {/* Gamificación §5.1 — la meta principal va grande arriba del
+            dashboard; las secundarias en tarjetas más chicas debajo. El
+            propio widget se oculta solo si la gamificación no está activa
+            o no hay metas visibles para este usuario. */}
+        {/* Fase 6 (§15) — alertas de metas propias por vencer, ANTES del
+            camino de avance: es lo que necesita acción hoy, no solo verse
+            bonito. Se oculta solo si no hay ninguna meta urgente. */}
+        <GoalDeadlineAlerts />
+
+        <GoalPathWidget />
+
+        {/* Gamificación §6 (Fase 4) — la otra cara de la misma meta: el
+            widget de arriba muestra el avance para motivar; esta tabla lo
+            vuelve una herramienta de decisión (quién viene rezagado, qué
+            sede cumple seguido, cómo va contra el período anterior). El
+            componente se oculta solo si no hay metas o la gamificación
+            está apagada. */}
+        <GoalComplianceTable />
 
         {/* Forecast de cierre — Fase B.1: usa expected_value/probability que
             ya existían en el modelo y no se estaban mostrando en ningún lado. */}

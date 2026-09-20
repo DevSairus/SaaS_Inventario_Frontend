@@ -24,6 +24,7 @@ const useNotificationsBundleStore = create((set, get) => ({
     payable: null,
     advance: null,
     crm: null,
+    crm_goals: null,
     quotes: null,
     appointments: null,
   },

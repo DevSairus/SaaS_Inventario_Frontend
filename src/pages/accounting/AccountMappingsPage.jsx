@@ -51,6 +51,16 @@ const EVENT_GROUPS = [
       { key: 'expense_category:otro', label: 'Otro' },
     ],
   },
+  {
+    title: 'Activos Fijos — Depreciación',
+    events: [
+      { key: 'fixed_asset_depreciation_expense:vehiculo', label: 'Gasto depreciación — Vehículos' },
+      { key: 'fixed_asset_depreciation_expense:maquinaria', label: 'Gasto depreciación — Maquinaria' },
+      { key: 'fixed_asset_depreciation_expense:equipo_computo', label: 'Gasto depreciación — Equipo de Cómputo' },
+      { key: 'fixed_asset_depreciation_expense:muebles_enseres', label: 'Gasto depreciación — Muebles y Enseres' },
+      { key: 'fixed_asset_depreciation_expense:otro', label: 'Gasto depreciación — Otro' },
+    ],
+  },
 ];
 
 const AccountMappingsPage = () => {

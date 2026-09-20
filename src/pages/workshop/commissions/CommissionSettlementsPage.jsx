@@ -4,7 +4,7 @@ import Layout from '../../../components/layout/Layout';
 import { commissionApi } from '../../../api/workshop';
 import {
   DollarSign, ChevronRight, Search, Calendar,
-  CheckCircle, AlertCircle, Loader2, User, Percent
+  CheckCircle, AlertCircle, Loader2, User, Tag
 } from 'lucide-react';
 
 const COP = (n) =>
@@ -32,7 +32,6 @@ export default function CommissionSettlementsPage() {
   const [techId, setTechId] = useState('');
   const [dateFrom, setDateFrom] = useState(firstOfMonth);
   const [dateTo, setDateTo] = useState(todayStr);
-  const [percentage, setPercentage] = useState('');
   const [preview, setPreview] = useState(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -53,19 +52,19 @@ export default function CommissionSettlementsPage() {
 
   // ── Preview ───────────────────────────────────────────────────────────────
   const loadPreview = useCallback(async () => {
-    if (!techId || !percentage) return;
+    if (!techId) return;
     setLoadingPreview(true);
     setPreview(null);
     setErrorMsg('');
     try {
-      const res = await commissionApi.preview({ technician_id: techId, date_from: dateFrom, date_to: dateTo, commission_percentage: percentage });
+      const res = await commissionApi.preview({ technician_id: techId, date_from: dateFrom, date_to: dateTo });
       setPreview(res.data.data);
     } catch {
       setErrorMsg('Error al calcular preview');
     } finally {
       setLoadingPreview(false);
     }
-  }, [techId, dateFrom, dateTo, percentage]);
+  }, [techId, dateFrom, dateTo]);
 
   // ── Create settlement ─────────────────────────────────────────────────────
   const handleCreate = async () => {
@@ -77,12 +76,10 @@ export default function CommissionSettlementsPage() {
         technician_id: techId,
         date_from: dateFrom,
         date_to: dateTo,
-        commission_percentage: parseFloat(percentage),
       });
       setSuccessMsg(`Liquidación ${res.data.data.settlement_number} creada por ${COP(res.data.data.commission_amount)}`);
       setPreview(null);
       setTechId('');
-      setPercentage('');
     } catch (e) {
       setErrorMsg(e?.response?.data?.message || 'Error al crear la liquidación');
     } finally {
@@ -178,8 +175,8 @@ export default function CommissionSettlementsPage() {
                 </div>
               </div>
 
-              {/* Fechas + porcentaje */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {/* Fechas */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">Desde</label>
                   <input type="date" value={dateFrom} onChange={e => { setDateFrom(e.target.value); setPreview(null); }}
@@ -190,19 +187,14 @@ export default function CommissionSettlementsPage() {
                   <input type="date" value={dateTo} onChange={e => { setDateTo(e.target.value); setPreview(null); }}
                     className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
                 </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">% Comisión</label>
-                  <div className="relative">
-                    <Percent size={13} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                    <input type="number" min="0" max="100" step="0.5" placeholder="Ej: 15"
-                      value={percentage} onChange={e => { setPercentage(e.target.value); setPreview(null); }}
-                      className="w-full border border-gray-200 rounded-lg px-3 pr-8 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
-                  </div>
-                </div>
               </div>
+              <p className="text-xs text-gray-400">
+                El % de comisión se calcula solo, por categoría de trabajo (Frenos, Suspensión, Otros...) —
+                configurable en <span className="font-medium text-gray-500">Taller → Comisiones · Categorías</span>.
+              </p>
 
               {/* Preview button */}
-              <button onClick={loadPreview} disabled={!techId || !percentage || loadingPreview}
+              <button onClick={loadPreview} disabled={!techId || loadingPreview}
                 className="flex items-center gap-2 bg-gray-800 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-700 disabled:opacity-40 transition">
                 {loadingPreview ? <Loader2 size={15} className="animate-spin" /> : <Search size={15} />}
                 {loadingPreview ? 'Calculando...' : 'Calcular preview'}
@@ -238,6 +230,29 @@ export default function CommissionSettlementsPage() {
                     </div>
                   </div>
                 </div>
+
+                {/* Desglose por categoría de comisión */}
+                {preview.categories && preview.categories.length > 0 && (
+                  <div className="border-b border-gray-100">
+                    <div className="px-5 py-2 bg-gray-50 flex items-center gap-1.5 text-xs font-medium text-gray-500">
+                      <Tag size={12} /> Desglose por categoría
+                    </div>
+                    <div className="divide-y divide-gray-50">
+                      {preview.categories.map(c => (
+                        <div key={c.commission_category_id} className="flex items-center justify-between px-5 py-2.5">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium text-gray-700">{c.name}</span>
+                            <span className="text-xs text-gray-400">{c.percentage}%</span>
+                          </div>
+                          <div className="flex items-center gap-4 text-right">
+                            <span className="text-xs text-gray-500">{COP(c.base_amount)}</span>
+                            <span className="text-sm font-semibold text-emerald-600 w-24">{COP(c.commission_amount)}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* Orders list */}
                 {preview.orders.length === 0 ? (
@@ -331,6 +346,12 @@ export default function CommissionSettlementsPage() {
                             {s.technician ? `${s.technician.first_name} ${s.technician.last_name}` : '—'}
                             {s.date_from && ` · ${s.date_from} → ${s.date_to}`}
                           </p>
+                          {s.payroll_status === 'cargada_nomina' && (
+                            <span className="text-xs px-1.5 py-0.5 rounded font-medium bg-emerald-50 text-emerald-600 mt-1 inline-block">Nómina</span>
+                          )}
+                          {(s.payroll_status === 'sin_empleado_vinculado' || s.payroll_status === 'pendiente_periodo') && (
+                            <span className="text-xs px-1.5 py-0.5 rounded font-medium bg-amber-50 text-amber-600 mt-1 inline-block">Pendiente nómina</span>
+                          )}
                         </div>
                       </div>
                       <div className="flex items-center gap-4">

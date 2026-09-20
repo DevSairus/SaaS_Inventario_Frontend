@@ -56,12 +56,25 @@ export const commissionApi = {
   create: (data) => axios.post('/workshop/commission-settlements', data),
   list: (params) => axios.get('/workshop/commission-settlements', { params }),
   getById: (id) => axios.get(`/workshop/commission-settlements/${id}`),
+  retryPayroll: (id) => axios.post(`/workshop/commission-settlements/${id}/retry-payroll`),
   getProductsReport: (params) => axios.get('/workshop/commission-settlements/products-report', { params }),
   // Liquidaciones de productos
   productPreview: (params) => axios.get('/workshop/commission-settlements/products-preview', { params }),
   createProductSettlement: (data) => axios.post('/workshop/commission-settlements/products', data),
   listProductSettlements: (params) => axios.get('/workshop/commission-settlements/products', { params }),
   getProductSettlementById: (id) => axios.get(`/workshop/commission-settlements/products/${id}`),
+};
+
+// ── Comisiones por categoría de trabajo (Frenos, Suspensión, Otros...) ────
+export const commissionCategoriesApi = {
+  list: (includeInactive = false) => axios.get('/workshop/commission-categories', { params: { include_inactive: includeInactive } }),
+  create: (data) => axios.post('/workshop/commission-categories', data),
+  update: (id, data) => axios.put(`/workshop/commission-categories/${id}`, data),
+  remove: (id) => axios.delete(`/workshop/commission-categories/${id}`),
+  setTechnicianRates: (id, rates) => axios.put(`/workshop/commission-categories/${id}/technician-rates`, { rates }),
+  getDiagramSystems: () => axios.get('/workshop/commission-categories/diagram-systems'),
+  getDiagramMappings: () => axios.get('/workshop/commission-categories/diagram-mappings'),
+  setDiagramMappings: (mappings) => axios.put('/workshop/commission-categories/diagram-mappings', { mappings }),
 };
 
 // ── Diagramas interactivos de intervención ────────────────

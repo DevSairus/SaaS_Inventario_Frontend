@@ -263,7 +263,7 @@ const InvoiceImportModal = ({ isOpen, onClose, onSuccess }) => {
     barcode: '',
     name: item.name || '',
     category_id: '',
-    brand: '',
+    brand: item.brand || '',
     unit_of_measure: 'unit',
     price_includes_tax: false,
   };

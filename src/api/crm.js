@@ -109,6 +109,32 @@ const crmApi = {
   createAutomationRule: (data) => api.post('/crm/automation-rules', data),
   updateAutomationRule: (id, data) => api.patch(`/crm/automation-rules/${id}`, data),
   removeAutomationRule: (id) => api.delete(`/crm/automation-rules/${id}`),
+
+  // ── Gamificación del CRM — metas y progreso ───────────────────────────────
+  listGoals: () => api.get('/crm/goals'),
+  createGoal: (data) => api.post('/crm/goals', data),
+  updateGoal: (id, data) => api.patch(`/crm/goals/${id}`, data),
+  removeGoal: (id) => api.delete(`/crm/goals/${id}`),
+  getGoalsProgress: () => api.get('/crm/goals/progress'),
+  // Fase 4 (§6) — cumplimiento histórico para el dashboard de decisiones.
+  // `periods` = cuántos períodos hacia atrás traer (default 6 en el backend).
+  getGoalsCompliance: (params = {}) => api.get('/crm/goals/compliance', { params }),
+  // Fase 6 — alertas propias: período por vencer + cuánto falta.
+  getGoalAlerts: () => api.get('/crm/goals/alerts'),
+  getGamificationSettings: () => api.get('/crm/gamification-settings'),
+  updateGamificationSettings: (data) => api.put('/crm/gamification-settings', data),
+
+  // ── Fase 5 (§10) — recompensas por cumplimiento de metas ─────────────────
+  listRewardRules: () => api.get('/crm/reward-rules'),
+  createRewardRule: (data) => api.post('/crm/reward-rules', data),
+  updateRewardRule: (id, data) => api.patch(`/crm/reward-rules/${id}`, data),
+  removeRewardRule: (id) => api.delete(`/crm/reward-rules/${id}`),
+  listRewards: (params = {}) => api.get('/crm/rewards', { params }),
+  listRewardBadges: (params = {}) => api.get('/crm/rewards/badges', { params }),
+  getUnmatchedRewardUsers: () => api.get('/crm/rewards/unmatched-users'),
+  approveReward: (id) => api.post(`/crm/rewards/${id}/approve`),
+  chargeRewardToPayroll: (id) => api.post(`/crm/rewards/${id}/charge-to-payroll`),
+  relinkRewardEmployee: (id) => api.post(`/crm/rewards/${id}/relink-employee`),
 };
 
 export default crmApi;

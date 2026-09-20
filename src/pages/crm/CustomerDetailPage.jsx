@@ -217,7 +217,7 @@ export default function CustomerDetailPage() {
     setAssignModal(true);
     if (advisors.length === 0) {
       try {
-        const res = await usersAPI.getAll({ limit: 200, is_active: true });
+        const res = await usersAPI.getAll({ limit: 200, is_active: true, has_system_access: true });
         setAdvisors((res.data?.users || []).filter(u => !['technician'].includes(u.role)));
       } catch { /* el select queda vacío si falla, no bloquea el modal */ }
     }

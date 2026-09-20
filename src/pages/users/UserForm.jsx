@@ -32,10 +32,13 @@ const UserForm = () => {
     password: '',
     role: 'user',
     phone: '',
+    cedula: '',
+    has_system_access: true,
   });
   const [errors, setErrors] = useState({});
   const [passwordRules, setPasswordRules] = useState([]);
   const [planLimitModal, setPlanLimitModal] = useState(null);
+  const [grantAccessModal, setGrantAccessModal] = useState(null);
 
   useEffect(() => {
     if (isEdit) {
@@ -60,12 +63,22 @@ const UserForm = () => {
         password:   '',
         role:       user.role       || 'user',
         phone:      user.phone      || '',
+        cedula:     user.cedula     || '',
+        has_system_access: user.has_system_access !== false,
       });
     }
   }, [isEdit, selectedUser]);
 
   const handleChange = (name, value) => {
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData((prev) => {
+      const next = { ...prev, [name]: value };
+      // Si cambia de rol y deja de ser "technician", el checkbox de "sin
+      // acceso" ya no aplica — vuelve a exigir email/contraseña.
+      if (name === 'role' && value !== 'technician') {
+        next.has_system_access = true;
+      }
+      return next;
+    });
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: '' }));
     }
@@ -76,16 +89,22 @@ const UserForm = () => {
     return check ? check(formData.password) : false;
   };
 
+  // El checkbox "Técnico sin acceso" solo tiene sentido creando el usuario;
+  // en edición, el acceso se habilita/revoca con el flujo dedicado más abajo.
+  const isNoAccessTechnician = !isEdit && formData.role === 'technician' && !formData.has_system_access;
+
   const validate = () => {
     const newErrors = {};
     if (!formData.first_name.trim()) newErrors.first_name = 'Nombre requerido';
     if (!formData.last_name.trim())  newErrors.last_name  = 'Apellido requerido';
-    if (!formData.email.trim())      newErrors.email      = 'Email requerido';
-    if (!isEdit) {
-      if (!formData.password) {
-        newErrors.password = 'Contraseña requerida';
-      } else if (formData.password.length < 8) {
-        newErrors.password = 'Mínimo 8 caracteres';
+    if (!isNoAccessTechnician) {
+      if (!formData.email.trim()) newErrors.email = 'Email requerido';
+      if (!isEdit) {
+        if (!formData.password) {
+          newErrors.password = 'Contraseña requerida';
+        } else if (formData.password.length < 8) {
+          newErrors.password = 'Mínimo 8 caracteres';
+        }
       }
     }
     return newErrors;
@@ -104,13 +123,19 @@ const UserForm = () => {
       if (isEdit) {
         const updateData = { ...formData };
         if (!updateData.password) delete updateData.password;
+        delete updateData.has_system_access; // se maneja aparte (habilitar/revocar acceso)
         const result = await updateUser(id, updateData);
         if (result?.success !== false) {
           toast.success('Usuario actualizado');
           navigate('/users');
         }
       } else {
-        await createUser(formData);
+        const payload = { ...formData };
+        if (isNoAccessTechnician) {
+          delete payload.email;
+          delete payload.password;
+        }
+        await createUser(payload);
         toast.success('Usuario creado');
         navigate('/users');
       }
@@ -132,6 +157,34 @@ const UserForm = () => {
         }
         return;
       }
+      toast.error(err?.message || 'Error del servidor. Intenta nuevamente.');
+    }
+  };
+
+  const handleGrantAccess = async (e) => {
+    e.preventDefault();
+    if (!grantAccessModal?.email || !grantAccessModal?.password) {
+      toast.error('Email y contraseña son requeridos');
+      return;
+    }
+    if (grantAccessModal.password.length < 8) {
+      toast.error('La contraseña debe tener al menos 8 caracteres');
+      return;
+    }
+    try {
+      const result = await updateUser(id, {
+        has_system_access: true,
+        email: grantAccessModal.email,
+        password: grantAccessModal.password,
+      });
+      if (result?.success !== false) {
+        toast.success('Acceso habilitado');
+        setGrantAccessModal(null);
+        fetchUserById(id);
+      } else {
+        toast.error(result?.error || 'No se pudo habilitar el acceso');
+      }
+    } catch (err) {
       toast.error(err?.message || 'Error del servidor. Intenta nuevamente.');
     }
   };
@@ -183,54 +236,80 @@ const UserForm = () => {
                 placeholder="Pérez"
               />
 
-              <Input
-                label="Email *"
-                type="email"
-                value={formData.email}
-                onChange={(e) => handleChange('email', e.target.value)}
-                error={errors.email}
-                placeholder="usuario@empresa.com"
-                disabled={isEdit}
-              />
+              {isEdit && !formData.has_system_access ? (
+                <div className="md:col-span-2 p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-600">
+                  Este técnico no tiene acceso al sistema (sin email ni contraseña). Solo aparece
+                  para asignación de OT y ventas.
+                  <div className="mt-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setGrantAccessModal({ email: '', password: '' })}
+                    >
+                      Habilitar acceso
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <Input
+                    label="Email *"
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => handleChange('email', e.target.value)}
+                    error={errors.email}
+                    placeholder="usuario@empresa.com"
+                    disabled={isEdit}
+                  />
 
-              {/* Contraseña + hints */}
-              <div>
-                <Input
-                  label={isEdit ? 'Nueva Contraseña (opcional)' : 'Contraseña *'}
-                  type="password"
-                  value={formData.password}
-                  onChange={(e) => handleChange('password', e.target.value)}
-                  error={errors.password}
-                  placeholder="Mínimo 8 caracteres"
-                  helperText={isEdit ? 'Deja en blanco para mantener la actual' : ''}
-                />
-                {!isEdit && passwordRules.length > 0 && (
-                  <ul className="mt-1.5 space-y-0.5 pl-0.5">
-                    {passwordRules.map((r) => {
-                      const ok = !!formData.password && cumple(r);
-                      return (
-                        <li
-                          key={r.rule}
-                          className={`flex items-center gap-1.5 text-xs transition-colors ${
-                            ok ? 'text-green-600' : 'text-gray-400'
-                          }`}
-                        >
-                          <span className="text-[10px] w-3 text-center">
-                            {ok ? '✓' : '○'}
-                          </span>
-                          {r.label}
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
-              </div>
+                  {/* Contraseña + hints */}
+                  <div>
+                    <Input
+                      label={isEdit ? 'Nueva Contraseña (opcional)' : 'Contraseña *'}
+                      type="password"
+                      value={formData.password}
+                      onChange={(e) => handleChange('password', e.target.value)}
+                      error={errors.password}
+                      placeholder="Mínimo 8 caracteres"
+                      helperText={isEdit ? 'Deja en blanco para mantener la actual' : ''}
+                    />
+                    {!isEdit && passwordRules.length > 0 && (
+                      <ul className="mt-1.5 space-y-0.5 pl-0.5">
+                        {passwordRules.map((r) => {
+                          const ok = !!formData.password && cumple(r);
+                          return (
+                            <li
+                              key={r.rule}
+                              className={`flex items-center gap-1.5 text-xs transition-colors ${
+                                ok ? 'text-green-600' : 'text-gray-400'
+                              }`}
+                            >
+                              <span className="text-[10px] w-3 text-center">
+                                {ok ? '✓' : '○'}
+                              </span>
+                              {r.label}
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    )}
+                  </div>
+                </>
+              )}
 
               <Input
                 label="Teléfono"
                 value={formData.phone}
                 onChange={(e) => handleChange('phone', e.target.value)}
                 placeholder="+57 300 123 4567"
+              />
+
+              <Input
+                label="Cédula"
+                value={formData.cedula}
+                onChange={(e) => handleChange('cedula', e.target.value)}
+                placeholder="Documento de identidad (opcional)"
               />
 
               {/* Rol */}
@@ -240,6 +319,7 @@ const UserForm = () => {
                   value={formData.role}
                   onChange={(e) => handleChange('role', e.target.value)}
                   className={`input ${errors.role ? 'border-red-500 focus:ring-red-500' : ''}`}
+                  disabled={isNoAccessTechnician}
                 >
                   <option value="admin">Administrador</option>
                   <option value="manager">Gerente</option>
@@ -252,6 +332,26 @@ const UserForm = () => {
                 </select>
                 {errors.role && (
                   <p className="mt-1 text-xs text-red-500">{errors.role}</p>
+                )}
+
+                {!isEdit && formData.role === 'technician' && (
+                  <label className="mt-3 flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="mt-0.5"
+                      checked={!formData.has_system_access}
+                      onChange={(e) =>
+                        handleChange('has_system_access', !e.target.checked)
+                      }
+                    />
+                    <span className="text-sm text-amber-900">
+                      Técnico solo para asignación de trabajos (sin acceso al sistema)
+                      <br />
+                      <span className="text-xs text-amber-700">
+                        No podrá iniciar sesión; solo aparecerá al asignar OT y ventas.
+                      </span>
+                    </span>
+                  </label>
                 )}
 
                 <div className="mt-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
@@ -455,6 +555,46 @@ const UserForm = () => {
             Actualizar plan
           </Button>
         </div>
+      </Modal>
+
+      {/* Modal: habilitar acceso a un técnico sin acceso */}
+      <Modal
+        isOpen={!!grantAccessModal}
+        onClose={() => setGrantAccessModal(null)}
+        title="Habilitar acceso al sistema"
+        size="sm"
+      >
+        <form onSubmit={handleGrantAccess} className="space-y-4">
+          <p className="text-sm text-gray-600">
+            Asigna un email y contraseña para que este técnico pueda iniciar sesión.
+          </p>
+          <Input
+            label="Email *"
+            type="email"
+            value={grantAccessModal?.email || ''}
+            onChange={(e) =>
+              setGrantAccessModal((prev) => ({ ...prev, email: e.target.value }))
+            }
+            placeholder="usuario@empresa.com"
+          />
+          <Input
+            label="Contraseña *"
+            type="password"
+            value={grantAccessModal?.password || ''}
+            onChange={(e) =>
+              setGrantAccessModal((prev) => ({ ...prev, password: e.target.value }))
+            }
+            placeholder="Mínimo 8 caracteres"
+          />
+          <div className="flex gap-3 justify-end">
+            <Button type="button" variant="outline" onClick={() => setGrantAccessModal(null)}>
+              Cancelar
+            </Button>
+            <Button type="submit" variant="primary" loading={isSubmitting}>
+              Habilitar acceso
+            </Button>
+          </div>
+        </form>
       </Modal>
     </Layout>
   );

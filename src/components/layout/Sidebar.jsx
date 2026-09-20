@@ -50,6 +50,7 @@ const NAV = [
       { label: "Reporte Taller",        path: "/workshop/report" },
       { label: "Liquidación Servicios", path: "/workshop/commission-settlements" },
       { label: "Comisiones Productos",  path: "/workshop/commission-products" },
+      { label: "Comisiones · Categorías", path: "/workshop/commission-categories", roles: ["admin", "super_admin"] },
       // diagramTemplates.routes.js: PATCH /:id/points solo admin/super_admin.
       { label: "Calibrar diagramas",    path: "/workshop/diagram-points-editor", roles: ["admin", "super_admin"] },
     ],
@@ -162,7 +163,8 @@ const NAV = [
       { label: "Productos",         path: "/products" },
       { label: "Compras",           path: "/purchases" },
       { label: "Movimientos",       path: "/movements" },
-      { label: "Ajustes",           path: "/adjustments " },
+      { label: "Ajustes",           path: "/adjustments" },
+      { label: "Inventario físico", path: "/inventory/physical-counts" },
       { label: "Categorias",        path: "/categories" },
       { label: "Transferencias",    path: "/inventory/transfers" },
       { label: "Consumos Internos", path: "/inventory/internal-consumptions" },

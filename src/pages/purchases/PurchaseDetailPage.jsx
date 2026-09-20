@@ -5,8 +5,9 @@ import useProductsStore from '../../store/productsStore';
 import Layout from '../../components/layout/Layout';
 import ConfirmPurchaseWithPaymentModal from '../../components/purchases/ConfirmPurchaseWithPaymentModal';
 import SupportDocumentPanel from '../../components/dian/SupportDocumentPanel';
+import RadianEventsPanel from '../../components/purchases/RadianEventsPanel';
 import toast from 'react-hot-toast';
-import { formatCurrency } from '../../utils/formatters';
+import { formatCurrency, formatDateTime } from '../../utils/formatters';
 
 const PurchaseDetailPage = () => {
   const { id } = useParams();
@@ -111,10 +112,18 @@ const PurchaseDetailPage = () => {
     );
   };
 
+  // purchase_date/expected_delivery_date/received_date son campos "solo
+  // fecha" (medianoche UTC) -- hay que leer los componentes en UTC, no
+  // locales, o en Bogotá (UTC-5) se muestra un día menos (mismo bug que
+  // documenta formatDate en utils/formatters.js; se recrea el formato largo
+  // en español que ya tenía esta página en vez de usar el 'dd/MM/yyyy'
+  // corto del util compartido). cancelled_at sí es un timestamp real -- ese
+  // usa formatDateTime normal, sin este ajuste.
   const formatDate = (dateString) => {
     if (!dateString) return '-';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('es-CO', {
+    const parsed = new Date(dateString);
+    const utcAsLocal = new Date(parsed.getUTCFullYear(), parsed.getUTCMonth(), parsed.getUTCDate());
+    return utcAsLocal.toLocaleDateString('es-CO', {
       year: 'numeric',
       month: 'long',
       day: 'numeric'
@@ -373,6 +382,10 @@ const PurchaseDetailPage = () => {
             hasSupplier={!!purchase.supplier}
           />
 
+          {/* Eventos RADIAN — solo aparece si la compra tiene CUFE (factura
+              electrónica del proveedor importada con XML válido). */}
+          <RadianEventsPanel purchase={purchase} />
+
           {/* Additional Info */}
           <div className="bg-white rounded-lg shadow p-6">
             <h2 className="text-xl font-semibold text-gray-800 mb-4">Información Adicional</h2>
@@ -421,7 +434,7 @@ const PurchaseDetailPage = () => {
               <div className="space-y-3">
                 <div>
                   <p className="text-sm text-red-600">Fecha de Cancelación</p>
-                  <p className="font-medium text-red-900">{formatDate(purchase.cancelled_at)}</p>
+                  <p className="font-medium text-red-900">{formatDateTime(purchase.cancelled_at)}</p>
                 </div>
                 {purchase.cancellation_reason && (
                   <div>

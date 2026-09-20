@@ -326,6 +326,11 @@ function SaleFormPage() {
           vehicleParams.applies_to_line = formData.vehicle_model;
           if (formData.vehicle_year) vehicleParams.applies_to_year = formData.vehicle_year;
         }
+        // Al editar una venta existente, que no se reste a sí misma del
+        // disponible real (cantidad en trámite).
+        if (isEditMode && id) {
+          vehicleParams.exclude_sale_id = id;
+        }
         let results = await searchProducts(searchTerm, vehicleParams);
 
         // Verificar equivalentes para productos con stock 0
@@ -457,7 +462,9 @@ function SaleFormPage() {
           for (const member of (group.members || [])) {
             if (member.product_id === product.id) continue;
             if (seen.has(member.product_id)) continue;
-            const memberStock = parseFloat(member.available_stock || member.current_stock || 0);
+            // Disponible real (stock menos cantidad en trámite) cuando el backend
+            // lo expone; si no, cae a available_stock/current_stock como antes.
+            const memberStock = parseFloat(member.available_real ?? member.available_stock ?? member.current_stock ?? 0);
             if (memberStock > 0) {
               seen.add(member.product_id);
               alts.push({
@@ -1624,6 +1631,11 @@ function SaleFormPage() {
                                 : 'text-red-600'
                             }`}>
                               Stock: {product.current_stock || 0}
+                              {product.in_process_qty > 0 && (
+                                <span className="text-amber-600 font-normal">
+                                  {' '}· En trámite: {parseFloat(product.in_process_qty)} · Disp.: {parseFloat(product.available_real ?? (product.current_stock - product.in_process_qty))}
+                                </span>
+                              )}
                             </span>
                           )}
                           {product._equivalentsWithStock > 0 && (

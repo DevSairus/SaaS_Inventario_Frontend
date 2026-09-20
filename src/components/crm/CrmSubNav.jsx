@@ -5,7 +5,7 @@
 // sensación de estar en un módulo, no en pantallas aisladas, y deja un
 // lugar natural para las notificaciones (badges) que hoy no existen.
 import { NavLink } from 'react-router-dom';
-import { Target, ListTodo, BarChart3, Settings, MessageCircle } from 'lucide-react';
+import { Target, ListTodo, BarChart3, Settings, MessageCircle, Gift } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
 
 const ITEMS = [
@@ -13,6 +13,9 @@ const ITEMS = [
   { to: '/crm/pipeline', label: 'Pipeline', icon: Target, key: 'pipeline' },
   { to: '/crm/followups', label: 'Seguimientos', icon: ListTodo, key: 'followups' },
   { to: '/crm/dashboard', label: 'Dashboard', icon: BarChart3, key: 'dashboard' },
+  // Fase 5 (§10.5) — abierto a cualquier rol: el propio vendedor necesita
+  // ver su bono; el endpoint ya scopea qué recompensas devuelve.
+  { to: '/crm/rewards', label: 'Recompensas', icon: Gift, key: 'rewards' },
   // Solo quien puede administrar etapas/plantillas (Fase B.3/B.4) ve este item.
   { to: '/crm/settings', label: 'Configuración', icon: Settings, key: 'settings', roles: ['admin', 'manager', 'super_admin'] },
 ];
