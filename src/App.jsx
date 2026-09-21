@@ -351,6 +351,7 @@ function App() {
         <Route path="adjustments/:id"      element={<TenantRoute module="inventory"><Suspense fallback={<Loading fullScreen />}><AdjustmentDetailPage /></Suspense></TenantRoute>} />
         <Route path="inventory/physical-counts"     element={<TenantRoute module="inventory"><Suspense fallback={<Loading fullScreen />}><PhysicalCountsPage /></Suspense></TenantRoute>} />
         <Route path="inventory/physical-counts/new" element={<TenantRoute module="inventory"><Suspense fallback={<Loading fullScreen />}><PhysicalCountPage /></Suspense></TenantRoute>} />
+        <Route path="inventory/physical-counts/:id/upload" element={<TenantRoute module="inventory"><Suspense fallback={<Loading fullScreen />}><PhysicalCountPage /></Suspense></TenantRoute>} />
         <Route path="inventory/physical-counts/:id" element={<TenantRoute module="inventory"><Suspense fallback={<Loading fullScreen />}><PhysicalCountDetailPage /></Suspense></TenantRoute>} />
 
         <Route path="movements"   element={<TenantRoute module="inventory"><Suspense fallback={<Loading fullScreen />}><MovementsPage /></Suspense></TenantRoute>} />

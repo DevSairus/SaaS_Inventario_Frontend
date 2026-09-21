@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, ExternalLink } from 'lucide-react';
+import { ArrowLeft, ExternalLink, Upload } from 'lucide-react';
 import Layout from '../../components/layout/Layout';
 import { physicalCountsAPI } from '../../api/physicalCounts';
 import { formatCurrency, formatNumber, formatDateTime } from '../../utils/formatters';
@@ -73,7 +73,17 @@ const PhysicalCountDetailPage = () => {
               </p>
             </div>
           </div>
-          {getStatusBadge(count.status)}
+          <div className="flex items-center gap-3">
+            {getStatusBadge(count.status)}
+            {count.status === 'open' && (
+              <button
+                onClick={() => navigate(`/inventory/physical-counts/${count.id}/upload`)}
+                className="inline-flex items-center gap-2 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium"
+              >
+                <Upload className="w-4 h-4" /> Subir conteo
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="bg-white rounded-lg shadow p-4 dark:bg-graphite grid grid-cols-2 sm:grid-cols-4 gap-4">

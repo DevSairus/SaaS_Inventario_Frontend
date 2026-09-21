@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Eye, ClipboardList } from 'lucide-react';
+import { Plus, Eye, Upload, ClipboardList } from 'lucide-react';
 import Layout from '../../components/layout/Layout';
 import { physicalCountsAPI } from '../../api/physicalCounts';
 import { formatCurrency, formatDateTime } from '../../utils/formatters';
@@ -115,13 +115,24 @@ const PhysicalCountsPage = () => {
                           {formatCurrency(c.shortage_value || 0)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          <button
-                            onClick={() => navigate(`/inventory/physical-counts/${c.id}`)}
-                            className="text-blue-600 hover:text-blue-900"
-                            title="Ver detalle"
-                          >
-                            <Eye className="w-5 h-5" />
-                          </button>
+                          <div className="flex items-center justify-end gap-3">
+                            {c.status === 'open' && (
+                              <button
+                                onClick={() => navigate(`/inventory/physical-counts/${c.id}/upload`)}
+                                className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300"
+                                title="Continuar / subir Excel de conteo"
+                              >
+                                <Upload className="w-5 h-5" />
+                              </button>
+                            )}
+                            <button
+                              onClick={() => navigate(`/inventory/physical-counts/${c.id}`)}
+                              className="text-blue-600 hover:text-blue-900"
+                              title="Ver detalle"
+                            >
+                              <Eye className="w-5 h-5" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}

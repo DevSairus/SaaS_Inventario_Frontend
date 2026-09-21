@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Upload, Download, CheckCircle, AlertTriangle, ExternalLink } from 'lucide-react';
 import Layout from '../../components/layout/Layout';
 import api from '../../api/axios';
@@ -64,9 +64,15 @@ const SummaryCard = ({ label, value, subvalue, tone = 'gray' }) => {
 
 const PhysicalCountPage = () => {
   const navigate = useNavigate();
+  // Si viene :id en la ruta, es una sesión "open" ya creada (por ejemplo, horas
+  // antes) que el usuario retoma para subir el Excel diligenciado -- ver
+  // /inventory/physical-counts/:id/upload en App.jsx. Salta el paso 1
+  // (no se crea sesión nueva) y arranca directo en el paso 2.
+  const { id: resumeId } = useParams();
 
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(resumeId ? 2 : 1);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isResuming, setIsResuming] = useState(!!resumeId);
 
   // Paso 1: formulario
   const [warehouses, setWarehouses] = useState([]);
@@ -103,6 +109,44 @@ const PhysicalCountPage = () => {
     };
     loadOptions();
   }, []);
+
+  // Al retomar una sesión existente, trae sus datos y valida que siga abierta
+  // (si ya fue aplicada/cancelada no tiene sentido seguir subiendo el Excel).
+  useEffect(() => {
+    if (!resumeId) return;
+    const loadExisting = async () => {
+      setIsResuming(true);
+      try {
+        const response = await physicalCountsAPI.getById(resumeId);
+        const existing = response.data;
+        if (existing.status !== 'open') {
+          toast.error('Esta sesión de conteo ya no está abierta');
+          navigate(`/inventory/physical-counts/${resumeId}`);
+          return;
+        }
+        setCount(existing);
+      } catch (error) {
+        toast.error(error.response?.data?.message || 'Error al obtener la sesión de conteo');
+        navigate('/inventory/physical-counts');
+      } finally {
+        setIsResuming(false);
+      }
+    };
+    loadExisting();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resumeId]);
+
+  // Re-descarga la plantilla de una sesión ya creada (por si el usuario
+  // perdió el Excel original entre la creación y el conteo físico).
+  const handleRedownloadTemplate = async () => {
+    if (!count) return;
+    try {
+      const blob = await physicalCountsAPI.downloadTemplate(count.id);
+      triggerBlobDownload(blob, `${count.count_number || 'conteo-fisico'}.xlsx`);
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Error al descargar la plantilla');
+    }
+  };
 
   // ── Paso 1: generar sesión + plantilla ──────────────────────────
   const handleGenerate = async () => {
@@ -286,11 +330,23 @@ const PhysicalCountPage = () => {
           )}
 
           {/* Paso 2: Subir + preview */}
-          {step === 2 && (
+          {step === 2 && isResuming && (
+            <div className="p-8 text-center">
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+            </div>
+          )}
+
+          {step === 2 && !isResuming && (
             <div className="space-y-5">
               {count && (
-                <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-3 text-sm text-indigo-800 dark:bg-indigo-900/20 dark:border-indigo-800/40 dark:text-indigo-300">
-                  Sesión <strong>{count.count_number}</strong>. Diligencia la columna "Conteo físico" en el Excel descargado y súbelo aquí.
+                <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-3 text-sm text-indigo-800 dark:bg-indigo-900/20 dark:border-indigo-800/40 dark:text-indigo-300 flex items-center justify-between gap-3 flex-wrap">
+                  <span>Sesión <strong>{count.count_number}</strong>. Diligencia la columna "Conteo físico" en el Excel descargado y súbelo aquí.</span>
+                  <button
+                    onClick={handleRedownloadTemplate}
+                    className="inline-flex items-center gap-1.5 text-indigo-700 hover:text-indigo-900 underline shrink-0 dark:text-indigo-300 dark:hover:text-indigo-100"
+                  >
+                    <Download className="w-4 h-4" /> Descargar plantilla de nuevo
+                  </button>
                 </div>
               )}
 
@@ -440,10 +496,10 @@ const PhysicalCountPage = () => {
 
               <div className="flex justify-between pt-2">
                 <button
-                  onClick={() => setStep(1)}
+                  onClick={() => (resumeId ? navigate('/inventory/physical-counts') : setStep(1))}
                   className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 dark:border-white/10 dark:text-gray-300 dark:hover:bg-white/5"
                 >
-                  Atrás
+                  {resumeId ? 'Cancelar' : 'Atrás'}
                 </button>
                 <button
                   onClick={() => setStep(3)}
@@ -514,7 +570,7 @@ const PhysicalCountPage = () => {
 
                   <div className="flex gap-2 pt-2">
                     <button
-                      onClick={resetFlow}
+                      onClick={() => (resumeId ? navigate('/inventory/physical-counts/new') : resetFlow())}
                       className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 dark:border-white/10 dark:text-gray-300 dark:hover:bg-white/5"
                     >
                       Nuevo conteo
