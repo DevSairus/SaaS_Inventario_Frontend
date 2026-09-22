@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useMovementsStore } from '../../store/movementsStore';
 import useProductsStore from '../../store/productsStore';
 import useBranchStore from '../../store/branchStore';
@@ -304,8 +305,9 @@ const MovementsPage = () => {
           </div>
         )}
 
-        {/* Modal de Kardex */}
-        {showKardex && selectedProduct && (
+        {/* Modal de Kardex — via portal: escapa del stacking context de <main>
+            (Layout.jsx usa z-10 ahí) para poder quedar por encima del sidebar (z-40). */}
+        {showKardex && selectedProduct && createPortal(
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
             <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-auto">
               <div className="p-6 border-b border-gray-200 flex justify-between items-center">
@@ -421,7 +423,8 @@ const MovementsPage = () => {
               </div>
               )}
             </div>
-          </div>
+          </div>,
+          document.body
         )}
       </div>
     </Layout>
