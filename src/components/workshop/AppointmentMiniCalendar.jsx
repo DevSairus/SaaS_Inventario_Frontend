@@ -19,9 +19,9 @@ const WEEKDAYS = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
 // completada > cancelada/no_asistio.
 function dotColorFor(dayAppointments) {
   if (dayAppointments.some(a => a.status === 'pendiente')) return 'bg-amber-500';
-  if (dayAppointments.some(a => a.status === 'confirmada')) return 'bg-blue-500';
-  if (dayAppointments.some(a => a.status === 'completada')) return 'bg-green-500';
-  return 'bg-gray-400';
+  if (dayAppointments.some(a => a.status === 'confirmada')) return 'bg-sky-500';
+  if (dayAppointments.some(a => a.status === 'completada')) return 'bg-emerald-500';
+  return 'bg-red-400';
 }
 
 /**
@@ -42,7 +42,7 @@ export default function AppointmentMiniCalendar({ month, onMonthChange, appointm
   const dayKey = (d) => format(d, 'yyyy-MM-dd');
 
   return (
-    <div className="bg-white border border-gray-100 rounded-xl shadow-[0_1px_2px_rgba(15,15,15,0.04)] p-4 dark:bg-graphite dark:border-white/10">
+    <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-4 dark:bg-graphite dark:border-white/10">
       <div className="flex items-center justify-between mb-3">
         <button type="button" onClick={() => onMonthChange(subMonths(month, 1))}
           className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-50 transition dark:text-gray-500 dark:hover:text-gray-200 dark:hover:bg-white/5">
@@ -76,10 +76,10 @@ export default function AppointmentMiniCalendar({ month, onMonthChange, appointm
               key={key}
               type="button"
               onClick={() => onSelectDay(d)}
-              className={`relative aspect-square flex flex-col items-center justify-center rounded-lg text-xs transition
+              className={`relative aspect-square flex flex-col items-center justify-center rounded-xl text-xs transition
                 ${!inMonth ? 'text-gray-300 dark:text-gray-600' : 'text-gray-700 dark:text-gray-300'}
-                ${isSelected ? 'bg-gradient-to-br from-blue-600 to-blue-500 text-white shadow-sm shadow-blue-500/30 font-semibold' : 'hover:bg-gray-50 dark:hover:bg-white/5'}
-                ${isToday && !isSelected ? 'ring-1 ring-blue-500/60 font-semibold' : ''}
+                ${isSelected ? 'bg-sky-600 text-white shadow-md shadow-sky-600/25 font-semibold' : 'hover:bg-sky-50 dark:hover:bg-white/5'}
+                ${isToday && !isSelected ? 'ring-1 ring-sky-500/60 font-semibold text-sky-700 dark:text-sky-300' : ''}
               `}
             >
               <span>{format(d, 'd')}</span>
