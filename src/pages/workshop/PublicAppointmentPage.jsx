@@ -11,6 +11,8 @@ import { MapPin, CalendarDays, UserRound, ArrowLeft, Check } from 'lucide-react'
 import { publicAppointmentsApi } from '../../api/workshopAppointments';
 import { publicVehiclePortalApi } from '../../api/workshop';
 import PhoneCountryCodeSelect, { DEFAULT_COUNTRY_CODE } from '../../components/common/PhoneCountryCodeSelect';
+import DayCarousel from '../../components/workshop/booking/DayCarousel';
+import SlotGrid from '../../components/workshop/booking/SlotGrid';
 import {
   buildDayCarousel,
   sortBranchesPrincipalFirst,
@@ -369,39 +371,16 @@ export default function PublicAppointmentPage() {
               </div>
             </div>
 
-            <div
-              className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 snap-x snap-mandatory scrollbar-thin"
-              role="listbox"
-              aria-label="Días disponibles"
-            >
-              {dayOptions.map((day) => {
-                const active = day.dateKey === date;
-                return (
-                  <button
-                    key={day.dateKey}
-                    type="button"
-                    role="option"
-                    aria-selected={active}
-                    onClick={() => {
-                      setAvailability(null);
-                      setLoadingSlots(true);
-                      setSelectedSlot(null);
-                      setDate(day.dateKey);
-                    }}
-                    className={`snap-start shrink-0 w-[4.5rem] rounded-2xl border px-2 py-3 text-center transition ${
-                      active
-                        ? 'border-sky-600 bg-sky-600 text-white shadow-md shadow-sky-600/20'
-                        : 'border-slate-200 bg-white text-slate-700 hover:border-sky-300'
-                    }`}
-                  >
-                    <span className={`block text-[10px] font-semibold uppercase tracking-wide ${active ? 'text-sky-100' : 'text-slate-400'}`}>
-                      {day.isToday ? 'Hoy' : day.weekdayShort}
-                    </span>
-                    <span className="block text-xl font-bold leading-tight mt-0.5">{day.dayNumber}</span>
-                  </button>
-                );
-              })}
-            </div>
+            <DayCarousel
+              days={dayOptions}
+              value={date}
+              onChange={(dateKey) => {
+                setAvailability(null);
+                setLoadingSlots(true);
+                setSelectedSlot(null);
+                setDate(dateKey);
+              }}
+            />
 
             <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-3 capitalize">
@@ -414,18 +393,7 @@ export default function PublicAppointmentPage() {
                   No hay horarios disponibles ese día. Prueba con otra fecha.
                 </p>
               ) : (
-                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-                  {availability.slots.filter((s) => s.available).map((slot) => (
-                    <button
-                      key={slot.time}
-                      type="button"
-                      onClick={() => setSelectedSlot(slot)}
-                      className="text-sm py-2.5 rounded-xl border font-medium transition border-sky-200 text-sky-800 bg-sky-50 hover:bg-sky-100 hover:border-sky-300"
-                    >
-                      {slot.time}
-                    </button>
-                  ))}
-                </div>
+                <SlotGrid slots={availability.slots} onSelect={setSelectedSlot} />
               )}
             </div>
           </section>

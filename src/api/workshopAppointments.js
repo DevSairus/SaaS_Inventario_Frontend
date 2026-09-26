@@ -11,6 +11,12 @@ export const appointmentsApi = {
   markPendingSeen: () => axios.post('/workshop/appointments/pending/seen'),
   create: (data) => axios.post('/workshop/appointments', data),
 
+  // Disponibilidad para el staff: ignora la ventana de reserva pública (ver
+  // buildDaySlots en el backend). Con appointmentId, no cuenta esa cita.
+  getAvailability: (date, appointmentId) =>
+    axios.get('/workshop/appointments/availability', { params: { date, appointment_id: appointmentId } }),
+  reschedule: (id, scheduled_at) => axios.patch(`/workshop/appointments/${id}/reschedule`, { scheduled_at }),
+
   confirm: (id) => axios.patch(`/workshop/appointments/${id}/confirm`),
   cancel: (id, reason) => axios.patch(`/workshop/appointments/${id}/cancel`, { reason }),
   sendWhatsApp: (id, type) => axios.post(`/workshop/appointments/${id}/send-whatsapp`, { type }),
