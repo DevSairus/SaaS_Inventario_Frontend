@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import Layout from '../../components/layout/Layout';
 import { vehiclesApi } from '../../api/workshop';
 import axios from '../../api/axios';
@@ -7,9 +7,14 @@ import {
   ArrowLeft, Car, Wrench, User, Save, X, PencilLine,
   ChevronRight, AlertTriangle, CheckCircle, Clock,
   FileText, Hash, Fuel, Gauge, Palette,
+  QrCode, Link2, MessageCircle, CalendarClock,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import NumericInput from '../../components/inputs/NumericInput';
+import VehicleLabelPrintModal from '../../components/workshop/VehicleLabelPrintModal';
+import {
+  MAINTENANCE_STATUS, VEHICLE_TYPE_LABELS, fmtKm, fmtDateOnly, describeRemaining, fmtKmPerDay,
+} from '../../components/workshop/maintenanceStatus';
 
 // ── helpers ──────────────────────────────────────────────────────────
 const COP = n => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(n || 0);
@@ -19,11 +24,6 @@ const inputCls = "w-full border border-gray-200 rounded-lg px-3 py-2 text-sm foc
 const FUEL_LABELS = {
   gasolina: 'Gasolina', diesel: 'Diésel', gas: 'Gas',
   hibrido: 'Híbrido', electrico: 'Eléctrico', otro: 'Otro'
-};
-
-const VEHICLE_TYPE_LABELS = {
-  automovil: 'Automóvil', camioneta: 'Camioneta', motocicleta: 'Motocicleta',
-  camion: 'Camión', otro: 'Otro',
 };
 
 const OT_STATUS = {
@@ -60,6 +60,9 @@ export default function VehicleDetailPage() {
   const [customers, setCustomers] = useState([]);
   const [custSearch, setCustSearch] = useState('');
   const [showCustDrop, setShowCustDrop] = useState(false);
+  const [maintenance, setMaintenance] = useState(null); // { upcoming, records, portal_url }
+  const [portalBusy, setPortalBusy] = useState(null);   // 'copy' | 'wa'
+  const [showLabelModal, setShowLabelModal] = useState(false);
 
   useEffect(() => { load(); }, [id]);
   useEffect(() => {
@@ -72,12 +75,64 @@ export default function VehicleDetailPage() {
       const res = await vehiclesApi.getHistory(id);
       setVehicle(res.data.data.vehicle);
       setHistory(res.data.data.history || []);
+      loadMaintenance();
     } catch {
       toast.error('Error cargando vehículo');
       navigate('/workshop/vehicles');
     } finally {
       setLoading(false);
     }
+  };
+
+  // No bloquea la ficha: si falla, la sección de mantenimientos simplemente no se pinta.
+  const loadMaintenance = () =>
+    vehiclesApi.getMaintenance(id)
+      .then(r => setMaintenance(r.data.data))
+      .catch(() => setMaintenance(null));
+
+  // ── Portal del cliente / sticker QR ─────────────────────────────────
+  const handleCopyPortal = async () => {
+    setPortalBusy('copy');
+    try {
+      const res = await vehiclesApi.getPortalLink(id);
+      await navigator.clipboard.writeText(res.data.data.portal_url);
+      setMaintenance(m => (m ? { ...m, portal_url: res.data.data.portal_url } : m));
+      toast.success('Enlace del portal copiado');
+    } catch {
+      toast.error('No se pudo generar el enlace del portal');
+    } finally {
+      setPortalBusy(null);
+    }
+  };
+
+  const handleSendPortalWhatsApp = async () => {
+    const win = window.open('', '_blank');
+    setPortalBusy('wa');
+    try {
+      const res = await vehiclesApi.sendPortalWhatsApp(id);
+      const { channel, waLink, message } = res.data;
+      if (channel === 'cloud_api') {
+        win?.close();
+        toast.success(message || 'Portal enviado por WhatsApp.', { duration: 5000 });
+      } else if (waLink && win) {
+        win.location.href = waLink;
+        toast.success('Se abrió WhatsApp con el enlace del portal. Presiona Enviar ↑', { duration: 5000 });
+      } else {
+        win?.close();
+        toast.error('No se pudo generar el enlace de WhatsApp.');
+      }
+    } catch (e) {
+      win?.close();
+      toast.error(e.response?.data?.message || 'Error al enviar el portal por WhatsApp', { duration: 6000 });
+    } finally {
+      setPortalBusy(null);
+    }
+  };
+
+  const handlePrintLabel = () => setShowLabelModal(true);
+  const handleCloseLabel = () => {
+    setShowLabelModal(false);
+    loadMaintenance(); // el primer sticker genera el portal_token
   };
 
   const startEdit = () => {
@@ -370,6 +425,19 @@ export default function VehicleDetailPage() {
                 + Nueva OT para esta moto
               </button>
             </div>
+
+            {/* Mantenimientos + portal del cliente */}
+            {maintenance && (
+              <MaintenanceSection
+                vehicle={vehicle}
+                maintenance={maintenance}
+                busy={portalBusy}
+                onCopy={handleCopyPortal}
+                onWhatsApp={handleSendPortalWhatsApp}
+                onLabel={handlePrintLabel}
+                onOpenOrder={woId => navigate(`/workshop/work-orders/${woId}`)}
+              />
+            )}
           </div>
 
         ) : (
@@ -538,6 +606,99 @@ export default function VehicleDetailPage() {
         )}
       </div>
 
+      <VehicleLabelPrintModal isOpen={showLabelModal} onClose={handleCloseLabel} vehicleId={id} />
     </Layout>
+  );
+}
+// ── Mantenimientos (próximos + portal/sticker) ─────────────────────────
+function MaintenanceSection({ vehicle, maintenance, busy, onCopy, onWhatsApp, onLabel, onOpenOrder }) {
+  const { upcoming = [], portal_url, usage } = maintenance;
+  const btnCls = 'flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 rounded-lg text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60';
+
+  return (
+    <div className="lg:col-span-3 bg-white border border-gray-100 rounded-xl p-4">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+        <h2 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+          <CalendarClock size={14} className="text-emerald-500"/> Mantenimientos
+          {usage && (
+            <span className="text-xs font-normal text-gray-500"
+              title={`Promedio con ${usage.readings} lecturas de km en ${usage.span_days} días. Última: ${fmtKm(usage.last_reading.km)} el ${fmtDateOnly(usage.last_reading.date)}`}>
+              · Uso {fmtKmPerDay(usage)} · km estimado hoy ≈ {fmtKm(usage.estimated_km)}
+            </span>
+          )}
+        </h2>
+        <div className="flex flex-wrap gap-2">
+          <button onClick={onCopy} disabled={!!busy} className={btnCls} title={portal_url || 'Genera el enlace permanente del portal'}>
+            <Link2 size={13}/> {busy === 'copy' ? 'Generando...' : 'Copiar enlace del portal'}
+          </button>
+          <button onClick={onWhatsApp} disabled={!!busy} className={btnCls}>
+            <MessageCircle size={13} className="text-green-600"/> {busy === 'wa' ? 'Enviando...' : 'Enviar por WhatsApp'}
+          </button>
+          <button onClick={onLabel} disabled={!!busy}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-900 text-white rounded-lg text-xs font-medium hover:bg-gray-800 disabled:opacity-60">
+            <QrCode size={13}/> Imprimir sticker QR
+          </button>
+        </div>
+      </div>
+
+      {upcoming.length === 0 ? (
+        <div className="text-center py-6 text-gray-400">
+          <p className="text-xs">
+            No hay mantenimientos configurados para {VEHICLE_TYPE_LABELS[vehicle.vehicle_type]?.toLowerCase() || 'este tipo de vehículo'}.
+          </p>
+          <Link to="/workshop/maintenance-types" className="mt-1 inline-block text-xs text-blue-500 hover:underline">
+            Configurar intervalos de mantenimiento
+          </Link>
+        </div>
+      ) : (
+        <div className="overflow-x-auto -mx-1">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-xs text-gray-400 border-b border-gray-100">
+                <th className="px-1 py-2 font-medium">Servicio</th>
+                <th className="px-1 py-2 font-medium">Último</th>
+                <th className="px-1 py-2 font-medium">Próximo</th>
+                <th className="px-1 py-2 font-medium">Estado</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-50">
+              {upcoming.map(u => {
+                const st = MAINTENANCE_STATUS[u.status] || MAINTENANCE_STATUS.sin_historial;
+                const next = [fmtKm(u.next_due_mileage), fmtDateOnly(u.next_due_date)].filter(Boolean).join(' o ');
+                const every = [fmtKm(u.interval_km), u.interval_months ? `${u.interval_months} mes${u.interval_months === 1 ? '' : 'es'}` : null].filter(Boolean).join(' o ');
+                return (
+                  <tr key={u.maintenance_type_id}>
+                    <td className="px-1 py-2.5">
+                      <p className="font-medium text-gray-800">{u.name}</p>
+                      <p className="text-xs text-gray-400">Cada {every}</p>
+                    </td>
+                    <td className="px-1 py-2.5 text-xs text-gray-600">
+                      {u.last ? (
+                        <>
+                          <p>{fmtDateOnly(u.last.performed_at)}{u.last.mileage_at_service ? ` · ${fmtKm(u.last.mileage_at_service)}` : ''}</p>
+                          {u.last.work_order_id && (
+                            <button onClick={() => onOpenOrder(u.last.work_order_id)} className="font-mono text-blue-500 hover:underline">
+                              {u.last.order_number}
+                            </button>
+                          )}
+                        </>
+                      ) : <span className="text-gray-400">—</span>}
+                    </td>
+                    <td className="px-1 py-2.5 text-xs text-gray-700 font-medium">{next || '—'}</td>
+                    <td className="px-1 py-2.5">
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${st.cls}`}>{st.label}</span>
+                      <p className="text-[11px] text-gray-400 mt-0.5">{describeRemaining(u)}</p>
+                      {u.estimated_km_due_date && (
+                        <p className="text-[11px] text-gray-400">Llega al km ≈ {fmtDateOnly(u.estimated_km_due_date)}</p>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
   );
 }
