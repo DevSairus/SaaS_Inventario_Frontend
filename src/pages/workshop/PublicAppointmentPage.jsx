@@ -2,10 +2,14 @@
 // Página pública para que un cliente solicite una cita de taller sin
 // autenticarse. Accesible en: /agendar/:slug
 // Mismo criterio "standalone, sin layout autenticado" que WorkOrderPublicPage.jsx.
+// Desde el portal del vehículo se llega con ?vehiculo=<portal_token>: el
+// vehículo va precargado y fijo, y la cita queda vinculada a él y a su
+// propietario (ver createAppointmentBody en workshopAppointments.controller.js).
 import { useEffect, useMemo, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { MapPin, CalendarDays, UserRound, ArrowLeft, Check } from 'lucide-react';
 import { publicAppointmentsApi } from '../../api/workshopAppointments';
+import { publicVehiclePortalApi } from '../../api/workshop';
 import PhoneCountryCodeSelect, { DEFAULT_COUNTRY_CODE } from '../../components/common/PhoneCountryCodeSelect';
 import {
   buildDayCarousel,
@@ -32,6 +36,9 @@ const STEPS = [
 
 export default function PublicAppointmentPage() {
   const { slug } = useParams();
+  const [searchParams] = useSearchParams();
+  const portalToken = searchParams.get('vehiculo');
+  const [lockedVehicle, setLockedVehicle] = useState(null); // { plate, brand, model }
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -86,6 +93,18 @@ export default function PublicAppointmentPage() {
     })();
   }, [slug]);
 
+  // Token inválido o de otro taller: se ignora y la agenda funciona normal.
+  useEffect(() => {
+    if (!portalToken) return;
+    publicVehiclePortalApi.get(portalToken)
+      .then((res) => {
+        const v = res.data.data.vehicle;
+        setLockedVehicle({ plate: v.plate, brand: v.brand, model: v.model });
+        setForm((f) => ({ ...f, vehicle_plate: v.plate || '', vehicle_brand: [v.brand, v.model].filter(Boolean).join(' ') }));
+      })
+      .catch(() => setLockedVehicle(null));
+  }, [portalToken]);
+
   useEffect(() => {
     if (!branchId) return;
     publicAppointmentsApi.getConfig(slug, branchId)
@@ -138,6 +157,7 @@ export default function PublicAppointmentPage() {
         ...form,
         customer_phone: phoneDigits ? `${phoneCountryCode}${phoneDigits}` : phoneDigits,
         scheduled_at: selectedSlot.scheduled_at,
+        ...(lockedVehicle ? { portal_token: portalToken } : {}),
       });
       setConfirmation(res.data.data);
     } catch (err) {
@@ -185,6 +205,11 @@ export default function PublicAppointmentPage() {
             {selectedBranch?.name ? <> en <span className="font-medium">{selectedBranch.name}</span></> : null}
             {' '}por WhatsApp.
           </p>
+          {lockedVehicle && (
+            <Link to={`/portal/vehiculo/${portalToken}`} className="inline-block mt-4 text-sm font-medium text-sky-700 hover:text-sky-900">
+              Volver a la hoja de vida de {lockedVehicle.plate}
+            </Link>
+          )}
         </div>
       </div>
     );
@@ -465,6 +490,12 @@ export default function PublicAppointmentPage() {
 
               <fieldset className="space-y-2.5">
                 <legend className="text-xs font-semibold uppercase tracking-wide text-slate-400">Vehículo</legend>
+                {lockedVehicle ? (
+                  <div className="rounded-xl bg-slate-50 border border-slate-200 px-3 py-2.5 text-sm text-slate-700">
+                    <span className="font-mono font-bold tracking-wide">{lockedVehicle.plate}</span>
+                    {form.vehicle_brand && <span className="text-slate-500"> · {form.vehicle_brand}</span>}
+                  </div>
+                ) : (
                 <div className="grid grid-cols-2 gap-2">
                   <input
                     type="text"
@@ -481,6 +512,7 @@ export default function PublicAppointmentPage() {
                     className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
                   />
                 </div>
+                )}
               </fieldset>
 
               <fieldset className="space-y-2.5">

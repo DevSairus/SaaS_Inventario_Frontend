@@ -46,6 +46,8 @@ const NAV = [
       { label: "Agenda de citas",       path: "/workshop/appointments" },
       // appointments.routes.js: GET /config solo admin/manager (ni siquiera super_admin).
       { label: "Configurar horarios",   path: "/workshop/appointments/settings", roles: ["admin", "manager"] },
+      // maintenanceTypes.routes.js: escritura solo admin/manager/super_admin.
+      { label: "Mantenimientos",        path: "/workshop/maintenance-types", roles: ["admin", "manager", "super_admin"] },
       { label: "Productividad",         path: "/workshop/productivity" },
       { label: "Reporte Taller",        path: "/workshop/report" },
       { label: "Liquidación Servicios", path: "/workshop/commission-settlements" },

@@ -95,6 +95,8 @@ const WorkshopReportPage = lazy(() => import('./pages/workshop/WorkshopReportPag
 const AppointmentsPage = lazy(() => import('./pages/workshop/AppointmentsPage'));
 const AppointmentSettingsPage = lazy(() => import('./pages/workshop/AppointmentSettingsPage'));
 import PublicAppointmentPage from './pages/workshop/PublicAppointmentPage';
+import VehiclePortalPage from './pages/workshop/VehiclePortalPage';
+const MaintenanceTypesPage = lazy(() => import('./pages/workshop/MaintenanceTypesPage'));
 const CustomersPage = lazy(() => import('./pages/customers/CustomersPage'));
 const CustomerDetailPage = lazy(() => import('./pages/crm/CustomerDetailPage'));
 const PipelinePage = lazy(() => import('./pages/crm/PipelinePage'));
@@ -284,6 +286,7 @@ function App() {
         <Route path="/ot/:token"      element={<WorkOrderPublicPage />} />
         <Route path="/public/quote/:token" element={<QuotePublicPage />} />
         <Route path="/agendar/:slug"       element={<PublicAppointmentPage />} />
+        <Route path="/portal/vehiculo/:token" element={<VehiclePortalPage />} />
         <Route path="/blog"           element={<Suspense fallback={<Loading fullScreen />}><BlogListPage /></Suspense>} />
         <Route path="/blog/:slug"     element={<Suspense fallback={<Loading fullScreen />}><BlogPostPage /></Suspense>} />
         <Route path="/ensambladora/seguimiento/:tipo/:token" element={<SeguimientoPublicoPage />} />
@@ -437,6 +440,7 @@ function App() {
         <Route path="workshop/commission-settlements/:id" element={<TenantRoute module="workshop"><Suspense fallback={<Loading fullScreen />}><CommissionSettlementDetailPage /></Suspense></TenantRoute>} />
         <Route path="workshop/commission-products"     element={<TenantRoute module="workshop"><Suspense fallback={<Loading fullScreen />}><CommissionProductsReportPage /></Suspense></TenantRoute>} />
         <Route path="workshop/commission-categories"   element={<TenantRoute module="workshop"><Suspense fallback={<Loading fullScreen />}><CommissionCategoriesPage /></Suspense></TenantRoute>} />
+        <Route path="workshop/maintenance-types"       element={<TenantRoute module="workshop" roles={['admin', 'manager', 'super_admin']}><Suspense fallback={<Loading fullScreen />}><MaintenanceTypesPage /></Suspense></TenantRoute>} />
         <Route path="workshop/diagram-points-editor"   element={<TenantRoute module="workshop"><Suspense fallback={<Loading fullScreen />}><DiagramPointsEditorPage /></Suspense></TenantRoute>} />
 
         {/* Customer Returns — ANTES de la ruta dinámica :id */}

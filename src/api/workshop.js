@@ -8,6 +8,24 @@ export const vehiclesApi = {
   create: (data) => axios.post('/workshop/vehicles', data),
   update: (id, data) => axios.put(`/workshop/vehicles/${id}`, data),
   remove: (id) => axios.delete(`/workshop/vehicles/${id}`),
+  // Portal del vehículo / mantenimientos (plan-portal-mantenimiento-vehiculo.md)
+  getMaintenance: (id) => axios.get(`/workshop/vehicles/${id}/maintenance`),
+  getPortalLink: (id) => axios.post(`/workshop/vehicles/${id}/portal-token`),
+  sendPortalWhatsApp: (id) => axios.post(`/workshop/vehicles/${id}/portal-whatsapp`),
+  getLabel: (id) => axios.get(`/workshop/vehicles/${id}/label`), // datos + QR del sticker
+};
+
+// ── Tipos de mantenimiento (intervalos por tipo de vehículo) ──
+export const maintenanceTypesApi = {
+  list: (params) => axios.get('/workshop/maintenance-types', { params }),
+  create: (data) => axios.post('/workshop/maintenance-types', data),
+  update: (id, data) => axios.put(`/workshop/maintenance-types/${id}`, data),
+  remove: (id) => axios.delete(`/workshop/maintenance-types/${id}`),
+};
+
+// ── Portal público del vehículo (sin sesión) ──
+export const publicVehiclePortalApi = {
+  get: (token) => axios.get(`/public/vehicles/${token}`),
 };
 
 // ── Work Orders ───────────────────────────────────────────
