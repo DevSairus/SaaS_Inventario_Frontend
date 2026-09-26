@@ -27,7 +27,11 @@ export default defineConfig({
   ],
   server: {
     port: 5172,
-    host: true
+    host: true,
+    // Para compartir en LAN: el celular llama a :5172/api y Vite lo pasa al backend.
+    proxy: {
+      '/api': { target: 'http://127.0.0.1:5001', changeOrigin: true },
+    },
   },
   resolve: {
     // Activa la versión inlined de @undecaf/zbar-wasm (WASM embebido como base64)
