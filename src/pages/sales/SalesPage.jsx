@@ -31,11 +31,12 @@ const DOC_LABELS = {
 };
 
 export default function SalesPage() {
-  // Remisiones ocultas a no-admin (Ajustes > Visibilidad de remisiones): el
-  // backend ya no las devuelve; acá solo se quita la opción del filtro.
+  // Remisiones ocultas (Ajustes > Visibilidad de remisiones): el backend ya
+  // no las devuelve a nadie salvo al superadmin impersonando; acá solo se
+  // quita la opción del filtro.
   const tenantFeatures = useTenantStore(s => s.features);
-  const userRole = useAuthStore(s => s.user?.role);
-  const hideRemisiones = tenantFeatures?.hide_remisiones_for_non_admin === true && !['admin', 'super_admin'].includes(userRole);
+  const isImpersonating = useAuthStore(s => s.isImpersonating);
+  const hideRemisiones = tenantFeatures?.hide_remisiones_for_non_admin === true && !isImpersonating();
   const navigate = useNavigate();
   const { sales, loading, fetchSales, setFilters, filters, stats, fetchStats } = useSalesStore();
   const { branches, fetchBranches } = useBranchStore();

@@ -32,6 +32,7 @@ const TenantDetail = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [toggling, setToggling] = useState(false);
+  const [togglingRemisiones, setTogglingRemisiones] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -80,6 +81,30 @@ const TenantDetail = () => {
       toast.error(err.response?.data?.message || 'No se pudo cambiar el estado del tenant.');
     } finally {
       setToggling(false);
+    }
+  };
+
+  // Solo el superadmin puede desactivar el ocultamiento de remisiones una
+  // vez que el admin del tenant lo activó (ver tenant.controller.js).
+  const handleToggleRemisionHiding = async () => {
+    const enabled = !tenant.hide_remisiones_for_non_admin;
+    if (enabled && !window.confirm(
+      'Ningún usuario de la empresa (tampoco los admin) verá las remisiones ni sus valores en ventas, ' +
+      'dashboard, informes, cartera y taller. Se cerrarán todas sus sesiones abiertas. ¿Continuar?'
+    )) return;
+    if (!enabled && !window.confirm(
+      'Al desactivarlo, todos los usuarios volverán a ver las remisiones y sus valores en ventas, ' +
+      'dashboard, informes, cartera y taller. Se cerrarán todas sus sesiones abiertas. ¿Continuar?'
+    )) return;
+    try {
+      setTogglingRemisiones(true);
+      await api.post(`/superadmin/tenants/${id}/remision-visibility`, { enabled });
+      setTenant(prev => ({ ...prev, hide_remisiones_for_non_admin: enabled }));
+      toast.success(enabled ? 'Remisiones ocultas. Sesiones de la empresa cerradas.' : 'Remisiones visibles. Sesiones de la empresa cerradas.');
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'No se pudo cambiar la visibilidad de remisiones.');
+    } finally {
+      setTogglingRemisiones(false);
     }
   };
 
@@ -411,6 +436,30 @@ const TenantDetail = () => {
           </div>
         </Card>
       </div>
+
+      {/* Visibilidad de remisiones */}
+      <Card title="Visibilidad de remisiones">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex-1">
+            <p className="font-medium text-gray-900 dark:text-gray-100 text-sm">
+              Ocultar remisiones a usuarios no administradores
+            </p>
+            <p className="text-xs text-gray-500 dark:text-gray-500 mt-0.5">
+              Oculta las remisiones a todos los usuarios de la empresa, incluidos los admin (solo tú las ves al
+              impersonar). El admin puede activarlo, pero no desactivarlo: eso solo se hace desde aquí.
+              Cada cambio cierra todas las sesiones abiertas de la empresa y queda en el registro de auditoría.
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <Badge color={tenant.hide_remisiones_for_non_admin ? 'yellow' : 'gray'}>
+              {tenant.hide_remisiones_for_non_admin ? 'Activo' : 'Inactivo'}
+            </Badge>
+            <Button variant="outline" onClick={handleToggleRemisionHiding} disabled={togglingRemisiones}>
+              {tenant.hide_remisiones_for_non_admin ? 'Desactivar' : 'Activar'}
+            </Button>
+          </div>
+        </div>
+      </Card>
 
       {/* Usuarios */}
       <Card title="Usuarios Recientes">

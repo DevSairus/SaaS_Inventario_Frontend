@@ -77,6 +77,7 @@ const SUBSCRIPTION_BLOCKED_CODES = new Set([
   'TENANT_INACTIVE',
 ]);
 let subscriptionBlockHandled = false;
+let sessionRevokedHandled = false;
 
 function processQueue(error, token = null) {
   pendingQueue.forEach(({ resolve, reject }) => {
@@ -105,6 +106,19 @@ api.interceptors.response.use(
       url.includes('/auth/refresh') ||
       url.includes('/auth/forgot-password') ||
       url.includes('/auth/reset-password');
+
+    // Cierre forzado de sesiones del tenant (backend utils/sessionRevocation.js,
+    // ej. al cambiar la visibilidad de remisiones): no se intenta refresh --
+    // el backend tampoco lo permitiría -- y se manda al login una sola vez
+    // aunque fallen varias requests en paralelo.
+    if (status === 401 && error.response?.data?.code === 'SESSION_REVOKED') {
+      if (!sessionRevokedHandled) {
+        sessionRevokedHandled = true;
+        toast.error(error.response.data.message || 'Inicia sesión nuevamente.', { duration: 8000 });
+        redirectToLogin();
+      }
+      return Promise.reject(error);
+    }
 
     if (status === 401 && !isAuthEndpoint && !originalRequest._retry) {
       if (isRefreshing) {

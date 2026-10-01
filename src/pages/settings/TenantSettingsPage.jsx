@@ -15,7 +15,7 @@ import { Building2, Receipt, ShoppingCart, Wrench, Landmark, MessageCircle } fro
 
 const TenantSettingsPage = () => {
   const navigate = useNavigate();
-  const { user } = useAuthStore();
+  const { user, logout } = useAuthStore();
   const isAdmin = user?.role === 'admin';
   const { setFeatures, setTaxConfig } = useTenantStore();
   const [loading, setLoading] = useState(true);
@@ -40,6 +40,11 @@ const TenantSettingsPage = () => {
   const [logoPreview, setLogoPreview] = useState(null);
   const [logoFile, setLogoFile] = useState(null);
   const [activeTab, setActiveTab] = useState('general');
+  // Ocultar remisiones: el admin solo puede ACTIVARLO; una vez guardado la
+  // sección deja de mostrarse y solo el superadmin lo desactiva desde su panel
+  // (ver tenant.controller.js#updateConfig). Se toma del valor CARGADO, no
+  // del estado local, para que el toggle no desaparezca al hacer clic.
+  const [remisionHidingLocked, setRemisionHidingLocked] = useState(false);
 
   const TABS = [
     { id: 'general',     label: 'General',     Icon: Building2 },
@@ -77,6 +82,7 @@ const TenantSettingsPage = () => {
           ...(data.business_config || {}),
         };
         setConfig({ ...data, features: normalizedFeatures, business_config: normalizedBusinessConfig });
+        setRemisionHidingLocked(data.features?.hide_remisiones_for_non_admin === true);
         // ✅ Manejar tanto URLs locales como de Cloudinary
         if (response.data.data.logo_url) {
           const logoUrl = response.data.data.logo_url;
@@ -184,7 +190,15 @@ const TenantSettingsPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
+    const activatingRemisionHiding = config.features?.hide_remisiones_for_non_admin === true && !remisionHidingLocked;
+    if (activatingRemisionHiding && !window.confirm(
+      'Vas a ocultar las remisiones a TODOS los usuarios, incluidos los administradores.\n\n' +
+      'Al guardar se cerrarán todas las sesiones abiertas de la empresa (también la tuya), ' +
+      'esta opción desaparecerá de la configuración y solo el superadministrador de Pitbox ' +
+      'podrá desactivarla. ¿Deseas continuar?'
+    )) return;
+
     try {
       setSaving(true);
       const response = await axios.put('/tenant/config', config);
@@ -195,6 +209,13 @@ const TenantSettingsPage = () => {
         // componentes (ej. ProductFormModal) lean las tarifas ICA al toque.
         setFeatures(config.features || {});
         setTaxConfig(config.tax_config || {});
+        // El backend ya invalidó todas las sesiones del tenant
+        // (utils/sessionRevocation.js): cerrar la propia de una vez.
+        if (activatingRemisionHiding) {
+          toast.success('Remisiones ocultas. Inicia sesión nuevamente.');
+          logout();
+          navigate('/login');
+        }
       }
     } catch (error) {
       toast.error('Error al guardar la configuración');
@@ -452,21 +473,26 @@ const TenantSettingsPage = () => {
             </div>
           </Card>
 
-          {/* Ocultar remisiones a usuarios no administradores (solo lo ve/cambia el admin) */}
-          {isAdmin && (
+          {/* Ocultar remisiones: el admin solo lo activa; una vez activo, solo
+              el superadmin lo desactiva (y lo ve) desde su panel. */}
+          {isAdmin && !remisionHidingLocked && (
             <Card>
               <div className="p-6">
                 <h2 className="text-xl font-semibold mb-1">Visibilidad de remisiones</h2>
                 <p className="text-sm text-gray-500 mb-5">
-                  Controla si los usuarios que no son administradores ven las remisiones.
+                  Oculta las remisiones a todos los usuarios de la empresa.
                 </p>
                 <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
                   <div className="flex-1 mr-4">
-                    <p className="font-medium text-gray-900 text-sm">Ocultar remisiones a usuarios no administradores</p>
+                    <p className="font-medium text-gray-900 text-sm">Ocultar remisiones</p>
                     <p className="text-xs text-gray-500 mt-0.5">
-                      No aparecen en el historial de ventas, el dashboard, los informes de ventas ni en la cartera o el
-                      historial del cliente. Solo se ocultan: siguen contando en inventario, contabilidad y caja,
-                      y quien crea una remisión puede abrirla e imprimirla al terminarla. Los administradores siempre las ven.
+                      No aparecen en el historial de ventas, el dashboard, los informes ni en la cartera o el historial
+                      del cliente, tampoco para los administradores. Las órdenes de trabajo cerradas con remisión no
+                      suman en los ingresos del taller. Siguen contando en inventario, contabilidad y caja, y quien crea
+                      una remisión puede abrirla e imprimirla al terminarla.
+                      <strong className="block mt-1 text-amber-700">
+                        Al guardar se cierran todas las sesiones abiertas. Una vez activada, solo el superadministrador puede desactivarla.
+                      </strong>
                     </p>
                   </div>
                   <button

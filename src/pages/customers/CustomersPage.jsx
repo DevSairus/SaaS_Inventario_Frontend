@@ -10,7 +10,6 @@ import Modal from '../../components/common/Modal';
 import Input from '../../components/common/Input';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
 import Layout from '../../components/layout/Layout';
-import RuesNitButton from '../../components/common/RuesNitButton';
 import DianLookupButton, { useDianLookupAvailability } from '../../components/common/DianLookupButton';
 import DivipolaCitySelect from '../../components/common/DivipolaCitySelect';
 import PhoneCountryCodeSelect, { DEFAULT_COUNTRY_CODE } from '../../components/common/PhoneCountryCodeSelect';
@@ -63,24 +62,6 @@ export default function CustomersPage() {
   }, [searchTerm, page]);
 
   const handleSearchChange = (value) => { setSearchTerm(value); setPage(1); };
-
-  const handleRuesResult = (data) => {
-    setFormData(prev => ({
-      ...prev,
-      customer_type: data.customer_type || prev.customer_type,
-      full_name:     data.full_name     || prev.full_name,
-      business_name: data.business_name || prev.business_name,
-      tax_id:        data.tax_id        || prev.tax_id,
-      city:          data.city          || prev.city,
-      address:       data.address       || prev.address,
-      // RUES no trae código DIVIPOLA — si vino ciudad, el campo queda para
-      // que el usuario la confirme/seleccione con el selector DIVIPOLA
-      // (city_code se limpia a propósito: la ciudad de texto libre de RUES
-      // puede no calzar 1:1 con un código DIVIPOLA válido).
-      city_code:     data.city ? '' : prev.city_code,
-    }));
-    toast.success('Datos RUES cargados. Completa email, teléfono y confirma la ciudad.');
-  };
 
   // La DIAN solo devuelve nombre y correo de recepción de facturas: el
   // correo no pisa uno que el usuario ya haya escrito.
@@ -281,13 +262,8 @@ export default function CustomersPage() {
                   {!editingCustomer && dianLookupAvailable && (
                     <DianLookupButton documentType={formData.document_type} number={formData.tax_id} onResult={handleDianResult} />
                   )}
-                  {/* Con consulta DIAN disponible, RUES solo aporta para empresas
-                      (dirección/ciudad); se omite su aviso de "persona natural". */}
-                  {!editingCustomer && (!dianLookupAvailable || formData.customer_type === 'company') && (
-                    <RuesNitButton nit={formData.tax_id} tipoCliente={formData.customer_type} onResult={handleRuesResult} />
-                  )}
                 </div>
-                {editingCustomer && <p className="text-xs text-gray-400 mt-1 dark:text-gray-500">La consulta RUES{dianLookupAvailable ? ' / DIAN' : ''} solo está disponible al crear un cliente nuevo.</p>}
+                {editingCustomer && dianLookupAvailable && <p className="text-xs text-gray-400 mt-1 dark:text-gray-500">La consulta DIAN solo está disponible al crear un cliente nuevo.</p>}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">Tipo de Identificación (DIAN) *</label>
