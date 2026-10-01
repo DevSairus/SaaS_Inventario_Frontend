@@ -29,7 +29,8 @@ import {
   X,
   Save,
   ArrowLeft,
-  Target
+  Target,
+  Layers
 } from 'lucide-react';
 import BarcodeScanner from '../../components/common/BarcodeScanner';
 import { productsAPI } from '../../api/products';
@@ -44,6 +45,8 @@ import {
 } from '../../utils/formatters';
 import toast from 'react-hot-toast';
 import ProductImageViewer from '../../components/products/ProductImageViewer';
+import ComboPickerModal from '../../components/combos/ComboPickerModal';
+import { groupDocumentItems, newComboGroupId } from '../../components/combos/comboUtils';
 import {
   ClipboardDocumentListIcon,
   DocumentTextIcon,
@@ -189,6 +192,7 @@ function SaleFormPage() {
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
+  const [showComboPicker, setShowComboPicker] = useState(false);
   const [stockAlternatives, setStockAlternatives] = useState([]);
 
   // Estados para búsqueda de clientes
@@ -419,6 +423,11 @@ function SaleFormPage() {
           subtotal: toInteger(item.subtotal, 0),
           total: toInteger(item.total, 0),
           technician_id: item.technician_id || '',
+          combo_id: item.combo_id || null,
+          combo_group_id: item.combo_group_id || null,
+          combo_name: item.combo_name || null,
+          combo_quantity: item.combo_quantity != null ? Number(item.combo_quantity) : null,
+          combo_show_breakdown: item.combo_show_breakdown,
         }));
         setItems(loadedItems);
       }
@@ -492,7 +501,7 @@ function SaleFormPage() {
       return;
     }
 
-    const existingIndex = items.findIndex(item => item.product_id === product.id);
+    const existingIndex = items.findIndex(item => item.product_id === product.id && !item.combo_group_id);
 
     if (existingIndex >= 0) {
       const newItems = [...items];
@@ -594,6 +603,48 @@ function SaleFormPage() {
     setItems(items.filter((_, i) => i !== index));
   };
 
+  // Combo -> sus componentes como líneas normales con el mismo combo_group_id
+  // (ver components/combos/ComboPickerModal.jsx y utils/comboLines.js del backend).
+  const handleAddCombo = ({ combo, quantity, show_breakdown, items: comboItems }) => {
+    const groupId = newComboGroupId();
+    const newLines = comboItems.map(({ product, quantity: qty, unit_price }) => calculateItemTotals({
+      item_type: product.product_type === 'service' ? 'service' : 'product',
+      product_id: product.id,
+      product_name: product.name,
+      product_sku: product.sku,
+      quantity: qty,
+      unit_price: toInteger(unit_price, 0),
+      discount_percentage: 0,
+      tax_percentage: product.has_tax === false ? 0 : (product.tax_percentage || 19),
+      price_includes_tax: product.price_includes_tax || false,
+      has_tax: product.has_tax !== false,
+      technician_id: '',
+      combo_id: combo.id,
+      combo_group_id: groupId,
+      combo_name: combo.name,
+      combo_quantity: quantity,
+      combo_show_breakdown: show_breakdown,
+    }));
+    setItems(prev => [...prev, ...newLines]);
+    setShowComboPicker(false);
+
+    const short = comboItems.filter(({ product, quantity: qty }) =>
+      product.track_inventory && product.product_type !== 'service' && parseFloat(product.current_stock || 0) < qty);
+    if (short.length > 0) {
+      toast(`Stock insuficiente de: ${short.map(s => s.product.name).join(', ')}`, { icon: '⚠️' });
+    }
+  };
+
+  const handleRemoveCombo = (groupId) => {
+    setItems(prev => prev.filter(item => item.combo_group_id !== groupId));
+  };
+
+  const handleComboBreakdownChange = (groupId, showBreakdown) => {
+    setItems(prev => prev.map(item => (item.combo_group_id === groupId
+      ? { ...item, combo_show_breakdown: showBreakdown }
+      : item)));
+  };
+
   const calculateTotals = () => {
     const subtotal = items.reduce((sum, item) => sum + toInteger(item.subtotal, 0), 0);
     const discount = items.reduce((sum, item) => sum + toInteger(item.discount_amount, 0), 0);
@@ -639,6 +690,13 @@ function SaleFormPage() {
           discount_percentage: toInteger(item.discount_percentage),
           tax_percentage: toInteger(item.tax_percentage),
           technician_id: item.technician_id || undefined,
+          ...(item.combo_group_id ? {
+            combo_id: item.combo_id || null,
+            combo_group_id: item.combo_group_id,
+            combo_name: item.combo_name,
+            combo_quantity: item.combo_quantity,
+            combo_show_breakdown: item.combo_show_breakdown !== false,
+          } : {}),
         }))
       };
 
@@ -681,6 +739,167 @@ function SaleFormPage() {
       toast.error(error.message || 'Error al guardar la venta');
     }
   };
+
+  // Fila de un ítem de la tabla. inCombo = componente de un combo (se
+  // edita igual que cualquier línea; el combo solo agrupa).
+  const renderItemRow = (item, index, inCombo = false) => (
+    <tr key={index} className={`hover:bg-gray-50 transition-colors ${inCombo ? 'bg-emerald-50/30' : ''}`}>
+      <td className={`py-4 px-4 ${inCombo ? 'pl-8 border-l-4 border-emerald-300' : ''}`}>
+        {item.item_type === 'free_line' ? (
+          <input
+            type="text"
+            value={item.product_name}
+            onChange={(e) => {
+              const updated = [...items];
+              updated[index].product_name = e.target.value;
+              setItems(updated);
+            }}
+            placeholder="Descripción del ítem..."
+            className="w-full px-2 py-1 border border-indigo-300 rounded text-sm font-medium text-gray-900 focus:ring-2 focus:ring-indigo-400"
+          />
+        ) : (
+          <div className="font-medium text-gray-900">{item.product_name}</div>
+        )}
+        <div className="flex items-center gap-2 mt-1">
+          {item.item_type === 'service' && (
+            <span className="inline-flex items-center gap-1 text-xs font-semibold text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full"><WrenchScrewdriverIcon className="w-3 h-3" /> Servicio</span>
+          )}
+          {item.item_type === 'free_line' && (
+            <span className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full"><PencilSquareIcon className="w-3 h-3" /> Línea libre · No mueve inventario</span>
+          )}
+          {item.item_type !== 'free_line' && item.product_sku && (
+            <span className="text-sm text-gray-500">SKU: {item.product_sku}</span>
+          )}
+        </div>
+        {item.price_includes_tax && (
+          <div className="inline-flex items-center gap-1 text-xs text-blue-600 mt-1 font-medium"><LightBulbIcon className="w-3 h-3" /> Precio incluye IVA</div>
+        )}
+        {item.has_tax === false && (
+          <div className="text-xs text-green-600 mt-1 font-medium">✓ Exento de IVA</div>
+        )}
+      </td>
+      <td className="py-4 px-4">
+        <Input
+          type="number"
+          {...INPUT_CONFIG.quantity}
+          value={item.quantity}
+          onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
+          className="text-center w-full"
+        />
+      </td>
+      <td className="py-4 px-4">
+        <NumericInput
+          value={item.unit_price}
+          onChange={(e) => handleItemChange(index, 'unit_price', e.target.value)}
+          className="text-right w-full input"
+        />
+      </td>
+      <td className="py-4 px-4">
+        <Input
+          type="number"
+          {...INPUT_CONFIG.percentage}
+          value={item.discount_percentage}
+          onChange={(e) => handleItemChange(index, 'discount_percentage', e.target.value)}
+          className="text-right w-full"
+        />
+      </td>
+      {!(hideRemisionTax && formData.document_type === 'remision') && (
+      <td className="py-4 px-4">
+        <Input
+          type="number"
+          {...INPUT_CONFIG.percentage}
+          value={item.tax_percentage}
+          onChange={(e) => handleItemChange(index, 'tax_percentage', e.target.value)}
+          className={`text-right w-full ${
+            item.has_tax === false || item.price_includes_tax 
+              ? 'bg-gray-100 cursor-not-allowed' 
+              : ''
+          }`}
+          disabled={item.has_tax === false || item.price_includes_tax}
+          title={
+            item.has_tax === false 
+              ? 'Producto exento de IVA' 
+              : item.price_includes_tax 
+              ? 'IVA configurado en el producto (incluido en precio)'
+              : ''
+          }
+        />
+      </td>
+      )}
+      <td className="py-4 px-4 text-right">
+        <span className="font-semibold text-gray-900">
+          {formatCurrency(item.total)}
+        </span>
+      </td>
+      {technicians.length > 0 && (
+        <td className="py-4 px-4">
+          <select
+            value={item.technician_id || ''}
+            onChange={(e) => {
+              const updated = [...items];
+              updated[index] = { ...updated[index], technician_id: e.target.value };
+              setItems(updated);
+            }}
+            className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
+          >
+            <option value="">— ninguno —</option>
+            {technicians.map(t => (
+              <option key={t.id} value={t.id}>{t.first_name} {t.last_name}</option>
+            ))}
+          </select>
+        </td>
+      )}
+      <td className="py-4 px-4">
+        <button
+          type="button"
+          onClick={() => handleRemoveItem(index)}
+          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+        >
+          <Trash2 className="w-4 h-4" />
+        </button>
+      </td>
+    </tr>
+  );
+
+  // Columnas antes de "Total": producto, cantidad, precio, desc. y (si se ve) IVA
+  const columnsBeforeTotal = 4 + (!(hideRemisionTax && formData.document_type === 'remision') ? 1 : 0);
+
+  // Encabezado de un combo + sus componentes. show_breakdown solo cambia cómo
+  // se ve el combo en el PDF / factura DIAN; aquí siempre se editan las líneas.
+  const renderComboGroup = (entry) => [
+    <tr key={`combo-${entry.groupId}`} className="bg-emerald-50 border-t-2 border-emerald-200">
+      <td colSpan={columnsBeforeTotal - 1} className="py-2 px-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <Layers className="w-4 h-4 text-emerald-600" />
+          <span className="font-semibold text-gray-900">{entry.name}</span>
+          {entry.quantity !== 1 && <span className="text-xs text-gray-500">× {entry.quantity}</span>}
+          <select
+            value={entry.showBreakdown ? 'breakdown' : 'summary'}
+            onChange={(e) => handleComboBreakdownChange(entry.groupId, e.target.value === 'breakdown')}
+            className="text-xs border border-emerald-200 rounded-lg px-2 py-1 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-400"
+            title="Cómo se muestra el combo en el documento impreso y en la factura electrónica"
+          >
+            <option value="breakdown">Documento: desglosado</option>
+            <option value="summary">Documento: solo nombre y total</option>
+          </select>
+        </div>
+      </td>
+      <td className="py-2 px-4 text-right text-xs text-gray-500">Total combo</td>
+      <td className="py-2 px-4 text-right font-semibold text-gray-900">{formatCurrency(entry.total)}</td>
+      {technicians.length > 0 && <td />}
+      <td className="py-2 px-4">
+        <button
+          type="button"
+          onClick={() => handleRemoveCombo(entry.groupId)}
+          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+          title="Quitar combo completo"
+        >
+          <Trash2 className="w-4 h-4" />
+        </button>
+      </td>
+    </tr>,
+    ...entry.rows.map(({ item, index }) => renderItemRow(item, index, true)),
+  ];
 
   const totals = calculateTotals();
 
@@ -1190,6 +1409,15 @@ function SaleFormPage() {
                     </button>
                     <button
                       type="button"
+                      onClick={() => setShowComboPicker(true)}
+                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors flex items-center gap-2 text-sm font-medium shadow-sm"
+                      title="Agregar un combo de productos/servicios"
+                    >
+                      <Layers className="w-4 h-4" />
+                      Combo
+                    </button>
+                    <button
+                      type="button"
                       onClick={() => setShowScanner(true)}
                       className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors flex items-center gap-2 text-sm font-medium shadow-sm"
                       title="Escanear código de barras con cámara o pistola USB"
@@ -1310,124 +1538,9 @@ function SaleFormPage() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-200">
-                        {items.map((item, index) => (
-                          <tr key={index} className="hover:bg-gray-50 transition-colors">
-                            <td className="py-4 px-4">
-                              {item.item_type === 'free_line' ? (
-                                <input
-                                  type="text"
-                                  value={item.product_name}
-                                  onChange={(e) => {
-                                    const updated = [...items];
-                                    updated[index].product_name = e.target.value;
-                                    setItems(updated);
-                                  }}
-                                  placeholder="Descripción del ítem..."
-                                  className="w-full px-2 py-1 border border-indigo-300 rounded text-sm font-medium text-gray-900 focus:ring-2 focus:ring-indigo-400"
-                                />
-                              ) : (
-                                <div className="font-medium text-gray-900">{item.product_name}</div>
-                              )}
-                              <div className="flex items-center gap-2 mt-1">
-                                {item.item_type === 'service' && (
-                                  <span className="inline-flex items-center gap-1 text-xs font-semibold text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full"><WrenchScrewdriverIcon className="w-3 h-3" /> Servicio</span>
-                                )}
-                                {item.item_type === 'free_line' && (
-                                  <span className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full"><PencilSquareIcon className="w-3 h-3" /> Línea libre · No mueve inventario</span>
-                                )}
-                                {item.item_type !== 'free_line' && item.product_sku && (
-                                  <span className="text-sm text-gray-500">SKU: {item.product_sku}</span>
-                                )}
-                              </div>
-                              {item.price_includes_tax && (
-                                <div className="inline-flex items-center gap-1 text-xs text-blue-600 mt-1 font-medium"><LightBulbIcon className="w-3 h-3" /> Precio incluye IVA</div>
-                              )}
-                              {item.has_tax === false && (
-                                <div className="text-xs text-green-600 mt-1 font-medium">✓ Exento de IVA</div>
-                              )}
-                            </td>
-                            <td className="py-4 px-4">
-                              <Input
-                                type="number"
-                                {...INPUT_CONFIG.quantity}
-                                value={item.quantity}
-                                onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
-                                className="text-center w-full"
-                              />
-                            </td>
-                            <td className="py-4 px-4">
-                              <NumericInput
-                                value={item.unit_price}
-                                onChange={(e) => handleItemChange(index, 'unit_price', e.target.value)}
-                                className="text-right w-full input"
-                              />
-                            </td>
-                            <td className="py-4 px-4">
-                              <Input
-                                type="number"
-                                {...INPUT_CONFIG.percentage}
-                                value={item.discount_percentage}
-                                onChange={(e) => handleItemChange(index, 'discount_percentage', e.target.value)}
-                                className="text-right w-full"
-                              />
-                            </td>
-                            {!(hideRemisionTax && formData.document_type === 'remision') && (
-                            <td className="py-4 px-4">
-                              <Input
-                                type="number"
-                                {...INPUT_CONFIG.percentage}
-                                value={item.tax_percentage}
-                                onChange={(e) => handleItemChange(index, 'tax_percentage', e.target.value)}
-                                className={`text-right w-full ${
-                                  item.has_tax === false || item.price_includes_tax 
-                                    ? 'bg-gray-100 cursor-not-allowed' 
-                                    : ''
-                                }`}
-                                disabled={item.has_tax === false || item.price_includes_tax}
-                                title={
-                                  item.has_tax === false 
-                                    ? 'Producto exento de IVA' 
-                                    : item.price_includes_tax 
-                                    ? 'IVA configurado en el producto (incluido en precio)'
-                                    : ''
-                                }
-                              />
-                            </td>
-                            )}
-                            <td className="py-4 px-4 text-right">
-                              <span className="font-semibold text-gray-900">
-                                {formatCurrency(item.total)}
-                              </span>
-                            </td>
-                            {technicians.length > 0 && (
-                              <td className="py-4 px-4">
-                                <select
-                                  value={item.technician_id || ''}
-                                  onChange={(e) => {
-                                    const updated = [...items];
-                                    updated[index] = { ...updated[index], technician_id: e.target.value };
-                                    setItems(updated);
-                                  }}
-                                  className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
-                                >
-                                  <option value="">— ninguno —</option>
-                                  {technicians.map(t => (
-                                    <option key={t.id} value={t.id}>{t.first_name} {t.last_name}</option>
-                                  ))}
-                                </select>
-                              </td>
-                            )}
-                            <td className="py-4 px-4">
-                              <button
-                                type="button"
-                                onClick={() => handleRemoveItem(index)}
-                                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
+                        {groupDocumentItems(items).map(entry => (entry.type === 'line'
+                          ? renderItemRow(entry.item, entry.index)
+                          : renderComboGroup(entry)))}
                       </tbody>
                     </table>
                   </div>
@@ -1541,6 +1654,12 @@ function SaleFormPage() {
             )}
           </form>
         </div>
+
+        <ComboPickerModal
+          isOpen={showComboPicker}
+          onClose={() => setShowComboPicker(false)}
+          onConfirm={handleAddCombo}
+        />
 
         {/* Modal de búsqueda de productos */}
         <Modal

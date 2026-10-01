@@ -11,6 +11,7 @@ const DashboardPage = lazy(() => import('./pages/dashboard/DashboardPage'));
 const ProductsPage = lazy(() => import('./pages/products/ProductsPage'));
 const ProductDetailPage = lazy(() => import('./pages/products/ProductDetailPage'));
 const CategoriesPage = lazy(() => import('./pages/categories/CategoriesPage'));
+const CombosPage = lazy(() => import('./pages/combos/CombosPage'));
 const SuppliersPage = lazy(() => import('./pages/suppliers/SuppliersPage'));
 const PurchasesPage = lazy(() => import('./pages/purchases/PurchasesPage'));
 const PurchaseFormPage = lazy(() => import('./pages/purchases/PurchaseFormPage'));
@@ -91,6 +92,7 @@ const CommissionSettlementDetailPage = lazy(() => import('./pages/workshop/commi
 const CommissionProductsReportPage = lazy(() => import('./pages/workshop/commissions/CommissionProductsReportPage'));
 const CommissionCategoriesPage = lazy(() => import('./pages/workshop/commissions/CommissionCategoriesPage'));
 const DiagramPointsEditorPage = lazy(() => import('./pages/workshop/DiagramPointsEditorPage'));
+const DiagramLibraryPage = lazy(() => import('./pages/workshop/DiagramLibraryPage'));
 const WorkshopReportPage = lazy(() => import('./pages/workshop/WorkshopReportPage'));
 const AppointmentsPage = lazy(() => import('./pages/workshop/AppointmentsPage'));
 const AppointmentSettingsPage = lazy(() => import('./pages/workshop/AppointmentSettingsPage'));
@@ -339,6 +341,7 @@ function App() {
         <Route path="products/:id" element={<TenantRoute module="inventory"><Suspense fallback={<Loading fullScreen />}><ProductDetailPage /></Suspense></TenantRoute>} />
         <Route path="products"   element={<TenantRoute module="inventory"><Suspense fallback={<Loading fullScreen />}><ProductsPage /></Suspense></TenantRoute>} />
         <Route path="categories" element={<TenantRoute module="inventory"><Suspense fallback={<Loading fullScreen />}><CategoriesPage /></Suspense></TenantRoute>} />
+        <Route path="combos" element={<TenantRoute module="inventory"><Suspense fallback={<Loading fullScreen />}><CombosPage /></Suspense></TenantRoute>} />
         <Route path="suppliers"  element={<TenantRoute module="inventory"><Suspense fallback={<Loading fullScreen />}><SuppliersPage /></Suspense></TenantRoute>} />
 
         {/* Compras */}
@@ -441,6 +444,7 @@ function App() {
         <Route path="workshop/commission-products"     element={<TenantRoute module="workshop"><Suspense fallback={<Loading fullScreen />}><CommissionProductsReportPage /></Suspense></TenantRoute>} />
         <Route path="workshop/commission-categories"   element={<TenantRoute module="workshop"><Suspense fallback={<Loading fullScreen />}><CommissionCategoriesPage /></Suspense></TenantRoute>} />
         <Route path="workshop/maintenance-types"       element={<TenantRoute module="workshop" roles={['admin', 'manager', 'super_admin']}><Suspense fallback={<Loading fullScreen />}><MaintenanceTypesPage /></Suspense></TenantRoute>} />
+        <Route path="workshop/diagram-library"         element={<TenantRoute module="workshop" roles={['admin', 'super_admin']}><Suspense fallback={<Loading fullScreen />}><DiagramLibraryPage /></Suspense></TenantRoute>} />
         <Route path="workshop/diagram-points-editor"   element={<TenantRoute module="workshop"><Suspense fallback={<Loading fullScreen />}><DiagramPointsEditorPage /></Suspense></TenantRoute>} />
 
         {/* Customer Returns — ANTES de la ruta dinámica :id */}

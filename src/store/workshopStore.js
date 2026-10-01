@@ -224,8 +224,11 @@ const useWorkshopStore = create((set, get) => ({
   generateSale: async (id, data = {}) => {
     try {
       const res = await workOrdersApi.generateSale(id, data);
-      const docLabel = data.document_type === 'factura' ? 'Factura' : 'Remisión';
-      toast.success(`${docLabel} ${res.data.data.sale_number} generada`);
+      // La factura se envía a la DIAN en segundo plano (ver
+      // workOrders.controller.js#generateSale): el resultado se ve en la venta.
+      toast.success(data.document_type === 'factura'
+        ? `Factura ${res.data.data.sale_number} generada — enviando a la DIAN`
+        : `Remisión ${res.data.data.sale_number} generada`);
       await get().fetchOrder(id);
       return res.data.data;
     } catch (err) {

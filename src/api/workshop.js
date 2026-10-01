@@ -41,6 +41,10 @@ export const workOrdersApi = {
   addItem: (id, data) => axios.post(`/workshop/work-orders/${id}/items`, data),
   updateItem: (id, itemId, data) => axios.patch(`/workshop/work-orders/${id}/items/${itemId}`, data),
   removeItem: (id, itemId) => axios.delete(`/workshop/work-orders/${id}/items/${itemId}`),
+  // Combos (requieren conexión: agregan todas las líneas en una transacción)
+  addCombo: (id, data) => axios.post(`/workshop/work-orders/${id}/combos`, data),
+  updateCombo: (id, groupId, data) => axios.patch(`/workshop/work-orders/${id}/combos/${groupId}`, data),
+  removeCombo: (id, groupId) => axios.delete(`/workshop/work-orders/${id}/combos/${groupId}`),
   generateSale: (id, data = {}) => axios.post(`/workshop/work-orders/${id}/generate-sale`, data),
   uploadPhotos: (id, phase, formData) =>
     axios.post(`/workshop/work-orders/${id}/photos/${phase}`, formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
@@ -100,6 +104,8 @@ export const diagramTemplatesApi = {
   list: (params) => axios.get('/workshop/diagram-templates', { params }),
   getById: (id) => axios.get(`/workshop/diagram-templates/${id}`),
   updatePoints: (id, points) => axios.patch(`/workshop/diagram-templates/${id}/points`, { points }),
+  // settings: [{ diagram_template_id, is_enabled?, extra_vehicle_types? }]
+  updateSettings: (settings) => axios.put('/workshop/diagram-templates/settings', { settings }),
 };
 
 export const diagnosisMarksApi = {

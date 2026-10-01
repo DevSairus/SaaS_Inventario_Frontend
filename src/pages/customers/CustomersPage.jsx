@@ -11,6 +11,7 @@ import Input from '../../components/common/Input';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
 import Layout from '../../components/layout/Layout';
 import RuesNitButton from '../../components/common/RuesNitButton';
+import DianLookupButton, { useDianLookupAvailability } from '../../components/common/DianLookupButton';
 import DivipolaCitySelect from '../../components/common/DivipolaCitySelect';
 import PhoneCountryCodeSelect, { DEFAULT_COUNTRY_CODE } from '../../components/common/PhoneCountryCodeSelect';
 import LibroAuxiliarModal from '../../components/accounting/LibroAuxiliarModal';
@@ -47,6 +48,7 @@ export default function CustomersPage() {
   const [page, setPage] = useState(1);
   const [formData, setFormData] = useState(FORM_EMPTY);
   const [ledgerCustomer, setLedgerCustomer] = useState(null);
+  const dianLookupAvailable = useDianLookupAvailability();
 
   // La búsqueda va al backend (no solo sobre lo ya cargado) para que un
   // cliente creado por fuera de este formulario (p. ej. desde el formato
@@ -78,6 +80,21 @@ export default function CustomersPage() {
       city_code:     data.city ? '' : prev.city_code,
     }));
     toast.success('Datos RUES cargados. Completa email, teléfono y confirma la ciudad.');
+  };
+
+  // La DIAN solo devuelve nombre y correo de recepción de facturas: el
+  // correo no pisa uno que el usuario ya haya escrito.
+  const handleDianResult = (data) => {
+    setFormData(prev => ({
+      ...prev,
+      customer_type: data.customer_type || prev.customer_type,
+      document_type: data.document_type || prev.document_type,
+      tax_id:        data.tax_id        || prev.tax_id,
+      full_name:     data.full_name     || prev.full_name,
+      business_name: data.business_name || prev.business_name,
+      email:         prev.email || data.email || '',
+    }));
+    toast.success('Datos DIAN cargados. Completa teléfono, dirección y ciudad.');
   };
 
   // Al cambiar el tipo de cliente, ajusta el tipo de identificación por
@@ -261,11 +278,16 @@ export default function CustomersPage() {
                   <input type="text" value={formData.tax_id} onChange={set('tax_id')}
                     placeholder={formData.customer_type === 'company' ? 'Ej: 900072256 o 900072256-1' : 'Ej: 92549045'}
                     className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100 dark:placeholder-gray-600" />
-                  {!editingCustomer && (
+                  {!editingCustomer && dianLookupAvailable && (
+                    <DianLookupButton documentType={formData.document_type} number={formData.tax_id} onResult={handleDianResult} />
+                  )}
+                  {/* Con consulta DIAN disponible, RUES solo aporta para empresas
+                      (dirección/ciudad); se omite su aviso de "persona natural". */}
+                  {!editingCustomer && (!dianLookupAvailable || formData.customer_type === 'company') && (
                     <RuesNitButton nit={formData.tax_id} tipoCliente={formData.customer_type} onResult={handleRuesResult} />
                   )}
                 </div>
-                {editingCustomer && <p className="text-xs text-gray-400 mt-1 dark:text-gray-500">La consulta RUES solo está disponible al crear un cliente nuevo.</p>}
+                {editingCustomer && <p className="text-xs text-gray-400 mt-1 dark:text-gray-500">La consulta RUES{dianLookupAvailable ? ' / DIAN' : ''} solo está disponible al crear un cliente nuevo.</p>}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">Tipo de Identificación (DIAN) *</label>

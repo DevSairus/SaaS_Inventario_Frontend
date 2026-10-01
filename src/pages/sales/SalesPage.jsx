@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useSalesStore from '../../store/salesStore';
 import useBranchStore from '../../store/branchStore';
+import useTenantStore from '../../store/tenantStore';
+import useAuthStore from '../../store/authStore';
 import Layout from '../../components/layout/Layout';
 import DianStatusBadge from '../../components/dian/DianStatusBadge';
 import { formatCurrency, formatDate } from '../../utils/formatters';
@@ -29,6 +31,11 @@ const DOC_LABELS = {
 };
 
 export default function SalesPage() {
+  // Remisiones ocultas a no-admin (Ajustes > Visibilidad de remisiones): el
+  // backend ya no las devuelve; acá solo se quita la opción del filtro.
+  const tenantFeatures = useTenantStore(s => s.features);
+  const userRole = useAuthStore(s => s.user?.role);
+  const hideRemisiones = tenantFeatures?.hide_remisiones_for_non_admin === true && !['admin', 'super_admin'].includes(userRole);
   const navigate = useNavigate();
   const { sales, loading, fetchSales, setFilters, filters, stats, fetchStats } = useSalesStore();
   const { branches, fetchBranches } = useBranchStore();
@@ -156,7 +163,7 @@ export default function SalesPage() {
                 className="text-sm border border-gray-200 dark:border-white/10 dark:bg-graphite-2 dark:text-gray-100 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="">Todos los documentos</option>
-                <option value="remision">Remisión</option>
+                {!hideRemisiones && <option value="remision">Remisión</option>}
                 <option value="factura">Factura</option>
                 <option value="cotizacion">Cotización</option>
                 <option value="nota_credito">Nota Crédito</option>

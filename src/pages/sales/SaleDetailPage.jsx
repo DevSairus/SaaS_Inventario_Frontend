@@ -34,6 +34,7 @@ import useTenantStore from '../../store/tenantStore';
 import toast from 'react-hot-toast';
 import DiagramMapEditor from '../../components/workshop/DiagramMapEditor';
 import ConvertQuoteToWorkOrderModal from '../../components/sales/ConvertQuoteToWorkOrderModal';
+import { groupDocumentItems } from '../../components/combos/comboUtils';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -584,11 +585,30 @@ export default function SaleDetailPage() {
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                      {sale.items?.map((item) => {
+                      {groupDocumentItems(sale.items)
+                        .flatMap(entry => (entry.type === 'line'
+                          ? [entry.item]
+                          : [{ comboHeader: entry }, ...entry.rows.map(r => r.item)]))
+                        .map((item) => {
+                        if (item.comboHeader) {
+                          const combo = item.comboHeader;
+                          return (
+                            <tr key={`combo-${combo.groupId}`} className="bg-emerald-50">
+                              <td className="px-4 py-2" colSpan={(hideRemisionTax && sale.document_type === 'remision') ? 4 : 5}>
+                                <span className="text-sm font-semibold text-gray-900">Combo: {combo.name}</span>
+                                {combo.quantity !== 1 && <span className="text-xs text-gray-500 ml-2">× {combo.quantity}</span>}
+                                <span className="text-xs text-gray-500 ml-2">
+                                  · En el documento: {combo.showBreakdown ? 'desglosado' : 'solo nombre y total'}
+                                </span>
+                              </td>
+                              <td className="px-4 py-2 text-right text-sm font-semibold">{formatCurrency(combo.total)}</td>
+                            </tr>
+                          );
+                        }
                         const rejected = item.approval_status === 'rechazado';
                         return (
                         <tr key={item.id} className={rejected ? 'opacity-50' : ''}>
-                          <td className="px-4 py-3">
+                          <td className={`px-4 py-3 ${item.combo_group_id ? 'pl-8 border-l-4 border-emerald-200' : ''}`}>
                             <div className={`text-sm font-medium text-gray-900 ${rejected ? 'line-through' : ''}`}>{item.product_name}</div>
                             {rejected ? (
                               <span className="inline-flex items-center gap-1 text-xs font-semibold text-red-600 bg-red-50 px-2 py-0.5 rounded-full mt-0.5">

@@ -72,7 +72,8 @@ export default function DiagramPointsEditorPage() {
 
   useEffect(() => {
     setSystem(''); setConfiguration(''); setTemplate(null); setPoints([]);
-    diagramTemplatesApi.list({ vehicle_type: vehicleType })
+    // all: 1 -> también los diagramas que el taller desactivó (se calibran igual)
+    diagramTemplatesApi.list({ vehicle_type: vehicleType, all: 1 })
       .then(res => setSystems(res.data.data || []))
       .catch(() => toast.error('No se pudo cargar el catálogo'));
   }, [vehicleType]);

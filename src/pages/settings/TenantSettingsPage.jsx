@@ -452,6 +452,39 @@ const TenantSettingsPage = () => {
             </div>
           </Card>
 
+          {/* Ocultar remisiones a usuarios no administradores (solo lo ve/cambia el admin) */}
+          {isAdmin && (
+            <Card>
+              <div className="p-6">
+                <h2 className="text-xl font-semibold mb-1">Visibilidad de remisiones</h2>
+                <p className="text-sm text-gray-500 mb-5">
+                  Controla si los usuarios que no son administradores ven las remisiones.
+                </p>
+                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
+                  <div className="flex-1 mr-4">
+                    <p className="font-medium text-gray-900 text-sm">Ocultar remisiones a usuarios no administradores</p>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      No aparecen en el historial de ventas, el dashboard, los informes de ventas ni en la cartera o el
+                      historial del cliente. Solo se ocultan: siguen contando en inventario, contabilidad y caja,
+                      y quien crea una remisión puede abrirla e imprimirla al terminarla. Los administradores siempre las ven.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => toggleFeature('hide_remisiones_for_non_admin')}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0 ${
+                      config.features?.hide_remisiones_for_non_admin ? 'bg-blue-600' : 'bg-gray-300'
+                    }`}
+                  >
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                      config.features?.hide_remisiones_for_non_admin ? 'translate-x-6' : 'translate-x-1'
+                    }`} />
+                  </button>
+                </div>
+              </div>
+            </Card>
+          )}
+
           {/* Mostrar/ocultar IVA discriminado en documentos de Ventas */}
           <Card>
             <div className="p-6">

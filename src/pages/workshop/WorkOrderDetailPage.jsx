@@ -14,7 +14,7 @@ import BarcodeScanner from '../../components/common/BarcodeScanner';
 import {
   ArrowLeft, Wrench, Car, User, Package, Plus, Trash2, Pencil,
   Camera, FileText, AlertTriangle, CheckCircle, Clock, DollarSign,
-  Printer, Download, ClipboardList, Share2, Image, Link2,
+  Printer, Download, ClipboardList, Share2, Image, Link2, Layers,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { ClipboardDocumentListIcon, DocumentTextIcon } from '@heroicons/react/24/outline';
@@ -22,6 +22,8 @@ import ProductImageViewer from '../../components/products/ProductImageViewer';
 import DiagramMapEditor from '../../components/workshop/DiagramMapEditor';
 import NumericInput from '../../components/inputs/NumericInput';
 import CompleteCustomerDianModal from '../../components/dian/CompleteCustomerDianModal';
+import ComboPickerModal from '../../components/combos/ComboPickerModal';
+import { groupDocumentItems } from '../../components/combos/comboUtils';
 
 const STATUS_FLOW = ['recibido', 'en_proceso', 'en_espera', 'listo', 'entregado'];
 
@@ -142,6 +144,8 @@ export default function WorkOrderDetailPage() {
 
   // Formulario agregar ítem
   const [showAddItem, setShowAddItem] = useState(false);
+  const [showComboPicker, setShowComboPicker] = useState(false);
+  const [addingCombo, setAddingCombo] = useState(false);
   const [newItem, setNewItem] = useState({
     product_id: '', product_name: '', item_type: 'repuesto', quantity: 1, unit_price: '', technician_id: '', requires_approval: false,
   });
@@ -356,6 +360,51 @@ export default function WorkOrderDetailPage() {
     }, 300);
     return () => clearTimeout(timer);
   }, [searchTerm, order?.vehicle]);
+
+  // ── Combos: agregar / quitar / cambiar presentación (requieren conexión) ──
+  const handleAddCombo = async ({ combo, quantity, show_breakdown, items, requires_approval }) => {
+    setAddingCombo(true);
+    try {
+      const res = await workOrdersApi.addCombo(id, {
+        combo_id: combo.id,
+        quantity,
+        show_breakdown,
+        requires_approval: requires_approval || undefined,
+        items: items.map(i => ({ product_id: i.product_id, quantity: i.quantity, unit_price: i.unit_price })),
+      });
+      toast.success(res.data?.message || 'Combo agregado');
+      (res.data?.warnings || []).forEach(w => toast(w.message || w, { icon: '⚠️', duration: 6000 }));
+      setShowComboPicker(false);
+      await fetchOrder(id);
+    } catch (err) {
+      const msg = err?.response?.data?.message || 'No se pudo agregar el combo';
+      toast.error(msg.toLowerCase().includes('bodega')
+        ? `${msg}. Asigna una bodega a la OT para poder agregar repuestos.`
+        : msg);
+    } finally {
+      setAddingCombo(false);
+    }
+  };
+
+  const handleRemoveCombo = async (entry) => {
+    if (!window.confirm(`¿Quitar el combo "${entry.name}" y sus ${entry.rows.length} línea(s) de la OT?`)) return;
+    try {
+      await workOrdersApi.removeCombo(id, entry.groupId);
+      toast.success('Combo eliminado');
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'No se pudo eliminar el combo');
+    }
+    await fetchOrder(id);
+  };
+
+  const handleComboBreakdownChange = async (groupId, showBreakdown) => {
+    try {
+      await workOrdersApi.updateCombo(id, groupId, { show_breakdown: showBreakdown });
+      await fetchOrder(id);
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'No se pudo actualizar el combo');
+    }
+  };
 
   const handleSelectProduct = (product) => {
     setNewItem(prev => ({
@@ -697,6 +746,151 @@ export default function WorkOrderDetailPage() {
   // 'listo' ahora también bloquea edición (ver revertStatus en el backend) --
   // solo se puede seguir editando en recibido/en_proceso/en_espera.
   const isClosed   = ['listo', 'entregado', 'cancelado'].includes(order.status);
+
+  // Fila de un ítem de la OT. inCombo = componente de un combo.
+  const renderOrderItem = (item, inCombo = false) => {
+    const isPending = (item.approval_status || 'aprobado') === 'pendiente';
+    const isEditingThis = editingItemId === item.id;
+    return (
+    <div key={item.id} className={`py-2.5 ${inCombo ? 'pl-4 border-l-2 border-emerald-200' : ''}`}>
+    <div className="flex items-center justify-between gap-2">
+      <div className="min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${
+            item.item_type === 'repuesto'
+              ? 'bg-orange-100 text-orange-700'
+              : item.item_type === 'mano_obra'
+                ? 'bg-blue-100 text-blue-700'
+                : item.item_type === 'free_line'
+                  ? 'bg-indigo-100 text-indigo-700'
+                  : 'bg-purple-100 text-purple-700'
+          }`}>
+            {item.item_type === 'mano_obra'
+              ? 'Mano de obra'
+              : item.item_type === 'free_line'
+                ? 'Línea libre'
+                : item.item_type}
+          </span>
+          <span className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">
+            {item.product_name || item.product?.name}
+          </span>
+          {isPending && (
+            <span className="text-xs px-1.5 py-0.5 rounded font-medium bg-amber-100 text-amber-700">
+              {item.quote_request_id ? 'Cotización enviada' : 'Pendiente de enviar'}
+            </span>
+          )}
+          {item.approval_status === 'rechazado' && (
+            <span className="text-xs px-1.5 py-0.5 rounded font-medium bg-red-100 text-red-700">
+              Rechazado por el cliente
+            </span>
+          )}
+          {item.commission_category && (
+            <span className="text-xs px-1.5 py-0.5 rounded font-medium bg-teal-100 text-teal-700">
+              {item.commission_category.name} · {item.commission_category.default_percentage}%
+            </span>
+          )}
+        </div>
+        {!isEditingThis && (
+          <p className="text-xs text-gray-400 mt-0.5">
+            {hidePrices ? `Cantidad: ${item.quantity}` : <>{item.quantity} × {COP(item.unit_price)}</>}
+            {!hidePrices && !hideWorkOrderTax && parseFloat(item.tax_amount) > 0 && (
+              <> · IVA {COP(item.tax_amount)}</>
+            )}
+            {item.item_technician && (
+              <span className="ml-2 text-blue-500">
+                · {item.item_technician.first_name} {item.item_technician.last_name}
+              </span>
+            )}
+          </p>
+        )}
+      </div>
+      <div className="flex items-center gap-2 flex-shrink-0">
+        {!hidePrices && (
+          <span className="text-sm font-semibold text-gray-900">{COP(item.total)}</span>
+        )}
+        {!isClosed && isPending && !isEditingThis && (
+          <button onClick={() => startEditItem(item)}
+            className="p-1 text-gray-300 hover:text-blue-500 transition"
+            title="Editar ítem pendiente">
+            <Pencil size={14} />
+          </button>
+        )}
+        {!isClosed && (
+          <button onClick={() => removeItem(id, item.id)}
+            className="p-1 text-gray-300 hover:text-red-500 transition">
+            <Trash2 size={14} />
+          </button>
+        )}
+      </div>
+    </div>
+    {isEditingThis && (
+      <div className="mt-2 p-2.5 bg-gray-50 dark:bg-graphite-2 rounded-lg flex flex-wrap items-end gap-2">
+        {item.item_type === 'free_line' && (
+          <input type="text" value={editItemVals.product_name}
+            onChange={e => setEditItemVals(v => ({ ...v, product_name: e.target.value }))}
+            placeholder="Descripción" className={`${inputCls} flex-1 min-w-[140px] !py-1.5`} />
+        )}
+        <NumericInput value={editItemVals.quantity}
+          onChange={e => setEditItemVals(vals => ({ ...vals, quantity: e.target.value }))}
+          placeholder="Cantidad" className={`${inputCls} w-20 !py-1.5`} />
+        {!hidePrices && (
+          <NumericInput value={editItemVals.unit_price}
+            onChange={e => setEditItemVals(vals => ({ ...vals, unit_price: e.target.value }))}
+            placeholder="Precio" className={`${inputCls} w-28 !py-1.5`} />
+        )}
+        <button onClick={() => saveEditItem(item)} disabled={savingEditItem}
+          className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 disabled:opacity-50">
+          {savingEditItem ? 'Guardando...' : 'Guardar'}
+        </button>
+        <button onClick={cancelEditItem} disabled={savingEditItem}
+          className="text-xs text-gray-500 px-2 py-1.5 hover:text-gray-700">
+          Cancelar
+        </button>
+      </div>
+    )}
+    </div>
+    );
+  };
+
+  // Combo: encabezado (nombre, cómo se muestra en el PDF, total, quitar) y
+  // sus componentes, que se siguen editando/eliminando uno a uno.
+  const renderOrderCombo = (entry) => (
+    <div key={`combo-${entry.groupId}`} className="py-2.5">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <div className="flex items-center gap-2 min-w-0 flex-wrap">
+          <Layers size={14} className="text-emerald-600 flex-shrink-0" />
+          <span className="text-sm font-semibold text-gray-800 dark:text-gray-200 truncate">{entry.name}</span>
+          {entry.quantity !== 1 && <span className="text-xs text-gray-400">× {entry.quantity}</span>}
+          {!isClosed ? (
+            <select
+              value={entry.showBreakdown ? 'breakdown' : 'summary'}
+              onChange={e => handleComboBreakdownChange(entry.groupId, e.target.value === 'breakdown')}
+              className="text-xs border border-emerald-200 dark:border-white/10 rounded-lg px-1.5 py-0.5 bg-white dark:bg-graphite"
+              title="Cómo se muestra el combo en el PDF de la OT"
+            >
+              <option value="breakdown">PDF: desglosado</option>
+              <option value="summary">PDF: solo nombre y total</option>
+            </select>
+          ) : (
+            <span className="text-xs text-gray-400">{entry.showBreakdown ? 'Desglosado' : 'Solo nombre y total'}</span>
+          )}
+        </div>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {!hidePrices && <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{COP(entry.total)}</span>}
+          {!isClosed && (
+            <button onClick={() => handleRemoveCombo(entry)}
+              className="p-1 text-gray-300 hover:text-red-500 transition" title="Quitar combo completo">
+              <Trash2 size={14} />
+            </button>
+          )}
+        </div>
+      </div>
+      <div className="mt-1 ml-1 divide-y divide-gray-50 dark:divide-white/5">
+        {entry.rows.map(({ item }) => renderOrderItem(item, true))}
+      </div>
+    </div>
+  );
+
   const isLocked   = ['listo', 'entregado'].includes(order.status); // reversable por admin
   const StatusIcon = sc.icon;
   const nextStatuses = STATUS_TRANSITIONS[order.status] || [];
@@ -965,6 +1159,15 @@ export default function WorkOrderDetailPage() {
               disabled={isClosed}
             />
 
+            <ComboPickerModal
+              isOpen={showComboPicker}
+              onClose={() => setShowComboPicker(false)}
+              onConfirm={handleAddCombo}
+              hidePrices={hidePrices}
+              submitting={addingCombo}
+              showApprovalOption
+            />
+
             {/* Repuestos & Servicios */}
             <div className="bg-white dark:bg-graphite border border-gray-100 dark:border-white/10 rounded-xl p-4">
               <div className="flex items-center justify-between mb-3">
@@ -972,6 +1175,7 @@ export default function WorkOrderDetailPage() {
                   <Package size={15} className="text-blue-600" />
                   <h2 className="font-semibold text-sm text-gray-800 dark:text-gray-200">Repuestos & Servicios</h2>
                 </div>
+                <div className="flex items-center">
                 {!isClosed && (
                   <button
                     onClick={() => { setShowAddItem(v => !v); if (showAddItem) resetAddForm(); }}
@@ -979,6 +1183,22 @@ export default function WorkOrderDetailPage() {
                     <Plus size={13} /> Agregar
                   </button>
                 )}
+                {!isClosed && (
+                  <button
+                    onClick={() => {
+                      // Agregar un combo crea todas sus líneas en una transacción
+                      // del servidor: no pasa por la cola offline.
+                      if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+                        toast.error('Agregar combos requiere conexión a internet');
+                        return;
+                      }
+                      setShowComboPicker(true);
+                    }}
+                    className="flex items-center gap-1 text-xs text-emerald-600 font-medium hover:text-emerald-700 ml-3">
+                    <Layers size={13} /> Combo
+                  </button>
+                )}
+                </div>
               </div>
 
               {/* Formulario agregar ítem */}
@@ -1223,109 +1443,9 @@ export default function WorkOrderDetailPage() {
                 <p className="text-sm text-gray-400 text-center py-6">Sin ítems aún</p>
               ) : (
                 <div className="divide-y divide-gray-50">
-                  {order.items.map(item => {
-                    const isPending = (item.approval_status || 'aprobado') === 'pendiente';
-                    const isEditingThis = editingItemId === item.id;
-                    return (
-                    <div key={item.id} className="py-2.5">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${
-                            item.item_type === 'repuesto'
-                              ? 'bg-orange-100 text-orange-700'
-                              : item.item_type === 'mano_obra'
-                                ? 'bg-blue-100 text-blue-700'
-                                : item.item_type === 'free_line'
-                                  ? 'bg-indigo-100 text-indigo-700'
-                                  : 'bg-purple-100 text-purple-700'
-                          }`}>
-                            {item.item_type === 'mano_obra'
-                              ? 'Mano de obra'
-                              : item.item_type === 'free_line'
-                                ? 'Línea libre'
-                                : item.item_type}
-                          </span>
-                          <span className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">
-                            {item.product_name || item.product?.name}
-                          </span>
-                          {isPending && (
-                            <span className="text-xs px-1.5 py-0.5 rounded font-medium bg-amber-100 text-amber-700">
-                              {item.quote_request_id ? 'Cotización enviada' : 'Pendiente de enviar'}
-                            </span>
-                          )}
-                          {item.approval_status === 'rechazado' && (
-                            <span className="text-xs px-1.5 py-0.5 rounded font-medium bg-red-100 text-red-700">
-                              Rechazado por el cliente
-                            </span>
-                          )}
-                          {item.commission_category && (
-                            <span className="text-xs px-1.5 py-0.5 rounded font-medium bg-teal-100 text-teal-700">
-                              {item.commission_category.name} · {item.commission_category.default_percentage}%
-                            </span>
-                          )}
-                        </div>
-                        {!isEditingThis && (
-                          <p className="text-xs text-gray-400 mt-0.5">
-                            {hidePrices ? `Cantidad: ${item.quantity}` : <>{item.quantity} × {COP(item.unit_price)}</>}
-                            {!hidePrices && !hideWorkOrderTax && parseFloat(item.tax_amount) > 0 && (
-                              <> · IVA {COP(item.tax_amount)}</>
-                            )}
-                            {item.item_technician && (
-                              <span className="ml-2 text-blue-500">
-                                · {item.item_technician.first_name} {item.item_technician.last_name}
-                              </span>
-                            )}
-                          </p>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        {!hidePrices && (
-                          <span className="text-sm font-semibold text-gray-900">{COP(item.total)}</span>
-                        )}
-                        {!isClosed && isPending && !isEditingThis && (
-                          <button onClick={() => startEditItem(item)}
-                            className="p-1 text-gray-300 hover:text-blue-500 transition"
-                            title="Editar ítem pendiente">
-                            <Pencil size={14} />
-                          </button>
-                        )}
-                        {!isClosed && (
-                          <button onClick={() => removeItem(id, item.id)}
-                            className="p-1 text-gray-300 hover:text-red-500 transition">
-                            <Trash2 size={14} />
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                    {isEditingThis && (
-                      <div className="mt-2 p-2.5 bg-gray-50 dark:bg-graphite-2 rounded-lg flex flex-wrap items-end gap-2">
-                        {item.item_type === 'free_line' && (
-                          <input type="text" value={editItemVals.product_name}
-                            onChange={e => setEditItemVals(v => ({ ...v, product_name: e.target.value }))}
-                            placeholder="Descripción" className={`${inputCls} flex-1 min-w-[140px] !py-1.5`} />
-                        )}
-                        <NumericInput value={editItemVals.quantity}
-                          onChange={e => setEditItemVals(vals => ({ ...vals, quantity: e.target.value }))}
-                          placeholder="Cantidad" className={`${inputCls} w-20 !py-1.5`} />
-                        {!hidePrices && (
-                          <NumericInput value={editItemVals.unit_price}
-                            onChange={e => setEditItemVals(vals => ({ ...vals, unit_price: e.target.value }))}
-                            placeholder="Precio" className={`${inputCls} w-28 !py-1.5`} />
-                        )}
-                        <button onClick={() => saveEditItem(item)} disabled={savingEditItem}
-                          className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 disabled:opacity-50">
-                          {savingEditItem ? 'Guardando...' : 'Guardar'}
-                        </button>
-                        <button onClick={cancelEditItem} disabled={savingEditItem}
-                          className="text-xs text-gray-500 px-2 py-1.5 hover:text-gray-700">
-                          Cancelar
-                        </button>
-                      </div>
-                    )}
-                    </div>
-                    );
-                  })}
+                  {groupDocumentItems(order.items).map(entry => (entry.type === 'line'
+                    ? renderOrderItem(entry.item)
+                    : renderOrderCombo(entry)))}
                 </div>
               )}
 

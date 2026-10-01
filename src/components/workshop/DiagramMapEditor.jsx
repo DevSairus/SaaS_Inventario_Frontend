@@ -10,14 +10,7 @@ import toast from 'react-hot-toast';
 import { diagramTemplatesApi, diagnosisMarksApi } from '../../api/workshop';
 import { saleDiagnosisMarksApi } from '../../api/sales';
 import useProductsStore from '../../store/productsStore';
-
-const SYSTEM_LABELS = {
-  suspension_delantera: 'Suspensión delantera',
-  suspension_trasera: 'Suspensión trasera',
-  frenos_delanteros: 'Frenos delanteros',
-  frenos_traseros: 'Frenos traseros',
-  vista_general: 'Vista general',
-};
+import { SYSTEM_LABELS } from './diagramLabels';
 
 const SEVERITY_OPTIONS = [
   { value: 'revisar', label: 'Revisar', color: '#2563eb' },
@@ -84,10 +77,24 @@ export default function DiagramMapEditor({ entityType = 'work_order', entityId, 
       .catch(() => toast.error('No se pudieron cargar las marcas del diagnóstico'));
   }, [resolvedEntityId, marksApi]);
 
-  const availableSystems = useMemo(() => [...new Set(systems.map(s => s.system))], [systems]);
+  // El catálogo solo trae los diagramas activos del taller. Si una OT o
+  // cotización ya tiene marcas sobre un diagrama que después se desactivó (o
+  // que dejó de aplicar a esta categoría), se agrega igual para que esas
+  // marcas no queden invisibles.
+  const catalog = useMemo(() => {
+    const ids = new Set(systems.map(s => s.id));
+    const fromMarks = [];
+    marks.forEach(m => {
+      const t = m.diagram_template;
+      if (t && !ids.has(t.id)) { ids.add(t.id); fromMarks.push(t); }
+    });
+    return [...systems, ...fromMarks];
+  }, [systems, marks]);
+
+  const availableSystems = useMemo(() => [...new Set(catalog.map(s => s.system))], [catalog]);
   const availableConfigs = useMemo(
-    () => systems.filter(s => s.system === system),
-    [systems, system]
+    () => catalog.filter(s => s.system === system),
+    [catalog, system]
   );
 
   const loadTemplate = async (templateId) => {
@@ -104,7 +111,7 @@ export default function DiagramMapEditor({ entityType = 'work_order', entityId, 
 
   useEffect(() => {
     if (!configuration) { setTemplate(null); return; }
-    const found = systems.find(s => s.system === system && s.configuration === configuration);
+    const found = catalog.find(s => s.system === system && s.configuration === configuration);
     if (found) loadTemplate(found.id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [configuration]);
