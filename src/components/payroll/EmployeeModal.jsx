@@ -10,6 +10,7 @@ import { useEmployeesStore } from '../../store/employeesStore';
 import useBranchStore from '../../store/branchStore';
 import NumericInput from '../inputs/NumericInput';
 import DivipolaCitySelect from '../common/DivipolaCitySelect';
+import FundSupplierSelect from './FundSupplierSelect';
 import {
   DOCUMENT_TYPES,
   CONTRACT_TYPES,
@@ -19,6 +20,7 @@ import {
   PAYMENT_FORMS,
   ACCOUNT_TYPES,
   PERIOD_TYPES,
+  ARL_RISK_CLASSES,
 } from '../../constants/payroll';
 
 const emptyForm = {
@@ -62,6 +64,10 @@ const emptyForm = {
   work_address: '',
   is_active: true,
   notes: '',
+  eps_supplier_id: '',
+  pension_fund_supplier_id: '',
+  severance_fund_supplier_id: '',
+  arl_risk_class: 1,
 };
 
 const EmployeeModal = ({ employee, onClose }) => {
@@ -126,6 +132,10 @@ const EmployeeModal = ({ employee, onClose }) => {
         work_address: employee.work_address || '',
         is_active: employee.is_active !== undefined ? employee.is_active : true,
         notes: employee.notes || '',
+        eps_supplier_id: employee.eps_supplier_id || '',
+        pension_fund_supplier_id: employee.pension_fund_supplier_id || '',
+        severance_fund_supplier_id: employee.severance_fund_supplier_id || '',
+        arl_risk_class: employee.arl_risk_class || 1,
       });
       setWorkDiffersFromResidence(!!(employee.work_city_code || employee.work_address));
     } else {
@@ -162,6 +172,10 @@ const EmployeeModal = ({ employee, onClose }) => {
       branch_id: formData.branch_id || null,
       account_type: formData.account_type || null,
       termination_date: formData.termination_date || null,
+      eps_supplier_id: formData.eps_supplier_id || null,
+      pension_fund_supplier_id: formData.pension_fund_supplier_id || null,
+      severance_fund_supplier_id: formData.severance_fund_supplier_id || null,
+      arl_risk_class: Number(formData.arl_risk_class) || 1,
       // Solo tiene sentido para término fijo — si el usuario cambió de
       // tipo de contrato después de haberla puesto, se limpia en vez de
       // dejar una fecha de fin "fantasma" en un contrato indefinido/otro.
@@ -522,6 +536,45 @@ const EmployeeModal = ({ employee, onClose }) => {
                   <span className="block text-xs text-gray-400">Actividades del Decreto 2090 de 2003</span>
                 </span>
               </label>
+            </div>
+          </div>
+
+          {/* Seguridad social */}
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-1">Seguridad social</h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
+              Los fondos se registran como proveedores y son el tercero de los aportes en el comprobante contable de nómina.
+              ARL y Caja de Compensación se configuran a nivel de empresa en Configuración de Nómina.
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">EPS</label>
+                <FundSupplierSelect name="eps_supplier_id" value={formData.eps_supplier_id} onChange={handleChange} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Fondo de pensiones (AFP)</label>
+                <FundSupplierSelect name="pension_fund_supplier_id" value={formData.pension_fund_supplier_id} onChange={handleChange} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Fondo de cesantías</label>
+                <FundSupplierSelect name="severance_fund_supplier_id" value={formData.severance_fund_supplier_id} onChange={handleChange} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Clase de riesgo ARL
+                  <span className="block text-xs font-normal text-gray-400">Define la tarifa del aporte a riesgos laborales</span>
+                </label>
+                <select
+                  name="arl_risk_class"
+                  value={formData.arl_risk_class}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-white/10 dark:bg-graphite-2 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  {ARL_RISK_CLASSES.map((opt) => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
 

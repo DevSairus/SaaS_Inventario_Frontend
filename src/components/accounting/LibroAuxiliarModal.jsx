@@ -12,8 +12,8 @@ const toLocalDateString = (date) => {
 };
 
 /**
- * Modal de Libro Auxiliar por tercero — se dispara desde Clientes/Proveedores.
- * `thirdParty` = { id, type: 'customer'|'supplier', name, tax_id }.
+ * Modal de Libro Auxiliar por tercero — se dispara desde Clientes/Proveedores/Empleados.
+ * `thirdParty` = { id, type: 'customer'|'supplier'|'employee', name, tax_id }.
  * Muestra saldo inicial + movimientos de cartera/cuentas por pagar con saldo
  * corrido y permite exportar a Excel/PDF con los mismos filtros.
  */
@@ -89,7 +89,7 @@ const LibroAuxiliarModal = ({ thirdParty, onClose }) => {
       <div className="bg-white dark:bg-graphite rounded-xl shadow-xl w-full max-w-3xl max-h-[85vh] flex flex-col">
         <div className="px-5 py-4 border-b border-gray-200 flex items-center justify-between dark:border-white/10">
           <div>
-            <h3 className="font-semibold text-gray-900 dark:text-gray-100">Libro Auxiliar — {thirdParty.type === 'customer' ? 'Cliente' : 'Proveedor'}</h3>
+            <h3 className="font-semibold text-gray-900 dark:text-gray-100">Libro Auxiliar — {{ customer: 'Cliente', supplier: 'Proveedor', employee: 'Empleado' }[thirdParty.type] || 'Tercero'}</h3>
             <p className="text-sm text-gray-500 dark:text-gray-400">{thirdParty.name}{thirdParty.tax_id ? ` - ${thirdParty.tax_id}` : ''}</p>
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">

@@ -18,9 +18,11 @@ import { usePayrollNovedadesStore } from '../../store/payrollNovedadesStore';
 import { usePayrollDocumentsStore } from '../../store/payrollDocumentsStore';
 import { employeesAPI } from '../../api/payroll';
 import useBranchStore from '../../store/branchStore';
+import useAuthStore from '../../store/authStore';
 import Layout from '../../components/layout/Layout';
 import PayrollPeriodModal from '../../components/payroll/PayrollPeriodModal';
 import PayrollNovedadModal from '../../components/payroll/PayrollNovedadModal';
+import PayrollAccountingPanel from '../../components/payroll/PayrollAccountingPanel';
 import {
   ArrowLeftIcon,
   PencilIcon,
@@ -109,6 +111,7 @@ const PayrollPeriodDetailPage = () => {
   } = usePayrollDocumentsStore();
 
   const { branches, fetchBranches, loaded: branchesLoaded } = useBranchStore();
+  const user = useAuthStore((state) => state.user);
 
   const [employees, setEmployees] = useState([]);
   const [employeesLoading, setEmployeesLoading] = useState(false);
@@ -638,6 +641,11 @@ const PayrollPeriodDetailPage = () => {
             </div>
           )}
         </div>
+
+        {/* Contabilidad y pagos (comprobantes y desembolsos) */}
+        {['emitido', 'cerrado'].includes(period.status) && (
+          <PayrollAccountingPanel period={period} canRegenerate={['admin', 'super_admin'].includes(user?.role)} />
+        )}
       </div>
 
       {isEditModalOpen && (

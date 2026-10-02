@@ -48,6 +48,16 @@ export const WORKER_TYPES = [
   { value: '22', label: 'Beneficiario Unión Sindical Obrera' },
 ];
 
+// Decreto 1295/1994 Art. 26 — misma tabla que ARL_TARIFAS en
+// backend/src/services/payroll/payrollAccountingService.js.
+export const ARL_RISK_CLASSES = [
+  { value: 1, label: 'Clase I — 0.522% (riesgo mínimo)' },
+  { value: 2, label: 'Clase II — 1.044% (riesgo bajo)' },
+  { value: 3, label: 'Clase III — 2.436% (riesgo medio)' },
+  { value: 4, label: 'Clase IV — 4.350% (riesgo alto)' },
+  { value: 5, label: 'Clase V — 6.960% (riesgo máximo)' },
+];
+
 export const SALARY_TYPES = [
   { value: 'ordinario', label: 'Ordinario' },
   { value: 'integral', label: 'Salario integral' },

@@ -205,4 +205,9 @@ export const SOURCE_TYPE_LABELS = {
   cash_session: 'Cierre de Caja',
   manual: 'Manual',
   adjustment: 'Ajuste',
+  payroll: 'Nómina',
+  payroll_provisions: 'Aportes y provisiones de nómina',
+  payroll_payment: 'Pago de nómina',
+  payroll_cesantias_year_end: 'Causación anual de cesantías',
+  payroll_provision_adjustment: 'Ajuste anual de provisiones de nómina',
 };

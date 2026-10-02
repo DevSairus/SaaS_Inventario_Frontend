@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { useEmployeesStore } from '../../store/employeesStore';
 import EmployeeModal from '../../components/payroll/EmployeeModal';
 import Layout from '../../components/layout/Layout';
+import LibroAuxiliarModal from '../../components/accounting/LibroAuxiliarModal';
 import { CONTRACT_TYPES, PERIOD_TYPES } from '../../constants/payroll';
 // Nota de reorganización: este archivo vivía en src/pages/EmployeesPage.jsx
 // (un nivel más arriba) pero su propio comentario de cabecera y el resto del
@@ -23,6 +24,7 @@ import {
   CheckCircleIcon,
   NoSymbolIcon,
   EnvelopeIcon,
+  BookOpenIcon,
 } from '@heroicons/react/24/outline';
 
 const contractLabel = (value) => CONTRACT_TYPES.find((c) => c.value === value)?.label || value;
@@ -37,6 +39,7 @@ const EmployeesPage = () => {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState(null);
+  const [ledgerEmployee, setLedgerEmployee] = useState(null);
   const [search, setSearch] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [filterActive, setFilterActive] = useState('');
@@ -261,6 +264,18 @@ const EmployeesPage = () => {
                               <PencilIcon className="h-4 w-4" />
                             </button>
                             <button
+                              onClick={() => setLedgerEmployee({
+                                id: emp.id,
+                                type: 'employee',
+                                name: [emp.first_name, emp.other_names, emp.first_surname, emp.second_surname].filter(Boolean).join(' '),
+                                tax_id: emp.document_number,
+                              })}
+                              title="Ver Libro Auxiliar (movimientos de nómina del empleado)"
+                              className="p-1.5 rounded-lg text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors"
+                            >
+                              <BookOpenIcon className="h-4 w-4" />
+                            </button>
+                            <button
                               onClick={() => handleToggleActive(emp)}
                               title={emp.is_active ? 'Desactivar' : 'Activar'}
                               className={`p-1.5 rounded-lg transition-colors ${
@@ -318,6 +333,7 @@ const EmployeesPage = () => {
       </div>
 
       {isModalOpen && <EmployeeModal employee={editingEmployee} onClose={handleClose} />}
+      {ledgerEmployee && <LibroAuxiliarModal thirdParty={ledgerEmployee} onClose={() => setLedgerEmployee(null)} />}
     </Layout>
   );
 };

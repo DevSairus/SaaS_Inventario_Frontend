@@ -280,6 +280,57 @@ export const payrollSettingsAPI = {
   },
 };
 
+// ── Contabilidad de nómina — comprobantes y desembolsos ────────────
+// Ver backend/src/services/payroll/payrollAccountingService.js.
+export const payrollAccountingAPI = {
+  // Comprobantes del periodo, pagos registrados, documentos con su estado
+  // de pago y seguridad social pendiente.
+  getPeriod: async (periodId) => {
+    const response = await api.get(`/payroll/periods/${periodId}/accounting`);
+    return response.data;
+  },
+  // Genera los comprobantes de un periodo emitido que no los tenga (no duplica).
+  generate: async (periodId) => {
+    const response = await api.post(`/payroll/periods/${periodId}/accounting/generate`);
+    return response.data;
+  },
+  // Body: { payment_type: 'net_pay'|'social_security', payment_date,
+  //         bank_account_id?, reference?, employee_ids? }
+  createPayment: async (periodId, payment) => {
+    const response = await api.post(`/payroll/periods/${periodId}/payments`, payment);
+    return response.data;
+  },
+  voidPayment: async (periodId, paymentId, reason) => {
+    const response = await api.post(`/payroll/periods/${periodId}/payments/${paymentId}/void`, { reason });
+    return response.data;
+  },
+  // Reemplaza los comprobantes del periodo por unos recalculados — admin.
+  // Las notas de ajuste aceptadas lo hacen solas.
+  regenerate: async (periodId) => {
+    const response = await api.post(`/payroll/periods/${periodId}/accounting/regenerate`);
+    return response.data;
+  },
+  // Cierre anual: causación (modo year_end) o ajuste de lo provisionado (monthly) — admin.
+  closeCesantiasYear: async (year) => {
+    const response = await api.post('/payroll/settings/cesantias-year-end', { year });
+    return response.data;
+  },
+  // Saldo de cesantías al 31-dic por empleado, lo consignado y lo pendiente.
+  getCesantiasAnnual: async (year) => {
+    const response = await api.get('/payroll/settings/cesantias-annual', { params: { year } });
+    return response.data;
+  },
+  // Body: { year, payment_date, bank_account_id?, reference?, employee_ids? }
+  consignCesantias: async (payload) => {
+    const response = await api.post('/payroll/settings/cesantias-annual/consign', payload);
+    return response.data;
+  },
+  voidCesantiasPayment: async (paymentId, reason) => {
+    const response = await api.post(`/payroll/settings/cesantias-annual/payments/${paymentId}/void`, { reason });
+    return response.data;
+  },
+};
+
 // ── Default export (compatibilidad con el estilo de dian.js) ───────
 const payrollAPI = {
   employees: employeesAPI,
@@ -291,6 +342,7 @@ const payrollAPI = {
   termination: payrollTerminationAPI,
   dashboard: payrollDashboardAPI,
   settings: payrollSettingsAPI,
+  accounting: payrollAccountingAPI,
 };
 
 export default payrollAPI;
