@@ -19,7 +19,8 @@ const TABS = [
   { id: 'income-statement', label: 'Estado de Resultados (P&G)' },
   { id: 'cashflow-indirecto', label: 'Flujo de Efectivo' },
   { id: 'aging', label: 'Antigüedad de Saldos' },
-  { id: 'retenciones', label: 'Retenciones' },
+  { id: 'retenciones', label: 'Retenciones recibidas' },
+  { id: 'retenciones-practicadas', label: 'Retenciones practicadas' },
   { id: 'libro-diario', label: 'Libro Diario' },
   { id: 'libro-iva', label: 'Libro de IVA' },
 ];
@@ -53,6 +54,7 @@ const FinancialReportsPage = () => {
     'cashflow-indirecto': { fn: financialReportsAPI.exportCashflowIndirecto, filename: (fmt) => `Flujo-Efectivo-${range.from}_${range.to}.${fmt === 'pdf' ? 'pdf' : 'xlsx'}` },
     'aging': { fn: (params, fmt) => financialReportsAPI.exportAging({ ...params, type: agingType }, fmt), filename: (fmt) => `Antiguedad-${agingType}-${range.as_of}.${fmt === 'pdf' ? 'pdf' : 'xlsx'}` },
     'retenciones': { fn: financialReportsAPI.exportRetenciones, filename: (fmt) => `Retenciones-${range.from}_${range.to}.${fmt === 'pdf' ? 'pdf' : 'xlsx'}` },
+    'retenciones-practicadas': { fn: financialReportsAPI.exportRetencionesPracticadas, filename: (fmt) => `Retenciones-Practicadas-${range.from}_${range.to}.${fmt === 'pdf' ? 'pdf' : 'xlsx'}` },
     'libro-diario': { fn: financialReportsAPI.exportLibroDiario, filename: (fmt) => `Libro-Diario-${range.from}_${range.to}.${fmt === 'pdf' ? 'pdf' : 'xlsx'}` },
     'libro-iva': { fn: financialReportsAPI.exportLibroIva, filename: (fmt) => `Libro-IVA-${range.from}_${range.to}.${fmt === 'pdf' ? 'pdf' : 'xlsx'}` },
   };
@@ -101,6 +103,7 @@ const FinancialReportsPage = () => {
       else if (currentTab === 'cashflow-indirecto') res = await financialReportsAPI.cashflowIndirecto({ from: range.from, to: range.to, branch_id });
       else if (currentTab === 'aging') res = await financialReportsAPI.aging({ as_of: range.as_of, branch_id, type: agingType });
       else if (currentTab === 'retenciones') res = await financialReportsAPI.retenciones({ from: range.from, to: range.to, branch_id });
+      else if (currentTab === 'retenciones-practicadas') res = await financialReportsAPI.retencionesPracticadas({ from: range.from, to: range.to, branch_id });
       else if (currentTab === 'libro-diario') res = await financialReportsAPI.libroDiario({ from: range.from, to: range.to, branch_id });
       else if (currentTab === 'libro-iva') res = await financialReportsAPI.libroIva({ from: range.from, to: range.to, branch_id });
       else res = await financialReportsAPI.incomeStatement({ from: range.from, to: range.to, branch_id });
@@ -453,6 +456,103 @@ const FinancialReportsPage = () => {
                 </table>
               </div>
             ))}
+          </div>
+        )}
+
+        {!loading && data && tab === 'retenciones-practicadas' && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {[
+                ['ReteFuente', data.totals.retefuente],
+                ['ReteIVA', data.totals.reteiva],
+                ['ReteICA', data.totals.reteica],
+                ['Total practicado', data.totals.total],
+              ].map(([label, value]) => (
+                <div key={label} className="bg-white dark:bg-graphite rounded-xl border border-gray-200 dark:border-white/10 p-3">
+                  <div className="text-xs text-gray-500 dark:text-gray-500">{label}</div>
+                  <div className="text-lg font-semibold">{formatCurrency(value)}</div>
+                </div>
+              ))}
+            </div>
+
+            {data.by_concept.length === 0 ? (
+              <div className="bg-white dark:bg-graphite rounded-xl border border-gray-200 dark:border-white/10 p-8 text-center text-gray-400 dark:text-gray-500">
+                No se practicaron retenciones a proveedores en el periodo seleccionado
+              </div>
+            ) : (
+              <>
+                <div className="bg-white dark:bg-graphite rounded-xl border border-gray-200 dark:border-white/10 overflow-x-auto">
+                  <div className="px-4 py-2.5 bg-gray-50 dark:bg-graphite-2 border-b border-gray-200 dark:border-white/10 text-sm font-semibold text-gray-800 dark:text-gray-200">
+                    Resumen por concepto
+                  </div>
+                  <table className="min-w-full divide-y divide-gray-100 dark:divide-white/10">
+                    <thead>
+                      <tr className="text-xs text-gray-500 dark:text-gray-400 uppercase">
+                        <th className="px-4 py-2 text-left">Tipo</th>
+                        <th className="px-4 py-2 text-left">Concepto</th>
+                        <th className="px-4 py-2 text-right">Tarifa</th>
+                        <th className="px-4 py-2 text-right">Base</th>
+                        <th className="px-4 py-2 text-right">Valor retenido</th>
+                        <th className="px-4 py-2 text-right">Docs.</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50 dark:divide-white/5">
+                      {data.by_concept.map((c) => (
+                        <tr key={`${c.code}-${c.concept}-${c.rate}`}>
+                          <td className="px-4 py-1.5 text-sm text-gray-700 dark:text-gray-300">{c.type_name}</td>
+                          <td className="px-4 py-1.5 text-sm text-gray-700 dark:text-gray-300">{c.concept}</td>
+                          <td className="px-4 py-1.5 text-sm text-right">{c.rate}{c.rate_unit}</td>
+                          <td className="px-4 py-1.5 text-sm text-right">{formatCurrency(c.base)}</td>
+                          <td className="px-4 py-1.5 text-sm text-right font-medium">{formatCurrency(c.amount)}</td>
+                          <td className="px-4 py-1.5 text-xs text-right text-gray-400">{c.documents}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {data.by_supplier.map((s) => (
+                  <div key={s.supplier_id} className="bg-white dark:bg-graphite rounded-xl border border-gray-200 dark:border-white/10 overflow-hidden">
+                    <div className="px-4 py-2.5 bg-gray-50 dark:bg-graphite-2 border-b border-gray-200 dark:border-white/10 flex items-center justify-between gap-2">
+                      <div>
+                        <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">{s.supplier_name}</span>
+                        {s.supplier_tax_id && <span className="text-xs text-gray-400 dark:text-gray-500 ml-2">NIT/CC {s.supplier_tax_id}</span>}
+                      </div>
+                      <button
+                        onClick={async () => {
+                          try {
+                            const response = await financialReportsAPI.exportRetencionesPracticadas({ from: range.from, to: range.to, supplier_id: s.supplier_id, branch_id: branchId || undefined }, 'pdf');
+                            window.open(URL.createObjectURL(response.data), '_blank');
+                          } catch { toast.error('Error generando el certificado'); }
+                        }}
+                        className="text-xs px-2.5 py-1 rounded-md border border-gray-300 dark:border-white/10 hover:bg-gray-100 hover:dark:bg-white/5 whitespace-nowrap"
+                      >
+                        Certificado PDF
+                      </button>
+                    </div>
+                    <table className="min-w-full divide-y divide-gray-100 dark:divide-white/10">
+                      <tbody className="divide-y divide-gray-50 dark:divide-white/5">
+                        {s.concepts.map((c) => (
+                          <tr key={`${c.code}-${c.concept}-${c.rate}`}>
+                            <td className="px-4 py-1.5 text-xs text-gray-500 w-28">{c.type_name}</td>
+                            <td className="px-2 py-1.5 text-sm text-gray-700 dark:text-gray-300">{c.concept}</td>
+                            <td className="px-4 py-1.5 text-sm text-right">{c.rate}{c.rate_unit}</td>
+                            <td className="px-4 py-1.5 text-sm text-right">{formatCurrency(c.base)}</td>
+                            <td className="px-4 py-1.5 text-sm text-right">{formatCurrency(c.amount)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                      <tfoot>
+                        <tr className="bg-gray-50 dark:bg-graphite-2/60 font-medium">
+                          <td colSpan={4} className="px-4 py-1.5 text-xs text-gray-400 dark:text-gray-500 text-right">Total retenido</td>
+                          <td className="px-4 py-1.5 text-sm text-right">{formatCurrency(s.totals.total)}</td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                ))}
+              </>
+            )}
           </div>
         )}
 

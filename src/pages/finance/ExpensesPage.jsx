@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { expensesAPI, EXPENSE_CATEGORIES } from '../../api/expenses';
 import { suppliersAPI } from '../../api/suppliers';
+import { retentionsAPI } from '../../api/retentions';
 import Layout from '../../components/layout/Layout';
 import toast from 'react-hot-toast';
 import {
@@ -48,6 +49,11 @@ const ExpensesPage = () => {
   const [showFormModal, setShowFormModal] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [showFiscalDetail, setShowFiscalDetail] = useState(false);
+  // Sugerencia de retenciones del motor del backend (categoría del gasto →
+  // concepto; perfil del tenant y del proveedor). Si el usuario edita una
+  // tarifa a mano, se deja de sobrescribir hasta que cambie proveedor/categoría.
+  const [retentionNotes, setRetentionNotes] = useState([]);
+  const [ratesTouched, setRatesTouched] = useState(false);
   const [suppliers, setSuppliers] = useState([]);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedExpense, setSelectedExpense] = useState(null);
@@ -165,8 +171,34 @@ const ExpensesPage = () => {
 
   const round2 = (n) => Math.round((n + Number.EPSILON) * 100) / 100;
 
+  useEffect(() => {
+    if (!showFiscalDetail || !form.supplier_id || ratesTouched) return undefined;
+    const subtotal = parseFloat(form.subtotal || form.total_amount) || 0;
+    const taxAmount = subtotal * (parseFloat(form.tax_rate) || 0) / 100;
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      retentionsAPI.preview({ supplier_id: form.supplier_id, expense: { category: form.category, subtotal, tax_amount: taxAmount } })
+        .then((res) => {
+          if (cancelled) return;
+          const lines = res.data?.lines || [];
+          const rateOf = (code) => Number(lines.find((l) => l.code === code)?.rate || 0);
+          setForm((f) => ({
+            ...f,
+            retefuente_rate: rateOf('07'),
+            reteiva_rate: rateOf('05'),
+            // El gasto captura ReteICA en %; el motor la da en ‰.
+            reteica_rate: rateOf('06') / 10,
+          }));
+          setRetentionNotes(res.data?.notes || []);
+        })
+        .catch(() => {});
+    }, 400);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [showFiscalDetail, form.supplier_id, form.category, form.subtotal, form.total_amount, form.tax_rate, ratesTouched]);
+
   const handleSelectSupplier = (supplierId) => {
     const supplier = suppliers.find(s => s.id === supplierId);
+    setRatesTouched(false);
     setForm(f => ({
       ...f,
       supplier_id: supplierId,
@@ -343,7 +375,7 @@ const ExpensesPage = () => {
               <label className="block text-sm font-medium text-gray-700 mb-1">Categoría</label>
               <select
                 value={form.category}
-                onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
+                onChange={e => { setRatesTouched(false); setForm(f => ({ ...f, category: e.target.value })); }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg"
               >
                 {EXPENSE_CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
@@ -501,7 +533,7 @@ const ExpensesPage = () => {
                         <label className="block text-xs text-gray-500 mb-1">ReteFuente %</label>
                         <NumericInput
                           value={form.retefuente_rate}
-                          onChange={e => setForm(f => ({ ...f, retefuente_rate: e.target.value }))}
+                          onChange={e => { setRatesTouched(true); setForm(f => ({ ...f, retefuente_rate: e.target.value })); }}
                           className="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm"
                         />
                       </div>
@@ -509,7 +541,7 @@ const ExpensesPage = () => {
                         <label className="block text-xs text-gray-500 mb-1">ReteIVA %</label>
                         <NumericInput
                           value={form.reteiva_rate}
-                          onChange={e => setForm(f => ({ ...f, reteiva_rate: e.target.value }))}
+                          onChange={e => { setRatesTouched(true); setForm(f => ({ ...f, reteiva_rate: e.target.value })); }}
                           className="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm"
                         />
                       </div>
@@ -517,14 +549,20 @@ const ExpensesPage = () => {
                         <label className="block text-xs text-gray-500 mb-1">ReteICA %</label>
                         <NumericInput
                           value={form.reteica_rate}
-                          onChange={e => setForm(f => ({ ...f, reteica_rate: e.target.value }))}
+                          onChange={e => { setRatesTouched(true); setForm(f => ({ ...f, reteica_rate: e.target.value })); }}
                           className="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm"
                         />
                       </div>
                     </div>
                     <p className="text-xs text-gray-400 mt-1">
                       ReteFuente/ReteICA sobre la base gravable; ReteIVA sobre el IVA calculado.
+                      {form.supplier_id && ' Sugeridas según la categoría del gasto, tu perfil tributario y el del proveedor.'}
                     </p>
+                    {retentionNotes.length > 0 && !ratesTouched && (
+                      <ul className="text-xs text-blue-800 bg-blue-50 rounded p-2 mt-1 space-y-0.5">
+                        {retentionNotes.map((n, i) => <li key={i}>• {n}</li>)}
+                      </ul>
+                    )}
                   </details>
                 </div>
               )}

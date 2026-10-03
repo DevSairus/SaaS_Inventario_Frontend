@@ -85,7 +85,10 @@ function Layout({ children }) {
             <SyncRetryButton />
           </div>
         </header>
-        <main className="relative z-10 flex-1 px-4 py-4 pb-24 min-w-0">
+        {/* Sin z-index propio: crearía un contexto de apilamiento que deja
+            atrapados los modales (z-50) por debajo del encabezado/menú. El
+            contenido ya queda sobre la marca de agua por orden en el DOM. */}
+        <main className="relative flex-1 px-4 py-4 pb-24 min-w-0">
           <div className="border border-gray-200 dark:border-white/10 rounded-2xl bg-white/70 dark:bg-[#17181C]/70 p-3 min-h-[calc(100vh-9rem)]">
             {children}
           </div>
@@ -111,9 +114,12 @@ function Layout({ children }) {
         setIsMobileOpen={setIsMobileMenuOpen}
       />
 
-      {/* Columna derecha */}
+      {/* Columna derecha. Sin z-index propio: con "z-10" creaba un contexto
+          de apilamiento y TODO modal de las páginas (z-50) quedaba atrapado
+          por debajo del sidebar (z-40) — el fondo oscuro no lo cubría. Sigue
+          por encima de la marca de agua (z-0) por orden en el DOM. */}
       <div
-        className="relative z-10 flex-1 flex flex-col min-w-0"
+        className="relative flex-1 flex flex-col min-w-0"
       >
         {/* Topbar móvil — solo visible en pantallas < lg */}
         <header className="lg:hidden sticky top-0 z-30 flex items-center justify-between bg-white dark:bg-[#17181C] border-b border-gray-200 dark:border-white/10 px-4 h-14 shadow-sm flex-shrink-0">

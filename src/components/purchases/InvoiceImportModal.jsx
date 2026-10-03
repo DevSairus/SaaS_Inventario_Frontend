@@ -180,7 +180,10 @@ const ProductLinkPicker = ({ value, productName, onChange }) => {
   );
 };
 
-const InvoiceImportModal = ({ isOpen, onClose, onSuccess }) => {
+// dianDocumentId: carga una factura del registro de documentos DIAN (Excel
+// del portal) cuyo XML ya se descargó — mismo flujo de revisión que el ZIP,
+// sin subir archivo.
+const InvoiceImportModal = ({ isOpen, onClose, onSuccess, dianDocumentId = null }) => {
   const { categories, fetchCategories } = useCategoriesStore();
   const [file, setFile]                 = useState(null);
   const [isDragging, setIsDragging]     = useState(false);
@@ -207,6 +210,11 @@ const InvoiceImportModal = ({ isOpen, onClose, onSuccess }) => {
 
   useEffect(() => { fetchCategories(); }, [fetchCategories]);
 
+  useEffect(() => {
+    if (isOpen && dianDocumentId) handlePreview(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, dianDocumentId]);
+
   const handleDragOver  = (e) => { e.preventDefault(); setIsDragging(true); };
   const handleDragLeave = () => setIsDragging(false);
 
@@ -226,7 +234,8 @@ const InvoiceImportModal = ({ isOpen, onClose, onSuccess }) => {
     setLoading(true); setError(null); setPreview(null); setRemovedItems([]); setShippingCost(''); setItemTaxOverrides({}); setManualLinks({}); setNewProductData({});
     try {
       const fd = new FormData();
-      fd.append('file', selectedFile);
+      if (dianDocumentId) fd.append('dian_document_id', dianDocumentId);
+      else fd.append('file', selectedFile);
       const res = await api.post('/invoice-import/preview', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
       if (res.data.success) {
         setPreview(res.data.data);
@@ -290,11 +299,12 @@ const InvoiceImportModal = ({ isOpen, onClose, onSuccess }) => {
   };
 
   const handleImport = async () => {
-    if (!file) return;
+    if (!file && !dianDocumentId) return;
     setLoading(true); setError(null);
     try {
       const fd = new FormData();
-      fd.append('file', file);
+      if (dianDocumentId) fd.append('dian_document_id', dianDocumentId);
+      else fd.append('file', file);
       fd.append('profit_margin', profitMargin);
       fd.append('supplier_name', supplierName);
       fd.append('removed_items', JSON.stringify(removedItems));
@@ -366,7 +376,13 @@ const InvoiceImportModal = ({ isOpen, onClose, onSuccess }) => {
             </div>
           )}
 
-          {!preview && !result && (
+          {!preview && !result && dianDocumentId && (
+            <div className="p-12 text-center text-sm text-gray-500 dark:text-gray-400">
+              {loading ? 'Leyendo el XML descargado de la DIAN...' : (error ? '' : 'Preparando vista previa...')}
+            </div>
+          )}
+
+          {!preview && !result && !dianDocumentId && (
             <div
               onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}
               className={`border-2 border-dashed rounded-xl p-12 text-center transition-all ${isDragging ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30' : 'border-gray-300 dark:border-white/10 hover:border-blue-400 hover:bg-gray-50 dark:hover:bg-white/5'}`}
@@ -425,6 +441,20 @@ const InvoiceImportModal = ({ isOpen, onClose, onSuccess }) => {
                 <div className="flex gap-6 text-sm">
                   <div><span className="text-gray-500 dark:text-gray-500">Número:</span><span className="ml-2 font-medium text-gray-900 dark:text-gray-100">{preview.invoice.number}</span></div>
                   <div><span className="text-gray-500 dark:text-gray-500">Fecha:</span><span className="ml-2 font-medium text-gray-900 dark:text-gray-100">{preview.invoice.date}</span></div>
+                  {/* Forma de pago (PaymentMeans/ID) y vencimiento (PaymentDueDate): de contado
+                      entra pendiente con vencimiento el día de emisión; a crédito, con su fecha. */}
+                  <div>
+                    <span className="text-gray-500 dark:text-gray-500">Pago:</span>
+                    <span className="ml-2 font-medium text-gray-900 dark:text-gray-100">
+                      {preview.invoice.payment_form === 'cash' ? 'Contado' : preview.invoice.payment_form === 'credit' ? 'Crédito' : 'Sin indicar'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500 dark:text-gray-500">Vence:</span>
+                    <span className="ml-2 font-medium text-gray-900 dark:text-gray-100">
+                      {preview.invoice.payment_form === 'cash' ? preview.invoice.date : (preview.invoice.due_date || 'Plazo del proveedor')}
+                    </span>
+                  </div>
                   {preview.hasPdf && <div className="text-green-600 dark:text-green-400 font-medium">✓ PDF incluido</div>}
                 </div>
               </div>

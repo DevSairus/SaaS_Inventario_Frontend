@@ -3,6 +3,8 @@ import { useSuppliersStore } from '../../store/suppliersStore';
 import toast from 'react-hot-toast';
 import NumericInput from '../inputs/NumericInput';
 import DivipolaCitySelect from '../common/DivipolaCitySelect';
+import SupplierRetentionsEditor from './SupplierRetentionsEditor';
+import useRetentionCatalog from '../../hooks/useRetentionCatalog';
 
 const DOCUMENT_TYPE_OPTIONS = [
   { value: '13', label: 'Cédula de ciudadanía' },
@@ -47,6 +49,7 @@ const SupplierModal = ({ supplier, onClose }) => {
   });
 
   const [errors, setErrors] = useState({});
+  const { concepts: retentionConcepts } = useRetentionCatalog();
 
   useEffect(() => {
     if (supplier) {
@@ -573,41 +576,77 @@ const SupplierModal = ({ supplier, onClose }) => {
             </label>
           </div>
 
-          {/* Retenciones (Fase C) — el tenant, como comprador, puede retener
-              a este proveedor en ReteFuente/ReteIVA/ReteICA. Estos dos
-              toggles cubren los dos motivos por los que NO debería
-              retenerle, y son independientes entre sí. */}
+          {/* Perfil tributario para retenciones (ver retentionEngine.service.js
+              en el backend). La TARIFA de ReteFuente no se configura aquí: sale
+              del concepto del producto/servicio comprado. Aquí solo van los
+              atributos del proveedor que deciden si aplica y con qué tarifa. */}
           <div className="mb-6 space-y-3">
-            <label className="flex items-center">
-              <input
-                type="checkbox"
-                checked={!!formData.retention_config?.is_exento}
-                onChange={(e) => setFormData(prev => ({
-                  ...prev,
-                  retention_config: { ...prev.retention_config, is_exento: e.target.checked }
-                }))}
-                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 h-4 w-4"
-              />
-              <span className="ml-2 text-sm text-gray-700">
-                Exento de retención
-                <span className="block text-xs text-gray-400">No se le practicará ninguna retención en las compras a este proveedor.</span>
-              </span>
-            </label>
-            <label className="flex items-center">
-              <input
-                type="checkbox"
-                checked={!!formData.retention_config?.is_autoretenedor}
-                onChange={(e) => setFormData(prev => ({
-                  ...prev,
-                  retention_config: { ...prev.retention_config, is_autoretenedor: e.target.checked }
-                }))}
-                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 h-4 w-4"
-              />
-              <span className="ml-2 text-sm text-gray-700">
-                Proveedor autorretenedor
-                <span className="block text-xs text-gray-400">Marcar si este proveedor está autorizado por la DIAN para autorretenerse. Aunque tu empresa no sea autorretenedora, no debes practicarle retención a este proveedor.</span>
-              </span>
-            </label>
+            <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">Perfil tributario (retenciones)</h3>
+            {(() => {
+              const rc = formData.retention_config || {};
+              const setRc = (field, value) => setFormData(prev => ({ ...prev, retention_config: { ...prev.retention_config, [field]: value } }));
+              const Check = ({ field, title, hint, disabled }) => (
+                <label className={`flex items-start ${disabled ? 'opacity-50' : ''}`}>
+                  <input type="checkbox" disabled={disabled} checked={!!rc[field]} onChange={(e) => setRc(field, e.target.checked)}
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 h-4 w-4 mt-0.5" />
+                  <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">
+                    {title}
+                    <span className="block text-xs text-gray-400">{hint}</span>
+                  </span>
+                </label>
+              );
+              return (
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <Check field="is_autoretenedor" title="Autorretenedor de renta"
+                      hint="La retención en la fuente por renta queda en $0 (él mismo se retiene). ReteIVA y ReteICA sí aplican." disabled={rc.is_exento} />
+                    <Check field="is_gran_contribuyente" title="Gran contribuyente"
+                      hint="No se le practica ReteIVA." disabled={rc.is_exento} />
+                    {formData.person_type === 'natural' && (
+                      <label className={`flex items-start ${rc.is_exento ? 'opacity-50' : ''}`}>
+                        <input type="checkbox" disabled={rc.is_exento} checked={rc.is_declarante !== false}
+                          onChange={(e) => setRc('is_declarante', e.target.checked)}
+                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 h-4 w-4 mt-0.5" />
+                        <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">
+                          Declarante de renta
+                          <span className="block text-xs text-gray-400">Las personas naturales no declarantes tienen tarifas de ReteFuente mayores (ej. compras 3.5% en vez de 2.5%).</span>
+                        </span>
+                      </label>
+                    )}
+                    <Check field="is_exento" title="Exento de toda retención" hint="No se le practica ninguna retención (casos especiales)." />
+                  </div>
+
+                  <p className="text-xs text-gray-500 bg-gray-50 dark:bg-white/5 rounded-lg p-2">
+                    Estos datos aparecen en el RUT del proveedor. El tipo de persona y el régimen se toman de la Clasificación
+                    Fiscal de arriba. Con esto, cada compra calcula sola sus retenciones.
+                  </p>
+
+                  <details className="text-sm">
+                    <summary className="cursor-pointer text-gray-600 dark:text-gray-400">Opciones avanzadas (para tu contador)</summary>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Concepto de ReteFuente por defecto</label>
+                      <select value={rc.default_concept_id || ''} onChange={(e) => setRc('default_concept_id', e.target.value || null)} disabled={rc.is_exento}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-white/10 rounded-lg text-sm dark:bg-graphite-2 dark:text-gray-100">
+                        <option value="">Según el producto (recomendado)</option>
+                        {retentionConcepts.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                      </select>
+                      <p className="text-xs text-gray-400 mt-1">Solo se usa si el producto y su categoría no tienen concepto. Útil para proveedores de un solo tipo (ej. honorarios).</p>
+                    </div>
+                  </div>
+
+                  <div className="pt-2">
+                    <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">ReteICA (tarifa municipal)</h4>
+                    <SupplierRetentionsEditor
+                      retentions={(rc.retentions || []).filter((r) => r.code === '06')}
+                      disabled={!!rc.is_exento}
+                      onChange={(list) => setRc('retentions', list)}
+                    />
+                  </div>
+                  </details>
+                </>
+              );
+            })()}
           </div>
 
           {/* Buttons */}

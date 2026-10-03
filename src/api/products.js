@@ -83,5 +83,11 @@ export const productsAPI = {
   getInProcess: async (id) => {
     const response = await api.get(`/products/${id}/in-process`);
     return response.data;
+  },
+
+  // Comparativo de proveedores (último precio, tendencia, historial) para la ficha.
+  getSuppliersDetail: async (id) => {
+    const response = await api.get(`/products/${id}/suppliers`, { params: { detail: 1 } });
+    return response.data;
   }
 };

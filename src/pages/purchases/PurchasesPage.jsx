@@ -22,6 +22,7 @@ import {
   CheckCircleIcon,
   ClockIcon,
   ArchiveBoxIcon,
+  TableCellsIcon,
 } from '@heroicons/react/24/outline';
 
 /* ─── helpers ─────────────────────────────────────────────── */
@@ -35,6 +36,7 @@ const normalizeQ = (s) => (s || '').toLowerCase().normalize('NFD').replace(/[\u0
 const STATUS = {
   draft:     { label: 'Borrador',   cls: 'bg-gray-100 text-gray-600' },
   confirmed: { label: 'Confirmada', cls: 'bg-blue-100 text-blue-700' },
+  partially_received: { label: 'Recibida parcial', cls: 'bg-amber-100 text-amber-700' },
   received:  { label: 'Recibida',   cls: 'bg-emerald-100 text-emerald-700' },
   cancelled: { label: 'Cancelada',  cls: 'bg-red-100 text-red-600' },
 };
@@ -104,6 +106,14 @@ const PurchasesPage = () => {
           </div>
           <div className="flex gap-2 flex-shrink-0">
             <button
+              onClick={() => navigate('/purchases/dian-documents')}
+              title="Subir el Excel de documentos recibidos del portal DIAN"
+              className="inline-flex items-center gap-2 px-4 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 shadow-sm"
+            >
+              <TableCellsIcon className="h-4 w-4" />
+              <span className="hidden sm:inline">Documentos DIAN</span>
+            </button>
+            <button
               onClick={() => setShowImportModal(true)}
               className="inline-flex items-center gap-2 px-4 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 shadow-sm"
             >
@@ -126,7 +136,7 @@ const PurchasesPage = () => {
             {[
               { icon: ShoppingCartIcon,  color: 'text-blue-600 bg-blue-50',    label: 'Total Compras',  value: stats.total || 0 },
               { icon: ClockIcon,         color: 'text-gray-500 bg-gray-100',   label: 'Borradores',     value: stats.draft || 0 },
-              { icon: CheckCircleIcon,   color: 'text-blue-600 bg-blue-50',    label: 'Confirmadas',    value: stats.confirmed || 0 },
+              { icon: CheckCircleIcon,   color: 'text-blue-600 bg-blue-50',    label: 'Confirmadas',    value: (stats.confirmed || 0) + (stats.partially_received || 0) },
               { icon: ArchiveBoxIcon,    color: 'text-emerald-600 bg-emerald-50', label: 'Recibidas',   value: stats.received || 0 },
               { icon: CurrencyDollarIcon,color: 'text-violet-600 bg-violet-50',label: 'Invertido (mes)',value: fmtCOP(stats.total_this_month), wide: true },
             ].map(({ icon: Icon, color, label, value, wide }) => (
@@ -217,6 +227,7 @@ const PurchasesPage = () => {
                   <option value="">Todos</option>
                   <option value="draft">Borrador</option>
                   <option value="confirmed">Confirmada</option>
+                  <option value="partially_received">Recibida parcial</option>
                   <option value="received">Recibida</option>
                   <option value="cancelled">Cancelada</option>
                 </select>

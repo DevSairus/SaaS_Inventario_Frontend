@@ -16,6 +16,7 @@ const SuppliersPage = lazy(() => import('./pages/suppliers/SuppliersPage'));
 const PurchasesPage = lazy(() => import('./pages/purchases/PurchasesPage'));
 const PurchaseFormPage = lazy(() => import('./pages/purchases/PurchaseFormPage'));
 const PurchaseDetailPage = lazy(() => import('./pages/purchases/PurchaseDetailPage'));
+const DianDocumentsPage = lazy(() => import('./pages/purchases/DianDocumentsPage'));
 const AdjustmentsPage = lazy(() => import('./pages/adjustments/AdjustmentsPage'));
 const AdjustmentFormPage = lazy(() => import('./pages/adjustments/AdjustmentFormPage'));
 const AdjustmentDetailPage = lazy(() => import('./pages/adjustments/AdjustmentDetailPage'));
@@ -53,6 +54,7 @@ const LoansPage = lazy(() => import('./pages/accounting/LoansPage'));
 const LoanDetailPage = lazy(() => import('./pages/accounting/LoanDetailPage'));
 const BankAccountsPage = lazy(() => import('./pages/accounting/BankAccountsPage'));
 const ExogenaPage = lazy(() => import('./pages/accounting/ExogenaPage'));
+const TaxClassificationPage = lazy(() => import('./pages/accounting/TaxClassificationPage'));
 const BankReconciliationPage = lazy(() => import('./pages/accounting/BankReconciliationPage'));
 // Lazy: son las únicas páginas dentro del alcance de la PWA "Taller" instalada
 // (offline + precache del Service Worker, ver frontend/src/pwa/sw.js). El resto
@@ -347,6 +349,7 @@ function App() {
         {/* Compras */}
         <Route path="purchases"          element={<TenantRoute module="inventory"><Suspense fallback={<Loading fullScreen />}><PurchasesPage /></Suspense></TenantRoute>} />
         <Route path="purchases/new"      element={<TenantRoute module="inventory"><Suspense fallback={<Loading fullScreen />}><PurchaseFormPage /></Suspense></TenantRoute>} />
+        <Route path="purchases/dian-documents" element={<TenantRoute module="inventory"><Suspense fallback={<Loading fullScreen />}><DianDocumentsPage /></Suspense></TenantRoute>} />
         <Route path="purchases/edit/:id" element={<TenantRoute module="inventory"><Suspense fallback={<Loading fullScreen />}><PurchaseFormPage /></Suspense></TenantRoute>} />
         <Route path="purchases/:id"      element={<TenantRoute module="inventory"><Suspense fallback={<Loading fullScreen />}><PurchaseDetailPage /></Suspense></TenantRoute>} />
 
@@ -393,6 +396,7 @@ function App() {
         <Route path="accounting/loans/:id"         element={<TenantRoute module="accounting" roles={['admin', 'manager']}><Suspense fallback={<Loading fullScreen />}><LoanDetailPage /></Suspense></TenantRoute>} />
         <Route path="accounting/bank-accounts"                     element={<TenantRoute module="accounting" roles={['admin', 'manager']}><Suspense fallback={<Loading fullScreen />}><BankAccountsPage /></Suspense></TenantRoute>} />
         <Route path="accounting/bank-accounts/:id/reconciliation"  element={<TenantRoute module="accounting" roles={['admin', 'manager']}><Suspense fallback={<Loading fullScreen />}><BankReconciliationPage /></Suspense></TenantRoute>} />
+        <Route path="accounting/tax-classification" element={<TenantRoute module="accounting" roles={['admin', 'manager', 'accountant']}><Suspense fallback={<Loading fullScreen />}><TaxClassificationPage /></Suspense></TenantRoute>} />
         <Route path="accounting/exogena"                          element={<TenantRoute module="accounting" roles={['admin', 'manager', 'accountant']}><Suspense fallback={<Loading fullScreen />}><ExogenaPage /></Suspense></TenantRoute>} />
 
         {/* ── Nómina Electrónica ─────────────────────── */}

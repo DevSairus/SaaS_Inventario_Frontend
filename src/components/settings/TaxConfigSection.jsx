@@ -1,5 +1,6 @@
 // frontend/src/components/settings/TaxConfigSection.jsx
 import { useState } from 'react';
+import PurchaseRetentionSettings from './PurchaseRetentionSettings';
 
 const TAX_TYPES = [
   { code: '01', name: 'IVA', description: 'Impuesto sobre las Ventas', unit: '%', defaultRate: 19 },
@@ -129,11 +130,16 @@ export default function TaxConfigSection({ taxConfig, onChange }) {
         </div>
       </div>
 
-      {/* Retenciones */}
-      <div>
+      {/* Retenciones en compras (las que practica la empresa) */}
+      <div className="pt-2 border-t border-gray-200">
+        <PurchaseRetentionSettings config={config} onChange={onChange} />
+      </div>
+
+      {/* Retenciones en ventas (las que te practican tus clientes) */}
+      <div className="pt-2 border-t border-gray-200">
         <div className="flex items-center justify-between mb-3">
           <div>
-            <h3 className="text-sm font-semibold text-gray-700">Retenciones</h3>
+            <h3 className="text-sm font-semibold text-gray-700">Retenciones que te practican tus clientes (ventas)</h3>
             <p className="text-xs text-gray-500 mt-0.5">
               Se restan del total a cobrar. Se aplican automáticamente según el cliente.
             </p>

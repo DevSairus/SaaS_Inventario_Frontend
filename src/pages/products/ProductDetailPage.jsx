@@ -9,6 +9,7 @@ import ProductImageViewer from '../../components/products/ProductImageViewer';
 import EquivalencesSection from '../../components/products/EquivalencesSection';
 import VehicleApplicationsSection from '../../components/products/VehicleApplicationsSection';
 import MovementsSection from '../../components/products/MovementsSection';
+import SuppliersSection from '../../components/products/SuppliersSection';
 import { ArrowLeft, Package, Users, Truck, Car, Activity, Edit3, ZoomIn } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { productsAPI } from '../../api/products';
@@ -18,6 +19,7 @@ const COP = (n) =>
 
 const TABS = [
   { key: 'general', label: 'General', icon: Package },
+  { key: 'proveedores', label: 'Proveedores', icon: Truck },
   { key: 'equivalencias', label: 'Equivalencias', icon: Users },
   { key: 'vehiculos', label: 'Aplicación Vehicular', icon: Car },
   { key: 'movimientos', label: 'Movimientos', icon: Activity },
@@ -318,6 +320,10 @@ export default function ProductDetailPage() {
               </div>
             )}
           </div>
+        )}
+
+        {activeTab === 'proveedores' && product && (
+          <SuppliersSection product={product} />
         )}
 
         {activeTab === 'equivalencias' && (

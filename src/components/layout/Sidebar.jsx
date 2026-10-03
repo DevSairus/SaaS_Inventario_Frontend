@@ -143,6 +143,7 @@ const NAV = [
       { label: "Activos Fijos",        path: "/accounting/fixed-assets" },
       { label: "Créditos",             path: "/accounting/loans" },
       { label: "Cuentas Bancarias",    path: "/accounting/bank-accounts" },
+      { label: "Clasificación tributaria", path: "/accounting/tax-classification" },
       { label: "Exógena DIAN",         path: "/accounting/exogena" },
     ],
   },

@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { XMarkIcon, CreditCardIcon, BanknotesIcon, DevicePhoneMobileIcon, CalendarDaysIcon } from '@heroicons/react/24/outline';
 import NumericInput from '../inputs/NumericInput';
+import BankAccountSelect from '../accounting/BankAccountSelect';
 
 const CREDIT_DAYS_OPTIONS = [15, 30, 60, 90];
 
@@ -16,10 +17,12 @@ const ConfirmPurchaseWithPaymentModal = ({
   isOpen,
   onClose,
   onConfirm,
-  purchaseTotal,
+  purchaseTotal,      // NETO a pagar al proveedor (total - retenciones)
+  retentions = 0,     // retenciones practicadas (informativo)
   defaultCreditDays,  // plazo por defecto del proveedor, si lo tiene
   loading = false,
 }) => {
+  const [bankAccountId, setBankAccountId] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [paidAmount, setPaidAmount]       = useState(purchaseTotal);
   const [paymentType, setPaymentType]     = useState(defaultCreditDays > 0 ? 'credit' : 'full');
@@ -33,6 +36,7 @@ const ConfirmPurchaseWithPaymentModal = ({
       setCreditDays(defaultCreditDays || 30);
       setCustomDays('');
       setPaymentMethod('cash');
+      setBankAccountId(null);
     }
   }, [isOpen, purchaseTotal, defaultCreditDays]);
 
@@ -42,6 +46,7 @@ const ConfirmPurchaseWithPaymentModal = ({
 
   const handleSubmit = () => {
     const payload = { payment_method: paymentMethod };
+    if (paymentMethod !== 'cash' && bankAccountId) payload.bank_account_id = bankAccountId;
 
     if (paymentType === 'full') {
       payload.paid_amount = purchaseTotal;
@@ -74,8 +79,13 @@ const ConfirmPurchaseWithPaymentModal = ({
         <div className="p-6 space-y-5">
           {/* Total */}
           <div className="bg-gray-50 dark:bg-graphite-2 rounded-lg p-4 border-2 border-gray-200 dark:border-white/10">
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Total de la Compra</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{retentions > 0 ? 'Neto a pagar al proveedor' : 'Total de la Compra'}</p>
             <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">${purchaseTotal.toLocaleString('es-CO')}</p>
+            {retentions > 0 && (
+              <p className="text-xs text-orange-600 mt-1">
+                Total ${(purchaseTotal + retentions).toLocaleString('es-CO')} − retenciones ${retentions.toLocaleString('es-CO')} (se pagan a la DIAN, no al proveedor)
+              </p>
+            )}
           </div>
 
           {/* Método de pago */}
@@ -99,6 +109,10 @@ const ConfirmPurchaseWithPaymentModal = ({
               ))}
             </div>
           </div>
+
+          {paymentMethod !== 'cash' && paymentType !== 'credit' && (
+            <BankAccountSelect value={bankAccountId} onChange={setBankAccountId} />
+          )}
 
           {/* Tipo de pago */}
           <div>

@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { usePurchasesStore } from '../../store/purchasesStore';
 import { useSuppliersStore } from '../../store/suppliersStore';
 import useProductsStore from '../../store/productsStore';
 import Layout from '../../components/layout/Layout';
 import NumericInput from '../../components/inputs/NumericInput';
+import { retentionsAPI } from '../../api/retentions';
 import {
   formatCurrency,
   toInteger,
@@ -48,6 +49,14 @@ const PurchaseFormPage = () => {
     discount_percentage: 0
   });
 
+  // Retenciones: las calcula el motor del backend (perfil del tenant + del
+  // proveedor + concepto de cada producto) vía /retentions/preview.
+  // `retentionLines` en null = usar el cálculo automático (no se envía nada
+  // y el backend recalcula igual al guardar); en cuanto el usuario edita una
+  // base o quita una línea, queda materializado y se envía como manual.
+  const [retentionPreview, setRetentionPreview] = useState({ lines: [], notes: [] });
+  const [retentionLines, setRetentionLines] = useState(null);
+
   // Estados para búsqueda de productos
   const [productSearch, setProductSearch] = useState('');
   const [showProductDropdown, setShowProductDropdown] = useState(false);
@@ -56,6 +65,24 @@ const PurchaseFormPage = () => {
   useEffect(() => {
     fetchSuppliers();
   }, []);
+
+  // Vista previa de retenciones (con debounce) cada vez que cambian el
+  // proveedor o los ítems.
+  const itemsKey = JSON.stringify(items.map(i => [i.product_id, i.quantity, i.unit_cost, i.discount_percentage, i.tax_rate]));
+  useEffect(() => {
+    if (!formData.supplier_id || items.length === 0) { setRetentionPreview({ lines: [], notes: [] }); return; }
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      retentionsAPI.preview({
+        supplier_id: formData.supplier_id,
+        items: items.map(i => ({ product_id: i.product_id, quantity: i.quantity, unit_cost: i.unit_cost, discount_percentage: i.discount_percentage, tax_rate: i.tax_rate })),
+      })
+        .then((res) => { if (!cancelled) setRetentionPreview({ lines: res.data?.lines || [], notes: res.data?.notes || [] }); })
+        .catch(() => { if (!cancelled) setRetentionPreview({ lines: [], notes: ['No se pudo calcular la vista previa de retenciones.'] }); });
+    }, 400);
+    return () => { cancelled = true; clearTimeout(timer); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData.supplier_id, itemsKey]);
 
   // Cargar datos prellenados desde Stock Alerts
   useEffect(() => {
@@ -135,6 +162,21 @@ const PurchaseFormPage = () => {
         shipping_cost: toNumber(purchase.shipping_cost, 0)
       });
 
+      // Retenciones: si se habían ajustado a mano se restauran tal cual; si
+      // no, se deja el cálculo automático (sigue a los ítems).
+      if (Array.isArray(purchase.applied_retentions) && purchase.applied_retentions.some(l => l.manual)) {
+        setRetentionLines(purchase.applied_retentions.map((l, idx) => ({
+          key: `saved-${idx}`,
+          retention_id: l.retention_id || null,
+          concept_id: l.concept_id || null,
+          code: l.code,
+          concept: l.concept,
+          rate: toNumber(l.rate, 0),
+          account_id: l.account_id || null,
+          base: toNumber(l.base, 0),
+        })));
+      }
+
       if (purchase.items && purchase.items.length > 0) {
         const loadedItems = purchase.items.map(item => {
           const totals = calculateItemTotals({
@@ -201,6 +243,7 @@ const PurchaseFormPage = () => {
       // Autocompletar el plazo de pago con el que tenga configurado el proveedor
       // por defecto (el usuario lo puede cambiar libremente después).
       const selectedSupplier = suppliers.find(s => s.id === value);
+      setRetentionLines(null);
       setFormData(prev => ({
         ...prev,
         supplier_id: value,
@@ -316,6 +359,30 @@ const PurchaseFormPage = () => {
     };
   };
 
+  const RET_NAMES = { '07': 'ReteFuente', '05': 'ReteIVA', '06': 'ReteICA' };
+  const currentTotals = calculateTotals();
+
+  const autoLines = useMemo(() => (retentionPreview.lines || []).map((l, idx) => ({
+    key: `auto-${idx}-${l.code}-${l.concept_id || l.retention_id || ''}`,
+    retention_id: l.retention_id || null,
+    concept_id: l.concept_id || null,
+    code: l.code,
+    concept: l.concept,
+    rate: toNumber(l.rate, 0),
+    account_id: l.account_id || null,
+    base: toNumber(l.base, 0),
+  })), [retentionPreview]);
+  const effectiveRetentionLines = retentionLines ?? autoLines;
+  const isManualRetentions = retentionLines !== null;
+
+  const retentionAmount = (l) => Math.round(toNumber(l.base, 0) * toNumber(l.rate, 0) / (l.code === '06' ? 1000 : 100) * 100) / 100;
+  const totalRetentions = effectiveRetentionLines.reduce((sum, l) => sum + retentionAmount(l), 0);
+
+  const updateRetentionLine = (key, field, value) => {
+    setRetentionLines(effectiveRetentionLines.map(l => (l.key === key ? { ...l, [field]: value } : l)));
+  };
+  const removeRetentionLine = (key) => setRetentionLines(effectiveRetentionLines.filter(l => l.key !== key));
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -344,6 +411,20 @@ const PurchaseFormPage = () => {
       }))
     };
 
+    // Solo se envían las retenciones si se ajustaron a mano; si no, el
+    // backend las recalcula con el motor (mismo resultado que la vista previa).
+    if (isManualRetentions) {
+      purchaseData.applied_retentions = effectiveRetentionLines.map(l => ({
+        retention_id: l.retention_id,
+        concept_id: l.concept_id,
+        code: l.code,
+        concept: l.concept,
+        rate: toNumber(l.rate, 0),
+        account_id: l.account_id,
+        base: toNumber(l.base, 0),
+      }));
+    }
+
     try {
       if (isEditMode) {
         await updatePurchase(id, purchaseData);
@@ -359,7 +440,7 @@ const PurchaseFormPage = () => {
     }
   };
 
-  const totals = calculateTotals();
+  const totals = currentTotals;
 
   return (
     <Layout>
@@ -775,9 +856,88 @@ const PurchaseFormPage = () => {
                       <span className="text-lg font-bold text-blue-600">{formatCurrency(totals.total)}</span>
                     </div>
                   </div>
+                  {totalRetentions > 0 && (
+                    <>
+                      <div className="flex justify-between text-sm text-orange-600">
+                        <span>Retenciones:</span>
+                        <span>-{formatCurrency(totalRetentions)}</span>
+                      </div>
+                      <div className="flex justify-between text-base font-bold text-green-700">
+                        <span>Neto a pagar al proveedor:</span>
+                        <span>{formatCurrency(totals.total - totalRetentions)}</span>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
+
+            {/* Retenciones practicadas al proveedor */}
+            {formData.supplier_id && (
+              <div className="mt-6 pt-4 border-t border-gray-200">
+                <h3 className="text-lg font-semibold text-gray-800 mb-1">Retenciones</h3>
+                {effectiveRetentionLines.length === 0 ? (
+                  <p className="text-sm text-gray-500 mb-2">Sin retenciones para esta compra.</p>
+                ) : (
+                  <div className="overflow-x-auto mb-2">
+                    <table className="min-w-full text-sm">
+                      <thead>
+                        <tr className="text-xs text-gray-500 uppercase">
+                          <th className="text-left py-2 pr-2">Tipo</th>
+                          <th className="text-left py-2 pr-2">Concepto</th>
+                          <th className="text-right py-2 pr-2">Tarifa</th>
+                          <th className="text-right py-2 pr-2">Base</th>
+                          <th className="text-right py-2 pr-2">Valor</th>
+                          <th></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {effectiveRetentionLines.map(l => (
+                          <tr key={l.key} className="border-t border-gray-100">
+                            <td className="py-2 pr-2 whitespace-nowrap">{RET_NAMES[l.code] || l.code}</td>
+                            <td className="py-2 pr-2">{l.concept}</td>
+                            <td className="py-2 pr-2 text-right whitespace-nowrap">{l.rate}{l.code === '06' ? '‰' : '%'}</td>
+                            <td className="py-2 pr-2 text-right">
+                              <NumericInput
+                                value={l.base}
+                                onChange={(e) => updateRetentionLine(l.key, 'base', toInteger(e.target.value, 0))}
+                                className="w-36 px-2 py-1 text-right border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              />
+                            </td>
+                            <td className="py-2 pr-2 text-right font-medium text-orange-600 whitespace-nowrap">-{formatCurrency(retentionAmount(l))}</td>
+                            <td className="py-2 text-right">
+                              <button type="button" onClick={() => removeRetentionLine(l.key)} className="text-red-500 hover:text-red-700 text-xs px-2 py-1">
+                                Quitar
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+
+                {/* Por qué aplica o no cada retención (motor del backend) */}
+                {retentionPreview.notes?.length > 0 && (
+                  <ul className="text-xs text-blue-800 bg-blue-50 border border-blue-100 rounded-lg p-2 space-y-0.5 mb-2">
+                    {retentionPreview.notes.map((n, i) => <li key={i}>• {n}</li>)}
+                  </ul>
+                )}
+
+                <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">
+                  <span>
+                    {isManualRetentions
+                      ? 'Ajustadas a mano: se guardarán tal como están.'
+                      : 'Calculadas según tu perfil tributario, el del proveedor y el concepto de cada producto.'}
+                  </span>
+                  {isManualRetentions && (
+                    <button type="button" onClick={() => setRetentionLines(null)} className="text-blue-600 hover:underline">
+                      Restablecer cálculo automático
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         )}
 

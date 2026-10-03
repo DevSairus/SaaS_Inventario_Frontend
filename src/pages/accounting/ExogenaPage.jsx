@@ -79,19 +79,34 @@ function ConceptsPanel({ format, year }) {
   return (
     <div className="p-3 space-y-2 bg-gray-50 dark:bg-graphite-2 rounded-lg">
       <p className="text-xs text-gray-500 dark:text-gray-400">
-        Asigna el código de concepto DIAN a cada naturaleza de transacción detectada. Donde aparece un valor
-        precargado es una sugerencia tomada de la tabla de conceptos de la Resolución 000227/2025 —
-        confírmala o corrígela antes de generar el archivo. Sin esto, el formato no se puede generar.
+        Código de concepto DIAN de cada tipo de transacción. Los marcados <strong>automático</strong> ya se aplican
+        (tabla de conceptos de la Resolución 000227/2025): no hace falta guardarlos. Cambia solo los que no compartas.
+        La clasificación de las compras (compras / servicios / honorarios…) se ajusta en Contabilidad → Clasificación tributaria.
       </p>
+      {data.legacy_purchase_concept && data.source_keys.some((k) => k.startsWith('purchase:')) && (
+        <p className="text-xs text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/20 rounded p-2">
+          Las compras ahora se separan por concepto de retención de cada producto (compras, servicios, honorarios…).
+          Las que dejes sin código usan tu mapeo general anterior de compras: <strong>{data.legacy_purchase_concept}</strong>.
+        </p>
+      )}
       {data.source_keys.map((key) => (
         <div key={key} className="flex items-center gap-2">
-          <span className="text-sm text-gray-700 dark:text-gray-300 flex-1">{key}</span>
-          {data.suggestions?.[key] && !data.mappings.some((m) => m.source_key === key) && (
-            <span className="text-[11px] text-amber-600 dark:text-amber-400">sugerido</span>
+          <span className="text-sm text-gray-700 dark:text-gray-300 flex-1">
+            {data.source_labels?.[key] || key}
+            <span className="block text-[10px] text-gray-400 font-mono">{key}</span>
+          </span>
+          {data.source_totals?.[key] && (
+            <span className="text-xs text-gray-500 dark:text-gray-400 text-right whitespace-nowrap">
+              {new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(data.source_totals[key].pago)}
+              {data.source_totals[key].retp > 0 && <span className="block text-[10px]">ReteFuente {new Intl.NumberFormat('es-CO', { maximumFractionDigits: 0 }).format(data.source_totals[key].retp)}</span>}
+            </span>
+          )}
+          {data.suggestions?.[key] && !data.mappings.some((m) => m.source_key === key) && values[key] === data.suggestions[key] && (
+            <span className="text-[11px] text-green-700 dark:text-green-400">automático</span>
           )}
           <input
             className={`${inputCls} max-w-[140px]`}
-            placeholder="Código concepto"
+            placeholder={key.startsWith('purchase:') && data.legacy_purchase_concept ? `${data.legacy_purchase_concept} (general)` : 'Código concepto'}
             value={values[key] || ''}
             onChange={(e) => setValues((v) => ({ ...v, [key]: e.target.value }))}
           />
@@ -493,13 +508,13 @@ function FormatRow({ format, year, onToggle }) {
     }
   };
 
-  const download = async () => {
-    setGenerating(true);
+  const download = async (fileFormat = 'xml') => {
+    setGenerating(fileFormat);
     try {
-      const response = await exogenaAPI.generate(format.code, year);
+      const response = await exogenaAPI.generate(format.code, year, fileFormat);
       const disposition = response.headers['content-disposition'] || '';
       const match = disposition.match(/filename="([^"]+)"/);
-      const filename = match ? match[1] : `Exogena-${format.code}-${year}.xml`;
+      const filename = match ? match[1] : `Exogena-${format.code}-${year}.${fileFormat === 'excel' ? 'xlsx' : 'xml'}`;
       const url = URL.createObjectURL(response.data);
       const link = document.createElement('a');
       link.href = url;
@@ -509,7 +524,12 @@ function FormatRow({ format, year, onToggle }) {
       link.remove();
       URL.revokeObjectURL(url);
     } catch (e) {
-      toast.error(e?.response?.data?.message || 'Error al generar el archivo');
+      // Con responseType 'blob' el JSON de error llega como Blob.
+      let message = e?.response?.data?.message;
+      if (!message && e?.response?.data instanceof Blob) {
+        try { message = JSON.parse(await e.response.data.text())?.message; } catch { /* sin detalle */ }
+      }
+      toast.error(message || 'Error al generar el archivo');
     } finally {
       setGenerating(false);
     }
@@ -554,11 +574,19 @@ function FormatRow({ format, year, onToggle }) {
               {checking ? 'Validando...' : 'Validar'}
             </button>
             <button
-              onClick={download}
-              disabled={generating || (readiness && !readiness.ready)}
+              onClick={() => download('xml')}
+              disabled={!!generating || (readiness && !readiness.ready)}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
             >
-              <ArrowDownTrayIcon className="w-4 h-4" /> {generating ? 'Generando...' : 'Generar y descargar'}
+              <ArrowDownTrayIcon className="w-4 h-4" /> {generating === 'xml' ? 'Generando...' : 'Generar XML'}
+            </button>
+            <button
+              onClick={() => download('excel')}
+              disabled={!!generating || (readiness && !readiness.ready)}
+              title="Mismos registros del XML en Excel, para revisión o para compartir"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border border-green-600 text-green-700 hover:bg-green-50 dark:text-green-400 dark:hover:bg-green-900/20 disabled:opacity-50"
+            >
+              <ArrowDownTrayIcon className="w-4 h-4" /> {generating === 'excel' ? 'Generando...' : 'Descargar Excel'}
             </button>
             {readiness && (
               <span className="text-xs text-gray-500 dark:text-gray-400">{readiness.recordCount} registro(s)</span>

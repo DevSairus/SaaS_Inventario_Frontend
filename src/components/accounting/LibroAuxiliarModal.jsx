@@ -175,6 +175,19 @@ const LibroAuxiliarModal = ({ thirdParty, onClose }) => {
                   </tfoot>
                 )}
               </table>
+              {/* El saldo final mezcla cuentas (ej. CxP al proveedor + retenciones
+                  que se le practicaron, que se deben a la DIAN). */}
+              {data.by_account?.length > 1 && (
+                <div className="border-t border-gray-200 dark:border-white/10 px-3 py-2">
+                  <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Saldo por cuenta al corte</div>
+                  {data.by_account.map((a) => (
+                    <div key={a.account_code} className="flex justify-between text-sm text-gray-700 dark:text-gray-300 py-0.5">
+                      <span>{a.account_code} - {a.account_name}</span>
+                      <span className="font-medium">{formatCurrency(a.balance)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>

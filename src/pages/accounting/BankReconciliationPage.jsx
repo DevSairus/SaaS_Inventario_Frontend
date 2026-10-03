@@ -35,6 +35,19 @@ const BankReconciliationPage = () => {
   const [dateFormat, setDateFormat] = useState('DD/MM/YYYY');
   const [decimalSeparator, setDecimalSeparator] = useState(',');
   const [importing, setImporting] = useState(false);
+  // Con plantilla guardada, el usuario puede pedir cambiar el mapeo (si la
+  // plantilla quedó mal configurada).
+  const [editMapping, setEditMapping] = useState(false);
+
+  // Mapeo actual del modal: el sugerido por el backend la primera vez, o el
+  // de la plantilla guardada al pedir "Cambiar mapeo".
+  const applyMappingFrom = (source) => {
+    if (!source) return;
+    setMapping({ ...emptyMapping, ...(source.column_mapping || {}) });
+    if (source.date_format) setDateFormat(source.date_format);
+    const dec = source.decimal_separator || source.amount_format?.decimal_separator;
+    if (dec) setDecimalSeparator(dec);
+  };
 
   // Selección para conciliar manualmente (click-to-pair)
   const [selectedTxId, setSelectedTxId] = useState(null);
@@ -62,8 +75,9 @@ const BankReconciliationPage = () => {
     try {
       const res = await bankAccountsAPI.previewImport(id, file);
       setImportPreview(res.data);
+      setEditMapping(false);
       if (!res.data.existing_template) {
-        setMapping(emptyMapping);
+        applyMappingFrom(res.data.suggested);
       }
     } catch (error) {
       toast.error(error.response?.data?.message || 'Error leyendo el archivo');
@@ -75,11 +89,12 @@ const BankReconciliationPage = () => {
     setPendingFile(null);
     setImportPreview(null);
     setMapping(emptyMapping);
+    setEditMapping(false);
   };
 
   const handleConfirmImport = async () => {
     if (!pendingFile) return;
-    const usingExistingTemplate = !!importPreview?.existing_template;
+    const usingExistingTemplate = !!importPreview?.existing_template && !editMapping;
 
     if (!usingExistingTemplate) {
       if (!mapping.fecha) return toast.error('Selecciona la columna de fecha');
@@ -98,6 +113,9 @@ const BankReconciliationPage = () => {
       });
       const d = res.data;
       toast.success(res.message || 'Extracto importado');
+      if (d.skipped_rows) {
+        toast(`${d.skipped_rows} fila(s) del archivo no eran movimientos (encabezados, resúmenes, totales) y se omitieron`, { duration: 5000 });
+      }
       if (d.row_errors?.length) {
         toast.error(`${d.row_errors.length} fila(s) no se pudieron leer — revisa el formato de fecha/monto`, { duration: 6000 });
       }
@@ -300,7 +318,17 @@ const BankReconciliationPage = () => {
           <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="px-5 py-4 border-b border-gray-200">
               <h3 className="font-semibold text-gray-900">Importar extracto — {pendingFile.name}</h3>
-              <p className="text-xs text-gray-500 mt-1">{importPreview.total_rows} fila(s) detectada(s)</p>
+              <p className="text-xs text-gray-500 mt-1">
+                {importPreview.total_rows} movimiento(s) detectado(s)
+                {importPreview.meta?.header_row > 1 && ` · encabezados en la fila ${importPreview.meta.header_row}`}
+                {importPreview.meta?.ignored_rows > 0 && ` · ${importPreview.meta.ignored_rows} fila(s) que no son movimientos se omiten`}
+              </p>
+              {importPreview.meta?.period && (
+                <p className="text-xs text-gray-500">
+                  Periodo del extracto: {importPreview.meta.period.from} a {importPreview.meta.period.to}
+                  {' '}(se usa para el año cuando la fecha viene sin año, ej. "1/04")
+                </p>
+              )}
             </div>
 
             <div className="px-5 py-4 space-y-4">
@@ -317,13 +345,24 @@ const BankReconciliationPage = () => {
                 </table>
               </div>
 
-              {importPreview.existing_template ? (
-                <p className="text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
-                  Ya reconocemos el formato de este banco — se usará el mapeo guardado anteriormente.
-                </p>
+              {importPreview.existing_template && !editMapping ? (
+                <div className="text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2 flex items-center justify-between gap-2">
+                  <span>Ya reconocemos el formato de este banco — se usará el mapeo guardado anteriormente.</span>
+                  <button
+                    type="button"
+                    onClick={() => { applyMappingFrom(importPreview.existing_template); setEditMapping(true); }}
+                    className="text-xs font-medium text-green-800 underline whitespace-nowrap"
+                  >
+                    Cambiar mapeo
+                  </button>
+                </div>
               ) : (
                 <div className="space-y-3">
-                  <p className="text-sm text-gray-600">Primera vez con este banco — indica a qué campo corresponde cada columna:</p>
+                  <p className="text-sm text-gray-600">
+                    {editMapping
+                      ? 'Ajusta el mapeo: se guardará para las próximas importaciones de este formato.'
+                      : 'Primera vez con este banco — revisa el mapeo sugerido (detectado por los nombres de columna):'}
+                  </p>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs font-medium text-gray-600 mb-1">Columna de fecha</label>

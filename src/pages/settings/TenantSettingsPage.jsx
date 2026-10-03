@@ -11,6 +11,7 @@ import toast from 'react-hot-toast';
 import useTenantStore from '../../store/tenantStore';
 import useAuthStore from '../../store/authStore';
 import TaxConfigSection from '../../components/settings/TaxConfigSection';
+import { invalidateRetentionCatalog } from '../../hooks/useRetentionCatalog';
 import { Building2, Receipt, ShoppingCart, Wrench, Landmark, MessageCircle } from 'lucide-react';
 
 const TenantSettingsPage = () => {
@@ -209,6 +210,7 @@ const TenantSettingsPage = () => {
         // componentes (ej. ProductFormModal) lean las tarifas ICA al toque.
         setFeatures(config.features || {});
         setTaxConfig(config.tax_config || {});
+        invalidateRetentionCatalog();
         // El backend ya invalidó todas las sesiones del tenant
         // (utils/sessionRevocation.js): cerrar la propia de una vez.
         if (activatingRemisionHiding) {

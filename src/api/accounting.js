@@ -119,7 +119,8 @@ export const exogenaAPI = {
   getConcepts: async (code, year) => (await api.get(`/accounting/exogena/formats/${code}/concepts`, { params: { year } })).data,
   saveConcepts: async (code, mappings) => (await api.put(`/accounting/exogena/formats/${code}/concepts`, { mappings })).data,
   getReadiness: async (code, year) => (await api.get(`/accounting/exogena/formats/${code}/readiness`, { params: { year } })).data,
-  generate: async (code, year) => api.get(`/accounting/exogena/formats/${code}/generate`, { params: { year }, responseType: 'blob' }),
+  // format: 'xml' (archivo a presentar a la DIAN) | 'excel' (revisión legible)
+  generate: async (code, year, format = 'xml') => api.get(`/accounting/exogena/formats/${code}/generate`, { params: { year, format }, responseType: 'blob' }),
 
   getManualRecords: async (formatCode, year) =>
     (await api.get('/accounting/exogena/manual-records', { params: { format_code: formatCode, year } })).data,
@@ -150,6 +151,7 @@ export const financialReportsAPI = {
   aging: async (params) => (await api.get('/accounting/reports/aging', { params })).data,
   trialBalanceComparativo: async (params) => (await api.get('/accounting/reports/trial-balance-comparativo', { params })).data,
   retenciones: async (params) => (await api.get('/accounting/reports/retenciones', { params })).data,
+  retencionesPracticadas: async (params) => (await api.get('/accounting/reports/retenciones-practicadas', { params })).data,
   cashflowIndirecto: async (params) => (await api.get('/accounting/reports/cashflow-indirecto', { params })).data,
 
   // Exportación Excel/PDF — mismos filtros que su endpoint JSON equivalente.
@@ -173,6 +175,8 @@ export const financialReportsAPI = {
     api.get('/accounting/reports/trial-balance-comparativo/export', { params: { ...params, format }, responseType: 'blob' }),
   exportRetenciones: (params = {}, format = 'excel') =>
     api.get('/accounting/reports/retenciones/export', { params: { ...params, format }, responseType: 'blob' }),
+  exportRetencionesPracticadas: (params = {}, format = 'excel') =>
+    api.get('/accounting/reports/retenciones-practicadas/export', { params: { ...params, format }, responseType: 'blob' }),
   exportCashflowIndirecto: (params = {}, format = 'excel') =>
     api.get('/accounting/reports/cashflow-indirecto/export', { params: { ...params, format }, responseType: 'blob' }),
 };
@@ -210,4 +214,14 @@ export const SOURCE_TYPE_LABELS = {
   payroll_payment: 'Pago de nómina',
   payroll_cesantias_year_end: 'Causación anual de cesantías',
   payroll_provision_adjustment: 'Ajuste anual de provisiones de nómina',
+};
+
+// Clasificación tributaria de compras (pantalla del contador): concepto de
+// retención por categoría y excepciones por producto.
+export const taxClassificationAPI = {
+  overview: async (year) => (await api.get('/accounting/tax-classification', { params: { year } })).data,
+  lines: async (year, concept_id) => (await api.get('/accounting/tax-classification/lines', { params: { year, concept_id } })).data,
+  saveCategories: async (assignments) => (await api.put('/accounting/tax-classification/categories', { assignments })).data,
+  products: async (params) => (await api.get('/accounting/tax-classification/products', { params })).data,
+  saveProducts: async (product_ids, concept_id) => (await api.put('/accounting/tax-classification/products', { product_ids, concept_id })).data,
 };

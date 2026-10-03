@@ -14,6 +14,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { formatCurrency } from '../../utils/formatters';
 import NumericInput from '../../components/inputs/NumericInput';
+import BankAccountSelect from '../../components/accounting/BankAccountSelect';
 
 const AccountsPayablePage = () => {
   const [loading, setLoading] = useState(true);
@@ -25,6 +26,7 @@ const AccountsPayablePage = () => {
   const [selectedPurchase, setSelectedPurchase] = useState(null);
   const [paymentAmount, setPaymentAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('Efectivo');
+  const [bankAccountId, setBankAccountId] = useState(null);
   const [paymentNotes, setPaymentNotes] = useState('');
   const [view, setView] = useState('by-supplier'); // 'by-supplier' o 'all-purchases'
   const [filters, setFilters] = useState({
@@ -61,8 +63,11 @@ const AccountsPayablePage = () => {
       await accountsPayableAPI.registerPayment(selectedPurchase.id, {
         amount: parseFloat(paymentAmount),
         payment_method: paymentMethod,
+        bank_account_id: paymentMethod !== 'Efectivo' ? bankAccountId : null,
         notes: paymentNotes
       });
+      toast.success('Pago registrado');
+      setBankAccountId(null);
 
       setShowPaymentModal(false);
       setSelectedPurchase(null);
@@ -297,6 +302,11 @@ const AccountsPayablePage = () => {
             </div>
             <div className="text-sm text-gray-500">
               {selectedPurchase.purchase_number} · Saldo: <span className="font-semibold text-gray-900">{formatCurrency(selectedPurchase.balance)}</span>
+              {selectedPurchase.total_retentions > 0 && (
+                <div className="text-xs text-orange-600 mt-0.5">
+                  Neto de retenciones ({formatCurrency(selectedPurchase.total_retentions)} se pagan a la DIAN, no al proveedor)
+                </div>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Monto a pagar</label>
@@ -319,6 +329,9 @@ const AccountsPayablePage = () => {
                 <option>Cheque</option>
               </select>
             </div>
+            {paymentMethod !== 'Efectivo' && (
+              <BankAccountSelect value={bankAccountId} onChange={setBankAccountId} />
+            )}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Notas (opcional)</label>
               <textarea

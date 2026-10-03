@@ -11,6 +11,7 @@ function CategoryFormModal({ isOpen, onClose, onSave, category, categories }) {
     commission_category_id: ''
   });
 
+
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [commissionCategories, setCommissionCategories] = useState([]);
