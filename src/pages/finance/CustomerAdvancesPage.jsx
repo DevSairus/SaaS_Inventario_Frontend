@@ -22,6 +22,8 @@ import { customerAdvancesAPI } from '../../api/customerAdvances';
 import RegisterAdvanceModal from '../../components/finance/RegisterAdvanceModal';
 import ReassignAdvanceModal from '../../components/finance/ReassignAdvanceModal';
 import useAuthStore from '../../store/authStore';
+import Dropdown from '../../components/common/Dropdown';
+import { MoreVertical, Eye, Undo2, ArrowLeftRight, Ban } from 'lucide-react';
 
 // Reasignar anticipos a otro cliente: solo personal de contabilidad.
 const REASSIGN_ROLES = ['admin', 'super_admin', 'accountant'];
@@ -320,19 +322,26 @@ const CustomerAdvancesPage = () => {
                         <td className="px-6 py-4 whitespace-nowrap text-sm">
                           <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${st.cls}`}>{st.label}</span>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-3">
-                          <button onClick={() => toggleDetail(adv)} className="text-blue-600 hover:text-blue-900">
-                            {expandedId === adv.id ? 'Ocultar' : 'Ver detalle'}
-                          </button>
-                          {adv.status === 'active' && parseFloat(adv.balance) > 0 && (
-                            <button onClick={() => openRefund(adv)} className="text-orange-600 hover:text-orange-900">Devolver</button>
-                          )}
-                          {canReassign && adv.status === 'active' && parseFloat(adv.balance) > 0 && (
-                            <button onClick={() => setReassignTarget(adv)} className="text-purple-600 hover:text-purple-900">Reasignar</button>
-                          )}
-                          {adv.status === 'active' && parseFloat(adv.applied_amount) === 0 && parseFloat(adv.refunded_amount) === 0 && !parseFloat(adv.reassigned_amount || 0) && !adv.reassigned_from_id && (
-                            <button onClick={() => { setVoidTarget(adv); setVoidReason(''); }} className="text-red-600 hover:text-red-900">Anular</button>
-                          )}
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                          <Dropdown
+                            trigger={
+                              <button title="Acciones" className="p-2 hover:bg-gray-100 rounded-lg">
+                                <MoreVertical className="w-5 h-5 text-gray-500" />
+                              </button>
+                            }
+                            items={[
+                              { label: expandedId === adv.id ? 'Ocultar detalle' : 'Ver detalle', icon: Eye, onClick: () => toggleDetail(adv) },
+                              adv.status === 'active' && parseFloat(adv.balance) > 0 && {
+                                label: 'Devolver', icon: Undo2, onClick: () => openRefund(adv), className: 'text-orange-700',
+                              },
+                              canReassign && adv.status === 'active' && parseFloat(adv.balance) > 0 && {
+                                label: 'Reasignar a otro cliente', icon: ArrowLeftRight, onClick: () => setReassignTarget(adv), className: 'text-purple-700',
+                              },
+                              adv.status === 'active' && parseFloat(adv.applied_amount) === 0 && parseFloat(adv.refunded_amount) === 0 && !parseFloat(adv.reassigned_amount || 0) && !adv.reassigned_from_id && {
+                                label: 'Anular', icon: Ban, onClick: () => { setVoidTarget(adv); setVoidReason(''); }, className: 'text-red-700',
+                              },
+                            ].filter(Boolean)}
+                          />
                         </td>
                       </tr>
                       {expandedId === adv.id && (
