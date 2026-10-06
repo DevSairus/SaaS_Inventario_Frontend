@@ -113,7 +113,10 @@ function SaleFormPage() {
   const isCrmQuoteRoute = location.pathname.startsWith('/crm/quotes');
   const isCrmQuoteMode = isCrmQuoteRoute || Boolean(opportunityId);
   const { createSale, updateSale, fetchSaleById, currentSale, loading } = useSalesStore();
-  const { features, enabledModules, fetchFeatures } = useTenantStore();
+  const { features, enabledModules, fetchFeatures, taxConfig } = useTenantStore();
+  // Porcentajes AIU por defecto del tenant (Configuración → Impuestos)
+  const aiuDefaults = { admin_pct: 10, unforeseen_pct: 5, profit_pct: 5, iva_rate: 19, ...(taxConfig?.aiu || {}) };
+  const toNumber = (v) => { const n = parseFloat(v); return Number.isFinite(n) ? n : 0; };
   const { user } = useAuthStore();
   // El descuento global mueve el total a cobrar -- el técnico no puede
   // aplicarlo (mismo criterio que en la OT).
@@ -167,6 +170,11 @@ function SaleFormPage() {
     technician_id: '',
     global_discount_type: 'fixed',
     global_discount_value: 0,
+    aiu_enabled: false,
+    aiu_admin_pct: '',
+    aiu_unforeseen_pct: '',
+    aiu_profit_pct: '',
+    aiu_object: '',
   });
 
   const [showBrandDropdown, setShowBrandDropdown] = useState(false);
@@ -401,6 +409,11 @@ function SaleFormPage() {
         technician_id: currentSale.technician_id || '',
         global_discount_type: currentSale.global_discount_type || 'fixed',
         global_discount_value: currentSale.global_discount_value || 0,
+        aiu_enabled: !!currentSale.aiu_enabled,
+        aiu_admin_pct: currentSale.aiu_admin_pct ?? '',
+        aiu_unforeseen_pct: currentSale.aiu_unforeseen_pct ?? '',
+        aiu_profit_pct: currentSale.aiu_profit_pct ?? '',
+        aiu_object: currentSale.aiu_object || '',
       });
 
       // Establecer el nombre del cliente en el campo de búsqueda
@@ -439,7 +452,7 @@ function SaleFormPage() {
     if (items.length > 0) {
       setItems(items.map(item => calculateItemTotals(item)));
     }
-  }, [formData.document_type]);
+  }, [formData.document_type, formData.aiu_enabled]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -460,7 +473,10 @@ function SaleFormPage() {
   const handleAddItem = async (product) => {
     // Verificar stock antes de agregar al carrito
     const stock = parseFloat(product.current_stock || 0);
-    if (stock <= 0 && product.track_inventory && product.product_type !== 'service') {
+    // Producto configurado para venderse con stock en 0: solo se avisa.
+    if (stock <= 0 && product.track_inventory && product.product_type !== 'service' && product.allow_negative_stock) {
+      toast(`${product.name} no tiene stock; se permite venderlo en negativo.`, { icon: '⚠️' });
+    } else if (stock <= 0 && product.track_inventory && product.product_type !== 'service') {
       // Buscar equivalentes con stock
       try {
         const res = await equivalencesAPI.getByProductId(product.id);
@@ -565,7 +581,14 @@ function SaleFormPage() {
     let tax = 0;
     let total = 0;
 
-    if (!hasTax) {
+    if (formData.aiu_enabled) {
+      // Factura AIU: la línea es costo directo sin IVA (el IVA va solo sobre
+      // la Utilidad). Si el precio traía IVA incluido, se le extrae.
+      tax = 0;
+      total = hasTax && priceIncludesTax
+        ? taxBase - Math.round((taxBase * taxPercentage) / (100 + taxPercentage))
+        : taxBase;
+    } else if (!hasTax) {
       // Producto exento de IVA
       tax = 0;
       total = taxBase;
@@ -657,6 +680,19 @@ function SaleFormPage() {
       : formData.global_discount_type === 'percentage'
         ? Math.round(total * Math.min(globalDiscountValue, 100) / 100)
         : Math.min(globalDiscountValue, total);
+    if (formData.aiu_enabled) {
+      // Vista previa AIU; el backend recalcula al guardar.
+      const direct = total;
+      const admin = Math.round(direct * toNumber(formData.aiu_admin_pct) / 100);
+      const unforeseen = Math.round(direct * toNumber(formData.aiu_unforeseen_pct) / 100);
+      const profit = Math.round(direct * toNumber(formData.aiu_profit_pct) / 100);
+      const aiuTax = Math.round(profit * toNumber(aiuDefaults.iva_rate) / 100);
+      const aiuSubtotal = direct + admin + unforeseen + profit;
+      return {
+        subtotal, discount, tax: aiuTax, total: aiuSubtotal + aiuTax, globalDiscount: 0, grandTotal: aiuSubtotal + aiuTax,
+        aiu: { direct, admin, unforeseen, profit, subtotal: aiuSubtotal },
+      };
+    }
     const grandTotal = total - globalDiscount;
     return { subtotal, discount, tax, total, globalDiscount, grandTotal };
   };
@@ -1566,6 +1602,66 @@ function SaleFormPage() {
               </div>
             )}
 
+            {/* Factura AIU -- IVA solo sobre la Utilidad (ver backend services/sales/aiu.service.js) */}
+            {/* Solo si el tenant habilitó AIU, o si la venta ya es AIU (editarla). */}
+            {items.length > 0 && formData.document_type !== 'remision' && (aiuDefaults.enabled || formData.aiu_enabled) && (
+              <Card className="mb-6">
+                <div className="p-6 space-y-4">
+                  <label className="flex items-start gap-2">
+                    <input
+                      type="checkbox"
+                      checked={!!formData.aiu_enabled}
+                      onChange={(e) => {
+                        const on = e.target.checked;
+                        setFormData(f => ({
+                          ...f,
+                          aiu_enabled: on,
+                          aiu_admin_pct: f.aiu_admin_pct !== '' ? f.aiu_admin_pct : aiuDefaults.admin_pct,
+                          aiu_unforeseen_pct: f.aiu_unforeseen_pct !== '' ? f.aiu_unforeseen_pct : aiuDefaults.unforeseen_pct,
+                          aiu_profit_pct: f.aiu_profit_pct !== '' ? f.aiu_profit_pct : aiuDefaults.profit_pct,
+                          ...(on ? { global_discount_value: 0 } : {}),
+                        }));
+                      }}
+                      className="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="text-sm text-gray-700">
+                      <span className="font-medium">Factura AIU</span> (Administración, Imprevistos, Utilidad)
+                      <span className="block text-xs text-gray-500">Las líneas son el costo directo; el IVA se liquida solo sobre la Utilidad.</span>
+                    </span>
+                  </label>
+                  {formData.aiu_enabled && (
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      {[
+                        { key: 'aiu_admin_pct', label: 'Administración %' },
+                        { key: 'aiu_unforeseen_pct', label: 'Imprevistos %' },
+                        { key: 'aiu_profit_pct', label: 'Utilidad %' },
+                      ].map(f => (
+                        <label key={f.key} className="block">
+                          <span className="text-xs text-gray-600">{f.label}</span>
+                          <input
+                            type="number" min="0" max="100" step="0.01"
+                            value={formData[f.key]}
+                            onChange={(e) => setFormData(d => ({ ...d, [f.key]: e.target.value }))}
+                            className="mt-1 w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          />
+                        </label>
+                      ))}
+                      <label className="block sm:col-span-3">
+                        <span className="text-xs text-gray-600">Contrato de servicios AIU por concepto de</span>
+                        <input
+                          type="text"
+                          value={formData.aiu_object}
+                          onChange={(e) => setFormData(d => ({ ...d, aiu_object: e.target.value }))}
+                          placeholder="Ej: mantenimiento preventivo de la flota"
+                          className="mt-1 w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        />
+                      </label>
+                    </div>
+                  )}
+                </div>
+              </Card>
+            )}
+
             {/* Totales */}
             {items.length > 0 && (
               <Card className="mb-6">
@@ -1591,7 +1687,7 @@ function SaleFormPage() {
                               </span>
                             </div>
                           )}
-                          <GlobalDiscountInput formData={formData} setFormData={setFormData} canDiscount={canApplyDiscount} />
+                          {!formData.aiu_enabled && <GlobalDiscountInput formData={formData} setFormData={setFormData} canDiscount={canApplyDiscount} />}
                           <div className="border-t-2 border-gray-300 pt-3">
                             <div className="flex justify-between items-center">
                               <span className="text-lg font-bold text-gray-900">TOTAL:</span>
@@ -1604,14 +1700,34 @@ function SaleFormPage() {
                       ) : (
                         /* Factura / Cotización: mostrar subtotal + IVA + total discriminados */
                         <>
+                          {totals.aiu && (
+                            <>
+                              <div className="flex justify-between text-sm text-gray-600">
+                                <span>Costo directo:</span>
+                                <span className="font-medium text-gray-900">{formatCurrency(totals.aiu.direct)}</span>
+                              </div>
+                              <div className="flex justify-between text-sm text-gray-600">
+                                <span>Administración ({toNumber(formData.aiu_admin_pct)}%):</span>
+                                <span className="font-medium text-gray-900">{formatCurrency(totals.aiu.admin)}</span>
+                              </div>
+                              <div className="flex justify-between text-sm text-gray-600">
+                                <span>Imprevistos ({toNumber(formData.aiu_unforeseen_pct)}%):</span>
+                                <span className="font-medium text-gray-900">{formatCurrency(totals.aiu.unforeseen)}</span>
+                              </div>
+                              <div className="flex justify-between text-sm text-gray-600">
+                                <span>Utilidad ({toNumber(formData.aiu_profit_pct)}%):</span>
+                                <span className="font-medium text-gray-900">{formatCurrency(totals.aiu.profit)}</span>
+                              </div>
+                            </>
+                          )}
                           <div className="flex justify-between text-sm text-gray-600">
                             <span>Subtotal:</span>
                             <span className="font-medium text-gray-900">
-                              {formatCurrency(totals.subtotal)}
+                              {formatCurrency(totals.aiu ? totals.aiu.subtotal : totals.subtotal)}
                             </span>
                           </div>
 
-                          {totals.discount > 0 && (
+                          {!totals.aiu && totals.discount > 0 && (
                             <div className="flex justify-between text-sm text-red-600">
                               <span>Descuento:</span>
                               <span className="font-medium">
@@ -1621,7 +1737,7 @@ function SaleFormPage() {
                           )}
 
                           <div className="flex justify-between text-sm text-gray-600">
-                            <span>IVA:</span>
+                            <span>{totals.aiu ? 'IVA sobre la Utilidad:' : 'IVA:'}</span>
                             <span className="font-medium text-gray-900">
                               {formatCurrency(totals.tax)}
                             </span>
@@ -1635,7 +1751,7 @@ function SaleFormPage() {
                               </span>
                             </div>
                           )}
-                          <GlobalDiscountInput formData={formData} setFormData={setFormData} canDiscount={canApplyDiscount} />
+                          {!formData.aiu_enabled && <GlobalDiscountInput formData={formData} setFormData={setFormData} canDiscount={canApplyDiscount} />}
 
                           <div className="border-t-2 border-gray-300 pt-3">
                             <div className="flex justify-between items-center">

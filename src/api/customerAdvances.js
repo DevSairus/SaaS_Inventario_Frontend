@@ -28,6 +28,9 @@ export const customerAdvancesAPI = {
   // Anular un anticipo (antes de que tenga aplicaciones/devoluciones)
   void: (id, data) => api.post(`/customer-advances/${id}/void`, data),
 
+  // Reasignar saldo a otro cliente (solo contabilidad: admin/accountant)
+  reassign: (id, data) => api.post(`/customer-advances/${id}/reassign`, data),
+
   // Anticipos disponibles de un cliente, orden FIFO (selector al facturar)
   getAvailableForCustomer: (customerId) =>
     api.get(`/customers/${customerId}/advances/available`),

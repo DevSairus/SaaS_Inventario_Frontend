@@ -11,21 +11,10 @@ import ProductImageUpload from './ProductImageUpload';
 import { productsAPI } from '../../api/products';
 import RuntConsultaModal from '../workshop/RuntConsultaModal';
 
-// Fase D — mismas 3 categorías que se configuran en Ajustes > Impuestos.
-// La tarifa vive ahí (tenant.tax_config.ica_categories), no acá: si el
-// producto referencia una categoría, la tarifa se resuelve en el backend al
-// momento de facturar, así que un cambio de tarifa aplica a todos los
-// productos de esa categoría sin tener que editarlos uno por uno.
-const ICA_CATEGORIES = [
-  { key: 'industrial', label: 'Industrial' },
-  { key: 'comercial', label: 'Comercial' },
-  { key: 'servicios', label: 'Servicios' },
-];
-
 const ProductFormModal = ({ isOpen, onClose, product = null }) => {
   const { createProduct, updateProduct, loading } = useProductsStore();
   const { categories, fetchCategories } = useCategoriesStore();
-  const { taxConfig, fetchFeatures } = useTenantStore();
+  const { fetchFeatures } = useTenantStore();
 
   const [warehouses, setWarehouses] = useState([]);
   const [loadingWarehouses, setLoadingWarehouses] = useState(false);
@@ -108,7 +97,7 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
   }, [fetchCategories]);
 
   useEffect(() => {
-    fetchFeatures(); // trae tax_config (incluye ica_categories) — no-op si ya está cargado
+    fetchFeatures(); // no-op si ya está cargado
   }, [fetchFeatures]);
 
   useEffect(() => {
@@ -694,85 +683,6 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
                     </button>
                   </div>
                 </label>
-              </div>
-
-              {/* ICA — Fase D: categoría económica en vez de tarifa manual */}
-              <div className="md:col-span-2">
-                <div className="p-3 bg-gray-50 dark:bg-graphite-2 rounded-lg border border-gray-200 dark:border-white/10">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <span className="text-sm font-medium text-gray-900 dark:text-gray-100">ICA (Industria y Comercio)</span>
-                      <p className="text-xs text-gray-500 dark:text-gray-500">Impuesto municipal, se expresa en milésimas (‰)</p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setFormData(prev => ({
-                        ...prev,
-                        tax_config: { ...prev.tax_config, ica: { ...prev.tax_config?.ica, enabled: !prev.tax_config?.ica?.enabled } }
-                      }))}
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0 ${
-                        formData.tax_config?.ica?.enabled ? 'bg-blue-600' : 'bg-gray-300 dark:bg-white/10'
-                      }`}
-                    >
-                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
-                        formData.tax_config?.ica?.enabled ? 'translate-x-6' : 'translate-x-1'
-                      }`} />
-                    </button>
-                  </div>
-
-                  {formData.tax_config?.ica?.enabled && (
-                    <div className="mt-3 pt-3 border-t border-gray-200 dark:border-white/10 space-y-2">
-                      <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">Categoría económica</label>
-                      <select
-                        value={formData.tax_config?.ica?.category || ''}
-                        onChange={(e) => {
-                          const category = e.target.value || null;
-                          setFormData(prev => ({
-                            ...prev,
-                            tax_config: {
-                              ...prev.tax_config,
-                              ica: { ...prev.tax_config?.ica, category, rate: category ? 0 : prev.tax_config?.ica?.rate }
-                            }
-                          }));
-                        }}
-                        className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-white/10 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-graphite dark:text-gray-100"
-                      >
-                        <option value="">Personalizada (escribir tarifa manual)</option>
-                        {ICA_CATEGORIES.map(cat => {
-                          const configuredRate = (taxConfig?.ica_categories || []).find(c => c.key === cat.key)?.rate;
-                          return (
-                            <option key={cat.key} value={cat.key}>
-                              {cat.label}{configuredRate !== undefined ? ` — ${configuredRate}‰` : ''}
-                            </option>
-                          );
-                        })}
-                      </select>
-
-                      {formData.tax_config?.ica?.category ? (
-                        <p className="text-xs text-gray-500 dark:text-gray-500">
-                          La tarifa se toma de Ajustes → Impuestos → Tarifas ICA por actividad económica.
-                          {(taxConfig?.ica_categories || []).find(c => c.key === formData.tax_config.ica.category) === undefined &&
-                            ' Aún no la has configurado ahí, así que hoy calcularía 0.'}
-                        </p>
-                      ) : (
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="number"
-                            value={formData.tax_config?.ica?.rate || 0}
-                            onChange={(e) => setFormData(prev => ({
-                              ...prev,
-                              tax_config: { ...prev.tax_config, ica: { ...prev.tax_config?.ica, rate: parseFloat(e.target.value) || 0 } }
-                            }))}
-                            min="0"
-                            step="0.01"
-                            className="w-24 px-2 py-1.5 text-sm text-right border border-gray-300 dark:border-white/10 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-graphite dark:text-gray-100"
-                          />
-                          <span className="text-xs text-gray-500 dark:text-gray-500">‰</span>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
               </div>
 
               {/* Inventario */}

@@ -278,6 +278,11 @@ export const payrollSettingsAPI = {
     const response = await api.put('/payroll/settings', percentages);
     return response.data;
   },
+  // Carga el catálogo de EPS/AFP/cesantías/ARL/cajas/SENA/ICBF como proveedores marcados
+  loadFundCatalog: async () => {
+    const response = await api.post('/payroll/settings/fund-catalog');
+    return response.data;
+  },
 };
 
 // ── Contabilidad de nómina — comprobantes y desembolsos ────────────

@@ -5,6 +5,7 @@ import NumericInput from '../inputs/NumericInput';
 import DivipolaCitySelect from '../common/DivipolaCitySelect';
 import SupplierRetentionsEditor from './SupplierRetentionsEditor';
 import useRetentionCatalog from '../../hooks/useRetentionCatalog';
+import { FUND_TYPE_LABELS, resetFundSuppliersCache } from '../payroll/FundSupplierSelect';
 
 const DOCUMENT_TYPE_OPTIONS = [
   { value: '13', label: 'Cédula de ciudadanía' },
@@ -46,6 +47,7 @@ const SupplierModal = ({ supplier, onClose }) => {
     is_obligated_to_invoice: true,
     city_code: '',
     document_type: '',
+    payroll_fund_types: [],
   });
 
   const [errors, setErrors] = useState({});
@@ -84,6 +86,7 @@ const SupplierModal = ({ supplier, onClose }) => {
           : true,
         city_code: supplier.city_code || '',
         document_type: supplier.document_type || '',
+        payroll_fund_types: Array.isArray(supplier.payroll_fund_types) ? supplier.payroll_fund_types : [],
       });
     }
   }, [supplier]);
@@ -141,6 +144,7 @@ const SupplierModal = ({ supplier, onClose }) => {
       : await createSupplier(dataToSend);
 
     if (success) {
+      resetFundSuppliersCache();
       toast.success(supplier ? 'Proveedor actualizado exitosamente' : 'Proveedor creado exitosamente');
       onClose();
     }
@@ -512,6 +516,31 @@ const SupplierModal = ({ supplier, onClose }) => {
                 </span>
               </span>
             </label>
+
+            {/* Entidad de nómina: solo los proveedores marcados aparecen en los
+                selectores de EPS, pensión, ARL, etc. de Nómina. */}
+            <div className="mt-4 border border-gray-200 rounded-lg p-3">
+              <p className="text-sm font-medium text-gray-700">Entidad de nómina</p>
+              <p className="text-xs text-gray-500 mb-2">Marca qué tipo de entidad es, para que aparezca al configurar empleados y la nómina.</p>
+              <div className="flex flex-wrap gap-x-5 gap-y-2">
+                {Object.entries(FUND_TYPE_LABELS).map(([key, label]) => (
+                  <label key={key} className="flex items-center gap-1.5 text-sm text-gray-700">
+                    <input
+                      type="checkbox"
+                      checked={formData.payroll_fund_types.includes(key)}
+                      onChange={(e) => setFormData(prev => ({
+                        ...prev,
+                        payroll_fund_types: e.target.checked
+                          ? [...prev.payroll_fund_types, key]
+                          : prev.payroll_fund_types.filter(t => t !== key),
+                      }))}
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 h-4 w-4"
+                    />
+                    {label}
+                  </label>
+                ))}
+              </div>
+            </div>
           </div>
 
           {/* Términos Comerciales */}

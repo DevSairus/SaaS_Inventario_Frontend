@@ -18,6 +18,27 @@ export const journalEntriesAPI = {
   reverse: async (id, reason) => (await api.patch(`/accounting/journal-entries/${id}/reverse`, { reason })).data,
 };
 
+// ICA por municipio (configuración, pre-liquidación y causación)
+export const icaAPI = {
+  getConfig: async () => (await api.get('/accounting/ica/config')).data,
+  createMunicipality: async (payload) => (await api.post('/accounting/ica/municipalities', payload)).data,
+  updateMunicipality: async (id, payload) => (await api.put(`/accounting/ica/municipalities/${id}`, payload)).data,
+  deleteMunicipality: async (id) => (await api.delete(`/accounting/ica/municipalities/${id}`)).data,
+  setActivities: async (id, activities) => (await api.put(`/accounting/ica/municipalities/${id}/activities`, { activities })).data,
+  assignBranches: async (assignments) => (await api.put('/accounting/ica/branches', { assignments })).data,
+  report: async (params) => (await api.get('/accounting/ica/report', { params })).data,
+  listSettlements: async (params = {}) => (await api.get('/accounting/ica/settlements', { params })).data,
+  createSettlement: async (payload) => (await api.post('/accounting/ica/settlements', payload)).data,
+  voidSettlement: async (id, reason) => (await api.patch(`/accounting/ica/settlements/${id}/void`, { reason })).data,
+};
+
+// Migración de movimientos entre cuentas (solo contabilidad)
+export const accountMigrationsAPI = {
+  list: async () => (await api.get('/accounting/account-migrations')).data,
+  preview: async (payload) => (await api.post('/accounting/account-migrations/preview', payload)).data,
+  execute: async (payload) => (await api.post('/accounting/account-migrations', payload)).data,
+};
+
 export const accountMappingsAPI = {
   getAll: async () => (await api.get('/accounting/account-mappings')).data,
   create: async (payload) => (await api.post('/accounting/account-mappings', payload)).data,

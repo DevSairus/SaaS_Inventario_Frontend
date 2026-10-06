@@ -8,6 +8,7 @@ const PAYROLL_STATUS = {
   cargada_nomina:          { label: 'Cargada a nómina',                 color: 'bg-emerald-50 border-emerald-200 text-emerald-700', icon: CheckCircle2 },
   sin_empleado_vinculado:  { label: 'Sin empleado de nómina vinculado',  color: 'bg-amber-50 border-amber-200 text-amber-700',       icon: AlertTriangle },
   pendiente_periodo:       { label: 'Sin período de nómina abierto',     color: 'bg-amber-50 border-amber-200 text-amber-700',       icon: AlertTriangle },
+  no_reporta_nomina:       { label: 'No se reporta a nómina (registrada como gasto)', color: 'bg-gray-50 border-gray-200 text-gray-600', icon: FileText },
   not_applicable:          null, // tenant sin módulo de nómina, o comisión $0 -- no se muestra nada
 };
 
@@ -170,7 +171,7 @@ export default function CommissionSettlementDetailPage() {
                 )}
               </div>
             </div>
-            {settlement.payroll_status !== 'cargada_nomina' && (
+            {!['cargada_nomina', 'no_reporta_nomina'].includes(settlement.payroll_status) && (
               <button onClick={handleRetryPayroll} disabled={retrying}
                 className="flex items-center gap-1.5 bg-white/70 hover:bg-white px-3 py-1.5 rounded-lg text-xs font-medium transition disabled:opacity-50">
                 <RefreshCw size={12} className={retrying ? 'animate-spin' : ''} />

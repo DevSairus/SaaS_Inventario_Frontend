@@ -82,7 +82,8 @@ export default function SupportDocumentsPage() {
   useEffect(() => { load(); }, [load]);
 
   useEffect(() => {
-    suppliersAPI.getAll({ is_active: true, limit: 200 })
+    // Documento Soporte: solo proveedores no obligados a facturar.
+    suppliersAPI.getAll({ is_active: true, is_obligated_to_invoice: false, limit: 500, sort_by: 'name', sort_order: 'ASC' })
       .then(res => setSuppliers(res.data || []))
       .catch(() => {});
   }, []);
@@ -274,9 +275,10 @@ export default function SupportDocumentsPage() {
                 >
                   <option value="">Sin proveedor (capturar datos al generar)</option>
                   {suppliers.map(s => (
-                    <option key={s.id} value={s.id}>{s.name}{s.is_obligated_to_invoice === false ? ' — no factura' : ''}</option>
+                    <option key={s.id} value={s.id}>{s.name}{s.tax_id ? ` — ${s.tax_id}` : ''}</option>
                   ))}
                 </select>
+                <p className="mt-1 text-xs text-gray-500">Solo se listan los proveedores marcados como no obligados a facturar.</p>
               </div>
 
               <div className="grid grid-cols-2 gap-3">

@@ -352,6 +352,9 @@ export default function CommissionSettlementsPage() {
                           {(s.payroll_status === 'sin_empleado_vinculado' || s.payroll_status === 'pendiente_periodo') && (
                             <span className="text-xs px-1.5 py-0.5 rounded font-medium bg-amber-50 text-amber-600 mt-1 inline-block">Pendiente nómina</span>
                           )}
+                          {s.payroll_status === 'no_reporta_nomina' && (
+                            <span className="text-xs px-1.5 py-0.5 rounded font-medium bg-gray-100 text-gray-600 mt-1 inline-block">No reporta nómina</span>
+                          )}
                         </div>
                       </div>
                       <div className="flex items-center gap-4">

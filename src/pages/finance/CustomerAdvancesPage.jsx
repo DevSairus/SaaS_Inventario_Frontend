@@ -20,12 +20,18 @@ import { formatCurrency } from '../../utils/formatters';
 import NumericInput from '../../components/inputs/NumericInput';
 import { customerAdvancesAPI } from '../../api/customerAdvances';
 import RegisterAdvanceModal from '../../components/finance/RegisterAdvanceModal';
+import ReassignAdvanceModal from '../../components/finance/ReassignAdvanceModal';
+import useAuthStore from '../../store/authStore';
+
+// Reasignar anticipos a otro cliente: solo personal de contabilidad.
+const REASSIGN_ROLES = ['admin', 'super_admin', 'accountant'];
 
 const STATUS_LABELS = {
   active: { label: 'Activo', cls: 'bg-blue-100 text-blue-800' },
   fully_applied: { label: 'Aplicado', cls: 'bg-green-100 text-green-800' },
   fully_refunded: { label: 'Devuelto', cls: 'bg-gray-100 text-gray-600' },
   voided: { label: 'Anulado', cls: 'bg-red-100 text-red-700' },
+  reassigned: { label: 'Reasignado', cls: 'bg-purple-100 text-purple-700' },
 };
 
 const formatDate = (date) => {
@@ -50,6 +56,10 @@ const CustomerAdvancesPage = () => {
   const [refundAmount, setRefundAmount] = useState('');
   const [refundReason, setRefundReason] = useState('');
   const [refundSaving, setRefundSaving] = useState(false);
+
+  const { user } = useAuthStore();
+  const canReassign = REASSIGN_ROLES.includes(user?.role);
+  const [reassignTarget, setReassignTarget] = useState(null);
 
   const [voidTarget, setVoidTarget] = useState(null);
   const [voidReason, setVoidReason] = useState('');
@@ -246,6 +256,7 @@ const CustomerAdvancesPage = () => {
             <option value="fully_applied">Aplicado</option>
             <option value="fully_refunded">Devuelto</option>
             <option value="voided">Anulado</option>
+            <option value="reassigned">Reasignado</option>
           </select>
           <input
             type="date"
@@ -316,7 +327,10 @@ const CustomerAdvancesPage = () => {
                           {adv.status === 'active' && parseFloat(adv.balance) > 0 && (
                             <button onClick={() => openRefund(adv)} className="text-orange-600 hover:text-orange-900">Devolver</button>
                           )}
-                          {adv.status === 'active' && parseFloat(adv.applied_amount) === 0 && parseFloat(adv.refunded_amount) === 0 && (
+                          {canReassign && adv.status === 'active' && parseFloat(adv.balance) > 0 && (
+                            <button onClick={() => setReassignTarget(adv)} className="text-purple-600 hover:text-purple-900">Reasignar</button>
+                          )}
+                          {adv.status === 'active' && parseFloat(adv.applied_amount) === 0 && parseFloat(adv.refunded_amount) === 0 && !parseFloat(adv.reassigned_amount || 0) && !adv.reassigned_from_id && (
                             <button onClick={() => { setVoidTarget(adv); setVoidReason(''); }} className="text-red-600 hover:text-red-900">Anular</button>
                           )}
                         </td>
@@ -330,6 +344,23 @@ const CustomerAdvancesPage = () => {
                               <div className="space-y-3">
                                 {adv.reference_note && (
                                   <p className="text-sm text-gray-600 italic">"{adv.reference_note}"</p>
+                                )}
+                                {detail?.reassignment_history?.length > 0 && (
+                                  <div>
+                                    <p className="text-xs font-medium text-gray-500 uppercase mb-1">Reasignaciones a otros clientes</p>
+                                    <div className="space-y-1.5">
+                                      {detail.reassignment_history.map((r) => (
+                                        <div key={r.to_advance_id} className="flex items-center justify-between bg-white p-2.5 rounded border text-sm">
+                                          <div>
+                                            <span className="font-medium">{r.to_advance_number}</span>
+                                            <span className="text-gray-400 ml-2">{formatDate(r.date)}</span>
+                                            {r.reason && <span className="text-gray-500 ml-2 italic">{r.reason}</span>}
+                                          </div>
+                                          <span className="font-medium text-purple-700">{formatCurrency(r.amount)}</span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
                                 )}
                                 <div>
                                   <p className="text-xs font-medium text-gray-500 uppercase mb-1">Aplicaciones a facturas</p>
@@ -435,6 +466,14 @@ const CustomerAdvancesPage = () => {
       )}
 
       {/* Anular */}
+      {reassignTarget && (
+        <ReassignAdvanceModal
+          advance={reassignTarget}
+          onClose={() => setReassignTarget(null)}
+          onSuccess={loadData}
+        />
+      )}
+
       {voidTarget && (
         <div className="fixed z-50 inset-0 overflow-y-auto" role="dialog" aria-modal="true">
           <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">

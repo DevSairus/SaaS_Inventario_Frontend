@@ -44,6 +44,7 @@ const emptyForm = {
   base_salary: 0,
   payroll_periodicity: 'mensual',
   transport_allowance_eligible: true,
+  commission_payroll_mode: '',
   hire_date: '',
   termination_date: '',
   contract_end_date: '',
@@ -109,6 +110,7 @@ const EmployeeModal = ({ employee, onClose }) => {
         salary_type: employee.salary_type || 'ordinario',
         base_salary: employee.base_salary || 0,
         payroll_periodicity: employee.payroll_periodicity || 'mensual',
+        commission_payroll_mode: employee.commission_payroll_mode || '',
         transport_allowance_eligible: employee.transport_allowance_eligible !== undefined
           ? employee.transport_allowance_eligible
           : true,
@@ -512,6 +514,21 @@ const EmployeeModal = ({ employee, onClose }) => {
               </div>
             </div>
 
+            <div className="mt-4 sm:w-1/2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Comisiones de mano de obra</label>
+              <select
+                name="commission_payroll_mode"
+                value={formData.commission_payroll_mode}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-white/10 dark:bg-graphite-2 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">Según configuración de nómina</option>
+                <option value="salarial">Salarial</option>
+                <option value="no_salarial">No salarial</option>
+                <option value="no_reportar">No se reporta a nómina</option>
+              </select>
+            </div>
+
             <div className="flex flex-col sm:flex-row gap-4 mt-4">
               <label className="flex items-center">
                 <input
@@ -549,15 +566,15 @@ const EmployeeModal = ({ employee, onClose }) => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">EPS</label>
-                <FundSupplierSelect name="eps_supplier_id" value={formData.eps_supplier_id} onChange={handleChange} />
+                <FundSupplierSelect fundType="eps" name="eps_supplier_id" value={formData.eps_supplier_id} onChange={handleChange} />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Fondo de pensiones (AFP)</label>
-                <FundSupplierSelect name="pension_fund_supplier_id" value={formData.pension_fund_supplier_id} onChange={handleChange} />
+                <FundSupplierSelect fundType="afp" name="pension_fund_supplier_id" value={formData.pension_fund_supplier_id} onChange={handleChange} />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Fondo de cesantías</label>
-                <FundSupplierSelect name="severance_fund_supplier_id" value={formData.severance_fund_supplier_id} onChange={handleChange} />
+                <FundSupplierSelect fundType="cesantias" name="severance_fund_supplier_id" value={formData.severance_fund_supplier_id} onChange={handleChange} />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">

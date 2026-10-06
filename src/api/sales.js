@@ -43,6 +43,10 @@ const salesApi = {
   registerPayment: (id, paymentData) => 
     api.post(`/sales/${id}/payments`, paymentData),
 
+  // Registrar retenciones que practicó el cliente (abono sin caja)
+  registerRetentions: (id, data) =>
+    api.post(`/sales/${id}/retentions`, data),
+
   // Eliminar venta (solo si está en borrador)
   delete: (id) => api.delete(`/sales/${id}`),
 

@@ -9,7 +9,9 @@
 import React, { useEffect, useState } from 'react';
 import Layout from '../../components/layout/Layout';
 import NumericInput from '../../components/inputs/NumericInput';
-import FundSupplierSelect from '../../components/payroll/FundSupplierSelect';
+import FundSupplierSelect, { resetFundSuppliersCache } from '../../components/payroll/FundSupplierSelect';
+import { payrollSettingsAPI } from '../../api/payroll';
+import toast from 'react-hot-toast';
 import { usePayrollSettingsStore } from '../../store/payrollSettingsStore';
 import CesantiasAnnualPanel from '../../components/payroll/CesantiasAnnualPanel';
 import { InformationCircleIcon, ArrowPathIcon, CheckIcon } from '@heroicons/react/24/outline';
@@ -69,13 +71,23 @@ const ACCOUNTING_OPTIONS = [
       { value: 'on_payment', label: 'Gasto cuando se pagan', hint: 'Sin provisión: se registran como gasto al disfrutarlas o compensarlas.' },
     ],
   },
+  {
+    key: 'commission_payroll_mode',
+    label: 'Comisiones de mano de obra (taller)',
+    note: 'Cómo llega a nómina la liquidación de comisiones de los técnicos. Es el valor por defecto: cada empleado puede tener su propia excepción en su ficha.',
+    options: [
+      { value: 'salarial', label: 'Salarial', hint: 'Novedad "Comisiones": integra el IBC de seguridad social y la base de cesantías y prima.' },
+      { value: 'no_salarial', label: 'No salarial', hint: 'Bonificación no salarial (Art. 128 CST): requiere pacto expreso con el trabajador. No integra IBC ni prestaciones.' },
+      { value: 'no_reportar', label: 'No se reporta a nómina', hint: 'La comisión queda como gasto operativo de la liquidación, por fuera de la nómina electrónica.' },
+    ],
+  },
 ];
 
 const COMPANY_FUNDS = [
-  { key: 'arl_supplier_id', label: 'ARL (riesgos laborales)' },
-  { key: 'ccf_supplier_id', label: 'Caja de compensación familiar' },
-  { key: 'sena_supplier_id', label: 'SENA' },
-  { key: 'icbf_supplier_id', label: 'ICBF' },
+  { key: 'arl_supplier_id', label: 'ARL (riesgos laborales)', fundType: 'arl' },
+  { key: 'ccf_supplier_id', label: 'Caja de compensación familiar', fundType: 'ccf' },
+  { key: 'sena_supplier_id', label: 'SENA', fundType: 'sena' },
+  { key: 'icbf_supplier_id', label: 'ICBF', fundType: 'icbf' },
 ];
 
 const ACCOUNTING_KEYS = [...ACCOUNTING_OPTIONS.map((o) => o.key), ...COMPANY_FUNDS.map((f) => f.key), 'employer_exonerated_114_1'];
@@ -83,6 +95,22 @@ const ACCOUNTING_KEYS = [...ACCOUNTING_OPTIONS.map((o) => o.key), ...COMPANY_FUN
 const PayrollSettingsPage = () => {
   const { settings, isLoading, fetchSettings, updateSettings } = usePayrollSettingsStore();
   const [formValues, setFormValues] = useState({});
+  const [fundsReloadKey, setFundsReloadKey] = useState(0);
+  const [loadingCatalog, setLoadingCatalog] = useState(false);
+
+  const handleLoadFundCatalog = async () => {
+    setLoadingCatalog(true);
+    try {
+      const res = await payrollSettingsAPI.loadFundCatalog();
+      toast.success(res.message || 'Catálogo cargado');
+      resetFundSuppliersCache();
+      setFundsReloadKey((k) => k + 1);
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Error cargando el catálogo');
+    } finally {
+      setLoadingCatalog(false);
+    }
+  };
   const [accountingValues, setAccountingValues] = useState({});
   const [saving, setSaving] = useState(false);
 
@@ -236,13 +264,23 @@ const PayrollSettingsPage = () => {
                 <div>
                   <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Fondos de la empresa</p>
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                    Regístrelos como proveedores; son el tercero de los aportes en el comprobante. EPS, pensión y cesantías se asignan en la ficha de cada empleado.
+                    Son el tercero de los aportes en el comprobante. Solo aparecen los proveedores marcados como entidad de nómina del tipo correspondiente (Proveedores → Entidad de nómina). EPS, pensión y cesantías se asignan en la ficha de cada empleado.
                   </p>
+                  <button
+                    type="button"
+                    onClick={handleLoadFundCatalog}
+                    disabled={loadingCatalog}
+                    className="mt-2 text-sm text-blue-600 hover:text-blue-800 disabled:opacity-50"
+                  >
+                    {loadingCatalog ? 'Cargando…' : 'Cargar catálogo de entidades (EPS, pensión, ARL, cajas, SENA, ICBF)'}
+                  </button>
                   <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {COMPANY_FUNDS.map((fund) => (
                       <div key={fund.key}>
                         <label className="block text-sm text-gray-700 dark:text-gray-300 mb-1">{fund.label}</label>
                         <FundSupplierSelect
+                          fundType={fund.fundType}
+                          reloadKey={fundsReloadKey}
                           name={fund.key}
                           value={accountingValues[fund.key]}
                           onChange={(e) => handleAccountingChange(fund.key, e.target.value)}

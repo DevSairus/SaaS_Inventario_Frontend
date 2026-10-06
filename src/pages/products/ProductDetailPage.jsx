@@ -315,7 +315,6 @@ export default function ProductDetailPage() {
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                   <DetailRow label="IVA" value={product.tax_config?.iva?.enabled ? `${product.tax_config.iva.rate}%` : (product.has_tax ? `${product.tax_percentage}%` : 'Exento')} />
                   <DetailRow label="INC" value={product.tax_config?.inc?.enabled ? `${product.tax_config.inc.rate}%` : 'No aplica'} />
-                  <DetailRow label="ICA" value={product.tax_config?.ica?.enabled ? `${product.tax_config.ica.rate}%` : 'No aplica'} />
                 </div>
               </div>
             )}

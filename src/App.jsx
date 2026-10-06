@@ -44,6 +44,8 @@ const ReceiptsPage = lazy(() => import('./pages/finance/ReceiptsPage'));
 const ChartOfAccountsPage = lazy(() => import('./pages/accounting/ChartOfAccountsPage'));
 const JournalEntriesPage = lazy(() => import('./pages/accounting/JournalEntriesPage'));
 const AccountMappingsPage = lazy(() => import('./pages/accounting/AccountMappingsPage'));
+const AccountMigrationsPage = lazy(() => import('./pages/accounting/AccountMigrationsPage'));
+const IcaPage = lazy(() => import('./pages/accounting/IcaPage'));
 const FinancialReportsPage = lazy(() => import('./pages/accounting/FinancialReportsPage'));
 const FiscalPeriodsPage = lazy(() => import('./pages/accounting/FiscalPeriodsPage'));
 const AccountingHealthPage = lazy(() => import('./pages/accounting/AccountingHealthPage'));
@@ -383,19 +385,21 @@ function App() {
         <Route path="expenses"         element={<TenantRoute module="treasury"><Suspense fallback={<Loading fullScreen />}><ExpensesPage /></Suspense></TenantRoute>} />
         <Route path="support-documents" element={<TenantRoute module="treasury"><Suspense fallback={<Loading fullScreen />}><SupportDocumentsPage /></Suspense></TenantRoute>} />
         <Route path="cashflow"         element={<TenantRoute module="treasury"><Suspense fallback={<Loading fullScreen />}><CashFlowPage /></Suspense></TenantRoute>} />
-        <Route path="accounting/chart-of-accounts" element={<TenantRoute module="accounting" roles={['admin', 'manager']}><Suspense fallback={<Loading fullScreen />}><ChartOfAccountsPage /></Suspense></TenantRoute>} />
-        <Route path="accounting/journal-entries"   element={<TenantRoute module="accounting" roles={['admin', 'manager']}><Suspense fallback={<Loading fullScreen />}><JournalEntriesPage /></Suspense></TenantRoute>} />
-        <Route path="accounting/account-mappings"  element={<TenantRoute module="accounting" roles={['admin', 'manager']}><Suspense fallback={<Loading fullScreen />}><AccountMappingsPage /></Suspense></TenantRoute>} />
-        <Route path="accounting/reports"           element={<TenantRoute module="accounting" roles={['admin', 'manager']}><Suspense fallback={<Loading fullScreen />}><FinancialReportsPage /></Suspense></TenantRoute>} />
-        <Route path="accounting/fiscal-periods"    element={<TenantRoute module="accounting" roles={['admin', 'manager']}><Suspense fallback={<Loading fullScreen />}><FiscalPeriodsPage /></Suspense></TenantRoute>} />
-        <Route path="accounting/health"            element={<TenantRoute module="accounting" roles={['admin', 'manager']}><Suspense fallback={<Loading fullScreen />}><AccountingHealthPage /></Suspense></TenantRoute>} />
-        <Route path="accounting/opening-balances"  element={<TenantRoute module="accounting" roles={['admin', 'manager']}><Suspense fallback={<Loading fullScreen />}><OpeningBalancesPage /></Suspense></TenantRoute>} />
-        <Route path="accounting/fixed-assets"      element={<TenantRoute module="accounting" roles={['admin', 'manager']}><Suspense fallback={<Loading fullScreen />}><FixedAssetsPage /></Suspense></TenantRoute>} />
-        <Route path="accounting/fixed-assets/:id"  element={<TenantRoute module="accounting" roles={['admin', 'manager']}><Suspense fallback={<Loading fullScreen />}><FixedAssetDetailPage /></Suspense></TenantRoute>} />
-        <Route path="accounting/loans"             element={<TenantRoute module="accounting" roles={['admin', 'manager']}><Suspense fallback={<Loading fullScreen />}><LoansPage /></Suspense></TenantRoute>} />
-        <Route path="accounting/loans/:id"         element={<TenantRoute module="accounting" roles={['admin', 'manager']}><Suspense fallback={<Loading fullScreen />}><LoanDetailPage /></Suspense></TenantRoute>} />
-        <Route path="accounting/bank-accounts"                     element={<TenantRoute module="accounting" roles={['admin', 'manager']}><Suspense fallback={<Loading fullScreen />}><BankAccountsPage /></Suspense></TenantRoute>} />
-        <Route path="accounting/bank-accounts/:id/reconciliation"  element={<TenantRoute module="accounting" roles={['admin', 'manager']}><Suspense fallback={<Loading fullScreen />}><BankReconciliationPage /></Suspense></TenantRoute>} />
+        <Route path="accounting/chart-of-accounts" element={<TenantRoute module="accounting" roles={['admin', 'manager', 'accountant']}><Suspense fallback={<Loading fullScreen />}><ChartOfAccountsPage /></Suspense></TenantRoute>} />
+        <Route path="accounting/journal-entries"   element={<TenantRoute module="accounting" roles={['admin', 'manager', 'accountant']}><Suspense fallback={<Loading fullScreen />}><JournalEntriesPage /></Suspense></TenantRoute>} />
+        <Route path="accounting/account-mappings"  element={<TenantRoute module="accounting" roles={['admin', 'manager', 'accountant']}><Suspense fallback={<Loading fullScreen />}><AccountMappingsPage /></Suspense></TenantRoute>} />
+        <Route path="accounting/reports"           element={<TenantRoute module="accounting" roles={['admin', 'manager', 'accountant']}><Suspense fallback={<Loading fullScreen />}><FinancialReportsPage /></Suspense></TenantRoute>} />
+        <Route path="accounting/fiscal-periods"    element={<TenantRoute module="accounting" roles={['admin', 'manager', 'accountant']}><Suspense fallback={<Loading fullScreen />}><FiscalPeriodsPage /></Suspense></TenantRoute>} />
+        <Route path="accounting/health"            element={<TenantRoute module="accounting" roles={['admin', 'manager', 'accountant']}><Suspense fallback={<Loading fullScreen />}><AccountingHealthPage /></Suspense></TenantRoute>} />
+        <Route path="accounting/opening-balances"  element={<TenantRoute module="accounting" roles={['admin', 'manager', 'accountant']}><Suspense fallback={<Loading fullScreen />}><OpeningBalancesPage /></Suspense></TenantRoute>} />
+        <Route path="accounting/fixed-assets"      element={<TenantRoute module="accounting" roles={['admin', 'manager', 'accountant']}><Suspense fallback={<Loading fullScreen />}><FixedAssetsPage /></Suspense></TenantRoute>} />
+        <Route path="accounting/fixed-assets/:id"  element={<TenantRoute module="accounting" roles={['admin', 'manager', 'accountant']}><Suspense fallback={<Loading fullScreen />}><FixedAssetDetailPage /></Suspense></TenantRoute>} />
+        <Route path="accounting/loans"             element={<TenantRoute module="accounting" roles={['admin', 'manager', 'accountant']}><Suspense fallback={<Loading fullScreen />}><LoansPage /></Suspense></TenantRoute>} />
+        <Route path="accounting/loans/:id"         element={<TenantRoute module="accounting" roles={['admin', 'manager', 'accountant']}><Suspense fallback={<Loading fullScreen />}><LoanDetailPage /></Suspense></TenantRoute>} />
+        <Route path="accounting/bank-accounts"                     element={<TenantRoute module="accounting" roles={['admin', 'manager', 'accountant']}><Suspense fallback={<Loading fullScreen />}><BankAccountsPage /></Suspense></TenantRoute>} />
+        <Route path="accounting/bank-accounts/:id/reconciliation"  element={<TenantRoute module="accounting" roles={['admin', 'manager', 'accountant']}><Suspense fallback={<Loading fullScreen />}><BankReconciliationPage /></Suspense></TenantRoute>} />
+        <Route path="accounting/ica"                element={<TenantRoute module="accounting" roles={['admin', 'manager', 'accountant']}><Suspense fallback={<Loading fullScreen />}><IcaPage /></Suspense></TenantRoute>} />
+        <Route path="accounting/account-migrations" element={<TenantRoute module="accounting" roles={['admin', 'accountant']}><Suspense fallback={<Loading fullScreen />}><AccountMigrationsPage /></Suspense></TenantRoute>} />
         <Route path="accounting/tax-classification" element={<TenantRoute module="accounting" roles={['admin', 'manager', 'accountant']}><Suspense fallback={<Loading fullScreen />}><TaxClassificationPage /></Suspense></TenantRoute>} />
         <Route path="accounting/exogena"                          element={<TenantRoute module="accounting" roles={['admin', 'manager', 'accountant']}><Suspense fallback={<Loading fullScreen />}><ExogenaPage /></Suspense></TenantRoute>} />
 

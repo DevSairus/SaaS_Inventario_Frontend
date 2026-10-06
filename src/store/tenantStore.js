@@ -6,7 +6,7 @@ const useTenantStore = create((set, get) => ({
   features: null,  // null = todavía no cargado
   enabledModules: null, // null = todavía no cargado; array de module keys una vez cargado
   tenantSlug: null, // usado para armar links públicos, ej. /agendar/:slug
-  taxConfig: null, // null = todavía no cargado; incluye ica_categories (Fase D)
+  taxConfig: null, // null = todavía no cargado; incluye aiu (defaults de factura AIU)
   loading: false,
 
   fetchFeatures: async () => {

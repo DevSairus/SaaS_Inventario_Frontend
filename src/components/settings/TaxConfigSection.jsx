@@ -5,7 +5,6 @@ import PurchaseRetentionSettings from './PurchaseRetentionSettings';
 const TAX_TYPES = [
   { code: '01', name: 'IVA', description: 'Impuesto sobre las Ventas', unit: '%', defaultRate: 19 },
   { code: '04', name: 'INC', description: 'Impoconsumo (licores, bebidas, etc.)', unit: '%', defaultRate: 8 },
-  { code: '03', name: 'ICA', description: 'Impuesto de Industria y Comercio', unit: '‰', defaultRate: 4.14 },
 ];
 
 const RETENTION_TYPES = [
@@ -14,23 +13,11 @@ const RETENTION_TYPES = [
   { code: '07', name: 'ReteFuente', description: 'Retención en la Fuente', unit: '%', defaultRate: 2.5, base: 'Base gravable' },
 ];
 
-// Fase D — Categorías de tarifa ICA. No hay tabla nacional de municipio +
-// actividad económica: cada municipio fija sus propias tarifas en su
-// Estatuto Tributario, así que la responsabilidad de cargar la tarifa
-// correcta es de cada tenant (o su contador). Aquí solo se ofrecen 3
-// categorías genéricas para no repetir el número en cada producto.
-const ICA_CATEGORIES = [
-  { key: 'industrial', label: 'Industrial' },
-  { key: 'comercial', label: 'Comercial' },
-  { key: 'servicios', label: 'Servicios' },
-];
-
 export default function TaxConfigSection({ taxConfig, onChange }) {
   const config = taxConfig || {};
   const taxes = config.taxes || TAX_TYPES.map(t => ({ ...t, rate: t.defaultRate, enabled: false }));
   const retentions = config.retentions || RETENTION_TYPES.map(r => ({ ...r, rate: r.defaultRate, enabled: false }));
   const isAutoretenedor = config.is_autoretenedor || false;
-  const icaCategories = config.ica_categories || ICA_CATEGORIES.map(c => ({ ...c, rate: 0 }));
 
   const updateTax = (code, field, value) => {
     const updated = taxes.map(t => t.code === code ? { ...t, [field]: value } : t);
@@ -42,10 +29,9 @@ export default function TaxConfigSection({ taxConfig, onChange }) {
     onChange({ ...config, retentions: updated });
   };
 
-  const updateIcaCategory = (key, rate) => {
-    const updated = icaCategories.map(c => c.key === key ? { ...c, rate } : c);
-    onChange({ ...config, ica_categories: updated });
-  };
+  // Factura AIU: valores por defecto (cada venta puede ajustar sus %).
+  const aiu = { enabled: false, admin_pct: 10, unforeseen_pct: 5, profit_pct: 5, iva_rate: 19, retefuente_base: 'total', ...(config.aiu || {}) };
+  const updateAiu = (field, value) => onChange({ ...config, aiu: { ...aiu, [field]: value } });
 
   return (
     <div className="space-y-6">
@@ -96,38 +82,68 @@ export default function TaxConfigSection({ taxConfig, onChange }) {
         </div>
       </div>
 
-      {/* Tarifas ICA por actividad económica (Fase D) */}
+      {/* Factura AIU */}
       <div>
-        <h3 className="text-sm font-semibold text-gray-700 mb-1">Tarifas ICA por actividad económica</h3>
-        <p className="text-xs text-gray-500 mb-4">
-          El ICA lo fija cada municipio en su propio Estatuto Tributario — no hay una tabla
-          nacional única, así que la tarifa correcta depende de dónde opera tu empresa. Configúrala
-          aquí una sola vez por categoría (verifícala con tu contador o el estatuto de tu municipio)
-          y en cada producto solo elige la categoría, en vez de escribir el número cada vez.
-        </p>
-        <div className="space-y-3">
-          {ICA_CATEGORIES.map(catType => {
-            const cat = icaCategories.find(c => c.key === catType.key) || { rate: 0 };
-            return (
-              <div key={catType.key} className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                <div className="flex-1">
-                  <span className="text-sm font-medium text-gray-900">{catType.label}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="number"
-                    value={cat.rate || 0}
-                    onChange={(e) => updateIcaCategory(catType.key, parseFloat(e.target.value) || 0)}
-                    min="0"
-                    step="0.01"
-                    className="w-20 px-2 py-1.5 text-sm text-right border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                  <span className="text-xs text-gray-500 w-4">‰</span>
-                </div>
-              </div>
-            );
-          })}
+        <div className="flex items-start justify-between gap-4 mb-1">
+          <h3 className="text-sm font-semibold text-gray-700">Facturación AIU (Administración, Imprevistos, Utilidad)</h3>
+          <button
+            type="button"
+            onClick={() => updateAiu('enabled', !aiu.enabled)}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0 ${aiu.enabled ? 'bg-blue-600' : 'bg-gray-300'}`}
+            aria-label="Habilitar facturación AIU"
+          >
+            <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${aiu.enabled ? 'translate-x-6' : 'translate-x-1'}`} />
+          </button>
         </div>
+        <p className="text-xs text-gray-500 mb-4">
+          Para contratos de servicios donde el IVA se liquida solo sobre la Utilidad. Si no la usas, déjala apagada:
+          la opción no aparece en ventas, órdenes de trabajo ni facturas.
+        </p>
+        {aiu.enabled && (<>
+        <p className="text-xs text-gray-500 mb-3">Porcentajes que se proponen al marcar una venta como AIU; en cada venta se pueden ajustar.</p>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {[
+            { key: 'admin_pct', label: 'Administración' },
+            { key: 'unforeseen_pct', label: 'Imprevistos' },
+            { key: 'profit_pct', label: 'Utilidad' },
+            { key: 'iva_rate', label: 'IVA sobre la Utilidad' },
+          ].map((f) => (
+            <label key={f.key} className="block">
+              <span className="text-xs text-gray-600">{f.label} (%)</span>
+              <input
+                type="number"
+                value={aiu[f.key]}
+                onChange={(e) => updateAiu(f.key, parseFloat(e.target.value) || 0)}
+                min="0"
+                max="100"
+                step="0.01"
+                className="mt-1 w-full px-2 py-1.5 text-sm text-right border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </label>
+          ))}
+        </div>
+        <label className="block mt-3">
+          <span className="text-xs text-gray-600">Base de la retención en la fuente que te practican</span>
+          <select
+            value={aiu.retefuente_base}
+            onChange={(e) => updateAiu('retefuente_base', e.target.value)}
+            className="mt-1 w-full sm:w-auto px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            <option value="total">Valor total del contrato (costo directo + A + I + U)</option>
+            <option value="aiu">Solo A + I + U (vigilancia, aseo, servicios temporales)</option>
+          </select>
+          <span className="block text-xs text-gray-500 mt-1">Confírmalo con tu contador según el tipo de contrato. ReteICA se calcula sobre el total y ReteIVA sobre el IVA.</span>
+        </label>
+        </>)}
+      </div>
+
+      {/* ICA: no se cobra en la factura; se liquida por municipio */}
+      <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+        <p className="text-xs text-blue-800">
+          <strong>ICA (Industria y Comercio):</strong> es un impuesto a cargo de tu empresa sobre sus ingresos, no se le cobra al
+          cliente en la factura. Configura municipios, actividades CIIU y tarifas, y liquida el impuesto en
+          <strong> Contabilidad → ICA</strong>.
+        </p>
       </div>
 
       {/* Retenciones en compras (las que practica la empresa) */}

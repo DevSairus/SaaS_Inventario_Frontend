@@ -60,7 +60,7 @@ export default function WorkOrderDetailPage() {
     sendQuoteRequest, resendQuoteRequest, applyApprovedItems,
   } = useWorkshopStore();
   const { searchProducts } = useProductsStore();
-  const { features, fetchFeatures } = useTenantStore();
+  const { features, fetchFeatures, taxConfig } = useTenantStore();
   // Config propia de la OT, separada de hide_remision_tax (que solo aplica a
   // remisiones/facturas de Ventas) para que activar/desactivar una no afecte
   // a la otra por accidente.
@@ -190,6 +190,8 @@ export default function WorkOrderDetailPage() {
   const [copyingLink, setCopyingLink]        = useState(false);
   // Modal de tipo de documento al generar venta desde OT
   const [showGenSaleModal, setShowGenSaleModal] = useState(false);
+  // Factura AIU al generar el documento (ver backend services/sales/aiu.service.js)
+  const [genAiu, setGenAiu] = useState({ enabled: false, admin_pct: '', unforeseen_pct: '', profit_pct: '', object: '' });
   // Se abre si generateSale (o el reintento tras completarlo) responde
   // DIAN_CUSTOMER_INCOMPLETE -- ver customerDianReadiness.js en el backend.
   const [dianIncompleteModal, setDianIncompleteModal] = useState(null); // { customerId, missingFields, docType } | null
@@ -482,6 +484,8 @@ export default function WorkOrderDetailPage() {
   };
 
   const handleGenerateSale = () => {
+    const d = { admin_pct: 10, unforeseen_pct: 5, profit_pct: 5, ...(taxConfig?.aiu || {}) };
+    setGenAiu({ enabled: false, admin_pct: d.admin_pct, unforeseen_pct: d.unforeseen_pct, profit_pct: d.profit_pct, object: '' });
     setShowGenSaleModal(true);
   };
 
@@ -489,7 +493,16 @@ export default function WorkOrderDetailPage() {
     setShowGenSaleModal(false);
     setGeneratingSale(true);
     try {
-      await generateSale(id, { document_type: docType });
+      await generateSale(id, {
+        document_type: docType,
+        ...(genAiu.enabled ? {
+          aiu_enabled: true,
+          aiu_admin_pct: genAiu.admin_pct,
+          aiu_unforeseen_pct: genAiu.unforeseen_pct,
+          aiu_profit_pct: genAiu.profit_pct,
+          aiu_object: genAiu.object,
+        } : {}),
+      });
     } catch (e) {
       const data = e?.response?.data || {};
       const msg = data.message || '';
@@ -2323,6 +2336,38 @@ export default function WorkOrderDetailPage() {
                 </p>
               </div>
               <div className="p-5 space-y-3">
+                {taxConfig?.aiu?.enabled && (
+                <div className="rounded-xl border border-gray-200 p-3 space-y-2">
+                  <label className="flex items-start gap-2 text-sm text-gray-700">
+                    <input
+                      type="checkbox"
+                      checked={genAiu.enabled}
+                      onChange={(e) => setGenAiu(a => ({ ...a, enabled: e.target.checked }))}
+                      className="mt-0.5 h-4 w-4 rounded border-gray-300"
+                    />
+                    <span>
+                      <span className="font-medium">Facturar como AIU</span>
+                      <span className="block text-xs text-gray-500">Los ítems son el costo directo; el IVA va solo sobre la Utilidad.</span>
+                    </span>
+                  </label>
+                  {genAiu.enabled && (
+                    <>
+                      <div className="grid grid-cols-3 gap-2">
+                        {[['admin_pct', 'Admin. %'], ['unforeseen_pct', 'Imprev. %'], ['profit_pct', 'Utilidad %']].map(([k, label]) => (
+                          <label key={k} className="text-xs text-gray-600">{label}
+                            <input type="number" min="0" max="100" step="0.01" value={genAiu[k]}
+                              onChange={(e) => setGenAiu(a => ({ ...a, [k]: e.target.value }))}
+                              className="mt-1 w-full border border-gray-300 rounded-lg px-2 py-1.5 text-sm" />
+                          </label>
+                        ))}
+                      </div>
+                      <input type="text" value={genAiu.object} placeholder="Contrato por concepto de…"
+                        onChange={(e) => setGenAiu(a => ({ ...a, object: e.target.value }))}
+                        className="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-sm" />
+                    </>
+                  )}
+                </div>
+                )}
                 {[
                   {
                     type: 'remision',

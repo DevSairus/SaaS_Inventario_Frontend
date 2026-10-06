@@ -23,6 +23,7 @@ import Layout from '../../components/layout/Layout';
 import salesApi from '../../api/sales';
 import { movementsAPI } from '../../api/movements';
 import ConfirmSaleWithPaymentModal from '../../components/sales/ConfirmSaleWithPaymentModal';
+import RegisterRetentionsModal from '../../components/sales/RegisterRetentionsModal';
 import { customerAdvancesAPI } from '../../api/customerAdvances';
 import VoidSaleModal from '../../components/sales/VoidSaleModal';
 import CreditDebitNoteModal from '../../components/sales/CreditDebitNoteModal';
@@ -50,6 +51,7 @@ export default function SaleDetailPage() {
   const [showConfirmWithPayment, setShowConfirmWithPayment] = useState(false);
   const [confirmingPayment, setConfirmingPayment] = useState(false);
   const [showPaymentForm, setShowPaymentForm] = useState(false);
+  const [showRetentions, setShowRetentions] = useState(false);
   const [lastPaymentIndex, setLastPaymentIndex] = useState(null);
   const [showVoidModal, setShowVoidModal] = useState(false);
   const [showNoteModal, setShowNoteModal] = useState(null); // null | 'credit' | 'debit'
@@ -408,6 +410,11 @@ export default function SaleDetailPage() {
                   Registrar Pago
                 </Button>
               )}
+              {['pending', 'completed'].includes(sale.status) && sale.payment_status !== 'paid' && sale.customer_id && (
+                <Button variant="secondary" onClick={() => setShowRetentions(true)}>
+                  Retenciones
+                </Button>
+              )}
 
               {moreActionsItems.length > 0 && (
                 <Dropdown
@@ -659,6 +666,21 @@ export default function SaleDetailPage() {
                 <div className="mt-6 pt-6 border-t">
                   <div className="flex justify-end">
                     <div className="w-80 space-y-2">
+                      {sale.aiu_enabled && (
+                        <>
+                          {[
+                            ['Costo directo', sale.aiu_direct_amount],
+                            [`Administración (${Number(sale.aiu_admin_pct)}%)`, sale.aiu_admin_amount],
+                            [`Imprevistos (${Number(sale.aiu_unforeseen_pct)}%)`, sale.aiu_unforeseen_amount],
+                            [`Utilidad (${Number(sale.aiu_profit_pct)}%)`, sale.aiu_profit_amount],
+                          ].map(([label, value]) => (
+                            <div key={label} className="flex justify-between text-sm">
+                              <span className="text-gray-600">{label}:</span>
+                              <span className="font-medium">{formatCurrency(value)}</span>
+                            </div>
+                          ))}
+                        </>
+                      )}
                       {!(hideRemisionTax && sale.document_type === 'remision') && (
                         <div className="flex justify-between text-sm">
                           <span className="text-gray-600">Subtotal:</span>
@@ -673,7 +695,7 @@ export default function SaleDetailPage() {
                       )}
                       {!(hideRemisionTax && sale.document_type === 'remision') && (
                         <div className="flex justify-between text-sm">
-                          <span className="text-gray-600">IVA:</span>
+                          <span className="text-gray-600">{sale.aiu_enabled ? 'IVA sobre la Utilidad:' : 'IVA:'}</span>
                           <span className="font-medium">{formatCurrency(sale.tax_amount)}</span>
                         </div>
                       )}
@@ -995,6 +1017,9 @@ export default function SaleDetailPage() {
 
         {/* ── Modales ── */}
         <div className="no-print">
+          {showRetentions && (
+            <RegisterRetentionsModal sale={sale} onClose={() => setShowRetentions(false)} onSaved={() => fetchSaleById(id)} />
+          )}
           <ConfirmSaleWithPaymentModal
             isOpen={showConfirmWithPayment}
             onClose={() => setShowConfirmWithPayment(false)}
