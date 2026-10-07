@@ -90,7 +90,9 @@ const COMPANY_FUNDS = [
   { key: 'icbf_supplier_id', label: 'ICBF', fundType: 'icbf' },
 ];
 
-const ACCOUNTING_KEYS = [...ACCOUNTING_OPTIONS.map((o) => o.key), ...COMPANY_FUNDS.map((f) => f.key), 'employer_exonerated_114_1'];
+// Planilla PILA y jornada -- ver backend/src/services/payroll/pila/.
+const PILA_KEYS = ['weekly_hours', 'pila_contributor_type', 'pila_presentation_form', 'pila_branch_code', 'pila_branch_name', 'arl_economic_activity'];
+const ACCOUNTING_KEYS = [...ACCOUNTING_OPTIONS.map((o) => o.key), ...COMPANY_FUNDS.map((f) => f.key), 'employer_exonerated_114_1', ...PILA_KEYS];
 
 const PayrollSettingsPage = () => {
   const { settings, isLoading, fetchSettings, updateSettings } = usePayrollSettingsStore();
@@ -289,6 +291,65 @@ const PayrollSettingsPage = () => {
                     ))}
                   </div>
                 </div>
+              </div>
+            </div>
+
+            {/* Seguridad social (PILA) y jornada */}
+            <div className="bg-white dark:bg-graphite shadow rounded-xl overflow-hidden">
+              <div className="px-4 py-3 border-b border-gray-100 dark:border-white/10">
+                <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Seguridad social (PILA) y jornada</h2>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  Datos del encabezado de la planilla. El código PILA de la ARL y la caja se toma de los proveedores elegidos arriba.
+                </p>
+              </div>
+              <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Jornada semanal (horas)
+                    <span className="block text-xs font-normal text-gray-400">Vacío = máxima legal (Ley 2101: 42 h desde el 15-jul-2026). Define el valor de la hora extra.</span>
+                  </label>
+                  <input type="number" min="1" max="48" step="0.5" value={accountingValues.weekly_hours ?? ''}
+                    onChange={(e) => handleAccountingChange('weekly_hours', e.target.value)} placeholder="42" className="w-full px-3 py-2 border border-gray-300 dark:border-white/10 dark:bg-graphite-2 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Actividad económica ARL de la empresa
+                    <span className="block text-xs font-normal text-gray-400">7 dígitos (Decreto 768/2022); cada empleado puede tener la suya</span>
+                  </label>
+                  <input type="text" maxLength={7} value={accountingValues.arl_economic_activity ?? ''}
+                    onChange={(e) => handleAccountingChange('arl_economic_activity', e.target.value.replace(/\D/g, ''))} placeholder="1701001" className="w-full px-3 py-2 border border-gray-300 dark:border-white/10 dark:bg-graphite-2 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tipo de aportante</label>
+                  <select value={accountingValues.pila_contributor_type || '01'} onChange={(e) => handleAccountingChange('pila_contributor_type', e.target.value)} className="w-full px-3 py-2 border border-gray-300 dark:border-white/10 dark:bg-graphite-2 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <option value="01">01 — Empleador</option>
+                    <option value="02">02 — Independiente</option>
+                    <option value="03">03 — Entidades o universidades públicas (régimen especial)</option>
+                    <option value="04">04 — Agremiaciones o asociaciones</option>
+                    <option value="05">05 — Cooperativas y precooperativas de trabajo asociado</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Forma de presentación</label>
+                  <select value={accountingValues.pila_presentation_form || 'U'} onChange={(e) => handleAccountingChange('pila_presentation_form', e.target.value)} className="w-full px-3 py-2 border border-gray-300 dark:border-white/10 dark:bg-graphite-2 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <option value="U">U — Única (toda la empresa)</option>
+                    <option value="S">S — Por sucursal</option>
+                  </select>
+                </div>
+                {accountingValues.pila_presentation_form === 'S' && (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Código de sucursal</label>
+                      <input type="text" maxLength={10} value={accountingValues.pila_branch_code ?? ''}
+                        onChange={(e) => handleAccountingChange('pila_branch_code', e.target.value)} className="w-full px-3 py-2 border border-gray-300 dark:border-white/10 dark:bg-graphite-2 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nombre de sucursal</label>
+                      <input type="text" maxLength={40} value={accountingValues.pila_branch_name ?? ''}
+                        onChange={(e) => handleAccountingChange('pila_branch_name', e.target.value)} className="w-full px-3 py-2 border border-gray-300 dark:border-white/10 dark:bg-graphite-2 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                    </div>
+                  </>
+                )}
               </div>
             </div>
 

@@ -27,6 +27,8 @@ const STATUS_CONFIG = {
   pending: { label: 'Pendiente', className: 'bg-yellow-100 text-yellow-800 border-yellow-200', Icon: Clock },
 };
 
+const RECORDED_CONFIG = { label: 'Registrado en Pitbox', className: 'bg-gray-100 text-gray-700 border-gray-200', Icon: Inbox };
+
 export default function SaleRadianPanel({ sale }) {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -153,7 +155,11 @@ export default function SaleRadianPanel({ sale }) {
           <div className="pt-3 mt-1 border-t border-gray-100 space-y-2">
             <h5 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Historial</h5>
             {events.map(ev => {
-              const config = STATUS_CONFIG[ev.dian_status] || STATUS_CONFIG.pending;
+              // Un evento "recibido" solo se registra en Pitbox (no viaja a la
+              // DIAN): mostrar "Aceptado" hacía pensar que la DIAN lo validó.
+              const config = ev.direction === 'received'
+                ? RECORDED_CONFIG
+                : (STATUS_CONFIG[ev.dian_status] || STATUS_CONFIG.pending);
               const { Icon } = config;
               const showReason = ['rejected', 'error'].includes(ev.dian_status) && ev.error_message;
               return (

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import Combobox from '../../components/common/Combobox';
 import Layout from '../../components/layout/Layout';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -12,6 +12,8 @@ import toast from 'react-hot-toast';
 import { ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 import RuntConsultaModal from '../../components/workshop/RuntConsultaModal';
 import NumericInput from '../../components/inputs/NumericInput';
+import DraftRecoveryBanner from '../../components/common/DraftRecoveryBanner';
+import useFormDraft from '../../hooks/useFormDraft';
 
 const inputCls = "w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white";
 
@@ -65,6 +67,49 @@ export default function WorkOrderFormPage() {
     warehouse_id: '', mileage_in: '', problem_description: '', promised_at: '', notes: '',
     opportunity_id: opportunityId || null,
   });
+
+  // Borrador local (apagón / caída de internet) -- ver hooks/useFormDraft.js.
+  // Los ítems de la OT no van acá: se guardan en el servidor al agregarlos
+  // en el detalle; lo que se puede perder es este formulario de ingreso.
+  const draftData = useMemo(() => ({
+    form, selVehicle, vehicleDisp, selCustomer, custDisp, custAutoFilled,
+    showNewVehicle, newVehicle, showNewCustomer, newCustomer,
+  }), [form, selVehicle, vehicleDisp, selCustomer, custDisp, custAutoFilled, showNewVehicle, newVehicle, showNewCustomer, newCustomer]);
+  const draft = useFormDraft({
+    scope: `wo:new${opportunityId ? `:${opportunityId}` : ''}`,
+    data: draftData,
+    isEmpty: (d) => !d.form?.vehicle_id && !d.form?.problem_description?.trim() && !d.form?.notes?.trim()
+      && !d.newVehicle?.plate && !d.newCustomer?.first_name,
+  });
+  const applyDraftData = (d) => {
+    if (d.form) setForm((f) => ({ ...f, ...d.form }));
+    setSelVehicle(d.selVehicle || null);
+    setVehicleDisp(d.vehicleDisp || '');
+    setSelCustomer(d.selCustomer || null);
+    setCustDisp(d.custDisp || '');
+    setCustAutoFilled(!!d.custAutoFilled);
+    setShowNewVehicle(!!d.showNewVehicle);
+    if (d.newVehicle) setNewVehicle(d.newVehicle);
+    setShowNewCustomer(!!d.showNewCustomer);
+    if (d.newCustomer) setNewCustomer(d.newCustomer);
+    prefilledRef.current = true; // no pisar el cliente recuperado con el de la URL
+  };
+  const handleRestoreDraft = () => {
+    const d = draft.restore();
+    if (!d) return;
+    applyDraftData(d);
+    toast.success('Borrador recuperado');
+  };
+  // Otro equipo guardó una versión más reciente mientras se trabajaba acá.
+  const handleUseRemoteDraft = () => {
+    const d = draft.resolveConflict(true);
+    if (!d) return;
+    applyDraftData(d);
+    toast.success('Se cargó la versión del otro equipo');
+  };
+  const summarizeDraft = (d) => (d
+    ? [d.vehicleDisp || d.newVehicle?.plate, d.custDisp, d.form?.problem_description?.slice(0, 60)].filter(Boolean).join(' · ')
+    : '');
 
   useEffect(() => {
     vehiclesApi.list({ limit: 500 }).then(r => setVehicles(r.data.data || [])).catch(() => {});
@@ -318,6 +363,7 @@ export default function WorkOrderFormPage() {
     setSaving(true);
     try {
       const order = await createOrder(form);
+      draft.clear();
       navigate(`/workshop/work-orders/${order.id}`);
     } catch (e) {
       const msg = e.response?.data?.message || 'Error al crear la OT';
@@ -329,7 +375,20 @@ export default function WorkOrderFormPage() {
 
   return (
     <Layout>
-      <div className="p-4 sm:p-6 max-w-3xl mx-auto">
+      <div className="p-4 sm:p-6 max-w-3xl mx-auto" {...draft.bind}>
+        <DraftRecoveryBanner
+          pending={draft.pending}
+          summary={summarizeDraft(draft.pending?.data)}
+          onRestore={handleRestoreDraft}
+          onDiscard={draft.discard}
+        />
+        <DraftRecoveryBanner
+          conflict
+          pending={draft.conflict}
+          summary={summarizeDraft(draft.conflict?.data)}
+          onRestore={handleUseRemoteDraft}
+          onDiscard={() => draft.resolveConflict(false)}
+        />
         <div className="flex items-center gap-3 mb-6">
           <button onClick={() => navigate('/workshop/work-orders')} className="p-2 hover:bg-gray-100 rounded-lg">
             <ArrowLeft size={18} />
@@ -622,7 +681,7 @@ export default function WorkOrderFormPage() {
         </div>
 
         <div className="flex gap-3 mt-6">
-          <button type="button" onClick={() => navigate('/workshop/work-orders')}
+          <button type="button" onClick={() => { draft.clear(); navigate('/workshop/work-orders'); }}
             className="flex-1 border border-gray-200 text-gray-600 py-2.5 rounded-xl text-sm font-medium hover:bg-gray-50 transition">
             Cancelar
           </button>

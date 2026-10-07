@@ -158,6 +158,7 @@ const NAV = [
       { label: "Periodos",            path: "/payroll/periods" },
       { label: "Documentos",          path: "/payroll/documents" },
       { label: "Certificados",        path: "/payroll/certificates" },
+      { label: "Seguridad social (PILA)", path: "/payroll/pila", roles: ["admin", "super_admin", "accountant", "manager"] },
       { label: "Liquidación definitiva", path: "/payroll/termination" },
       { label: "Dashboard de costos", path: "/payroll/costs-dashboard" },
       { label: "Configuración",        path: "/payroll/settings", roles: ["admin", "super_admin"] },

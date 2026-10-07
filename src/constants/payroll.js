@@ -32,21 +32,60 @@ export const CONTRACT_TYPES = [
   { value: '5', label: 'Otro' },
 ];
 
-// Tabla 5.5.3 del Anexo Técnico — TipoTrabajador. Lista base; ampliar según
-// se necesiten más códigos del Anexo.
+// Tabla 5.5.3 del Anexo Técnico de nómina electrónica — TipoTrabajador. Es
+// la misma tabla de "tipo de cotizante" de la PILA. Antes Pitbox usaba
+// códigos propios ('02' pensionado, '03'/'04' aprendices) que no son los de
+// la tabla -- ver migración 2026100701-pila-fields.js.
 export const WORKER_TYPES = [
-  { value: '01', label: 'Empleado' },
-  { value: '02', label: 'Pensionado' },
-  { value: '03', label: 'Aprendiz en etapa lectiva' },
-  { value: '04', label: 'Aprendiz en etapa productiva' },
-  { value: '05', label: 'Estudiante (decreto 055 de 2015)' },
-  { value: '06', label: 'Cooperado (cooperativas de trabajo asociado)' },
-  { value: '10', label: 'Independiente' },
-  { value: '19', label: 'Aporte voluntario / otros' },
-  { value: '20', label: 'Estudiantes de posgrado en salud (residentes)' },
-  { value: '21', label: 'Estudiantes de posgrado sin ánimo de lucro' },
-  { value: '22', label: 'Beneficiario Unión Sindical Obrera' },
+  { value: '01', label: '01 — Dependiente' },
+  { value: '02', label: '02 — Servicio doméstico' },
+  { value: '04', label: '04 — Madre comunitaria' },
+  { value: '12', label: '12 — Aprendiz SENA en etapa lectiva' },
+  { value: '18', label: '18 — Funcionario público sin tope máximo de IBC' },
+  { value: '19', label: '19 — Aprendiz SENA en etapa productiva' },
+  { value: '20', label: '20 — Estudiante (régimen especial Ley 789 de 2002)' },
+  { value: '21', label: '21 — Estudiante de posgrado en salud' },
+  { value: '22', label: '22 — Profesor de establecimiento particular' },
+  { value: '23', label: '23 — Estudiante, aportes solo a riesgos laborales' },
+  { value: '30', label: '30 — Dependiente de entidad pública (régimen especial)' },
+  { value: '31', label: '31 — Cooperado o precooperativa de trabajo asociado' },
+  { value: '47', label: '47 — Dependiente de entidad beneficiaria del SGP' },
+  { value: '51', label: '51 — Trabajador de tiempo parcial' },
+  { value: '54', label: '54 — Prepensionado de entidad en liquidación' },
+  { value: '56', label: '56 — Prepensionado con aporte voluntario a salud' },
+  { value: '58', label: '58 — Estudiante en práctica laboral (sector público)' },
 ];
+
+// Tabla 5.5.4 — SubTipoTrabajador (subtipo de cotizante PILA). El
+// pensionado es un dependiente (01) con subtipo: no cotiza pensión.
+export const WORKER_SUBTYPES = [
+  { value: '00', label: '00 — No aplica' },
+  { value: '01', label: '01 — Pensionado por vejez activo' },
+  { value: '03', label: '03 — No obligado a cotizar pensión por edad' },
+  { value: '04', label: '04 — Con requisitos cumplidos para pensión' },
+  { value: '05', label: '05 — Con indemnización sustitutiva o devolución de saldos' },
+  { value: '06', label: '06 — De régimen exceptuado de pensiones' },
+];
+
+// Jornada máxima legal semanal (Ley 2101 de 2021) -- mismo cálculo que
+// backend/src/services/payroll/jornada.js. `override` = jornada de la
+// empresa (Configuración de Nómina), si es menor.
+export const weeklyHoursFor = (date, override) => {
+  if (Number(override) > 0) return Number(override);
+  const iso = String(date || new Date().toISOString()).slice(0, 10);
+  if (iso >= '2026-07-15') return 42;
+  if (iso >= '2025-07-15') return 44;
+  if (iso >= '2024-07-15') return 46;
+  if (iso >= '2023-07-15') return 47;
+  return 48;
+};
+// Horas del mes = horas semanales x 30 / 6 (44 h -> 220, 42 h -> 210).
+export const monthlyHoursFor = (date, override) => (weeklyHoursFor(date, override) * 30) / 6;
+
+// Horas extra (el pago incluye la hora ordinaria + el recargo) vs. recargos
+// (solo el porcentaje adicional: la hora ya está pagada en el salario).
+export const HORAS_EXTRA_CATEGORIES = new Set(['HEDs', 'HENs', 'HEDDFs', 'HENDFs']);
+export const HORAS_RECARGO_CATEGORIES = new Set(['HRNs', 'HRDDFs', 'HRNDFs']);
 
 // Decreto 1295/1994 Art. 26 — misma tabla que ARL_TARIFAS en
 // backend/src/services/payroll/payrollAccountingService.js.

@@ -132,6 +132,7 @@ const PayrollDocumentDetailPage = lazy(() => import('./pages/payroll/PayrollDocu
 const PayrollCertificatesPage = lazy(() => import('./pages/payroll/PayrollCertificatesPage'));
 const EmployeeTerminationPage = lazy(() => import('./pages/payroll/EmployeeTerminationPage'));
 const PayrollCostsDashboardPage = lazy(() => import('./pages/payroll/PayrollCostsDashboardPage'));
+const PayrollPilaPage = lazy(() => import('./pages/payroll/PayrollPilaPage'));
 const PayrollSettingsPage = lazy(() => import('./pages/payroll/PayrollSettingsPage'));
 
 // Movimientos Avanzados
@@ -414,6 +415,7 @@ function App() {
         <Route path="payroll/certificates"   element={<TenantRoute module="payroll"><Suspense fallback={<Loading fullScreen />}><PayrollCertificatesPage /></Suspense></TenantRoute>} />
         <Route path="payroll/termination"    element={<TenantRoute module="payroll"><Suspense fallback={<Loading fullScreen />}><EmployeeTerminationPage /></Suspense></TenantRoute>} />
         <Route path="payroll/costs-dashboard" element={<TenantRoute module="payroll"><Suspense fallback={<Loading fullScreen />}><PayrollCostsDashboardPage /></Suspense></TenantRoute>} />
+        <Route path="payroll/pila"           element={<TenantRoute module="payroll" roles={[ROLES.ADMIN, 'accountant', 'manager']}><Suspense fallback={<Loading fullScreen />}><PayrollPilaPage /></Suspense></TenantRoute>} />
         <Route path="payroll/settings"       element={<TenantRoute module="payroll" roles={[ROLES.ADMIN]}><Suspense fallback={<Loading fullScreen />}><PayrollSettingsPage /></Suspense></TenantRoute>} />
         <Route path="cash-sessions"    element={<TenantRoute module="treasury"><Suspense fallback={<Loading fullScreen />}><CashSessionsPage /></Suspense></TenantRoute>} />
         <Route path="receipts"         element={<TenantRoute module="treasury"><Suspense fallback={<Loading fullScreen />}><ReceiptsPage /></Suspense></TenantRoute>} />

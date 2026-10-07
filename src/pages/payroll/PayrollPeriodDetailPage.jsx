@@ -657,6 +657,7 @@ const PayrollPeriodDetailPage = () => {
           employees={employees}
           defaultEmployeeId={novedadDefaultEmployee}
           payrollPeriodId={id}
+          periodDate={period?.end_date}
           onClose={() => setIsNovedadModalOpen(false)}
           onSuccess={() => { if (period.status === 'liquidado') recalculatePreview(id); }}
         />

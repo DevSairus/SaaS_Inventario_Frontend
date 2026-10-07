@@ -20,7 +20,11 @@ import {
   VACACIONES_LICENCIAS_SCHEMAS,
   NOVEDAD_REPLACES_PREVIOUS,
   HORAS_PERCENTAGE_SETTING_KEY,
+  HORAS_EXTRA_CATEGORIES,
+  HORAS_RECARGO_CATEGORIES,
+  monthlyHoursFor,
 } from '../../constants/payroll';
+import { formatCurrency } from '../../utils/formatters';
 
 const emptyForm = {
   employee_id: '',
@@ -37,7 +41,7 @@ const emptyForm = {
 // simpleValueListXml() en el backend), así que no necesitan más que esto.
 const SINGLE_VALUE_FIELD = { name: 'valor', label: 'Valor', type: 'money', required: true };
 
-const PayrollNovedadModal = ({ isOpen, employees, defaultEmployeeId, payrollPeriodId, onClose, onSuccess }) => {
+const PayrollNovedadModal = ({ isOpen, employees, defaultEmployeeId, payrollPeriodId, periodDate, onClose, onSuccess }) => {
   const { createNovedad, isLoading } = usePayrollNovedadesStore();
   const { concepts, fetchConcepts } = usePayrollConceptsStore();
   const { settings: payrollSettings, fetchSettings } = usePayrollSettingsStore();
@@ -45,6 +49,9 @@ const PayrollNovedadModal = ({ isOpen, employees, defaultEmployeeId, payrollPeri
   const [formData, setFormData] = useState(emptyForm);
   const [fieldValues, setFieldValues] = useState({});
   const [errors, setErrors] = useState({});
+  // El valor de horas extra/recargos se calcula solo (horas x valor hora x
+  // porcentaje) hasta que el usuario lo escribe a mano.
+  const [pagoManual, setPagoManual] = useState(false);
 
   useEffect(() => {
     if (isOpen && !concepts.length) fetchConcepts();
@@ -56,6 +63,7 @@ const PayrollNovedadModal = ({ isOpen, employees, defaultEmployeeId, payrollPeri
       setFormData({ ...emptyForm, employee_id: defaultEmployeeId || '' });
       setFieldValues({});
       setErrors({});
+      setPagoManual(false);
     }
   }, [isOpen, defaultEmployeeId]);
 
@@ -65,6 +73,30 @@ const PayrollNovedadModal = ({ isOpen, employees, defaultEmployeeId, payrollPeri
   const subtypeDef = vlSchema?.subtypes.find((s) => s.value === formData.subtype);
   const activeFields = vlSchema ? (subtypeDef?.fields || []) : (schema || [SINGLE_VALUE_FIELD]);
   const replacesPrevious = NOVEDAD_REPLACES_PREVIOUS.has(formData.dian_category);
+
+  // ── Horas extra y recargos: valor automático ──
+  // Valor hora = salario mensual / horas del mes (jornada legal de la Ley
+  // 2101 o la de la empresa). Hora extra: valor hora x (1 + %); recargo
+  // (nocturno, dominical/festivo): solo valor hora x %, porque la hora
+  // ordinaria ya está en el salario.
+  const esExtra = HORAS_EXTRA_CATEGORIES.has(formData.dian_category);
+  const esRecargo = HORAS_RECARGO_CATEGORIES.has(formData.dian_category);
+  const esHoras = esExtra || esRecargo;
+  const empleado = (employees || []).find((emp) => emp.id === formData.employee_id);
+  const horasMes = monthlyHoursFor(periodDate, payrollSettings?.weekly_hours);
+  const valorHora = empleado ? Number(empleado.base_salary || 0) / horasMes : 0;
+  const factorHoras = esExtra ? 1 + Number(fieldValues.porcentaje || 0) / 100 : Number(fieldValues.porcentaje || 0) / 100;
+  const pagoCalculado = esHoras && valorHora > 0 && Number(fieldValues.cantidad) > 0
+    ? Math.round(valorHora * factorHoras * Number(fieldValues.cantidad))
+    : null;
+
+  useEffect(() => {
+    if (!esHoras || pagoManual) return;
+    setFieldValues((prev) => {
+      const next = pagoCalculado == null ? '' : String(pagoCalculado);
+      return prev.pago === next ? prev : { ...prev, pago: next };
+    });
+  }, [esHoras, pagoManual, pagoCalculado]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -82,13 +114,16 @@ const PayrollNovedadModal = ({ isOpen, employees, defaultEmployeeId, payrollPeri
       const settingKey = HORAS_PERCENTAGE_SETTING_KEY[value];
       const configuredPct = settingKey && payrollSettings?.[settingKey];
       setFieldValues(configuredPct !== undefined && configuredPct !== null ? { porcentaje: String(configuredPct) } : {});
+      setPagoManual(false);
       return;
     }
     if (name === 'subtype') setFieldValues({});
+    if (name === 'employee_id') setPagoManual(false);
     if (errors[name]) setErrors((prev) => ({ ...prev, [name]: '' }));
   };
 
   const handleFieldChange = (fieldName, value) => {
+    if (fieldName === 'pago' && esHoras) setPagoManual(value !== '');
     setFieldValues((prev) => ({ ...prev, [fieldName]: value }));
     if (errors[fieldName]) setErrors((prev) => ({ ...prev, [fieldName]: '' }));
   };
@@ -334,6 +369,10 @@ const PayrollNovedadModal = ({ isOpen, employees, defaultEmployeeId, payrollPeri
               placeholder="0"
             />
             {errors.unpaid_days && <p className="text-red-500 dark:text-red-400 text-sm mt-1">{errors.unpaid_days}</p>}
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+              Para ausencias injustificadas o suspensiones. Las incapacidades, vacaciones y licencias registradas como novedad
+              ya descuentan sus días del básico: no las registre también aquí.
+            </p>
           </div>
         ) : (
           <>
@@ -396,6 +435,24 @@ const PayrollNovedadModal = ({ isOpen, employees, defaultEmployeeId, payrollPeri
             {HORAS_PERCENTAGE_SETTING_KEY[formData.dian_category] && (
               <p className="text-xs text-gray-400 -mt-2">
                 Porcentaje precargado desde la configuración de nómina — ajústalo si este caso puntual es distinto.
+              </p>
+            )}
+            {esHoras && (
+              <p className="text-xs text-gray-500 dark:text-gray-400 -mt-2">
+                {!empleado
+                  ? 'Selecciona el empleado para calcular el valor automáticamente.'
+                  : valorHora > 0
+                    ? <>
+                        Valor hora {formatCurrency(valorHora)} (salario / {horasMes} h){' '}
+                        × {esExtra ? `(1 + ${fieldValues.porcentaje || 0}%)` : `${fieldValues.porcentaje || 0}%`}
+                        {Number(fieldValues.cantidad) > 0 ? ` × ${fieldValues.cantidad} h = ${formatCurrency(pagoCalculado)}` : ''}
+                        {pagoManual && (
+                          <button type="button" onClick={() => setPagoManual(false)} className="ml-2 text-blue-600 hover:underline">
+                            Usar el valor calculado
+                          </button>
+                        )}
+                      </>
+                    : 'El empleado no tiene salario registrado: escribe el valor a pagar.'}
               </p>
             )}
             {errors.fields && <p className="text-red-500 dark:text-red-400 text-sm -mt-2">{errors.fields}</p>}

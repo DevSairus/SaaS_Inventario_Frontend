@@ -269,6 +269,37 @@ export const payrollDashboardAPI = {
 // ── Configuración de nómina (porcentajes de recargo) ────────────────
 // GET es de lectura libre; PUT requiere admin/super_admin (el backend lo
 // valida, esto es solo el cliente HTTP).
+// Planilla PILA del mes (backend/src/services/payroll/pila/). `download`
+// devuelve la respuesta axios cruda (blob), igual que las demás descargas.
+export const payrollPilaAPI = {
+  preview: async (year, month) => {
+    const response = await api.get('/payroll/pila/preview', { params: { year, month } });
+    return response.data;
+  },
+  download: (year, month) => api.get('/payroll/pila/download', { params: { year, month }, responseType: 'blob' }),
+  // Planilla anterior (TXT o Excel): devuelve cambios propuestos, sin escribir nada.
+  analyzeImport: async (file) => {
+    const form = new FormData();
+    form.append('file', file);
+    const response = await api.post('/payroll/pila/import/analyze', form, { headers: { 'Content-Type': 'multipart/form-data' } });
+    return response.data;
+  },
+  applyImport: async (changes) => {
+    const response = await api.post('/payroll/pila/import/apply', { changes });
+    return response.data;
+  },
+  // Excel con la plantilla de la empresa (o la estándar). Blob crudo.
+  downloadExcel: (year, month) => api.get('/payroll/pila/download-excel', { params: { year, month }, responseType: 'blob' }),
+  getExcelTemplate: async () => (await api.get('/payroll/pila/excel-template')).data,
+  learnExcelTemplate: async (file) => {
+    const form = new FormData();
+    form.append('file', file);
+    return (await api.post('/payroll/pila/excel-template/learn', form, { headers: { 'Content-Type': 'multipart/form-data' } })).data;
+  },
+  saveExcelTemplate: async (template) => (await api.put('/payroll/pila/excel-template', { template })).data,
+  resetExcelTemplate: async () => (await api.delete('/payroll/pila/excel-template')).data,
+};
+
 export const payrollSettingsAPI = {
   get: async () => {
     const response = await api.get('/payroll/settings');

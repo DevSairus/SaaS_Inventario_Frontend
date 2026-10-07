@@ -48,6 +48,7 @@ const SupplierModal = ({ supplier, onClose }) => {
     city_code: '',
     document_type: '',
     payroll_fund_types: [],
+    pila_code: '',
   });
 
   const [errors, setErrors] = useState({});
@@ -87,6 +88,7 @@ const SupplierModal = ({ supplier, onClose }) => {
         city_code: supplier.city_code || '',
         document_type: supplier.document_type || '',
         payroll_fund_types: Array.isArray(supplier.payroll_fund_types) ? supplier.payroll_fund_types : [],
+        pila_code: supplier.pila_code || '',
       });
     }
   }, [supplier]);
@@ -540,6 +542,21 @@ const SupplierModal = ({ supplier, onClose }) => {
                   </label>
                 ))}
               </div>
+              {formData.payroll_fund_types.some((t) => !['sena', 'icbf', 'cesantias'].includes(t)) && (
+                <div className="mt-3 max-w-xs">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Código PILA</label>
+                  <input
+                    type="text"
+                    name="pila_code"
+                    value={formData.pila_code}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, pila_code: e.target.value.toUpperCase() }))}
+                    maxLength={10}
+                    placeholder="Ej: EPS037, 230301, CCF03, 14-11"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Código de la administradora en la planilla de seguridad social (distinto del NIT).</p>
+                </div>
+              )}
             </div>
           </div>
 

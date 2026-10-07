@@ -15,6 +15,7 @@ import {
   DOCUMENT_TYPES,
   CONTRACT_TYPES,
   WORKER_TYPES,
+  WORKER_SUBTYPES,
   SALARY_TYPES,
   PAYMENT_METHODS,
   PAYMENT_FORMS,
@@ -69,6 +70,9 @@ const emptyForm = {
   pension_fund_supplier_id: '',
   severance_fund_supplier_id: '',
   arl_risk_class: 1,
+  pila_work_center: '',
+  arl_economic_activity: '',
+  arl_rate: '',
 };
 
 const EmployeeModal = ({ employee, onClose }) => {
@@ -138,6 +142,9 @@ const EmployeeModal = ({ employee, onClose }) => {
         pension_fund_supplier_id: employee.pension_fund_supplier_id || '',
         severance_fund_supplier_id: employee.severance_fund_supplier_id || '',
         arl_risk_class: employee.arl_risk_class || 1,
+        pila_work_center: employee.pila_work_center || '',
+        arl_economic_activity: employee.arl_economic_activity || '',
+        arl_rate: employee.arl_rate != null ? String(Number(employee.arl_rate) * 100) : '',
       });
       setWorkDiffersFromResidence(!!(employee.work_city_code || employee.work_address));
     } else {
@@ -178,6 +185,10 @@ const EmployeeModal = ({ employee, onClose }) => {
       pension_fund_supplier_id: formData.pension_fund_supplier_id || null,
       severance_fund_supplier_id: formData.severance_fund_supplier_id || null,
       arl_risk_class: Number(formData.arl_risk_class) || 1,
+      pila_work_center: formData.pila_work_center.trim() || null,
+      arl_economic_activity: formData.arl_economic_activity.replace(/\D/g, '') || null,
+      // En pantalla en porcentaje (0.522); se guarda como fracción (0.00522).
+      arl_rate: formData.arl_rate === '' ? null : Number(formData.arl_rate) / 100,
       // Solo tiene sentido para término fijo — si el usuario cambió de
       // tipo de contrato después de haberla puesto, se limpia en vez de
       // dejar una fecha de fin "fantasma" en un contrato indefinido/otro.
@@ -412,6 +423,9 @@ const EmployeeModal = ({ employee, onClose }) => {
                   onChange={handleChange}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-white/10 dark:bg-graphite-2 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
+                  {!WORKER_TYPES.some((o) => o.value === formData.worker_type) && (
+                    <option value={formData.worker_type}>{formData.worker_type} — código anterior, elija el correcto</option>
+                  )}
                   {WORKER_TYPES.map((opt) => (
                     <option key={opt.value} value={opt.value}>{opt.label}</option>
                   ))}
@@ -422,15 +436,19 @@ const EmployeeModal = ({ employee, onClose }) => {
                   Subtipo de trabajador
                   <span className="block text-xs font-normal text-gray-400">Código DIAN (tabla 5.5.4)</span>
                 </label>
-                <input
-                  type="text"
+                <select
                   name="worker_subtype"
                   value={formData.worker_subtype}
                   onChange={handleChange}
-                  maxLength={5}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-white/10 dark:bg-graphite-2 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="00"
-                />
+                >
+                  {!WORKER_SUBTYPES.some((o) => o.value === formData.worker_subtype) && (
+                    <option value={formData.worker_subtype}>{formData.worker_subtype}</option>
+                  )}
+                  {WORKER_SUBTYPES.map((opt) => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
               </div>
             </div>
 
@@ -591,6 +609,27 @@ const EmployeeModal = ({ employee, onClose }) => {
                     <option key={opt.value} value={opt.value}>{opt.label}</option>
                   ))}
                 </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Centro de trabajo ARL
+                  <span className="block text-xs font-normal text-gray-400">Código registrado ante la ARL (PILA)</span>
+                </label>
+                <input type="text" name="pila_work_center" value={formData.pila_work_center} onChange={handleChange} maxLength={9} placeholder="1" className="w-full px-3 py-2 border border-gray-300 dark:border-white/10 dark:bg-graphite-2 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Actividad económica ARL
+                  <span className="block text-xs font-normal text-gray-400">7 dígitos (Decreto 768/2022). Vacío = la de la empresa</span>
+                </label>
+                <input type="text" name="arl_economic_activity" value={formData.arl_economic_activity} onChange={handleChange} maxLength={7} placeholder="1701001" className="w-full px-3 py-2 border border-gray-300 dark:border-white/10 dark:bg-graphite-2 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Tarifa ARL exacta (%)
+                  <span className="block text-xs font-normal text-gray-400">Solo si difiere de la de su clase de riesgo</span>
+                </label>
+                <input type="number" step="0.0001" min="0" name="arl_rate" value={formData.arl_rate} onChange={handleChange} placeholder="0.522" className="w-full px-3 py-2 border border-gray-300 dark:border-white/10 dark:bg-graphite-2 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
               </div>
             </div>
           </div>

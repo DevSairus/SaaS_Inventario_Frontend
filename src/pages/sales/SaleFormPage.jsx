@@ -16,6 +16,8 @@ import NumericInput from '../../components/inputs/NumericInput';
 import Card from '../../components/common/Card';
 import Modal from '../../components/common/Modal';
 import Layout from '../../components/layout/Layout';
+import DraftRecoveryBanner from '../../components/common/DraftRecoveryBanner';
+import useFormDraft from '../../hooks/useFormDraft';
 import { 
   Plus, 
   Trash2, 
@@ -447,6 +449,108 @@ function SaleFormPage() {
     }
   }, [isEditMode, currentSale]);
 
+  // ── Borrador local (apagón / caída de internet) ──────────────────────
+  // Se guarda en el equipo mientras se arma la venta o cotización y se
+  // ofrece recuperarlo al volver a abrir el mismo formulario -- ver
+  // hooks/useFormDraft.js.
+  const draftScope = isEditMode
+    ? `sale:edit:${id}`
+    : isCrmQuoteMode ? `crmquote:new${opportunityId ? `:${opportunityId}` : ''}` : 'sale:new';
+  const draftData = useMemo(
+    () => ({ formData, items, customerSearchTerm, showQuickCustomer, quickCustomer }),
+    [formData, items, customerSearchTerm, showQuickCustomer, quickCustomer]
+  );
+  const saleUpdatedAt = currentSale?.id === id ? (currentSale.updated_at || currentSale.updatedAt || null) : null;
+  const draft = useFormDraft({
+    scope: draftScope,
+    data: draftData,
+    meta: { baseUpdatedAt: saleUpdatedAt },
+    // En edición, recién cuando cargó la venta (si no, la carga misma
+    // contaría como cambio del usuario).
+    enabled: !isEditMode || currentSale?.id === id,
+    isEmpty: (d) => !d.items?.length && !d.formData?.customer_id && !d.formData?.notes?.trim()
+      && !d.formData?.vehicle_plate && !d.quickCustomer?.full_name,
+  });
+  const [draftWarnings, setDraftWarnings] = useState([]);
+  // En edición, el aviso espera a que cargue la venta: si no, la carga
+  // pisaría lo recuperado.
+  const draftPending = isEditMode && currentSale?.id !== id ? null : draft.pending;
+
+  // Al recuperar: el borrador puede tener horas o días -- se revisa contra
+  // el catálogo actual (producto inactivo, stock insuficiente, producto
+  // modificado después del borrador, p.ej. cambio de precio).
+  const revalidateDraftItems = async (draftItems, savedAt) => {
+    const qty = {};
+    const names = {};
+    draftItems.forEach((it) => {
+      if (!it.product_id || it.item_type === 'free_line') return;
+      qty[it.product_id] = (qty[it.product_id] || 0) + toInteger(it.quantity, 0);
+      names[it.product_id] = it.product_name;
+    });
+    const ids = Object.keys(qty).slice(0, 40);
+    if (!ids.length) return;
+    const warnings = [];
+    await Promise.all(ids.map(async (pid) => {
+      try {
+        const res = await productsAPI.getById(pid);
+        const p = res?.data;
+        if (!p || p.is_active === false) {
+          warnings.push(`${names[pid]}: ya no está activo en el catálogo.`);
+          return;
+        }
+        const stock = parseFloat(p.current_stock || 0);
+        if (p.track_inventory && p.product_type !== 'service' && !p.allow_negative_stock && stock < qty[pid]) {
+          warnings.push(`${names[pid]}: stock actual ${stock}, el borrador tiene ${qty[pid]}.`);
+        }
+        const updated = new Date(p.updated_at || p.updatedAt || 0).getTime();
+        if (updated > savedAt) {
+          warnings.push(`${names[pid]}: el producto se modificó después del borrador — revisa el precio.`);
+        }
+      } catch (e) {
+        if (e?.response?.status === 404) warnings.push(`${names[pid]}: ya no existe en el catálogo.`);
+      }
+    }));
+    setDraftWarnings(warnings);
+  };
+
+  const applyDraftData = (d, savedAt) => {
+    if (d.formData) setFormData((prev) => ({ ...prev, ...d.formData }));
+    setItems(Array.isArray(d.items) ? d.items : []);
+    setCustomerSearchTerm(d.customerSearchTerm || '');
+    setShowQuickCustomer(!!d.showQuickCustomer);
+    if (d.quickCustomer) setQuickCustomer(d.quickCustomer);
+    revalidateDraftItems(Array.isArray(d.items) ? d.items : [], savedAt || Date.now());
+  };
+
+  const handleRestoreDraft = () => {
+    const savedAt = draft.pending?.savedAt;
+    const d = draft.restore();
+    if (!d) return;
+    applyDraftData(d, savedAt);
+    toast.success('Borrador recuperado');
+  };
+
+  // Otro equipo guardó una versión más reciente mientras se trabajaba acá.
+  const handleUseRemoteDraft = () => {
+    const savedAt = draft.conflict?.savedAt;
+    const d = draft.resolveConflict(true);
+    if (!d) return;
+    applyDraftData(d, savedAt);
+    toast.success('Se cargó la versión del otro equipo');
+  };
+
+  const summarizeDraft = (d) => {
+    if (!d) return '';
+    const n = d.items?.length || 0;
+    const customer = d.customerSearchTerm || d.quickCustomer?.full_name || '';
+    return [`${n} ítem${n === 1 ? '' : 's'}`, customer].filter(Boolean).join(' · ');
+  };
+  const draftSummary = summarizeDraft(draftPending?.data);
+  const draftWarning = isEditMode && draftPending?.meta?.baseUpdatedAt && saleUpdatedAt
+    && draftPending.meta.baseUpdatedAt !== saleUpdatedAt
+    ? 'Esta venta se modificó después del borrador; al recuperarlo se reemplazan esos cambios.'
+    : null;
+
   // Recalcular totales cuando cambie el tipo de documento (afecta si se aplica IVA o no)
   useEffect(() => {
     if (items.length > 0) {
@@ -757,10 +861,12 @@ function SaleFormPage() {
 
       if (isEditMode) {
         await updateSale(id, saleData);
+        draft.clear();
         toast.success('Venta actualizada exitosamente');
         navigate(`/sales/${id}`);
       } else {
         const result = await createSale(saleData);
+        draft.clear();
         if (opportunityId) {
           toast.success('Cotización creada y vinculada a la oportunidad');
         } else if (isCrmQuoteMode) {
@@ -941,7 +1047,7 @@ function SaleFormPage() {
 
   return (
     <Layout>
-      <div className="space-y-4 max-w-7xl mx-auto">
+      <div className="space-y-4 max-w-7xl mx-auto" {...draft.bind}>
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
@@ -973,7 +1079,7 @@ function SaleFormPage() {
             </div>
           </div>
           <div className="flex gap-2 flex-shrink-0">
-            <Button type="button" variant="outline" onClick={() => navigate(isCrmQuoteRoute ? '/crm/pipeline' : '/sales')}>
+            <Button type="button" variant="outline" onClick={() => { draft.clear(); navigate(isCrmQuoteRoute ? '/crm/pipeline' : '/sales'); }}>
               Cancelar
             </Button>
             <Button
@@ -986,6 +1092,37 @@ function SaleFormPage() {
             </Button>
           </div>
         </div>
+
+        <DraftRecoveryBanner
+          pending={draftPending}
+          summary={draftSummary}
+          warning={draftWarning}
+          onRestore={handleRestoreDraft}
+          onDiscard={draft.discard}
+        />
+        <DraftRecoveryBanner
+          conflict
+          pending={draft.conflict}
+          summary={summarizeDraft(draft.conflict?.data)}
+          onRestore={handleUseRemoteDraft}
+          onDiscard={() => draft.resolveConflict(false)}
+        />
+
+        {draftWarnings.length > 0 && (
+          <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="font-medium">Revisa el borrador recuperado:</p>
+                <ul className="mt-1 list-disc pl-5 space-y-0.5">
+                  {draftWarnings.map((w) => <li key={w}>{w}</li>)}
+                </ul>
+              </div>
+              <button type="button" onClick={() => setDraftWarnings([])} className="text-amber-700 hover:text-amber-900" title="Cerrar">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
 
         {!isEditMode && opportunityId && (
           <div className="flex items-start gap-2.5 px-4 py-3 bg-accent/[0.05] border border-accent/15 rounded-xl text-sm text-gray-700">
