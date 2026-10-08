@@ -81,12 +81,18 @@ const CustomerReturnDetailPage = () => {
     const badges = {
       inventory: 'bg-blue-100 text-blue-800',
       discard: 'bg-red-100 text-red-800',
-      repair: 'bg-yellow-100 text-yellow-800'
+      repair: 'bg-yellow-100 text-yellow-800',
+      quarantine: 'bg-orange-100 text-orange-800',
+      retained: 'bg-purple-100 text-purple-800',
+      none: 'bg-gray-100 text-gray-700'
     };
     const labels = {
       inventory: 'Inventario',
       discard: 'Descartar',
-      repair: 'Reparación'
+      repair: 'Reparación',
+      quarantine: 'Cuarentena',
+      retained: 'Retenido en OT',
+      none: 'Sin inventario'
     };
     return (
       <span className={`px-2 py-1 rounded text-xs font-medium ${badges[destination]}`}>
@@ -283,11 +289,11 @@ const CustomerReturnDetailPage = () => {
                 <tr key={item.id}>
                   <td className="px-6 py-4">
                     <div className="text-sm font-medium text-gray-900">
-                      {item.product?.name || 'N/A'}
+                      {item.product?.name || item.saleItem?.product_name || 'N/A'}
                     </div>
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-500">
-                    {item.product?.sku || 'N/A'}
+                    {item.product?.sku || item.saleItem?.product_sku || (item.saleItem?.item_type === 'free_line' ? 'Línea libre' : 'N/A')}
                   </td>
                   <td className="px-6 py-4 text-right text-sm text-gray-900">
                     {item.quantity}

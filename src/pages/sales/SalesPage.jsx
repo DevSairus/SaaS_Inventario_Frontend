@@ -6,6 +6,9 @@ import useTenantStore from '../../store/tenantStore';
 import useAuthStore from '../../store/authStore';
 import Layout from '../../components/layout/Layout';
 import DianStatusBadge from '../../components/dian/DianStatusBadge';
+import ConfirmDialog from '../../components/common/ConfirmDialog';
+import salesApi from '../../api/sales';
+import toast from 'react-hot-toast';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import { PlusIcon, MagnifyingGlassIcon, FunnelIcon } from '@heroicons/react/24/outline';
 
@@ -30,6 +33,27 @@ const DOC_LABELS = {
   nota_debito:  'Nota Débito',
 };
 
+// Remisión que se puede facturar desde el listado (el backend revalida todo:
+// devoluciones, datos DIAN del cliente, resolución activa...). Solo las del
+// mes en curso -- ver services/sales/remisionInvoicing.service.js.
+const isInvoiceableRemision = (sale) => {
+  if (sale.document_type !== 'remision' || !['pending', 'completed'].includes(sale.status) || sale.invoiced_in_sale_id) return false;
+  const d = new Date(sale.sale_date);
+  const now = new Date();
+  return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+};
+
+// Marca de facturación de remisiones junto al tipo de documento.
+function InvoicingTag({ sale }) {
+  const cls = 'ml-1.5 inline-flex text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-300';
+  if (sale.invoiced_in_sale_id) return <span className={cls} title="Incluida en una factura electrónica">Facturada</span>;
+  if (sale.is_consolidated_invoice) return <span className={cls} title="Factura que agrupa varias remisiones">Agrupada</span>;
+  if (sale.document_type === 'factura' && sale.remision_number) {
+    return <span className={cls} title="Factura emitida desde una remisión">{sale.remision_number}</span>;
+  }
+  return null;
+}
+
 export default function SalesPage() {
   // Remisiones ocultas (Ajustes > Visibilidad de remisiones): el backend ya
   // no las devuelve a nadie salvo al superadmin impersonando; acá solo se
@@ -43,6 +67,37 @@ export default function SalesPage() {
 
   const [searchInput, setSearchInput] = useState('');
   const [showFilters, setShowFilters] = useState(false);
+
+  // Facturar remisiones (una, o varias del mismo cliente agrupadas)
+  const canInvoiceRemisiones = tenantFeatures?.allow_remision_to_invoice === true && !hideRemisiones;
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [confirmInvoicing, setConfirmInvoicing] = useState(false);
+  const [invoicing, setInvoicing] = useState(false);
+  const selectedSales = sales.filter(s => selectedIds.includes(s.id));
+  const selectedCustomerId = selectedSales[0]?.customer_id;
+  const selectedTotal = selectedSales.reduce((sum, s) => sum + parseFloat(s.total_amount || 0), 0);
+  const isSelectable = (sale) => isInvoiceableRemision(sale)
+    && (!selectedCustomerId || (sale.customer_id === selectedCustomerId && sale.branch_id === selectedSales[0]?.branch_id));
+  const toggleSelected = (saleId) => setSelectedIds(ids => (ids.includes(saleId) ? ids.filter(i => i !== saleId) : [...ids, saleId]));
+
+  const handleInvoiceSelected = async () => {
+    setConfirmInvoicing(false);
+    setInvoicing(true);
+    try {
+      const res = selectedIds.length === 1
+        ? await salesApi.convertToInvoice(selectedIds[0])
+        : await salesApi.consolidateInvoice(selectedIds);
+      toast.success(res.data?.message || 'Factura creada', { duration: 6000 });
+      const invoiceId = res.data?.data?.sale_id || res.data?.data?.id;
+      setSelectedIds([]);
+      if (invoiceId) navigate(`/sales/${invoiceId}`);
+      else fetchSales();
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Error facturando las remisiones', { duration: 8000 });
+    } finally {
+      setInvoicing(false);
+    }
+  };
 
   useEffect(() => {
     fetchSales();
@@ -198,6 +253,40 @@ export default function SalesPage() {
           )}
         </div>
 
+        {canInvoiceRemisiones && selectedIds.length > 0 && (
+          <div className="flex items-center justify-between gap-3 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800/40 rounded-lg px-4 py-3">
+            <p className="text-sm text-indigo-900 dark:text-indigo-200">
+              {selectedIds.length} remisi{selectedIds.length === 1 ? 'ón' : 'ones'} de {selectedSales[0]?.customer_name} · {formatCurrency(selectedTotal)}
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setSelectedIds([])}
+                className="px-3 py-1.5 text-sm text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-white/10 rounded-lg hover:bg-white dark:hover:bg-white/5"
+              >
+                Quitar selección
+              </button>
+              <button
+                onClick={() => setConfirmInvoicing(true)}
+                disabled={invoicing}
+                className="px-3 py-1.5 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+              >
+                {invoicing ? 'Facturando...' : selectedIds.length === 1 ? 'Facturar electrónicamente' : 'Agrupar en una factura'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        <ConfirmDialog
+          open={confirmInvoicing}
+          onCancel={() => setConfirmInvoicing(false)}
+          onConfirm={handleInvoiceSelected}
+          title={selectedIds.length === 1 ? 'Facturar electrónicamente' : 'Agrupar en una factura'}
+          message={selectedIds.length === 1
+            ? `La remisión ${selectedSales[0]?.sale_number} se convertirá en factura electrónica y se enviará a la DIAN.`
+            : `Se emitirá una factura electrónica por ${formatCurrency(selectedTotal)} con las remisiones ${selectedSales.map(s => s.sale_number).join(', ')}. Pagos, cartera e inventario siguen en cada remisión.`}
+          confirmText="Facturar"
+        />
+
         <div id="tour-sales-table" className="bg-white dark:bg-graphite rounded-lg border border-gray-200 dark:border-white/10 overflow-hidden">
           {loading ? (
             <div className="flex items-center justify-center py-20">
@@ -221,6 +310,7 @@ export default function SalesPage() {
               <table className="hidden lg:table min-w-full divide-y divide-gray-100 dark:divide-white/10">
                 <thead className="bg-gray-50 dark:bg-graphite-2">
                   <tr>
+                    {canInvoiceRemisiones && <th className="w-8 px-3 py-3" />}
                     {(branches.length > 1 ? ['#', 'Cliente', 'Documento', 'Sede', 'Fecha', 'Total', 'Pago', 'Estado', 'DIAN'] : ['#', 'Cliente', 'Documento', 'Fecha', 'Total', 'Pago', 'Estado', 'DIAN']).map(h => (
                       <th key={h} className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-500 uppercase tracking-wide">
                         {h}
@@ -238,6 +328,20 @@ export default function SalesPage() {
                         onClick={() => navigate(`/sales/${sale.id}`)}
                         className="hover:bg-gray-50 dark:hover:bg-white/5 cursor-pointer transition-colors"
                       >
+                        {canInvoiceRemisiones && (
+                          <td className="px-3 py-3" onClick={e => e.stopPropagation()}>
+                            {isInvoiceableRemision(sale) && (
+                              <input
+                                type="checkbox"
+                                checked={selectedIds.includes(sale.id)}
+                                disabled={!selectedIds.includes(sale.id) && !isSelectable(sale)}
+                                onChange={() => toggleSelected(sale.id)}
+                                title={isSelectable(sale) || selectedIds.includes(sale.id) ? 'Seleccionar para facturar' : 'Solo se agrupan remisiones del mismo cliente y sede'}
+                                className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 disabled:opacity-30"
+                              />
+                            )}
+                          </td>
+                        )}
                         <td className="px-4 py-3 text-sm font-mono text-gray-700 dark:text-gray-300 whitespace-nowrap">{sale.sale_number}</td>
                         <td className="px-4 py-3">
                           <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{sale.customer_name}</p>
@@ -245,6 +349,7 @@ export default function SalesPage() {
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
                           {DOC_LABELS[sale.document_type] || '—'}
+                          <InvoicingTag sale={sale} />
                           {sale.converted_to_work_order_id && (
                             <span
                               className="ml-1.5 inline-flex text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300"

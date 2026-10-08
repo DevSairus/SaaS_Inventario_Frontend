@@ -460,7 +460,10 @@ function SaleFormPage() {
     () => ({ formData, items, customerSearchTerm, showQuickCustomer, quickCustomer }),
     [formData, items, customerSearchTerm, showQuickCustomer, quickCustomer]
   );
-  const saleUpdatedAt = currentSale?.id === id ? (currentSale.updated_at || currentSale.updatedAt || null) : null;
+  // Ojo: en una venta nueva id y currentSale?.id son ambos undefined -- sin
+  // el `isEditMode &&` la comparación daba true y reventaba con currentSale null.
+  const saleLoaded = isEditMode && currentSale?.id === id;
+  const saleUpdatedAt = saleLoaded ? (currentSale.updated_at || currentSale.updatedAt || null) : null;
   const draft = useFormDraft({
     scope: draftScope,
     data: draftData,

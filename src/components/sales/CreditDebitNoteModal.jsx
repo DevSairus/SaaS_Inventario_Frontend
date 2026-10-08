@@ -50,11 +50,18 @@ export default function CreditDebitNoteModal({ isOpen, onClose, sale, onSuccess,
   // ── Computed ───────────────────────────────────────────────
   const selectedItems = allItems.filter(i => (quantities[i.id] || 0) > 0);
 
-  const itemsTotal = selectedItems.reduce((sum, item) => {
+  const grossItemsTotal = selectedItems.reduce((sum, item) => {
     const qty   = quantities[item.id] || 0;
     const ratio = qty / parseFloat(item.quantity);
     return sum + parseFloat(item.total) * ratio;
   }, 0);
+  // NC: lo acreditado lleva su parte del descuento global de la factura
+  // (backend: services/sales/globalDiscount.service.js). La ND no.
+  const globalDiscount = isCredit ? parseFloat(sale?.global_discount_amount || 0) : 0;
+  const preDiscountTotal = parseFloat(sale?.total_amount || 0) + globalDiscount;
+  const itemsTotal = globalDiscount > 0 && preDiscountTotal > 0
+    ? grossItemsTotal - Math.round(grossItemsTotal * (globalDiscount / preDiscountTotal) * 100) / 100
+    : grossItemsTotal;
 
   const noteTotal = mode === 'amount' ? parseFloat(amount) || 0 : itemsTotal;
 

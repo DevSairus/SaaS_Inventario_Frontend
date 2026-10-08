@@ -570,6 +570,36 @@ const TenantSettingsPage = () => {
             </div>
           </Card>
 
+          {/* Facturar remisiones ya confirmadas */}
+          <Card>
+            <div className="p-6">
+              <h2 className="text-xl font-semibold mb-1">Facturación de remisiones</h2>
+              <p className="text-sm text-gray-500 mb-5">
+                Permite convertir remisiones ya confirmadas (incluso pagadas) en factura electrónica.
+              </p>
+              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <div className="flex-1 mr-4">
+                  <p className="font-medium text-gray-900 text-sm">Permitir facturar remisiones</p>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    Una remisión se puede convertir en factura, o varias del mismo cliente se pueden agrupar en una sola.
+                    Solo aplica a remisiones del mes en curso. Requiere una resolución de facturación electrónica activa.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => toggleFeature('allow_remision_to_invoice')}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0 ${
+                    config.features?.allow_remision_to_invoice ? 'bg-blue-600' : 'bg-gray-300'
+                  }`}
+                >
+                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                    config.features?.allow_remision_to_invoice ? 'translate-x-6' : 'translate-x-1'
+                  }`} />
+                </button>
+              </div>
+            </div>
+          </Card>
+
           {/* Facturación Electrónica DIAN */}
           <Card>
             <div className="p-6 flex items-center justify-between">

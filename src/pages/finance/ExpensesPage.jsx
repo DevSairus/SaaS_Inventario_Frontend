@@ -16,6 +16,7 @@ import {
 import { formatCurrency } from '../../utils/formatters';
 import NumericInput from '../../components/inputs/NumericInput';
 import SupportDocumentPanel from '../../components/dian/SupportDocumentPanel';
+import BankAccountSelect from '../../components/accounting/BankAccountSelect';
 
 const IVA_RATE_OPTIONS = [0, 5, 19];
 
@@ -26,6 +27,7 @@ const emptyForm = {
   expense_date: new Date().toISOString().split('T')[0],
   due_date: '',
   payment_method: 'Efectivo',
+  bank_account_id: null,
   is_recurring: false,
   notes: '',
   paid_now: true,
@@ -59,6 +61,7 @@ const ExpensesPage = () => {
   const [selectedExpense, setSelectedExpense] = useState(null);
   const [paymentAmount, setPaymentAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('Efectivo');
+  const [paymentBankAccountId, setPaymentBankAccountId] = useState(null);
   const [supportDocExpense, setSupportDocExpense] = useState(null);
 
   useEffect(() => {
@@ -151,12 +154,14 @@ const ExpensesPage = () => {
     try {
       await expensesAPI.registerPayment(selectedExpense.id, {
         amount: parseFloat(paymentAmount),
-        payment_method: paymentMethod
+        payment_method: paymentMethod,
+        bank_account_id: paymentMethod !== 'Efectivo' ? paymentBankAccountId : null,
       });
       toast.success('Pago registrado');
       setShowPaymentModal(false);
       setSelectedExpense(null);
       setPaymentAmount('');
+      setPaymentBankAccountId(null);
       loadData();
     } catch (error) {
       toast.error(error?.response?.data?.message || 'Error registrando el pago');
@@ -311,7 +316,8 @@ const ExpensesPage = () => {
                   <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400">Sin gastos registrados</td></tr>
                 )}
                 {filteredExpenses.map(e => {
-                  const balance = parseFloat(e.total_amount) - parseFloat(e.paid_amount || 0);
+                  // Saldo con el proveedor: neto de retenciones (esas se le deben a la DIAN)
+                  const balance = Math.max(parseFloat(e.total_amount) - parseFloat(e.total_retentions || 0) - parseFloat(e.paid_amount || 0), 0);
                   return (
                     <tr key={e.id} className="hover:bg-gray-50">
                       <td className="px-4 py-3 text-sm font-medium text-gray-900">{e.expense_number}</td>
@@ -322,7 +328,12 @@ const ExpensesPage = () => {
                       <td className="px-4 py-3 text-sm text-gray-600">{categoryLabel(e.category)}</td>
                       <td className="px-4 py-3 text-sm text-gray-600">{formatDate(e.expense_date)}</td>
                       <td className="px-4 py-3 text-sm text-gray-600">{formatCurrency(e.total_amount)}</td>
-                      <td className="px-4 py-3 text-sm font-semibold text-gray-900">{formatCurrency(balance)}</td>
+                      <td className="px-4 py-3 text-sm font-semibold text-gray-900">
+                        {formatCurrency(balance)}
+                        {parseFloat(e.total_retentions || 0) > 0 && (
+                          <div className="text-xs font-normal text-gray-400">Ret. {formatCurrency(e.total_retentions)}</div>
+                        )}
+                      </td>
                       <td className="px-4 py-3">
                         <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
                           e.payment_status === 'paid' ? 'bg-green-100 text-green-700'
@@ -448,6 +459,13 @@ const ExpensesPage = () => {
                 <option>Cheque</option>
               </select>
             </div>
+
+            {form.paid_now && form.payment_method !== 'Efectivo' && (
+              <BankAccountSelect
+                value={form.bank_account_id}
+                onChange={id => setForm(f => ({ ...f, bank_account_id: id }))}
+              />
+            )}
 
             <div className="flex items-center gap-2">
               <input
@@ -616,6 +634,9 @@ const ExpensesPage = () => {
                 <option>Cheque</option>
               </select>
             </div>
+            {paymentMethod !== 'Efectivo' && (
+              <BankAccountSelect value={paymentBankAccountId} onChange={setPaymentBankAccountId} />
+            )}
             <div className="flex justify-end gap-2 pt-2">
               <button
                 onClick={() => { setShowPaymentModal(false); setSelectedExpense(null); }}

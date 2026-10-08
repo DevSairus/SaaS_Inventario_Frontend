@@ -20,10 +20,13 @@ import { formatCurrency } from '../../utils/formatters';
 import NumericInput from '../../components/inputs/NumericInput';
 import { customerAdvancesAPI } from '../../api/customerAdvances';
 import RegisterAdvanceModal from '../../components/finance/RegisterAdvanceModal';
+import BankAccountSelect from '../../components/accounting/BankAccountSelect';
 import ReassignAdvanceModal from '../../components/finance/ReassignAdvanceModal';
 import useAuthStore from '../../store/authStore';
 import Dropdown from '../../components/common/Dropdown';
 import { MoreVertical, Eye, Undo2, ArrowLeftRight, Ban } from 'lucide-react';
+
+const isCashMethod = (method) => /efectivo|cash/i.test(method || 'Efectivo');
 
 // Reasignar anticipos a otro cliente: solo personal de contabilidad.
 const REASSIGN_ROLES = ['admin', 'super_admin', 'accountant'];
@@ -57,6 +60,7 @@ const CustomerAdvancesPage = () => {
   const [refundTarget, setRefundTarget] = useState(null);
   const [refundAmount, setRefundAmount] = useState('');
   const [refundReason, setRefundReason] = useState('');
+  const [refundBankAccountId, setRefundBankAccountId] = useState(null);
   const [refundSaving, setRefundSaving] = useState(false);
 
   const { user } = useAuthStore();
@@ -100,6 +104,8 @@ const CustomerAdvancesPage = () => {
     setRefundTarget(advance);
     setRefundAmount(advance.balance);
     setRefundReason('');
+    // Por defecto sale de la misma cuenta por la que entró el anticipo
+    setRefundBankAccountId(advance.bank_account_id || null);
   };
 
   const handleRefund = async () => {
@@ -112,6 +118,7 @@ const CustomerAdvancesPage = () => {
       await customerAdvancesAPI.refund(refundTarget.id, {
         amount: parseFloat(refundAmount),
         reason: refundReason || undefined,
+        ...(isCashMethod(refundTarget.method) ? {} : { bank_account_id: refundBankAccountId }),
       });
       toast.success('Anticipo devuelto exitosamente');
       setRefundTarget(null);
@@ -442,6 +449,9 @@ const CustomerAdvancesPage = () => {
                       className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                     />
                   </div>
+                  {!isCashMethod(refundTarget.method) && (
+                    <BankAccountSelect value={refundBankAccountId} onChange={setRefundBankAccountId} />
+                  )}
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Motivo (opcional)</label>
                     <textarea

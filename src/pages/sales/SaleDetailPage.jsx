@@ -57,6 +57,7 @@ export default function SaleDetailPage() {
   const [showNoteModal, setShowNoteModal] = useState(null); // null | 'credit' | 'debit'
   const [showConvertModal, setShowConvertModal] = useState(false);
   const [stockErrors, setStockErrors] = useState([]);
+  const [invoicingBusy, setInvoicingBusy] = useState(false);
   // Se abre si confirmSale responde DIAN_CUSTOMER_INCOMPLETE -- ver
   // customerDianReadiness.js en el backend.
   const [dianIncompleteModal, setDianIncompleteModal] = useState(null); // { customerId, missingFields, paymentData } | null
@@ -135,15 +136,30 @@ export default function SaleDetailPage() {
       if (['pending', 'completed'].includes(currentSale?.status)) {
         // Si el anticipo cubre todo el saldo, paid_amount llega en 0 -- no
         // hay nada que registrar como abono (registerPayment exige monto > 0).
-        if (parseFloat(cashPortion || 0) > 0) {
+        if (saleConfirmData.payment_method === 'mixed' && saleConfirmData.payment_splits?.length) {
+          // Pago mixto sobre una venta ya confirmada: un abono por medio de
+          // pago, cada uno a su caja/cuenta bancaria.
+          for (const split of saleConfirmData.payment_splits) {
+            await salesApi.registerPayment(id, {
+              amount: split.amount,
+              payment_method: split.method,
+              bank_account_id: split.bank_account_id,
+              payment_date: toLocalDateString(),
+            });
+          }
+        } else if (parseFloat(cashPortion || 0) > 0) {
           await salesApi.registerPayment(id, {
             amount: cashPortion,
             payment_method: saleConfirmData.payment_method,
+            bank_account_id: saleConfirmData.bank_account_id,
             payment_date: toLocalDateString(),
           });
         }
       } else {
-        await confirmSale(id, saleConfirmData);
+        // advance_amount: el backend lo cuenta como pago para decidir
+        // contado/crédito (XML DIAN), aunque el anticipo se aplique después.
+        const advanceAmount = (advance_applications || []).reduce((s, a) => s + parseFloat(a.amount || 0), 0);
+        await confirmSale(id, { ...saleConfirmData, advance_amount: advanceAmount || undefined });
       }
 
       // Aplicar anticipo(s) seleccionados en el modal (Cartera) -- se hace
@@ -223,6 +239,54 @@ export default function SaleDetailPage() {
     }
   };
 
+  // Remisión → factura electrónica (services/sales/remisionInvoicing.service.js)
+  const handleConvertToInvoice = async () => {
+    setConfirmDialog({ show: false, action: null });
+    setInvoicingBusy(true);
+    try {
+      const res = await salesApi.convertToInvoice(id);
+      toast.success(res.data?.message || 'Remisión convertida en factura', { duration: 5000 });
+      await fetchSaleById(id);
+    } catch (error) {
+      const data = error.response?.data || {};
+      if (data.code === 'DIAN_CUSTOMER_INCOMPLETE') {
+        setDianIncompleteModal({ customerId: data.customerId, missingFields: data.missingFields || [], retryInvoicing: true });
+      } else {
+        toast.error(data.message || 'Error convirtiendo la remisión');
+      }
+    } finally {
+      setInvoicingBusy(false);
+    }
+  };
+
+  const handleAnnulConsolidated = async () => {
+    setConfirmDialog({ show: false, action: null });
+    setInvoicingBusy(true);
+    try {
+      const res = await salesApi.annulConsolidated(id);
+      toast.success(res.data?.message || 'Anulación enviada a la DIAN', { duration: 7000 });
+      await fetchSaleById(id);
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Error anulando la factura', { duration: 7000 });
+    } finally {
+      setInvoicingBusy(false);
+    }
+  };
+
+  const handleRevertInvoicing = async () => {
+    setConfirmDialog({ show: false, action: null });
+    setInvoicingBusy(true);
+    try {
+      const res = await salesApi.revertInvoicing(id);
+      toast.success(res.data?.message || 'Facturación revertida', { duration: 5000 });
+      await fetchSaleById(id);
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Error revirtiendo la facturación');
+    } finally {
+      setInvoicingBusy(false);
+    }
+  };
+
   const handleRegisterPayment = async () => {
     try {
       setSavingPayment(true);
@@ -288,8 +352,19 @@ export default function SaleDetailPage() {
   const hasReturns      = approvedReturns.length > 0;
   const returnedTotal   = approvedReturns.reduce((s, r) => s + parseFloat(r.total_amount || 0), 0);
   const isFullyReturned = hasReturns && returnedTotal >= parseFloat(sale.total_amount) * 0.99;
+  // ── Facturación de remisiones ──────────────────────────────────────────────
+  const isGroupedRemision = !!sale.invoiced_in_sale_id;
+  const isConsolidated    = !!sale.is_consolidated_invoice;
+  const isInvoicedRemision = sale.document_type === 'factura' && (isConsolidated || !!sale.remision_number);
+  const canRevertInvoicing = isInvoicedRemision && ['rejected', 'error'].includes(sale.dian_status) && sale.status !== 'cancelled';
+  // Factura agrupada ya aceptada: se anula con nota crédito (solo fiscal)
+  const canAnnulConsolidated = isConsolidated && sale.dian_status === 'accepted' && sale.status !== 'cancelled';
+  const canConvertToInvoice = sale.document_type === 'remision' && sale.invoicing?.eligible;
+
   // El botón "Anular" solo aparece si la venta no está completamente devuelta
-  const canVoid = ['pending', 'completed'].includes(sale.status) && !isFullyReturned;
+  // (ni participa en una factura agrupada: se anula la factura, no la remisión)
+  const canVoid = ['pending', 'completed'].includes(sale.status) && !isFullyReturned
+    && !isGroupedRemision && !isConsolidated;
 
   const REASON_LABELS = {
     customer_request: 'Solicitud del cliente',
@@ -329,11 +404,21 @@ export default function SaleDetailPage() {
       label: 'Anular venta', icon: RotateCcw, onClick: () => setShowVoidModal(true),
       className: 'text-red-700 dark:text-red-400',
     },
-    sale.document_type === 'factura' && sale.dian_status === 'accepted' && {
+    canAnnulConsolidated && {
+      label: 'Anular factura agrupada', icon: FileText,
+      onClick: () => setConfirmDialog({ show: true, action: 'annulConsolidated' }),
+      className: 'text-red-700 dark:text-red-400',
+    },
+    canRevertInvoicing && {
+      label: isConsolidated ? 'Revertir agrupación' : 'Volver a remisión', icon: RotateCcw,
+      onClick: () => setConfirmDialog({ show: true, action: 'revertInvoicing' }),
+      className: 'text-red-700 dark:text-red-400',
+    },
+    sale.document_type === 'factura' && sale.dian_status === 'accepted' && !isConsolidated && {
       label: 'Nota crédito', icon: FileText, onClick: () => setShowNoteModal('credit'),
       className: 'text-purple-700 dark:text-purple-400',
     },
-    sale.document_type === 'factura' && sale.dian_status === 'accepted' && {
+    sale.document_type === 'factura' && sale.dian_status === 'accepted' && !isConsolidated && {
       label: 'Nota débito', icon: FileText, onClick: () => setShowNoteModal('debit'),
       className: 'text-orange-700 dark:text-orange-400',
     },
@@ -408,6 +493,16 @@ export default function SaleDetailPage() {
               {['pending', 'completed'].includes(sale.status) && sale.payment_status !== 'paid' && (
                 <Button variant="primary" icon={CheckIcon} onClick={() => setShowConfirmWithPayment(true)}>
                   Registrar Pago
+                </Button>
+              )}
+              {canConvertToInvoice && (
+                <Button
+                  variant="primary"
+                  icon={FileText}
+                  disabled={invoicingBusy}
+                  onClick={() => setConfirmDialog({ show: true, action: 'convertToInvoice' })}
+                >
+                  {invoicingBusy ? 'Facturando...' : 'Facturar electrónicamente'}
                 </Button>
               )}
               {['pending', 'completed'].includes(sale.status) && sale.payment_status !== 'paid' && sale.customer_id && (
@@ -490,6 +585,48 @@ export default function SaleDetailPage() {
           </div>
         )}
 
+        {/* ── Facturación de remisiones: de dónde viene / dónde quedó ── */}
+        {(isGroupedRemision || isInvoicedRemision) && (
+          <div className="no-print rounded-xl border border-blue-200 bg-blue-50 px-5 py-4 text-sm text-blue-900">
+            {isGroupedRemision && (
+              <p>
+                Esta remisión está incluida en la factura electrónica{' '}
+                <Link to={`/sales/${sale.invoiced_in_sale_id}`} className="font-semibold underline">
+                  {sale.consolidated_invoice?.sale_number || 'ver factura'}
+                </Link>.
+                Los pagos se siguen registrando aquí o desde la factura.
+              </p>
+            )}
+            {isInvoicedRemision && !isConsolidated && (
+              <p>Factura electrónica emitida desde la remisión <span className="font-mono font-semibold">{sale.remision_number}</span>.</p>
+            )}
+            {isConsolidated && (
+              <>
+                <p className="font-semibold">Factura que agrupa {sale.invoiced_remisiones?.length || 0} remisiones</p>
+                <p className="text-xs text-blue-800 mt-0.5">
+                  Pagos, cartera e inventario se llevan en cada remisión. Lo que registres aquí se reparte entre ellas: pagos y anticipos de la más antigua a la más reciente, retenciones en proporción al saldo de cada una.
+                </p>
+                <div className="mt-2 space-y-1">
+                  {(sale.invoiced_remisiones || []).map((r) => (
+                    <div key={r.id} className="flex items-center gap-3">
+                      <Link to={`/sales/${r.id}`} className="font-mono font-medium underline">{r.sale_number}</Link>
+                      <span className="text-blue-700">{formatDate(r.sale_date)}</span>
+                      <span className="ml-auto">{formatCurrency(r.total_amount)}</span>
+                      <span className="w-28 text-right">{getPaymentStatusBadge(r.payment_status)}</span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
+        {sale.document_type === 'remision' && sale.invoicing?.enabled && !sale.invoicing.eligible && sale.invoicing.reasons?.length > 0 && !isGroupedRemision && (
+          <div className="no-print rounded-xl border border-gray-200 bg-gray-50 px-5 py-3 text-xs text-gray-600">
+            No se puede facturar electrónicamente: {sale.invoicing.reasons.join('. ')}.
+          </div>
+        )}
+
         {/* ── Panel DIAN (solo facturas): estado, CUFE, fechas, motivo de rechazo y acciones ── */}
         {sale.document_type === 'factura' && (
           <div className="no-print">
@@ -544,6 +681,16 @@ export default function SaleDetailPage() {
                     <p className="text-sm text-gray-600">Método de Pago</p>
                     <p className="font-medium">{getPaymentMethodLabel(sale.payment_method)}</p>
                   </div>
+                  {sale.payment_form && (
+                    <div>
+                      <p className="text-sm text-gray-600">Forma de Pago</p>
+                      <p className="font-medium">
+                        {sale.payment_form === 'credito'
+                          ? `Crédito${sale.due_date ? ` · vence ${formatDate(sale.due_date)}` : ''}`
+                          : 'Contado'}
+                      </p>
+                    </div>
+                  )}
                   {sale.delivery_date && (
                     <div>
                       <p className="text-sm text-gray-600">Fecha de Entrega</p>
@@ -1041,6 +1188,37 @@ export default function SaleDetailPage() {
             confirmVariant="danger"
           />
 
+          <ConfirmDialog
+            open={confirmDialog.show && confirmDialog.action === 'convertToInvoice'}
+            onCancel={() => setConfirmDialog({ show: false, action: null })}
+            onConfirm={handleConvertToInvoice}
+            title="Facturar electrónicamente"
+            message={`La remisión ${sale.sale_number} se convertirá en factura electrónica con un nuevo consecutivo y se enviará a la DIAN. Los pagos, el inventario y la contabilidad no cambian.`}
+            confirmText="Facturar"
+          />
+
+          <ConfirmDialog
+            open={confirmDialog.show && confirmDialog.action === 'annulConsolidated'}
+            onCancel={() => setConfirmDialog({ show: false, action: null })}
+            onConfirm={handleAnnulConsolidated}
+            title="Anular factura agrupada"
+            message={`Se enviará a la DIAN una nota crédito que anula la factura ${sale.sale_number}. Cuando la acepte, las remisiones quedarán libres para facturarlas de nuevo. Pagos, inventario y contabilidad de las remisiones no cambian; si hubo una devolución real, anula después cada remisión.`}
+            confirmText="Anular factura"
+            confirmVariant="danger"
+          />
+
+          <ConfirmDialog
+            open={confirmDialog.show && confirmDialog.action === 'revertInvoicing'}
+            onCancel={() => setConfirmDialog({ show: false, action: null })}
+            onConfirm={handleRevertInvoicing}
+            title={isConsolidated ? 'Revertir agrupación' : 'Volver a remisión'}
+            message={isConsolidated
+              ? 'La factura (rechazada por la DIAN) se cancelará y sus remisiones quedarán libres para facturarlas de nuevo.'
+              : `La factura (rechazada por la DIAN) volverá a ser la remisión ${sale.remision_number}.`}
+            confirmText="Revertir"
+            confirmVariant="danger"
+          />
+
           <VoidSaleModal
             isOpen={showVoidModal}
             onClose={() => setShowVoidModal(false)}
@@ -1078,9 +1256,10 @@ export default function SaleDetailPage() {
             missingFields={dianIncompleteModal?.missingFields || []}
             onClose={() => setDianIncompleteModal(null)}
             onCompleted={() => {
-              const paymentData = dianIncompleteModal?.paymentData;
+              const { paymentData, retryInvoicing } = dianIncompleteModal || {};
               setDianIncompleteModal(null);
               if (paymentData) handleConfirmWithPayment(paymentData);
+              else if (retryInvoicing) handleConvertToInvoice();
             }}
           />
         </div>

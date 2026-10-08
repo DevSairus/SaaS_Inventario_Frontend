@@ -27,7 +27,7 @@ export default function SaleCirculationPanel({ sale, onUpdate }) {
   const [acting, setActing] = useState(false);
   const [openForm, setOpenForm] = useState(null); // 'endoso' | 'limitacion' | 'mandato' | 'pago' | 'informe' | null
 
-  const eligibleToInscribe = ['033_received', '034'].includes(sale?.radian_status) && Number(sale?.credit_days) > 0;
+  const eligibleToInscribe = ['033_received', '034'].includes(sale?.radian_status) && sale?.payment_form === 'credito';
   const circulation = sale?.radian_circulation || {};
   const inscribed = !!circulation.inscribed_at;
 

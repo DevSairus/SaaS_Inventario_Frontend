@@ -47,6 +47,12 @@ const salesApi = {
   registerRetentions: (id, data) =>
     api.post(`/sales/${id}/retentions`, data),
 
+  // Facturación de remisiones confirmadas (si el tenant lo habilitó)
+  convertToInvoice: (id) => api.post(`/sales/${id}/convert-to-invoice`),
+  consolidateInvoice: (saleIds, notes) => api.post('/sales/consolidate-invoice', { sale_ids: saleIds, notes }),
+  revertInvoicing: (id) => api.post(`/sales/${id}/revert-invoicing`),
+  annulConsolidated: (id, reason) => api.post(`/sales/${id}/annul-consolidated`, { reason }),
+
   // Eliminar venta (solo si está en borrador)
   delete: (id) => api.delete(`/sales/${id}`),
 

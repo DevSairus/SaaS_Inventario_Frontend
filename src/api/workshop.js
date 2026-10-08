@@ -46,6 +46,9 @@ export const workOrdersApi = {
   updateCombo: (id, groupId, data) => axios.patch(`/workshop/work-orders/${id}/combos/${groupId}`, data),
   removeCombo: (id, groupId) => axios.delete(`/workshop/work-orders/${id}/combos/${groupId}`),
   generateSale: (id, data = {}) => axios.post(`/workshop/work-orders/${id}/generate-sale`, data),
+  // Abonos cobrados antes de facturar (requieren conexión: mueven caja)
+  getPayments: (id) => axios.get(`/workshop/work-orders/${id}/payments`),
+  registerPayment: (id, data) => axios.post(`/workshop/work-orders/${id}/payments`, data),
   uploadPhotos: (id, phase, formData) =>
     axios.post(`/workshop/work-orders/${id}/photos/${phase}`, formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
   deletePhoto: (id, phase, index) => axios.delete(`/workshop/work-orders/${id}/photos/${phase}/${index}`),

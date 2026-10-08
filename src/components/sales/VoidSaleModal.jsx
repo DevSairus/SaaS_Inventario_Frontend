@@ -40,11 +40,19 @@ export default function VoidSaleModal({ isOpen, onClose, sale, onSuccess }) {
   // ── Computed ───────────────────────────────────────────────────────────────
   const selectedItems = returnableItems.filter(i => quantities[i.id] > 0);
 
-  const returnTotal = selectedItems.reduce((sum, item) => {
+  // Descuento global de la venta: lo devuelto lleva su parte proporcional
+  // (backend: services/sales/globalDiscount.service.js).
+  const globalDiscount = parseFloat(sale?.global_discount_amount || 0);
+  const preDiscountTotal = parseFloat(sale?.total_amount || 0) + globalDiscount;
+  const grossReturn = selectedItems.reduce((sum, item) => {
     const qty   = quantities[item.id] || 0;
     const ratio = qty / parseFloat(item.quantity);
     return sum + parseFloat(item.total) * ratio;
   }, 0);
+  const returnDiscount = globalDiscount > 0 && preDiscountTotal > 0
+    ? Math.round(grossReturn * (globalDiscount / preDiscountTotal) * 100) / 100
+    : 0;
+  const returnTotal = grossReturn - returnDiscount;
 
   const isValid = selectedItems.length > 0 && reason;
 
@@ -322,6 +330,12 @@ export default function VoidSaleModal({ isOpen, onClose, sale, onSuccess }) {
                     </span>
                   </div>
                 ))}
+                {returnDiscount > 0 && (
+                  <div className="flex justify-between text-sm text-gray-600">
+                    <span>Descuento global proporcional</span>
+                    <span>−{formatCurrency(returnDiscount)}</span>
+                  </div>
+                )}
                 <div className="border-t pt-2 flex justify-between font-bold text-base">
                   <span>Total a devolver</span>
                   <span className="text-red-600">{formatCurrency(returnTotal)}</span>

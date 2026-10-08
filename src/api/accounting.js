@@ -90,6 +90,9 @@ export const LOAN_TYPE_LABELS = {
 // Conciliación Bancaria (Fase 3 del plan de Contabilidad Pitbox).
 export const bankAccountsAPI = {
   getAll: async (params = {}) => (await api.get('/accounting/bank-accounts', { params })).data,
+  // Cuentas activas para el selector al cobrar/pagar -- endpoint sin rol
+  // contable (cajeros, vendedores).
+  getOptions: async () => (await api.get('/bank-account-options')).data,
   getById: async (id) => (await api.get(`/accounting/bank-accounts/${id}`)).data,
   create: async (payload) => (await api.post('/accounting/bank-accounts', payload)).data,
   update: async (id, payload) => (await api.put(`/accounting/bank-accounts/${id}`, payload)).data,

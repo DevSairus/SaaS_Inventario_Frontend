@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { XMarkIcon, CreditCardIcon, BanknotesIcon, DevicePhoneMobileIcon, CalendarDaysIcon, ClockIcon, PlusIcon, TrashIcon, WalletIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import NumericInput from '../inputs/NumericInput';
 import { customerAdvancesAPI } from '../../api/customerAdvances';
+import BankAccountSelect from '../accounting/BankAccountSelect';
 
 const CREDIT_DAYS_OPTIONS = [15, 30, 60, 90];
 
@@ -72,6 +73,7 @@ const ConfirmSaleWithPaymentModal = ({
   const [customDays, setCustomDays]       = useState('');
   const [useCustomDays, setUseCustomDays] = useState(false);
   const [cashReceived, setCashReceived]   = useState('');
+  const [bankAccountId, setBankAccountId] = useState(null);
 
   // Mixed payment state
   const [mixedRows, setMixedRows] = useState([emptyMixedRow(), emptyMixedRow()]);
@@ -94,6 +96,7 @@ const ConfirmSaleWithPaymentModal = ({
       setCustomDays('');
       setUseCustomDays(false);
       setCashReceived('');
+      setBankAccountId(null);
       setMixedRows([emptyMixedRow(), emptyMixedRow()]);
       setSelectedAdvances({});
       setAdvances([]);
@@ -214,7 +217,11 @@ const ConfirmSaleWithPaymentModal = ({
         document_type: docType,
         payment_method: 'mixed',
         paid_amount: effectiveTotal,
-        payment_splits: mixedRows.map(r => ({ method: r.method, amount: parseFloat(r.amount) })),
+        payment_splits: mixedRows.map(r => ({
+          method: r.method,
+          amount: parseFloat(r.amount),
+          bank_account_id: r.method !== 'cash' ? (r.bank_account_id || null) : null,
+        })),
         advance_applications: advanceApplications,
       });
       return;
@@ -230,6 +237,7 @@ const ConfirmSaleWithPaymentModal = ({
       document_type: docType,
       payment_method: paymentMethod,
       paid_amount: finalAmount,
+      bank_account_id: paymentMethod !== 'cash' && finalAmount > 0 ? bankAccountId : null,
       credit_days: paymentType !== 'full' ? effectiveCreditDays : undefined,
       advance_applications: advanceApplications,
     });
@@ -404,7 +412,8 @@ const ConfirmSaleWithPaymentModal = ({
 
                   <div className="space-y-2">
                     {mixedRows.map((row, index) => (
-                      <div key={index} className="flex items-center gap-2 bg-white rounded-lg border border-purple-200 px-3 py-2">
+                      <div key={index} className="bg-white rounded-lg border border-purple-200 px-3 py-2 space-y-1.5">
+                      <div className="flex items-center gap-2">
                         <select
                           value={row.method}
                           onChange={(e) => updateMixedRow(index, 'method', e.target.value)}
@@ -428,6 +437,14 @@ const ConfirmSaleWithPaymentModal = ({
                           className="text-gray-400 hover:text-red-500 disabled:opacity-30 transition-colors flex-shrink-0">
                           <TrashIcon className="w-4 h-4" />
                         </button>
+                      </div>
+                      {row.method !== 'cash' && (
+                        <BankAccountSelect
+                          compact
+                          value={row.bank_account_id}
+                          onChange={(id) => updateMixedRow(index, 'bank_account_id', id)}
+                        />
+                      )}
                       </div>
                     ))}
                   </div>
@@ -481,6 +498,11 @@ const ConfirmSaleWithPaymentModal = ({
                     ))}
                   </div>
                 </div>
+              )}
+
+              {/* Cuenta bancaria que recibe el pago (no efectivo) */}
+              {paymentType !== 'mixed' && paymentType !== 'credit' && !isCash && (
+                <BankAccountSelect value={bankAccountId} onChange={setBankAccountId} />
               )}
 
               {/* Abono parcial */}

@@ -9,6 +9,7 @@ import toast from 'react-hot-toast';
 import customersApi from '../../api/customers';
 import { customerAdvancesAPI } from '../../api/customerAdvances';
 import NumericInput from '../inputs/NumericInput';
+import BankAccountSelect from '../accounting/BankAccountSelect';
 
 const METHODS = ['Efectivo', 'Transferencia', 'Tarjeta de Crédito', 'Tarjeta de Débito', 'Cheque'];
 
@@ -21,6 +22,7 @@ const RegisterAdvanceModal = ({ isOpen, onClose, onSuccess, presetCustomer = nul
 
   const [amount, setAmount] = useState('');
   const [method, setMethod] = useState('Efectivo');
+  const [bankAccountId, setBankAccountId] = useState(null);
   const [receivedDate, setReceivedDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [referenceNote, setReferenceNote] = useState('');
   const [triggersIva, setTriggersIva] = useState(false);
@@ -73,6 +75,7 @@ const RegisterAdvanceModal = ({ isOpen, onClose, onSuccess, presetCustomer = nul
         customer_id: customer.id,
         amount: parseFloat(amount),
         method,
+        bank_account_id: method !== 'Efectivo' ? bankAccountId : null,
         received_date: receivedDate,
         reference_note: referenceNote || undefined,
         triggers_iva: triggersIva,
@@ -180,6 +183,10 @@ const RegisterAdvanceModal = ({ isOpen, onClose, onSuccess, presetCustomer = nul
                     />
                   </div>
                 </div>
+
+                {method !== 'Efectivo' && (
+                  <BankAccountSelect value={bankAccountId} onChange={setBankAccountId} />
+                )}
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Nota de referencia (opcional)</label>

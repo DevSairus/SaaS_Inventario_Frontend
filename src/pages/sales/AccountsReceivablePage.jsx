@@ -17,6 +17,7 @@ import {
 import { formatCurrency } from '../../utils/formatters';
 import NumericInput from '../../components/inputs/NumericInput';
 import ApplyAdvanceModal from '../../components/finance/ApplyAdvanceModal';
+import BankAccountSelect from '../../components/accounting/BankAccountSelect';
 
 const AccountsReceivablePage = () => {
   const [loading, setLoading] = useState(true);
@@ -28,6 +29,7 @@ const AccountsReceivablePage = () => {
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [paymentAmount, setPaymentAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('Efectivo');
+  const [bankAccountId, setBankAccountId] = useState(null);
   const [paymentNotes, setPaymentNotes] = useState('');
   const [view, setView] = useState('by-customer'); // 'by-customer' o 'all-invoices'
   const [applyAdvanceTarget, setApplyAdvanceTarget] = useState(null);
@@ -65,12 +67,14 @@ const AccountsReceivablePage = () => {
       await salesApi.registerPayment(selectedInvoice.id, {
         amount: parseFloat(paymentAmount),
         payment_method: paymentMethod,
+        bank_account_id: paymentMethod !== 'Efectivo' ? bankAccountId : null,
         notes: paymentNotes
       });
       
       setShowPaymentModal(false);
       setSelectedInvoice(null);
       setPaymentAmount('');
+      setBankAccountId(null);
       setPaymentNotes('');
       loadData();
     } catch (error) {
@@ -544,6 +548,10 @@ const AccountsReceivablePage = () => {
                       <option>Cheque</option>
                     </select>
                   </div>
+
+                  {paymentMethod !== 'Efectivo' && (
+                    <BankAccountSelect value={bankAccountId} onChange={setBankAccountId} />
+                  )}
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700">

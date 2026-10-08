@@ -100,6 +100,12 @@ export default function SaleRadianPanel({ sale }) {
           que Pitbox controle el plazo de 3 días hábiles y habilite la aceptación tácita si no responde.
         </p>
 
+        {sale.payment_form !== 'credito' && (
+          <p className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2">
+            Factura de contado: no es título valor, así que no aplica la aceptación tácita (034) ni la inscripción en RADIAN.
+          </p>
+        )}
+
         {deadline && (
           <div className={`text-xs rounded-lg px-3 py-2 flex items-center gap-2 ${deadlineExpired ? 'bg-blue-50 text-blue-700' : 'bg-amber-50 text-amber-700'}`}>
             <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
@@ -116,7 +122,7 @@ export default function SaleRadianPanel({ sale }) {
               <Inbox className="w-3.5 h-3.5" /> Registrar evento recibido
             </button>
           )}
-          {status === '032_received' && deadlineExpired && (
+          {status === '032_received' && deadlineExpired && sale.payment_form === 'credito' && (
             <button disabled={acting} onClick={handleTacita}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium">
               <Gavel className="w-3.5 h-3.5" /> Emitir Aceptación Tácita (034)

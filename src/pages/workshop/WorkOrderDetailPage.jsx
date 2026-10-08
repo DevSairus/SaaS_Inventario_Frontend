@@ -23,6 +23,7 @@ import DiagramMapEditor from '../../components/workshop/DiagramMapEditor';
 import NumericInput from '../../components/inputs/NumericInput';
 import CompleteCustomerDianModal from '../../components/dian/CompleteCustomerDianModal';
 import ComboPickerModal from '../../components/combos/ComboPickerModal';
+import WorkOrderPaymentsPanel from '../../components/workshop/WorkOrderPaymentsPanel';
 import { groupDocumentItems } from '../../components/combos/comboUtils';
 
 const STATUS_FLOW = ['recibido', 'en_proceso', 'en_espera', 'listo', 'entregado'];
@@ -192,6 +193,9 @@ export default function WorkOrderDetailPage() {
   const [showGenSaleModal, setShowGenSaleModal] = useState(false);
   // Factura AIU al generar el documento (ver backend services/sales/aiu.service.js)
   const [genAiu, setGenAiu] = useState({ enabled: false, admin_pct: '', unforeseen_pct: '', profit_pct: '', object: '' });
+  // Plazo de pago si la OT queda con saldo: la factura sale a crédito con ese
+  // vencimiento (XML DIAN + RADIAN). Por defecto, el plazo del cliente.
+  const [genCreditDays, setGenCreditDays] = useState(30);
   // Se abre si generateSale (o el reintento tras completarlo) responde
   // DIAN_CUSTOMER_INCOMPLETE -- ver customerDianReadiness.js en el backend.
   const [dianIncompleteModal, setDianIncompleteModal] = useState(null); // { customerId, missingFields, docType } | null
@@ -486,6 +490,7 @@ export default function WorkOrderDetailPage() {
   const handleGenerateSale = () => {
     const d = { admin_pct: 10, unforeseen_pct: 5, profit_pct: 5, ...(taxConfig?.aiu || {}) };
     setGenAiu({ enabled: false, admin_pct: d.admin_pct, unforeseen_pct: d.unforeseen_pct, profit_pct: d.profit_pct, object: '' });
+    setGenCreditDays(Number(order?.customer?.payment_terms) > 0 ? Number(order.customer.payment_terms) : 30);
     setShowGenSaleModal(true);
   };
 
@@ -493,8 +498,10 @@ export default function WorkOrderDetailPage() {
     setShowGenSaleModal(false);
     setGeneratingSale(true);
     try {
+      const pendingBalance = parseFloat(order?.total_amount || 0) - parseFloat(order?.paid_amount || 0);
       await generateSale(id, {
         document_type: docType,
+        ...(pendingBalance > 0.01 ? { credit_days: genCreditDays } : {}),
         ...(genAiu.enabled ? {
           aiu_enabled: true,
           aiu_admin_pct: genAiu.admin_pct,
@@ -962,9 +969,12 @@ export default function WorkOrderDetailPage() {
               <button
                 onClick={() => {
                   const itemsConStock = order.items?.filter(i => i.item_type === 'repuesto' && i.inventory_movement_id) || [];
+                  const paidNote = parseFloat(order.paid_amount || 0) > 0
+                    ? `\n\nLos abonos (${COP(order.paid_amount)}) quedarán como anticipo del cliente: se pueden aplicar a otra factura o devolver desde Anticipos.`
+                    : '';
                   const msg = itemsConStock.length > 0
-                    ? `¿Cancelar la OT ${order.order_number}?\n\nSe devolverán al inventario ${itemsConStock.length} repuesto(s) descontados:\n${itemsConStock.map(i => `• ${i.product_name} (×${parseFloat(i.quantity)})`).join('\n')}\n\nEsta acción no se puede deshacer.`
-                    : `¿Cancelar la OT ${order.order_number}?\n\nEsta acción no se puede deshacer.`;
+                    ? `¿Cancelar la OT ${order.order_number}?\n\nSe devolverán al inventario ${itemsConStock.length} repuesto(s) descontados:\n${itemsConStock.map(i => `• ${i.product_name} (×${parseFloat(i.quantity)})`).join('\n')}${paidNote}\n\nEsta acción no se puede deshacer.`
+                    : `¿Cancelar la OT ${order.order_number}?${paidNote}\n\nEsta acción no se puede deshacer.`;
                   if (window.confirm(msg)) changeStatus(id, 'cancelado');
                 }}
                 className="px-3 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800/40 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition">
@@ -1548,6 +1558,10 @@ export default function WorkOrderDetailPage() {
                 </div>
                 );
               })()}
+
+              {!hidePrices && order.items?.length > 0 && (
+                <WorkOrderPaymentsPanel order={order} onChanged={() => fetchOrder(id)} />
+              )}
 
                 {/* Botones imprimir OT desde sección ítems */}
                 {order.items?.length > 0 && (
@@ -2367,6 +2381,23 @@ export default function WorkOrderDetailPage() {
                     </>
                   )}
                 </div>
+                )}
+                {parseFloat(order?.total_amount || 0) - parseFloat(order?.paid_amount || 0) > 0.01 && (
+                  <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
+                    <label className="block text-sm font-medium text-amber-900">
+                      Saldo pendiente: {COP(parseFloat(order.total_amount || 0) - parseFloat(order.paid_amount || 0))}
+                    </label>
+                    <p className="text-xs text-amber-800 mt-0.5 mb-2">Se emite a crédito. Plazo de pago:</p>
+                    <select
+                      value={genCreditDays}
+                      onChange={(e) => setGenCreditDays(parseInt(e.target.value, 10))}
+                      className="w-full border border-amber-300 rounded-lg px-2 py-1.5 text-sm bg-white"
+                    >
+                      {[...new Set([0, 8, 15, 30, 45, 60, 90, genCreditDays])].sort((a, b) => a - b).map((days) => (
+                        <option key={days} value={days}>{days === 0 ? 'Vence hoy' : `${days} días`}</option>
+                      ))}
+                    </select>
+                  </div>
                 )}
                 {[
                   {
