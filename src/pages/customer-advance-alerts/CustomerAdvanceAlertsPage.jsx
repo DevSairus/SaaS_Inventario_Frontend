@@ -10,9 +10,13 @@ import {
 } from '@heroicons/react/24/outline';
 import useCustomerAdvanceAlertsStore from '../../store/customerAdvanceAlertsStore';
 import Layout from '../../components/layout/Layout';
+import useIsManagement from '../../hooks/useIsManagement';
 
 const CustomerAdvanceAlertsPage = () => {
   const navigate = useNavigate();
+  // Verificar/resolver/ignorar/reactivar: checkRole('admin', 'manager',
+  // 'accountant') en customer-advance-alerts.routes.js.
+  const canManage = useIsManagement();
   const {
     alerts = [],
     stats = {},
@@ -67,7 +71,8 @@ const CustomerAdvanceAlertsPage = () => {
 
   const handleResolveConfirm = async () => {
     if (selectedAlert) {
-      await resolveAlert(selectedAlert.id, resolutionNotes);
+      // El store ya muestra el toast con la causa; aquí solo se deja el modal abierto.
+      try { await resolveAlert(selectedAlert.id, resolutionNotes); } catch { return; }
       setShowResolveModal(false);
       setSelectedAlert(null);
       setResolutionNotes('');
@@ -76,12 +81,12 @@ const CustomerAdvanceAlertsPage = () => {
 
   const handleIgnore = async (alertId) => {
     if (window.confirm('¿Ignorar esta alerta? Dejará de aparecer en la campana de notificaciones.')) {
-      await ignoreAlert(alertId);
+      try { await ignoreAlert(alertId); } catch { /* toast en el store */ }
     }
   };
 
   const handleReactivate = async (alertId) => {
-    await reactivateAlert(alertId);
+    try { await reactivateAlert(alertId); } catch { /* toast en el store */ }
   };
 
   const handleCheckAlerts = async () => {
@@ -89,6 +94,8 @@ const CustomerAdvanceAlertsPage = () => {
     try {
       await checkAlerts();
       await fetchAging();
+    } catch {
+      // toast en el store
     } finally {
       setChecking(false);
     }
@@ -112,14 +119,14 @@ const CustomerAdvanceAlertsPage = () => {
               Anticipos de clientes sin aplicar, ordenados por tiempo transcurrido
             </p>
           </div>
-          <button
+          {canManage && <button
             onClick={handleCheckAlerts}
             disabled={checking}
             className="inline-flex items-center gap-2 px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 disabled:opacity-50"
           >
             <ArrowPathIcon className={`w-4 h-4 ${checking ? 'animate-spin' : ''}`} />
             Verificar alertas
-          </button>
+          </button>}
         </div>
 
         {/* Stats */}
@@ -224,7 +231,7 @@ const CustomerAdvanceAlertsPage = () => {
                           </td>
                           <td className="px-4 py-3">
                             <button
-                              onClick={() => alert.advance?.id && navigate(`/customer-advances/${alert.advance.id}`)}
+                              onClick={() => alert.advance?.id && navigate(`/customer-advances?search=${encodeURIComponent(alert.advance.advance_number || '')}`)}
                               className="text-sm text-blue-600 hover:underline"
                             >
                               {alert.advance?.advance_number || '-'}
@@ -252,7 +259,7 @@ const CustomerAdvanceAlertsPage = () => {
                           </td>
                           <td className="px-4 py-3">
                             <div className="flex items-center justify-end gap-1">
-                              {alert.status === 'active' && (
+                              {canManage && alert.status === 'active' && (
                                 <>
                                   <button
                                     onClick={() => handleResolveClick(alert)}
@@ -270,7 +277,7 @@ const CustomerAdvanceAlertsPage = () => {
                                   </button>
                                 </>
                               )}
-                              {alert.status !== 'active' && (
+                              {canManage && alert.status !== 'active' && (
                                 <button
                                   onClick={() => handleReactivate(alert.id)}
                                   title="Reactivar"

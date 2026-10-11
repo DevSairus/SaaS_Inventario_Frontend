@@ -5,16 +5,22 @@ import Layout from '../../components/layout/Layout';
 import api from '../../api/axios';
 import toast from 'react-hot-toast';
 import { formatNumber } from '../../utils/formatters';
+import Pagination from '../../components/common/Pagination';
+import useIsManagement from '../../hooks/useIsManagement';
+import { SUPPLIER_RETURN_REASONS, labelOf } from '../../utils/returnLabels';
+import ApproveSupplierReturnModal from '../../components/inventory/ApproveSupplierReturnModal';
 
 const SupplierReturnsPage = () => {
   const navigate = useNavigate();
+  // Aprobar/rechazar: checkRole('admin', 'manager', 'accountant') en el backend.
+  const canManage = useIsManagement();
   const [returns, setReturns] = useState([]);
   const [loading, setLoading] = useState(false);
   const [filters, setFilters] = useState({
     search: '',
     status: '',
     page: 1,
-    limit: 10
+    limit: 20
   });
   const [pagination, setPagination] = useState({ total: 0, pages: 0 });
   const [showApproveModal, setShowApproveModal] = useState(false);
@@ -33,20 +39,9 @@ const SupplierReturnsPage = () => {
       setReturns(response.data.data || []);
       setPagination(response.data.pagination || { total: 0, pages: 0 });
     } catch (error) {
+      toast.error(error.response?.data?.message || 'Error cargando las devoluciones');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleApprove = async () => {
-    try {
-      await api.put(`/inventory/supplier-returns/${selectedReturn.id}/approve`);
-      setShowApproveModal(false);
-      setSelectedReturn(null);
-      toast.success('Devolución aprobada exitosamente');
-      fetchReturns();
-    } catch (error) {
-      toast.error(error.response?.data?.message || 'Error al aprobar');
     }
   };
 
@@ -67,12 +62,14 @@ const SupplierReturnsPage = () => {
     const badges = {
       pending: 'bg-yellow-100 text-yellow-800',
       approved: 'bg-green-100 text-green-800',
-      rejected: 'bg-red-100 text-red-800'
+      rejected: 'bg-red-100 text-red-800',
+      reversed: 'bg-gray-200 text-gray-700'
     };
     const labels = {
       pending: 'Pendiente',
       approved: 'Aprobada',
-      rejected: 'Rechazada'
+      rejected: 'Rechazada',
+      reversed: 'Reversada'
     };
     return (
       <span className={`px-2 py-1 rounded-full text-xs font-medium ${badges[status]}`}>
@@ -97,6 +94,12 @@ const SupplierReturnsPage = () => {
             Nueva Devolución
           </button>
         </div>
+
+        {!canManage && (
+          <div className="bg-blue-50 border border-blue-200 text-blue-800 text-sm rounded-lg px-4 py-3">
+            Puedes registrar y consultar devoluciones. Las pendientes las aprueba un administrador, gerente o contador.
+          </div>
+        )}
 
         <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
           <div className="flex flex-col md:flex-row gap-4">
@@ -180,7 +183,7 @@ const SupplierReturnsPage = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{ret.reason}</div>
+                      <div className="text-sm text-gray-900">{labelOf(SUPPLIER_RETURN_REASONS, ret.reason)}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">
@@ -199,7 +202,7 @@ const SupplierReturnsPage = () => {
                         >
                           <Eye className="w-5 h-5" />
                         </button>
-                        {ret.status === 'pending' && (
+                        {canManage && ret.status === 'pending' && (
                           <>
                             <button
                               onClick={() => {
@@ -231,34 +234,23 @@ const SupplierReturnsPage = () => {
             </table>
             </div>
           )}
+          {pagination.pages > 1 && (
+            <div className="px-4 py-3 border-t border-gray-200">
+              <Pagination
+                currentPage={filters.page}
+                totalPages={pagination.pages}
+                onPageChange={(page) => setFilters(prev => ({ ...prev, page }))}
+              />
+            </div>
+          )}
         </div>
 
-        {showApproveModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 max-w-md w-full">
-              <h3 className="text-lg font-bold mb-4">Aprobar Devolución</h3>
-              <p className="text-gray-600 mb-4">
-                ¿Estás seguro de aprobar la devolución {selectedReturn?.return_number}?
-              </p>
-              <p className="text-sm text-red-600 mb-4">
-                Esto reducirá el stock de los productos.
-              </p>
-              <div className="flex gap-2 justify-end">
-                <button
-                  onClick={() => setShowApproveModal(false)}
-                  className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={handleApprove}
-                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-                >
-                  Aprobar
-                </button>
-              </div>
-            </div>
-          </div>
+        {showApproveModal && selectedReturn && (
+          <ApproveSupplierReturnModal
+            supplierReturn={selectedReturn}
+            onClose={() => { setShowApproveModal(false); setSelectedReturn(null); }}
+            onApproved={() => { setShowApproveModal(false); setSelectedReturn(null); fetchReturns(); }}
+          />
         )}
 
         {showRejectModal && (

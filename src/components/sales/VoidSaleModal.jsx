@@ -1,9 +1,37 @@
 // frontend/src/components/sales/VoidSaleModal.jsx
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { X, AlertTriangle, RotateCcw, ChevronRight, ChevronLeft, Check, FileText, Package } from 'lucide-react';
 import { formatCurrency } from '../../utils/formatters';
 import api from '../../api/axios';
 import toast from 'react-hot-toast';
+import useReturnSettlementPreview from '../../hooks/useReturnSettlementPreview';
+import ReturnSettlementFields, { settlementPayload } from '../returns/ReturnSettlementFields';
+
+// Liquidación de lo devuelto (vista previa del backend): baja primero lo que
+// debe el cliente; si pagó de más, se elige devolver dinero o saldo a favor.
+function VoidSettlement({ saleId, amount, hasCustomer, settlement, onSettlementChange, method, onMethodChange, bankAccountId, onBankAccountChange, onPreview }) {
+  const { preview, loading, error } = useReturnSettlementPreview('/sales/customer-returns/preview', { sale_id: saleId, amount });
+  if (onPreview) onPreview(preview, loading || !!error);
+  return (
+    <div className="space-y-2">
+      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Dinero</p>
+      <ReturnSettlementFields
+        mode="customer"
+        total={amount}
+        preview={preview}
+        loading={loading}
+        error={error}
+        canCredit={hasCustomer}
+        settlement={hasCustomer ? settlement : 'refund'}
+        onSettlementChange={onSettlementChange}
+        method={method}
+        onMethodChange={onMethodChange}
+        bankAccountId={bankAccountId}
+        onBankAccountChange={onBankAccountChange}
+      />
+    </div>
+  );
+}
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 const REASONS = [
@@ -34,6 +62,12 @@ export default function VoidSaleModal({ isOpen, onClose, sale, onSuccess }) {
   const [notes, setNotes]       = useState('');
   const [loading, setLoading]   = useState(false);
   const [result, setResult]     = useState(null); // respuesta final del backend
+  // Parte ya pagada de lo devuelto: devolver dinero o saldo a favor (igual
+  // que al aprobar una devolución -- backend settlePaidPortion).
+  const [settlement, setSettlement] = useState(sale?.customer_id ? 'credit' : 'refund');
+  const [refundMethod, setRefundMethod] = useState('Efectivo');
+  const [refundBankAccountId, setRefundBankAccountId] = useState(null);
+  const previewRef = useRef({ preview: null, busy: true });
 
   if (!isOpen || !sale) return null;
 
@@ -97,6 +131,7 @@ export default function VoidSaleModal({ isOpen, onClose, sale, onSuccess }) {
         notes,
         items,
         return_type: returnType,
+        ...settlementPayload(previewRef.current.preview, sale?.customer_id ? settlement : 'refund', refundMethod, refundBankAccountId),
       });
 
       setResult(data);
@@ -362,6 +397,21 @@ export default function VoidSaleModal({ isOpen, onClose, sale, onSuccess }) {
                   )}
                 </div>
               </div>
+
+              {returnTotal > 0 && (
+                <VoidSettlement
+                  saleId={sale.id}
+                  amount={Math.round(returnTotal * 100) / 100}
+                  hasCustomer={!!sale?.customer_id}
+                  settlement={settlement}
+                  onSettlementChange={setSettlement}
+                  method={refundMethod}
+                  onMethodChange={setRefundMethod}
+                  bankAccountId={refundBankAccountId}
+                  onBankAccountChange={setRefundBankAccountId}
+                  onPreview={(preview, busy) => { previewRef.current = { preview, busy }; }}
+                />
+              )}
 
               {/* Motivo */}
               <div>

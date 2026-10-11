@@ -144,10 +144,9 @@ const useCustomerAdvanceAlertsStore = create((set, get) => ({
       await get().fetchStats();
       set({ loading: false });
     } catch (error) {
-      set({
-        error: error.response?.data?.message || 'Error al resolver alerta',
-        loading: false
-      });
+      const errMsg = error.response?.data?.message || 'Error al resolver alerta';
+      toast.error(errMsg, { id: 'advance-alert-error' });
+      set({ error: errMsg, loading: false });
       throw error;
     }
   },
@@ -161,10 +160,9 @@ const useCustomerAdvanceAlertsStore = create((set, get) => ({
       await get().fetchStats();
       set({ loading: false });
     } catch (error) {
-      set({
-        error: error.response?.data?.message || 'Error al ignorar alerta',
-        loading: false
-      });
+      const errMsg = error.response?.data?.message || 'Error al ignorar alerta';
+      toast.error(errMsg, { id: 'advance-alert-error' });
+      set({ error: errMsg, loading: false });
       throw error;
     }
   },
@@ -178,10 +176,9 @@ const useCustomerAdvanceAlertsStore = create((set, get) => ({
       await get().fetchStats();
       set({ loading: false });
     } catch (error) {
-      set({
-        error: error.response?.data?.message || 'Error al reactivar alerta',
-        loading: false
-      });
+      const errMsg = error.response?.data?.message || 'Error al reactivar alerta';
+      toast.error(errMsg, { id: 'advance-alert-error' });
+      set({ error: errMsg, loading: false });
       throw error;
     }
   }

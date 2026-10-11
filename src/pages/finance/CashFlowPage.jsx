@@ -128,6 +128,12 @@ const CashFlowPage = () => {
     work_order: 'Abono OT',
     customer_advance: 'Anticipo recibido',
     customer_advance_refund: 'Devolución de anticipo',
+    customer_return_refund: 'Reintegro por devolución',
+    supplier_return_refund: 'Reintegro de proveedor',
+    customer_return_reversal: 'Reversión de devolución (cliente)',
+    supplier_return_reversal: 'Reversión de devolución (proveedor)',
+    opening_receivable: 'Abono a saldo inicial',
+    opening_payable: 'Pago de saldo inicial',
   };
 
   const maxDayAbs = data?.by_day?.length
@@ -231,8 +237,8 @@ const CashFlowPage = () => {
 
                 {reconciliation.accounts_used === 0 && (
                   <p className="text-xs text-gray-500 mt-2">
-                    El tenant no tiene mapeo de cuentas de Caja/Bancos configurado en Contabilidad, así que no hay nada
-                    con qué comparar todavía.
+                    Aún no hay cuentas contables de Caja/Bancos asignadas en Contabilidad → Mapeo de Cuentas,
+                    así que no hay con qué comparar todavía.
                   </p>
                 )}
 

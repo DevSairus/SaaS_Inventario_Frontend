@@ -19,9 +19,11 @@ export const customerReturnsApi = {
     return response.data;
   },
 
-  // Aprobar devolución
-  approve: async (id, notes = '') => {
-    const response = await api.put(`/sales/customer-returns/${id}/approve`, { notes });
+  // Aprobar devolución. payload: { settlement_type: 'refund' | 'credit',
+  // payment_method, bank_account_id } -- qué hacer con la parte ya pagada
+  // (ver ApproveCustomerReturnModal).
+  approve: async (id, payload = {}) => {
+    const response = await api.put(`/sales/customer-returns/${id}/approve`, payload);
     return response.data;
   },
 

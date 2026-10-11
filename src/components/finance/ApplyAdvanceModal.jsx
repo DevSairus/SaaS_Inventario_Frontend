@@ -12,6 +12,7 @@ import toast from 'react-hot-toast';
 import { customerAdvancesAPI } from '../../api/customerAdvances';
 import { formatCurrency } from '../../utils/formatters';
 import NumericInput from '../inputs/NumericInput';
+import { saleBalance } from '../../utils/saleAmounts';
 
 const ApplyAdvanceModal = ({ isOpen, onClose, onSuccess, sale }) => {
   const [loading, setLoading] = useState(true);
@@ -19,10 +20,12 @@ const ApplyAdvanceModal = ({ isOpen, onClose, onSuccess, sale }) => {
   const [selected, setSelected] = useState({}); // { advance_id: amountString }
   const [saving, setSaving] = useState(false);
 
-  const balance = sale ? parseFloat(sale.balance ?? (sale.total_amount - (sale.paid_amount || 0))) : 0;
+  const balance = sale ? parseFloat(sale.balance ?? saleBalance(sale)) : 0;
 
   useEffect(() => {
-    if (isOpen && sale?.customer_id) load();
+    if (!isOpen) return;
+    if (sale?.customer_id) load();
+    else { setAdvances([]); setLoading(false); } // sin cliente: nada que cargar (antes giraba sin fin)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, sale?.customer_id]);
 
@@ -131,6 +134,10 @@ const ApplyAdvanceModal = ({ isOpen, onClose, onSuccess, sale }) => {
               {loading ? (
                 <div className="flex items-center justify-center py-8 text-gray-500">
                   <ArrowPathIcon className="h-5 w-5 animate-spin mr-2" /> Cargando anticipos disponibles...
+                </div>
+              ) : !sale?.customer_id ? (
+                <div className="text-center py-8 text-sm text-gray-500">
+                  Esta factura no tiene cliente asignado. Los anticipos se aplican solo a facturas del mismo cliente.
                 </div>
               ) : advances.length === 0 ? (
                 <div className="text-center py-8 text-sm text-gray-400">

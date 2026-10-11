@@ -8,6 +8,7 @@ import toast from 'react-hot-toast';
 import NumericInput from '../inputs/NumericInput';
 import { formatCurrency } from '../../utils/formatters';
 import salesApi from '../../api/sales';
+import { saleBalance } from '../../utils/saleAmounts';
 
 const FIELDS = [
   { key: 'retefuente', label: 'ReteFuente', rateKey: 'retefuente_rate', unit: '%' },
@@ -16,7 +17,7 @@ const FIELDS = [
 ];
 
 const RegisterRetentionsModal = ({ sale, onClose, onSaved }) => {
-  const pending = parseFloat(sale.total_amount || 0) - parseFloat(sale.paid_amount || 0);
+  const pending = saleBalance(sale);
   const [values, setValues] = useState(() => Object.fromEntries(FIELDS.map((f) => [f.key, parseFloat(sale[`${f.key}_amount`] || 0) || ''])));
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [saving, setSaving] = useState(false);

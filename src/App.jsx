@@ -204,6 +204,7 @@ import PwaBootstrap from './pwa/PwaBootstrap';
 import InstallPrompt from './pwa/components/InstallPrompt';
 import ImpersonationBanner from './components/common/ImpersonationBanner';
 import { ROLES, ROUTES } from './utils/constants';
+import { MANAGEMENT_ROLES } from './hooks/useIsManagement';
 
 // Redirigir según rol
 function RoleBasedRedirect() {
@@ -228,6 +229,10 @@ function SuperAdminRoute({ children, roles }) {
 // que ya aplica el backend en server.js para /api/accounting. Sin esto, un vendedor podía
 // entrar a /accounting/* escribiendo la URL directamente y ver la pantalla vacía/con errores
 // 403 en vez de ser redirigido.
+// Cuentas por Pagar/Cobrar, Gastos, Documentos Soporte, Flujo de Caja y
+// Configuración DIAN: mismo criterio que checkRole en las rutas del backend.
+const MGMT_ROLES = MANAGEMENT_ROLES;
+
 function TenantRoute({ children, module, roles }) {
   const { user, isAuthenticated } = useAuthStore();
   const enabledModules = useTenantStore((s) => s.enabledModules);
@@ -373,7 +378,7 @@ function App() {
         <Route path="sales"          element={<TenantRoute module="sales"><Suspense fallback={<Loading fullScreen />}><SalesPage /></Suspense></TenantRoute>} />
         <Route path="sales/new"      element={<TenantRoute module="sales"><Suspense fallback={<Loading fullScreen />}><SaleFormPage /></Suspense></TenantRoute>} />
         <Route path="sales/:id/edit" element={<TenantRoute module="sales"><Suspense fallback={<Loading fullScreen />}><SaleFormPage /></Suspense></TenantRoute>} />
-        <Route path="accounts-receivable" element={<TenantRoute module="receivables"><Suspense fallback={<Loading fullScreen />}><AccountsReceivablePage /></Suspense></TenantRoute>} />
+        <Route path="accounts-receivable" element={<TenantRoute module="receivables" roles={MGMT_ROLES}><Suspense fallback={<Loading fullScreen />}><AccountsReceivablePage /></Suspense></TenantRoute>} />
         <Route path="customer-advances" element={<TenantRoute module="receivables"><Suspense fallback={<Loading fullScreen />}><CustomerAdvancesPage /></Suspense></TenantRoute>} />
         <Route path="customer-advance-alerts" element={<TenantRoute module="receivables"><Suspense fallback={<Loading fullScreen />}><CustomerAdvanceAlertsPage /></Suspense></TenantRoute>} />
 
@@ -381,11 +386,11 @@ function App() {
         <Route path="quotes" element={<TenantRoute module={["sales", "workshop", "crm"]}><Suspense fallback={<Loading fullScreen />}><QuotesPage /></Suspense></TenantRoute>} />
 
         {/* ── Tesorería ──────────────────────────────── */}
-        <Route path="accounts-payable" element={<TenantRoute module="treasury"><Suspense fallback={<Loading fullScreen />}><AccountsPayablePage /></Suspense></TenantRoute>} />
+        <Route path="accounts-payable" element={<TenantRoute module="treasury" roles={MGMT_ROLES}><Suspense fallback={<Loading fullScreen />}><AccountsPayablePage /></Suspense></TenantRoute>} />
         <Route path="payable-alerts"   element={<TenantRoute module="treasury"><Suspense fallback={<Loading fullScreen />}><PayableAlertsPage /></Suspense></TenantRoute>} />
-        <Route path="expenses"         element={<TenantRoute module="treasury"><Suspense fallback={<Loading fullScreen />}><ExpensesPage /></Suspense></TenantRoute>} />
-        <Route path="support-documents" element={<TenantRoute module="treasury"><Suspense fallback={<Loading fullScreen />}><SupportDocumentsPage /></Suspense></TenantRoute>} />
-        <Route path="cashflow"         element={<TenantRoute module="treasury"><Suspense fallback={<Loading fullScreen />}><CashFlowPage /></Suspense></TenantRoute>} />
+        <Route path="expenses"         element={<TenantRoute module="treasury" roles={MGMT_ROLES}><Suspense fallback={<Loading fullScreen />}><ExpensesPage /></Suspense></TenantRoute>} />
+        <Route path="support-documents" element={<TenantRoute module="treasury" roles={MGMT_ROLES}><Suspense fallback={<Loading fullScreen />}><SupportDocumentsPage /></Suspense></TenantRoute>} />
+        <Route path="cashflow"         element={<TenantRoute module="treasury" roles={MGMT_ROLES}><Suspense fallback={<Loading fullScreen />}><CashFlowPage /></Suspense></TenantRoute>} />
         <Route path="accounting/chart-of-accounts" element={<TenantRoute module="accounting" roles={['admin', 'manager', 'accountant']}><Suspense fallback={<Loading fullScreen />}><ChartOfAccountsPage /></Suspense></TenantRoute>} />
         <Route path="accounting/journal-entries"   element={<TenantRoute module="accounting" roles={['admin', 'manager', 'accountant']}><Suspense fallback={<Loading fullScreen />}><JournalEntriesPage /></Suspense></TenantRoute>} />
         <Route path="accounting/account-mappings"  element={<TenantRoute module="accounting" roles={['admin', 'manager', 'accountant']}><Suspense fallback={<Loading fullScreen />}><AccountMappingsPage /></Suspense></TenantRoute>} />
@@ -508,8 +513,8 @@ function App() {
         <Route path="profile"  element={<TenantRoute><Suspense fallback={<Loading fullScreen />}><ProfilePage /></Suspense></TenantRoute>} />
 
         {/* ✅ DIAN — Facturación Electrónica ────────── */}
-        <Route path="dian/config"  element={<TenantRoute><Suspense fallback={<Loading fullScreen />}><DianConfigPage /></Suspense></TenantRoute>} />
-        <Route path="dian/eventos" element={<TenantRoute><Suspense fallback={<Loading fullScreen />}><DianEventsPage /></Suspense></TenantRoute>} />
+        <Route path="dian/config"  element={<TenantRoute roles={MGMT_ROLES}><Suspense fallback={<Loading fullScreen />}><DianConfigPage /></Suspense></TenantRoute>} />
+        <Route path="dian/eventos" element={<TenantRoute roles={MGMT_ROLES}><Suspense fallback={<Loading fullScreen />}><DianEventsPage /></Suspense></TenantRoute>} />
 
         {/* ── Soporte ──────────────────────────────── */}
         <Route path="support"              element={<TenantRoute><Suspense fallback={<Loading fullScreen />}><SupportFAQ /></Suspense></TenantRoute>} />

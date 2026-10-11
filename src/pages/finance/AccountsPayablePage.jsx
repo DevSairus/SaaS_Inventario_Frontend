@@ -15,10 +15,14 @@ import {
 import { formatCurrency } from '../../utils/formatters';
 import NumericInput from '../../components/inputs/NumericInput';
 import BankAccountSelect from '../../components/accounting/BankAccountSelect';
+import api from '../../api/axios';
 
 const AccountsPayablePage = () => {
   const [loading, setLoading] = useState(true);
   const [summary, setSummary] = useState(null);
+  // Saldos a favor con proveedores (devoluciones) sin aplicar todavía.
+  const [supplierCredits, setSupplierCredits] = useState([]);
+  const [applyingCreditId, setApplyingCreditId] = useState(null);
   const [bySupplier, setBySupplier] = useState([]);
   const [allPurchases, setAllPurchases] = useState([]);
   const [selectedSupplier, setSelectedSupplier] = useState(null);
@@ -47,9 +51,24 @@ const AccountsPayablePage = () => {
       setSummary(response.data.summary);
       setBySupplier(response.data.by_supplier);
       setAllPurchases(response.data.all_purchases);
+      setSupplierCredits(response.data.supplier_credits || []);
     } catch (error) {
+      toast.error(error.response?.data?.message || 'Error cargando cuentas por pagar');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleApplyCredit = async (credit) => {
+    setApplyingCreditId(credit.supplier_return_id);
+    try {
+      const res = await api.post(`/inventory/supplier-returns/${credit.supplier_return_id}/apply-credit`);
+      toast.success(res.data?.message || 'Saldo a favor aplicado');
+      loadData();
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Error al aplicar el saldo a favor');
+    } finally {
+      setApplyingCreditId(null);
     }
   };
 
@@ -112,6 +131,27 @@ const AccountsPayablePage = () => {
             <ArrowPathIcon className="w-4 h-4" /> Actualizar
           </button>
         </div>
+
+        {supplierCredits.length > 0 && (
+          <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 space-y-2">
+            <p className="text-sm font-semibold text-emerald-900">Saldo a favor con proveedores (por devoluciones)</p>
+            {supplierCredits.map((c) => (
+              <div key={c.supplier_return_id} className="flex items-center justify-between gap-3 flex-wrap text-sm">
+                <span className="text-emerald-900">
+                  {c.supplier_name} · {formatCurrency(c.available)}
+                  <span className="text-emerald-700"> (devolución {c.return_number})</span>
+                </span>
+                <button
+                  onClick={() => handleApplyCredit(c)}
+                  disabled={applyingCreditId === c.supplier_return_id}
+                  className="px-3 py-1.5 text-xs font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 disabled:opacity-50"
+                >
+                  Aplicar a compras pendientes
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Tarjetas resumen */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -227,7 +267,7 @@ const AccountsPayablePage = () => {
                     <div key={p.id} className="flex items-center justify-between bg-white rounded-lg border border-gray-200 p-3">
                       <div>
                         <div className="text-sm font-medium text-gray-900">{p.purchase_number}{p.invoice_number ? ` · Fact. ${p.invoice_number}` : ''}</div>
-                        <div className="text-xs text-gray-500">{formatDate(p.purchase_date)} {p.due_date ? `· Vence ${formatDate(p.due_date)}` : ''}</div>
+                        <div className="text-xs text-gray-500">{formatDate(p.purchase_date)} {p.effective_due_date ? `· Vence ${formatDate(p.effective_due_date)}${p.due_date ? '' : ' (30 días)'}` : ''}</div>
                       </div>
                       <div className="flex items-center gap-3">
                         <span className="text-sm font-semibold text-gray-900">{formatCurrency(p.balance)}</span>
@@ -265,7 +305,11 @@ const AccountsPayablePage = () => {
                       <td className="px-4 py-3 text-sm text-gray-600">{p.supplier_name}</td>
                       <td className="px-4 py-3 text-sm text-gray-600">{formatDate(p.purchase_date)}</td>
                       <td className="px-4 py-3 text-sm text-gray-600">
-                        {p.due_date ? formatDate(p.due_date) : '—'}
+                        {p.due_date
+                          ? formatDate(p.due_date)
+                          : p.effective_due_date
+                            ? <span title="Sin fecha de vencimiento: se asume plazo de 30 días desde la compra">{formatDate(p.effective_due_date)} <span className="text-xs text-gray-400">(30 días)</span></span>
+                            : '—'}
                         {p.is_overdue && <span className="ml-1 text-xs text-red-600">({p.days_overdue}d)</span>}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-600">{formatCurrency(p.total_amount)}</td>

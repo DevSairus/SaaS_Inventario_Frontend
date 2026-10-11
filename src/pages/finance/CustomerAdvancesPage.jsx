@@ -3,7 +3,8 @@
 // Fase 3 (frontend) de Anticipos de Clientes -- listado + informe (§9 del
 // plan). Vive en Cartera, junto a Cuentas por Cobrar, mismo estilo que
 // AccountsReceivablePage.jsx.
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import Layout from '../../components/layout/Layout';
 import toast from 'react-hot-toast';
 import {
@@ -22,14 +23,15 @@ import { customerAdvancesAPI } from '../../api/customerAdvances';
 import RegisterAdvanceModal from '../../components/finance/RegisterAdvanceModal';
 import BankAccountSelect from '../../components/accounting/BankAccountSelect';
 import ReassignAdvanceModal from '../../components/finance/ReassignAdvanceModal';
-import useAuthStore from '../../store/authStore';
 import Dropdown from '../../components/common/Dropdown';
+import Pagination from '../../components/common/Pagination';
+import useIsManagement from '../../hooks/useIsManagement';
 import { MoreVertical, Eye, Undo2, ArrowLeftRight, Ban } from 'lucide-react';
 
 const isCashMethod = (method) => /efectivo|cash/i.test(method || 'Efectivo');
 
-// Reasignar anticipos a otro cliente: solo personal de contabilidad.
-const REASSIGN_ROLES = ['admin', 'super_admin', 'accountant'];
+// customerAdvances.controller.js pagina por limit/offset (máx. 200).
+const PAGE_SIZE = 50;
 
 const STATUS_LABELS = {
   active: { label: 'Activo', cls: 'bg-blue-100 text-blue-800' },
@@ -49,8 +51,14 @@ const CustomerAdvancesPage = () => {
   const [loading, setLoading] = useState(true);
   const [advances, setAdvances] = useState([]);
   const [summary, setSummary] = useState(null);
-  const [search, setSearch] = useState('');
+  // ?search= permite enlazar a un anticipo puntual (p. ej. desde Antigüedad de Anticipos).
+  const [searchParams] = useSearchParams();
+  const [search, setSearch] = useState(searchParams.get('search') || '');
+  const [debouncedSearch, setDebouncedSearch] = useState(search.trim());
   const [filters, setFilters] = useState({ status: '', from_date: '', to_date: '' });
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const loadSeq = useRef(0);
 
   const [showRegisterModal, setShowRegisterModal] = useState(false);
   const [expandedId, setExpandedId] = useState(null);
@@ -63,26 +71,41 @@ const CustomerAdvancesPage = () => {
   const [refundBankAccountId, setRefundBankAccountId] = useState(null);
   const [refundSaving, setRefundSaving] = useState(false);
 
-  const { user } = useAuthStore();
-  const canReassign = REASSIGN_ROLES.includes(user?.role);
+  // Devolver/Anular/Reasignar: checkRole('admin', 'manager', 'accountant') en el backend.
+  const canManage = useIsManagement();
+  const canReassign = canManage;
   const [reassignTarget, setReassignTarget] = useState(null);
 
   const [voidTarget, setVoidTarget] = useState(null);
   const [voidReason, setVoidReason] = useState('');
   const [voidSaving, setVoidSaving] = useState(false);
 
-  useEffect(() => { loadData(); }, [filters]);
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search.trim()), 350);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  useEffect(() => { setPage(1); }, [filters, debouncedSearch]);
+  useEffect(() => { loadData(); }, [filters, debouncedSearch, page]);
 
   const loadData = async () => {
+    const seq = ++loadSeq.current;
     try {
       setLoading(true);
-      const res = await customerAdvancesAPI.list(filters);
+      const res = await customerAdvancesAPI.list({
+        ...filters,
+        search: debouncedSearch || undefined,
+        limit: PAGE_SIZE,
+        offset: (page - 1) * PAGE_SIZE,
+      });
+      if (seq !== loadSeq.current) return;
       setAdvances(res.data.data || []);
+      setTotal(res.data.total || 0);
       setSummary(res.data.summary || null);
-    } catch {
-      toast.error('Error cargando anticipos');
+    } catch (err) {
+      if (seq === loadSeq.current) toast.error(err.response?.data?.message || 'Error cargando anticipos');
     } finally {
-      setLoading(false);
+      if (seq === loadSeq.current) setLoading(false);
     }
   };
 
@@ -153,15 +176,8 @@ const CustomerAdvancesPage = () => {
     `${adv.customer?.first_name || ''} ${adv.customer?.last_name || ''}`.trim() ||
     '—';
 
-  const searchLower = search.toLowerCase().trim();
-  const filteredAdvances = searchLower
-    ? advances.filter((a) =>
-        customerName(a).toLowerCase().includes(searchLower) ||
-        (a.customer?.tax_id || '').toLowerCase().includes(searchLower) ||
-        (a.advance_number || '').toLowerCase().includes(searchLower) ||
-        (a.reference_note || '').toLowerCase().includes(searchLower)
-      )
-    : advances;
+  // La búsqueda y la paginación se resuelven en el backend.
+  const filteredAdvances = advances;
 
   if (loading && advances.length === 0) {
     return (
@@ -338,13 +354,15 @@ const CustomerAdvancesPage = () => {
                             }
                             items={[
                               { label: expandedId === adv.id ? 'Ocultar detalle' : 'Ver detalle', icon: Eye, onClick: () => toggleDetail(adv) },
-                              adv.status === 'active' && parseFloat(adv.balance) > 0 && {
+                              canManage && adv.status === 'active' && parseFloat(adv.balance) > 0 && {
                                 label: 'Devolver', icon: Undo2, onClick: () => openRefund(adv), className: 'text-orange-700',
                               },
                               canReassign && adv.status === 'active' && parseFloat(adv.balance) > 0 && {
                                 label: 'Reasignar a otro cliente', icon: ArrowLeftRight, onClick: () => setReassignTarget(adv), className: 'text-purple-700',
                               },
-                              adv.status === 'active' && parseFloat(adv.applied_amount) === 0 && parseFloat(adv.refunded_amount) === 0 && !parseFloat(adv.reassigned_amount || 0) && !adv.reassigned_from_id && {
+                              // Los anticipos que vienen de una OT o de una devolución no se anulan (no
+                              // tienen asiento de recepción propio): se aplican o se devuelven.
+                              canManage && !adv.work_order_id && !adv.customer_return_id && adv.status === 'active' && parseFloat(adv.applied_amount) === 0 && parseFloat(adv.refunded_amount) === 0 && !parseFloat(adv.reassigned_amount || 0) && !adv.reassigned_from_id && {
                                 label: 'Anular', icon: Ban, onClick: () => { setVoidTarget(adv); setVoidReason(''); }, className: 'text-red-700',
                               },
                             ].filter(Boolean)}
@@ -413,6 +431,11 @@ const CustomerAdvancesPage = () => {
               </tbody>
             </table>
           </div>
+          {total > PAGE_SIZE && (
+            <div className="px-4 py-3 border-t border-gray-200">
+              <Pagination currentPage={page} totalPages={Math.ceil(total / PAGE_SIZE)} onPageChange={setPage} />
+            </div>
+          )}
         </div>
       </div>
 

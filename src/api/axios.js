@@ -207,7 +207,14 @@ api.interceptors.response.use(
     }
 
     if (status === 403 && !originalRequest.skipGlobalForbidden) {
-      toast.error('No tienes permisos para realizar esta acción.');
+      // MODULE_NOT_INCLUDED (requireModule): no es un problema de permisos del
+      // usuario sino del plan -- un admin veía "No tienes permisos" sin serlo.
+      // El id evita apilar el mismo toast cuando fallan varias peticiones juntas.
+      if (errorCode === 'MODULE_NOT_INCLUDED') {
+        toast.error(error.response?.data?.message || 'Tu plan no incluye este módulo.', { id: `module-${error.response?.data?.module || 'x'}` });
+      } else {
+        toast.error('No tienes permisos para realizar esta acción.', { id: 'forbidden' });
+      }
     }
 
     // Retry automático para errores de red / servidor (NO para 4xx)

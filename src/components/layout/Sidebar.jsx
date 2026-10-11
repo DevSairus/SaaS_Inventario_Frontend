@@ -118,7 +118,7 @@ const NAV = [
       // los 403 al cargar el dashboard/menú).
       { label: "Cuentas por Pagar",   path: "/accounts-payable", roles: ["admin", "super_admin", "manager", "accountant"] },
       { label: "Gastos Operativos",   path: "/expenses", roles: ["admin", "super_admin", "manager", "accountant"] },
-      { label: "Documentos Soporte DIAN", path: "/support-documents" },
+      { label: "Documentos Soporte DIAN", path: "/support-documents", roles: ["admin", "super_admin", "manager", "accountant"] },
       { label: "Flujo de Caja",       path: "/cashflow", roles: ["admin", "super_admin", "manager", "accountant"] },
       // Cajas y Recibos sí admiten "seller" (cashSessions.routes.js / receipts.routes.js).
       { label: "Cajas",               path: "/cash-sessions" },

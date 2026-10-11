@@ -36,6 +36,8 @@ import toast from 'react-hot-toast';
 import DiagramMapEditor from '../../components/workshop/DiagramMapEditor';
 import ConvertQuoteToWorkOrderModal from '../../components/sales/ConvertQuoteToWorkOrderModal';
 import { groupDocumentItems } from '../../components/combos/comboUtils';
+import { saleBalance } from '../../utils/saleAmounts';
+import useIsManagement from '../../hooks/useIsManagement';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -54,6 +56,9 @@ export default function SaleDetailPage() {
   const [showRetentions, setShowRetentions] = useState(false);
   const [lastPaymentIndex, setLastPaymentIndex] = useState(null);
   const [showVoidModal, setShowVoidModal] = useState(false);
+  // Anular/devolver desde la venta crea y aprueba la devolución de una vez:
+  // mismo permiso que aprobar devoluciones (checkRole en sales.routes.js).
+  const isManagement = useIsManagement();
   const [showNoteModal, setShowNoteModal] = useState(null); // null | 'credit' | 'debit'
   const [showConvertModal, setShowConvertModal] = useState(false);
   const [stockErrors, setStockErrors] = useState([]);
@@ -363,7 +368,7 @@ export default function SaleDetailPage() {
 
   // El botón "Anular" solo aparece si la venta no está completamente devuelta
   // (ni participa en una factura agrupada: se anula la factura, no la remisión)
-  const canVoid = ['pending', 'completed'].includes(sale.status) && !isFullyReturned
+  const canVoid = isManagement && ['pending', 'completed'].includes(sale.status) && !isFullyReturned
     && !isGroupedRemision && !isConsolidated;
 
   const REASON_LABELS = {
@@ -933,10 +938,16 @@ export default function SaleDetailPage() {
                             <span className="font-medium">{formatCurrency(sale.paid_amount)}</span>
                           </div>
                         )}
+                        {parseFloat(sale.returned_amount || 0) > 0 && (
+                          <div className="flex justify-between text-sm text-gray-600">
+                            <span>Descontado por devoluciones:</span>
+                            <span className="font-medium">{formatCurrency(sale.returned_amount)}</span>
+                          </div>
+                        )}
                         {sale.payment_status !== 'paid' && (
                           <div className="flex justify-between text-sm text-orange-600">
                             <span>Saldo pendiente:</span>
-                            <span className="font-medium">{formatCurrency(sale.total_amount - (sale.paid_amount || 0))}</span>
+                            <span className="font-medium">{formatCurrency(saleBalance(sale))}</span>
                           </div>
                         )}
                         {sale.payment_status === 'paid' && (

@@ -488,6 +488,50 @@ function ManualDataPanel({ format, year, documentTypes }) {
   }
 }
 
+// Devoluciones aprobadas este año sobre documentos de años anteriores
+// (1001: compras; 1003: facturas con retención). Lo decide el contador:
+// por defecto no se toca lo ya declarado.
+const PRIOR_YEAR_RETURNS_FORMATS = {
+  '1001': 'Devoluciones a proveedor de compras de años anteriores',
+  '1003': 'Devoluciones de clientes sobre facturas de años anteriores',
+};
+
+function PriorYearReturnsOption({ format }) {
+  const [value, setValue] = useState(format.options?.prior_year_returns || 'skip');
+  const [saving, setSaving] = useState(false);
+  const save = async (next) => {
+    const previous = value;
+    setValue(next);
+    setSaving(true);
+    try {
+      await exogenaAPI.setFormatOptions(format.code, { prior_year_returns: next });
+      toast.success('Opción guardada');
+    } catch (e) {
+      setValue(previous);
+      toast.error(e?.response?.data?.message || 'No se pudo guardar la opción');
+    } finally {
+      setSaving(false);
+    }
+  };
+  return (
+    <div className="rounded-lg border border-gray-200 dark:border-white/10 p-3 text-sm space-y-2">
+      <p className="font-medium text-gray-700 dark:text-gray-200">{PRIOR_YEAR_RETURNS_FORMATS[format.code]}</p>
+      {[
+        ['skip', 'No afectar este año', 'Lo de años anteriores ya se declaró; la devolución no cambia este formato.'],
+        ['subtract', 'Restar en el año de la devolución', 'El pago/retención devuelto se descuenta de este año (sin bajar de 0).'],
+      ].map(([v, title, help]) => (
+        <label key={v} className="flex items-start gap-2 cursor-pointer">
+          <input type="radio" name={`prior-year-${format.code}`} className="mt-1" checked={value === v} disabled={saving} onChange={() => save(v)} />
+          <span>
+            <span className="text-gray-800 dark:text-gray-100">{title}</span>
+            <span className="block text-xs text-gray-500 dark:text-gray-400">{help}</span>
+          </span>
+        </label>
+      ))}
+    </div>
+  );
+}
+
 function FormatRow({ format, year, onToggle }) {
   const [expanded, setExpanded] = useState(false);
   const [readiness, setReadiness] = useState(null);
@@ -567,6 +611,7 @@ function FormatRow({ format, year, onToggle }) {
       {expanded && !isPending && (
         <div className="px-4 pb-4 space-y-3 border-t border-gray-100 dark:border-white/10 pt-3">
           {format.needsConceptMapping && <ConceptsPanel format={format} year={year} />}
+          {PRIOR_YEAR_RETURNS_FORMATS[format.code] && <PriorYearReturnsOption format={format} />}
           {format.dataSource === 'manual' && <ManualDataPanel format={format} year={year} documentTypes={format._documentTypes} />}
 
           <div className="flex items-center gap-2">
@@ -606,7 +651,8 @@ function FormatRow({ format, year, onToggle }) {
           )}
           {readiness?.skipped?.length > 0 && (
             <div className="text-xs text-gray-500 dark:text-gray-400">
-              {readiness.skipped.length} fila(s) se excluirán del archivo (dato faltante en el tercero, ej. sin NIT).
+              {readiness.skipped.length} fila(s) se excluirán del archivo (dato faltante en el tercero, ej. sin NIT
+              {readiness.skipped.some((s) => s.reason === 'devolucion_sin_retenciones_en_el_ano') && ', o devoluciones de clientes sin retenciones este año contra las cuales restarlas'}).
             </div>
           )}
         </div>

@@ -18,6 +18,8 @@ const TenantSettingsPage = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
   const isAdmin = user?.role === 'admin';
+  // /dian/config exige estos roles (App.jsx y backend dian.routes.js).
+  const canConfigureDian = ['admin', 'manager', 'accountant'].includes(user?.role);
   const { setFeatures, setTaxConfig } = useTenantStore();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -601,7 +603,7 @@ const TenantSettingsPage = () => {
           </Card>
 
           {/* Facturación Electrónica DIAN */}
-          <Card>
+          {canConfigureDian && <Card>
             <div className="p-6 flex items-center justify-between">
               <div className="flex items-start gap-4">
                 <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600">
@@ -623,7 +625,7 @@ const TenantSettingsPage = () => {
                 Configurar →
               </button>
             </div>
-          </Card>
+          </Card>}
 
           {/* Configuración de Impuestos */}
           <Card>

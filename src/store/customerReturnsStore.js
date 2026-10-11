@@ -81,10 +81,10 @@ const useCustomerReturnsStore = create((set, get) => ({
     }
   },
 
-  approveReturn: async (id, notes) => {
+  approveReturn: async (id, payload = {}) => {
     set({ loading: true, error: null });
     try {
-      await customerReturnsApi.approve(id, notes);
+      await customerReturnsApi.approve(id, payload);
       set({ loading: false });
       get().fetchReturns();
     } catch (error) {

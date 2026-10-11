@@ -19,12 +19,41 @@ const EVENT_GROUPS = [
     ],
   },
   {
+    title: 'Ventas — retenciones que te practica el cliente',
+    events: [
+      { key: 'sale_retefuente_receivable', label: 'Retención en la fuente (a favor)' },
+      { key: 'sale_reteiva_receivable', label: 'ReteIVA (a favor)' },
+      { key: 'sale_reteica_receivable', label: 'ReteICA (a favor)' },
+    ],
+  },
+  {
     title: 'Compras',
     events: [
       { key: 'purchase_inventory', label: 'Ingreso a inventario' },
       { key: 'purchase_payable', label: 'Compra a crédito (proveedores)' },
       { key: 'purchase_cash_account', label: 'Compra de contado' },
+      { key: 'purchase_bank_account', label: 'Compra pagada por banco' },
       { key: 'purchase_iva_descontable', label: 'IVA descontable de la compra' },
+      { key: 'purchase_retefuente_payable', label: 'Retención en la fuente practicada (por pagar a la DIAN)' },
+      { key: 'purchase_reteiva_payable', label: 'ReteIVA practicada (por pagar a la DIAN)' },
+      { key: 'purchase_reteica_payable', label: 'ReteICA practicada (por pagar al municipio)' },
+    ],
+  },
+  {
+    title: 'Inventario',
+    events: [
+      { key: 'inventory_adjustment_surplus', label: 'Sobrante en ajuste de inventario' },
+      { key: 'inventory_adjustment_shortage', label: 'Faltante o merma en ajuste de inventario' },
+      { key: 'internal_consumption_expense', label: 'Consumo interno de inventario' },
+      { key: 'opening_balance_suspense', label: 'Contrapartida de stock y saldos iniciales' },
+    ],
+  },
+  {
+    title: 'Cajas y anticipos',
+    events: [
+      { key: 'cash_session_surplus', label: 'Sobrante de caja (al cerrar sesión)' },
+      { key: 'cash_session_shortage', label: 'Faltante de caja (al cerrar sesión)' },
+      { key: 'customer_advance_liability', label: 'Anticipos recibidos de clientes' },
     ],
   },
   {
@@ -33,6 +62,9 @@ const EVENT_GROUPS = [
       { key: 'expense_payable', label: 'Gasto pendiente de pago' },
       { key: 'expense_cash_account', label: 'Gasto pagado en efectivo' },
       { key: 'expense_bank_account', label: 'Gasto pagado por banco' },
+      { key: 'expense_retefuente_payable', label: 'Retención en la fuente practicada (por pagar a la DIAN)' },
+      { key: 'expense_reteiva_payable', label: 'ReteIVA practicada (por pagar a la DIAN)' },
+      { key: 'expense_reteica_payable', label: 'ReteICA practicada (por pagar al municipio)' },
     ],
   },
   {
@@ -48,6 +80,8 @@ const EVENT_GROUPS = [
       { key: 'expense_category:insumos_oficina', label: 'Insumos de Oficina' },
       { key: 'expense_category:seguros', label: 'Seguros' },
       { key: 'expense_category:honorarios', label: 'Honorarios' },
+      // Desde 2026092103 apunta a costo de servicio (615595), no a gasto.
+      { key: 'expense_category:comisiones_tecnicos', label: 'Comisiones a Técnicos (costo del servicio)' },
       { key: 'expense_category:otro', label: 'Otro' },
     ],
   },
@@ -107,6 +141,22 @@ const EVENT_GROUPS = [
       { key: 'payroll_provision:prima', label: 'Prima de servicios por pagar' },
       { key: 'payroll_provision:vacaciones', label: 'Vacaciones por pagar' },
       { key: 'payroll_payment_bank', label: 'Banco para pagos de nómina (si no se elige cuenta)' },
+    ],
+  },
+  {
+    title: 'ICA',
+    events: [
+      { key: 'ica_expense', label: 'Gasto de ICA del período (incluye avisos y bomberil)' },
+      { key: 'ica_payable', label: 'ICA por pagar' },
+      { key: 'autoica_receivable', label: 'Autorretención de ICA (a favor)' },
+      { key: 'autoica_payable', label: 'Autorretención de ICA por pagar' },
+    ],
+  },
+  {
+    title: 'Cierre del ejercicio',
+    events: [
+      { key: 'year_end_result', label: 'Resultado del ejercicio' },
+      { key: 'year_end_accumulated', label: 'Resultados de ejercicios anteriores (acumulados)' },
     ],
   },
   {

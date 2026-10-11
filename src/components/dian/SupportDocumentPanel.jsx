@@ -33,6 +33,11 @@ import {
 import AdHocSellerModal from './AdHocSellerModal';
 import SupportDocumentAdjustmentModal from './SupportDocumentAdjustmentModal';
 import { getPrimaryDianReason } from './DianStatusBadge';
+import useAuthStore from '../../store/authStore';
+
+// Mismo criterio que checkRole en backend/src/routes/dian.routes.js: el resto
+// de roles (p. ej. bodega viendo una compra) solo ve el estado.
+const ACTION_ROLES = ['admin', 'manager', 'accountant'];
 
 const STATUS_CONFIG = {
   none: {
@@ -69,6 +74,7 @@ export default function SupportDocumentPanel({
   hasSupplier = true,
   onSellerLinked,
 }) {
+  const canAct = ACTION_ROLES.includes(useAuthStore((s) => s.user?.role));
   const [doc, setDoc] = useState(null);
   const [loading, setLoading] = useState(true);
   const [acting, setActing] = useState(false);
@@ -265,7 +271,7 @@ export default function SupportDocumentPanel({
               </div>
             )}
 
-            <div className="flex gap-2 pt-1 flex-wrap">
+            {canAct && <div className="flex gap-2 pt-1 flex-wrap">
               {status !== 'accepted' && (
                 <button disabled={acting} onClick={handleGenerate}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium">
@@ -295,7 +301,7 @@ export default function SupportDocumentPanel({
                   Nota de Ajuste
                 </button>
               )}
-            </div>
+            </div>}
 
             {adjustments.length > 0 && (
               <div className="pt-3 mt-1 border-t border-gray-100 space-y-2">
@@ -343,7 +349,7 @@ export default function SupportDocumentPanel({
                           )}
                         </div>
                       )}
-                      {(adj.dian_status === 'rejected' || adj.dian_status === 'pending') && (
+                      {canAct && (adj.dian_status === 'rejected' || adj.dian_status === 'pending') && (
                         <button type="button" disabled={resendingAdjId === adj.id}
                           onClick={() => handleResendAdjustment(adj.id)}
                           className="mt-2 inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 underline disabled:opacity-50">

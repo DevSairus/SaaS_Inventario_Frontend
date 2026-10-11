@@ -11,6 +11,7 @@
 // (retentionEngine.service.js).
 import { useEffect, useState } from 'react';
 import { chartOfAccountsAPI } from '../../api/accounting';
+import useCanReadAccounting from '../../hooks/useCanReadAccounting';
 import { EXPENSE_CATEGORIES } from '../../api/expenses';
 import useRetentionCatalog from '../../hooks/useRetentionCatalog';
 
@@ -30,11 +31,14 @@ export default function PurchaseRetentionSettings({ config, onChange }) {
   const [showAllConcepts, setShowAllConcepts] = useState(false);
   const COMMON = ['compras', 'servicios', 'honorarios'];
 
+  const canReadAccounting = useCanReadAccounting();
+
   useEffect(() => {
+    if (!canReadAccounting) return;
     chartOfAccountsAPI.getAll()
       .then((res) => setAccounts((res?.data || []).filter((a) => a.accepts_entries !== false && String(a.code).startsWith('2365'))))
       .catch(() => {});
-  }, []);
+  }, [canReadAccounting]);
 
   const defaults = catalog?.defaults;
   const fp = {

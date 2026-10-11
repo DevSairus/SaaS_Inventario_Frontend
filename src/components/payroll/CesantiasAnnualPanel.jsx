@@ -10,6 +10,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { payrollAccountingAPI } from '../../api/payroll';
 import { bankAccountsAPI } from '../../api/accounting';
+import useCanReadAccounting from '../../hooks/useCanReadAccounting';
 import { ArrowPathIcon, BanknotesIcon, CalculatorIcon } from '@heroicons/react/24/outline';
 
 const formatCurrencyCOP = (value) =>
@@ -51,7 +52,10 @@ const CesantiasAnnualPanel = ({ mode }) => {
 
   useEffect(() => { load(); }, [load]);
 
+  const canReadAccounting = useCanReadAccounting();
+
   useEffect(() => {
+    if (!canReadAccounting) return;
     bankAccountsAPI.getAll()
       .then((res) => {
         const list = (res.data || []).filter((b) => b.is_active !== false);
@@ -59,7 +63,7 @@ const CesantiasAnnualPanel = ({ mode }) => {
         if (list[0]) setForm((f) => ({ ...f, bank_account_id: f.bank_account_id || list[0].id }));
       })
       .catch(() => setBankAccounts([]));
-  }, []);
+  }, [canReadAccounting]);
 
   const closeLabel = mode === 'year_end' ? 'Causar cesantías e intereses al 31 de diciembre' : 'Ajustar provisiones al 31 de diciembre';
   const closeHint = mode === 'year_end'

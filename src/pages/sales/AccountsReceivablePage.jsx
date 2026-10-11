@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { accountsReceivableAPI } from '../../api/accountsReceivable';
 import salesApi from '../../api/sales';
+import { openingBalancesAPI } from '../../api/accounting';
 import Layout from '../../components/layout/Layout';
 import toast from 'react-hot-toast';
 import { 
@@ -52,6 +53,7 @@ const AccountsReceivablePage = () => {
       setByCustomer(response.data.by_customer);
       setAllInvoices(response.data.all_invoices);
     } catch (error) {
+      toast.error(error.response?.data?.message || 'Error cargando cuentas por cobrar');
     } finally {
       setLoading(false);
     }
@@ -64,21 +66,34 @@ const AccountsReceivablePage = () => {
     }
 
     try {
-      await salesApi.registerPayment(selectedInvoice.id, {
-        amount: parseFloat(paymentAmount),
-        payment_method: paymentMethod,
-        bank_account_id: paymentMethod !== 'Efectivo' ? bankAccountId : null,
-        notes: paymentNotes
-      });
+      if (selectedInvoice.is_opening_balance) {
+        // Saldo inicial (Contabilidad → Saldos Iniciales): no es una venta,
+        // se abona en su propio registro con su asiento contra cartera.
+        await openingBalancesAPI.registerPayment(selectedInvoice.id, {
+          amount: parseFloat(paymentAmount),
+          payment_method: paymentMethod,
+          bank_account_id: paymentMethod !== 'Efectivo' ? bankAccountId : null,
+          notes: paymentNotes
+        });
+      } else {
+        await salesApi.registerPayment(selectedInvoice.id, {
+          amount: parseFloat(paymentAmount),
+          payment_method: paymentMethod,
+          bank_account_id: paymentMethod !== 'Efectivo' ? bankAccountId : null,
+          notes: paymentNotes
+        });
+      }
       
       setShowPaymentModal(false);
       setSelectedInvoice(null);
       setPaymentAmount('');
       setBankAccountId(null);
       setPaymentNotes('');
+      toast.success('Pago registrado');
       loadData();
     } catch (error) {
-      toast.error('Error al registrar el pago');
+      // Causas típicas: caja cerrada en la sede, venta ya pagada, monto inválido.
+      toast.error(error.response?.data?.message || 'Error al registrar el pago');
     }
   };
 
@@ -186,8 +201,11 @@ const AccountsReceivablePage = () => {
               </div>
               <div className="ml-5 w-0 flex-1">
                 <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">
-                    Vencido (+30 días)
+                  <dt
+                    className="text-sm font-medium text-gray-500 truncate"
+                    title="Pasada la fecha de vencimiento de la factura; si no tiene, 30 días desde la venta"
+                  >
+                    Vencido
                   </dt>
                   <dd className="text-lg font-semibold text-red-600">
                     {formatCurrency(summary?.total_overdue)}
@@ -352,6 +370,11 @@ const AccountsReceivablePage = () => {
                               <div className="flex-1">
                                 <div className="flex items-center space-x-4">
                                   <span className="font-medium">{invoice.sale_number}</span>
+                                  {invoice.is_opening_balance && (
+                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+                                      Saldo inicial
+                                    </span>
+                                  )}
                                   <span className="text-sm text-gray-500">
                                     {formatDate(invoice.sale_date)}
                                   </span>
@@ -371,12 +394,15 @@ const AccountsReceivablePage = () => {
                                 </div>
                               </div>
                               <div className="ml-4 flex-shrink-0 flex items-center gap-2">
-                                <button
-                                  onClick={() => setApplyAdvanceTarget(invoice)}
-                                  className="inline-flex items-center px-3 py-2 border border-blue-300 text-sm leading-4 font-medium rounded-md text-blue-700 bg-white hover:bg-blue-50"
-                                >
-                                  Aplicar Anticipo
-                                </button>
+                                {/* Los anticipos son por cliente: sin cliente no hay qué aplicar. */}
+                                {invoice.customer_id && !invoice.is_opening_balance && (
+                                  <button
+                                    onClick={() => setApplyAdvanceTarget(invoice)}
+                                    className="inline-flex items-center px-3 py-2 border border-blue-300 text-sm leading-4 font-medium rounded-md text-blue-700 bg-white hover:bg-blue-50"
+                                  >
+                                    Aplicar Anticipo
+                                  </button>
+                                )}
                                 <button
                                   onClick={() => {
                                     setSelectedInvoice(invoice);
@@ -448,6 +474,11 @@ const AccountsReceivablePage = () => {
                 <tr key={invoice.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                     {invoice.sale_number}
+                    {invoice.is_opening_balance && (
+                      <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+                        Saldo inicial
+                      </span>
+                    )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {invoice.customer_name}
@@ -474,12 +505,14 @@ const AccountsReceivablePage = () => {
                     )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-3">
-                    <button
-                      onClick={() => setApplyAdvanceTarget(invoice)}
-                      className="text-blue-700 hover:text-blue-900"
-                    >
-                      Aplicar Anticipo
-                    </button>
+                    {invoice.customer_id && !invoice.is_opening_balance && (
+                      <button
+                        onClick={() => setApplyAdvanceTarget(invoice)}
+                        className="text-blue-700 hover:text-blue-900"
+                      >
+                        Aplicar Anticipo
+                      </button>
+                    )}
                     <button
                       onClick={() => {
                         setSelectedInvoice(invoice);
@@ -544,7 +577,7 @@ const AccountsReceivablePage = () => {
                       <option>Efectivo</option>
                       <option>Tarjeta de Crédito</option>
                       <option>Tarjeta de Débito</option>
-                      <option>Transferencia Bancaria</option>
+                      <option>Transferencia</option>
                       <option>Cheque</option>
                     </select>
                   </div>

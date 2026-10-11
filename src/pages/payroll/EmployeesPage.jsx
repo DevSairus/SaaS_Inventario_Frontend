@@ -4,6 +4,7 @@ import { useEmployeesStore } from '../../store/employeesStore';
 import EmployeeModal from '../../components/payroll/EmployeeModal';
 import Layout from '../../components/layout/Layout';
 import LibroAuxiliarModal from '../../components/accounting/LibroAuxiliarModal';
+import useCanReadAccounting from '../../hooks/useCanReadAccounting';
 import { CONTRACT_TYPES, PERIOD_TYPES } from '../../constants/payroll';
 // Nota de reorganización: este archivo vivía en src/pages/EmployeesPage.jsx
 // (un nivel más arriba) pero su propio comentario de cabecera y el resto del
@@ -31,6 +32,7 @@ const contractLabel = (value) => CONTRACT_TYPES.find((c) => c.value === value)?.
 const periodicityLabel = (value) => PERIOD_TYPES.find((p) => p.value === value)?.label || value;
 
 const EmployeesPage = () => {
+  const canReadAccounting = useCanReadAccounting();
   const {
     employees, stats, isLoading, pagination, filters,
     fetchEmployees, fetchStats, setFilters, setPage,
@@ -263,18 +265,20 @@ const EmployeesPage = () => {
                             <button onClick={() => handleEdit(emp)} title="Editar" className="p-1.5 rounded-lg text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors">
                               <PencilIcon className="h-4 w-4" />
                             </button>
-                            <button
-                              onClick={() => setLedgerEmployee({
-                                id: emp.id,
-                                type: 'employee',
-                                name: [emp.first_name, emp.other_names, emp.first_surname, emp.second_surname].filter(Boolean).join(' '),
-                                tax_id: emp.document_number,
-                              })}
-                              title="Ver Libro Auxiliar (movimientos de nómina del empleado)"
-                              className="p-1.5 rounded-lg text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors"
-                            >
-                              <BookOpenIcon className="h-4 w-4" />
-                            </button>
+                            {canReadAccounting && (
+                              <button
+                                onClick={() => setLedgerEmployee({
+                                  id: emp.id,
+                                  type: 'employee',
+                                  name: [emp.first_name, emp.other_names, emp.first_surname, emp.second_surname].filter(Boolean).join(' '),
+                                  tax_id: emp.document_number,
+                                })}
+                                title="Ver Libro Auxiliar (movimientos de nómina del empleado)"
+                                className="p-1.5 rounded-lg text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors"
+                              >
+                                <BookOpenIcon className="h-4 w-4" />
+                              </button>
+                            )}
                             <button
                               onClick={() => handleToggleActive(emp)}
                               title={emp.is_active ? 'Desactivar' : 'Activar'}

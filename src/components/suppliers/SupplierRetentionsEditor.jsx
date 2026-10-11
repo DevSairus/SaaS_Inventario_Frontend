@@ -6,6 +6,7 @@
 // producto/servicio comprado.
 import { useEffect, useState } from 'react';
 import { chartOfAccountsAPI } from '../../api/accounting';
+import useCanReadAccounting from '../../hooks/useCanReadAccounting';
 
 // Solo ReteICA: la ReteFuente sale del concepto del producto (catálogo del
 // tenant) y la ReteIVA del perfil tributario — ver retentionEngine.service.js.
@@ -22,7 +23,10 @@ export default function SupplierRetentionsEditor({ retentions = [], onChange, di
   // El selector de cuenta es opcional: si el usuario no tiene acceso a
   // contabilidad (o el módulo no está activo), simplemente no se muestra y
   // la retención va a la cuenta mapeada por defecto para su tipo.
+  const canReadAccounting = useCanReadAccounting();
+
   useEffect(() => {
+    if (!canReadAccounting) return undefined;
     let cancelled = false;
     chartOfAccountsAPI.getAll()
       .then((res) => {
@@ -32,7 +36,7 @@ export default function SupplierRetentionsEditor({ retentions = [], onChange, di
       })
       .catch(() => {});
     return () => { cancelled = true; };
-  }, []);
+  }, [canReadAccounting]);
 
   const update = (id, field, value) => onChange(retentions.map((r) => (r.id === id ? { ...r, [field]: value } : r)));
   const remove = (id) => onChange(retentions.filter((r) => r.id !== id));

@@ -1,5 +1,5 @@
 // frontend/src/pages/finance/ExpensesPage.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { expensesAPI, EXPENSE_CATEGORIES } from '../../api/expenses';
 import { suppliersAPI } from '../../api/suppliers';
 import { retentionsAPI } from '../../api/retentions';
@@ -17,8 +17,13 @@ import { formatCurrency } from '../../utils/formatters';
 import NumericInput from '../../components/inputs/NumericInput';
 import SupportDocumentPanel from '../../components/dian/SupportDocumentPanel';
 import BankAccountSelect from '../../components/accounting/BankAccountSelect';
+import useAuthStore from '../../store/authStore';
+import Pagination from '../../components/common/Pagination';
 
 const IVA_RATE_OPTIONS = [0, 5, 19];
+// Mismo criterio que backend/src/routes/expenses.routes.js (DELETE /:id).
+const DELETE_ROLES = ['admin', 'manager'];
+const PAGE_SIZE = 50;
 
 const emptyForm = {
   category: 'otro',
@@ -44,6 +49,8 @@ const emptyForm = {
 };
 
 const ExpensesPage = () => {
+  const { user } = useAuthStore();
+  const canDelete = DELETE_ROLES.includes(user?.role);
   const [loading, setLoading] = useState(true);
   const [expenses, setExpenses] = useState([]);
   const [summary, setSummary] = useState(null);
@@ -63,26 +70,56 @@ const ExpensesPage = () => {
   const [paymentMethod, setPaymentMethod] = useState('Efectivo');
   const [paymentBankAccountId, setPaymentBankAccountId] = useState(null);
   const [supportDocExpense, setSupportDocExpense] = useState(null);
+  // Paginación y búsqueda en el backend (antes: 100 más recientes y la
+  // búsqueda solo filtraba esos 100).
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState({ total: 0, pages: 1 });
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const loadSeq = useRef(0); // descarta respuestas viejas al cambiar filtro/página
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(filters.search.trim()), 350);
+    return () => clearTimeout(t);
+  }, [filters.search]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [filters.category, filters.payment_status, debouncedSearch]);
 
   useEffect(() => {
     loadData();
+  }, [filters.category, filters.payment_status, debouncedSearch, page]);
+
+  useEffect(() => {
     suppliersAPI.getAll({ is_active: true, limit: 200 })
       .then(res => setSuppliers(res.data || []))
       .catch(() => {});
-  }, [filters.category, filters.payment_status]);
+  }, []);
 
   const loadData = async () => {
+    const seq = ++loadSeq.current;
     try {
       setLoading(true);
       const [expensesRes, summaryRes] = await Promise.all([
-        expensesAPI.getAll({ category: filters.category, payment_status: filters.payment_status, limit: 100 }),
+        expensesAPI.getAll({
+          category: filters.category,
+          payment_status: filters.payment_status,
+          search: debouncedSearch || undefined,
+          page,
+          limit: PAGE_SIZE,
+        }),
         expensesAPI.getSummary()
       ]);
+      if (seq !== loadSeq.current) return;
       setExpenses(expensesRes.data);
+      setPagination({
+        total: expensesRes.pagination?.total ?? (expensesRes.data || []).length,
+        pages: expensesRes.pagination?.pages || 1,
+      });
       setSummary(summaryRes.data);
     } catch (error) {
     } finally {
-      setLoading(false);
+      if (seq === loadSeq.current) setLoading(false);
     }
   };
 
@@ -216,13 +253,7 @@ const ExpensesPage = () => {
 
   const categoryLabel = (value) => EXPENSE_CATEGORIES.find(c => c.value === value)?.label || value;
 
-  const searchLower = filters.search.toLowerCase().trim();
-  const filteredExpenses = searchLower
-    ? expenses.filter(e =>
-        (e.description || '').toLowerCase().includes(searchLower) ||
-        (e.expense_number || '').toLowerCase().includes(searchLower)
-      )
-    : expenses;
+  const filteredExpenses = expenses;
 
   return (
     <Layout>
@@ -361,7 +392,7 @@ const ExpensesPage = () => {
                             Pagar
                           </button>
                         )}
-                        {parseFloat(e.paid_amount || 0) === 0 && (
+                        {canDelete && parseFloat(e.paid_amount || 0) === 0 && (
                           <button onClick={() => handleDelete(e)} className="text-gray-400 hover:text-red-600">
                             <TrashIcon className="w-4 h-4" />
                           </button>
@@ -373,6 +404,11 @@ const ExpensesPage = () => {
               </tbody>
             </table>
           </div>
+          {pagination.pages > 1 && (
+            <div className="px-4 py-3 border-t border-gray-200">
+              <Pagination currentPage={page} totalPages={pagination.pages} onPageChange={setPage} />
+            </div>
+          )}
         </div>
       </div>
 

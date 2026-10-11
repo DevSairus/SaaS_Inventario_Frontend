@@ -140,6 +140,7 @@ export const RECONCILIATION_STATUS_LABELS = {
 export const exogenaAPI = {
   getFormats: async () => (await api.get('/accounting/exogena/formats')).data,
   toggleFormat: async (code, isEnabled) => (await api.put(`/accounting/exogena/formats/${code}`, { is_enabled: isEnabled })).data,
+  setFormatOptions: async (code, options) => (await api.put(`/accounting/exogena/formats/${code}`, { options })).data,
   getConcepts: async (code, year) => (await api.get(`/accounting/exogena/formats/${code}/concepts`, { params: { year } })).data,
   saveConcepts: async (code, mappings) => (await api.put(`/accounting/exogena/formats/${code}/concepts`, { mappings })).data,
   getReadiness: async (code, year) => (await api.get(`/accounting/exogena/formats/${code}/readiness`, { params: { year } })).data,

@@ -14,6 +14,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { payrollAccountingAPI } from '../../api/payroll';
 import { bankAccountsAPI } from '../../api/accounting';
+import useCanReadAccounting from '../../hooks/useCanReadAccounting';
 import {
   ArrowPathIcon,
   BanknotesIcon,
@@ -182,13 +183,16 @@ const PayrollAccountingPanel = ({ period, canRegenerate = false }) => {
 
   useEffect(() => { load(); }, [load, period.status]);
 
+  const canReadAccounting = useCanReadAccounting();
+
   useEffect(() => {
+    if (!canReadAccounting) return;
     // Sin módulo de contabilidad (o sin cuentas registradas) se paga contra
     // la cuenta de bancos del Mapeo de Cuentas.
     bankAccountsAPI.getAll()
       .then((res) => setBankAccounts((res.data || []).filter((b) => b.is_active !== false)))
       .catch(() => setBankAccounts([]));
-  }, []);
+  }, [canReadAccounting]);
 
   const handleGenerate = async () => {
     setGenerating(true);

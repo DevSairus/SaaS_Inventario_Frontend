@@ -1,12 +1,15 @@
 // frontend/src/pages/finance/ReceiptsPage.jsx
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import toast from 'react-hot-toast';
 import { receiptsAPI } from '../../api/receipts';
 import { formatCurrency } from '../../utils/formatters';
 import Layout from '../../components/layout/Layout';
+import Pagination from '../../components/common/Pagination';
 import { DocumentTextIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 
 const SOURCE_LABELS = { sale: 'Venta', work_order: 'Taller' };
+// receipts.controller.js pagina por limit/offset (máx. 200) y devuelve total.
+const PAGE_SIZE = 50;
 
 const toLocalDateString = (date) => {
   const d = date instanceof Date ? date : new Date(date);
@@ -22,6 +25,8 @@ const ReceiptsPage = () => {
   const [receipts, setReceipts] = useState([]);
   const [total, setTotal] = useState(0);
   const [openingPdfId, setOpeningPdfId] = useState(null);
+  const [page, setPage] = useState(1);
+  const loadSeq = useRef(0);
 
   const [filters, setFilters] = useState({
     from_date: toLocalDateString(new Date(new Date().setDate(1))),
@@ -31,24 +36,27 @@ const ReceiptsPage = () => {
   });
 
   const loadData = useCallback(async () => {
+    const seq = ++loadSeq.current;
     try {
       setLoading(true);
       setLoadError(null);
-      const params = {};
+      const params = { limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE };
       if (filters.from_date) params.from_date = filters.from_date;
       if (filters.to_date) params.to_date = filters.to_date;
       if (filters.source_type) params.source_type = filters.source_type;
       if (filters.search) params.search = filters.search;
       const res = await receiptsAPI.list(params);
+      if (seq !== loadSeq.current) return;
       setReceipts(res.data.data || []);
       setTotal(res.data.total || 0);
     } catch (error) {
       setLoadError(error.response?.data?.message || 'Error cargando los recibos');
     } finally {
-      setLoading(false);
+      if (seq === loadSeq.current) setLoading(false);
     }
-  }, [filters]);
+  }, [filters, page]);
 
+  useEffect(() => { setPage(1); }, [filters]);
   useEffect(() => { loadData(); }, [loadData]);
 
   const openPdf = async (receipt) => {
@@ -165,6 +173,11 @@ const ReceiptsPage = () => {
               </tbody>
             </table>
           </div>
+          {total > PAGE_SIZE && (
+            <div className="px-4 py-3 border-t border-gray-200">
+              <Pagination currentPage={page} totalPages={Math.ceil(total / PAGE_SIZE)} onPageChange={setPage} />
+            </div>
+          )}
         </div>
       </div>
     </Layout>

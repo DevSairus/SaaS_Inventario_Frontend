@@ -26,6 +26,16 @@ const SOURCE_LABELS = {
   work_order: 'OT (sin facturar)',
   purchase: 'Compra',
   expense: 'Gasto',
+  // Mismas fuentes que buildCashFlow() (cashflow.controller.js), que también
+  // alimenta el cuadre de la sesión.
+  customer_advance: 'Anticipo recibido',
+  customer_advance_refund: 'Devolución de anticipo',
+  customer_return_refund: 'Reintegro por devolución',
+  supplier_return_refund: 'Reintegro de proveedor',
+  customer_return_reversal: 'Reversión de devolución (cliente)',
+  supplier_return_reversal: 'Reversión de devolución (proveedor)',
+  opening_receivable: 'Abono a saldo inicial',
+  opening_payable: 'Pago de saldo inicial',
 };
 
 // Lista de movimientos que componen el cuadre de una sesión — drill-down

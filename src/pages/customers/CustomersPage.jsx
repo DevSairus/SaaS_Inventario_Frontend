@@ -14,6 +14,7 @@ import DianLookupButton, { useDianLookupAvailability } from '../../components/co
 import DivipolaCitySelect from '../../components/common/DivipolaCitySelect';
 import PhoneCountryCodeSelect, { DEFAULT_COUNTRY_CODE } from '../../components/common/PhoneCountryCodeSelect';
 import LibroAuxiliarModal from '../../components/accounting/LibroAuxiliarModal';
+import useCanReadAccounting from '../../hooks/useCanReadAccounting';
 import toast from 'react-hot-toast';
 
 // schemeID DIAN — mismos códigos que usa dianKitAdapter.js. El default por
@@ -39,6 +40,7 @@ const FORM_EMPTY = {
 const PAGE_SIZE = 50;
 
 export default function CustomersPage() {
+  const canReadAccounting = useCanReadAccounting();
   const { customers, customersTotal, loading, error, fetchCustomers, createCustomer, updateCustomer, deleteCustomer } = useCustomersStore();
   const [showModal, setShowModal] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState(null);
@@ -199,10 +201,12 @@ export default function CustomersPage() {
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex justify-end space-x-2">
                         <Link to={`/customers/${customer.id}`} className="text-blue-600 hover:text-blue-900" title="Ver detalle"><EyeIcon className="h-5 w-5" /></Link>
-                        <button
-                          onClick={() => setLedgerCustomer({ id: customer.id, type: 'customer', name: customer.business_name || customer.full_name, tax_id: customer.tax_id })}
-                          className="text-indigo-600 hover:text-indigo-900" title="Ver Libro Auxiliar (cartera)"
-                        ><BookOpenIcon className="h-5 w-5" /></button>
+                        {canReadAccounting && (
+                          <button
+                            onClick={() => setLedgerCustomer({ id: customer.id, type: 'customer', name: customer.business_name || customer.full_name, tax_id: customer.tax_id })}
+                            className="text-indigo-600 hover:text-indigo-900" title="Ver Libro Auxiliar (cartera)"
+                          ><BookOpenIcon className="h-5 w-5" /></button>
+                        )}
                         <button onClick={() => handleOpenModal(customer)} className="text-yellow-600 hover:text-yellow-900" title="Editar"><PencilIcon className="h-5 w-5" /></button>
                         <button onClick={() => setDeleteDialog({ show: true, customer })} className="text-red-600 hover:text-red-900" title="Eliminar"><TrashIcon className="h-5 w-5" /></button>
                       </div>

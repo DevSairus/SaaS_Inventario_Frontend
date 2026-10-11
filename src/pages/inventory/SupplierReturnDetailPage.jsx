@@ -1,36 +1,37 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, CheckCircle, XCircle, Package, RotateCcw } from 'lucide-react';
+import { ArrowLeft, CheckCircle, XCircle, Package } from 'lucide-react';
 import Layout from '../../components/layout/Layout';
 import api from '../../api/axios';
 import toast from 'react-hot-toast';
+import useIsManagement from '../../hooks/useIsManagement';
+import ApproveSupplierReturnModal from '../../components/inventory/ApproveSupplierReturnModal';
+import ReverseReturnModal from '../../components/returns/ReverseReturnModal';
+import { SUPPLIER_RETURN_REASONS as REASON_LABELS } from '../../utils/returnLabels';
 
 const COP = (n) =>
   new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(n || 0);
 
-const REASON_LABELS = {
-  defective:  'Producto Defectuoso',
-  incorrect:  'Producto Incorrecto',
-  excess:     'Exceso de Inventario',
-  damaged:    'Dañado en Tránsito',
-  other:      'Otro',
-};
 
 const STATUS_CONFIG = {
   pending:  { label: 'Pendiente',  cls: 'bg-yellow-100 text-yellow-800' },
   approved: { label: 'Aprobada',   cls: 'bg-green-100 text-green-800'  },
   rejected: { label: 'Rechazada',  cls: 'bg-red-100 text-red-800'      },
+  reversed: { label: 'Reversada',  cls: 'bg-gray-200 text-gray-700'     },
 };
 
 const SupplierReturnDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  // Aprobar/rechazar/eliminar: checkRole('admin', 'manager', 'accountant').
+  const canManage = useIsManagement();
 
   const [supplierReturn, setSupplierReturn] = useState(null);
   const [loading, setLoading]               = useState(true);
   const [actionLoading, setActionLoading]   = useState(false);
   const [showApproveModal, setShowApproveModal] = useState(false);
   const [showRejectModal,  setShowRejectModal]  = useState(false);
+  const [showReverseModal, setShowReverseModal] = useState(false);
   const [rejectionReason,  setRejectionReason]  = useState('');
 
   useEffect(() => { loadReturn(); }, [id]);
@@ -48,15 +49,29 @@ const SupplierReturnDetailPage = () => {
     }
   };
 
-  const handleApprove = async () => {
+  // Reintento de la Nota de Ajuste al Documento Soporte si falló al aprobar.
+  const handleIssueAdjustment = async () => {
     setActionLoading(true);
     try {
-      await api.put(`/inventory/supplier-returns/${id}/approve`);
-      toast.success('Devolución aprobada. Stock actualizado.');
-      setShowApproveModal(false);
+      const res = await api.post(`/inventory/supplier-returns/${id}/support-adjustment`);
+      toast.success(res.data?.message || 'Nota de Ajuste creada');
       loadReturn();
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Error al aprobar');
+      toast.error(err.response?.data?.message || 'Error al crear la Nota de Ajuste');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // Saldo a favor que quedó sin aplicar (no había compras pendientes al aprobar).
+  const handleApplyCredit = async () => {
+    setActionLoading(true);
+    try {
+      const res = await api.post(`/inventory/supplier-returns/${id}/apply-credit`);
+      toast.success(res.data?.message || 'Saldo a favor aplicado');
+      loadReturn();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Error al aplicar el saldo a favor');
     } finally {
       setActionLoading(false);
     }
@@ -135,7 +150,7 @@ const SupplierReturnDetailPage = () => {
 
           {/* Acciones */}
           <div className="flex gap-2 flex-wrap">
-            {isPending && (
+            {isPending && canManage && (
               <>
                 <button
                   onClick={() => setShowApproveModal(true)}
@@ -156,6 +171,14 @@ const SupplierReturnDetailPage = () => {
                   Eliminar
                 </button>
               </>
+            )}
+            {supplierReturn.status === 'approved' && canManage && (
+              <button
+                onClick={() => setShowReverseModal(true)}
+                className="flex items-center gap-1.5 border border-gray-300 text-gray-700 hover:bg-gray-50 px-4 py-2 rounded-lg text-sm font-medium transition"
+              >
+                Reversar devolución
+              </button>
             )}
           </div>
         </div>
@@ -271,6 +294,85 @@ const SupplierReturnDetailPage = () => {
               {supplierReturn.approved_at && new Date(supplierReturn.approved_at).toLocaleString('es-CO')}
             </p>
             <p className="text-xs text-green-600 mt-1">El stock fue reducido al momento de la aprobación.</p>
+            {supplierReturn.payable_reduction != null && (
+              <div className="text-sm text-green-800 mt-2 space-y-0.5">
+                {Number(supplierReturn.payable_reduction) > 0 && <p>Se descontó de lo que se le debía al proveedor: <strong>{COP(supplierReturn.payable_reduction)}</strong></p>}
+                {(() => {
+                  const r = supplierReturn.retention_reversal || {};
+                  const total = Number(r.retefuente || 0) + Number(r.reteiva || 0) + Number(r.reteica || 0);
+                  return total > 0 ? <p>Retenciones reversadas: <strong>{COP(total)}</strong></p> : null;
+                })()}
+              </div>
+            )}
+            {(supplierReturn.support_adjustment || supplierReturn.requires_support_adjustment) && (
+              <div className="text-sm mt-2">
+                {supplierReturn.support_adjustment ? (
+                  <p className="text-green-800">
+                    Nota de Ajuste al Documento Soporte {supplierReturn.support_adjustment.adjustment_number || ''}:{' '}
+                    {{ accepted: 'aceptada por la DIAN', rejected: 'rechazada', pending: 'pendiente de envío', sending: 'enviando' }[supplierReturn.support_adjustment.dian_status] || supplierReturn.support_adjustment.dian_status}
+                    {supplierReturn.support_adjustment.dian_status === 'rejected' && supplierReturn.support_adjustment.dian_error_message && (
+                      <span className="block text-red-600">{supplierReturn.support_adjustment.dian_error_message}</span>
+                    )}
+                  </p>
+                ) : (
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <span className="text-amber-800">Falta la Nota de Ajuste al Documento Soporte.</span>
+                    {canManage && (
+                      <button onClick={handleIssueAdjustment} disabled={actionLoading}
+                        className="px-3 py-1.5 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
+                        Emitir Nota de Ajuste
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+            {supplierReturn.settlement_type === 'refund' && (
+              <p className="text-sm text-green-800 mt-2">
+                Reintegro del proveedor: <strong>{COP(supplierReturn.refund_amount)}</strong> en {supplierReturn.refund_method || 'Efectivo'}.
+              </p>
+            )}
+            {supplierReturn.settlement_type === 'credit' && (() => {
+              const available = Number(supplierReturn.credit_amount || 0) - Number(supplierReturn.credit_applied_amount || 0);
+              return (
+                <div className="text-sm text-green-800 mt-2 space-y-1">
+                  <p>
+                    Saldo a favor con el proveedor: <strong>{COP(supplierReturn.credit_amount)}</strong>
+                    {Number(supplierReturn.credit_applied_amount || 0) > 0 && <> · aplicado {COP(supplierReturn.credit_applied_amount)}</>}
+                  </p>
+                  {(supplierReturn.credit_applications || []).map((a) => (
+                    <p key={`${a.purchase_id}-${a.date}`} className="text-xs text-green-700">
+                      Compra {a.purchase_number}: {COP(a.amount)}
+                    </p>
+                  ))}
+                  {available > 0.009 && (
+                    <div className="flex items-center gap-3 flex-wrap pt-1">
+                      <span className="text-amber-800">Disponible para aplicar: <strong>{COP(available)}</strong></span>
+                      {canManage && (
+                        <button
+                          onClick={handleApplyCredit}
+                          disabled={actionLoading}
+                          className="px-3 py-1.5 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                        >
+                          Aplicar a compras pendientes
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+          </div>
+        )}
+
+        {supplierReturn.status === 'reversed' && (
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-5 mt-6">
+            <h3 className="font-semibold text-gray-800 mb-1">Reversada</h3>
+            <p className="text-sm text-gray-700">{supplierReturn.reversal_reason}</p>
+            {supplierReturn.reversed_at && <p className="text-xs text-gray-500 mt-1">{new Date(supplierReturn.reversed_at).toLocaleString('es-CO')}</p>}
+            {Number(supplierReturn.reversal_amount || 0) > 0 && (
+              <p className="text-sm text-gray-700 mt-1">Movimiento de dinero de la reversión: {COP(supplierReturn.reversal_amount)} en {supplierReturn.reversal_method || 'Efectivo'}</p>
+            )}
           </div>
         )}
 
@@ -290,41 +392,22 @@ const SupplierReturnDetailPage = () => {
         )}
       </div>
 
+      {showReverseModal && (
+        <ReverseReturnModal
+          mode="supplier"
+          ret={supplierReturn}
+          onClose={() => setShowReverseModal(false)}
+          onReversed={() => { setShowReverseModal(false); loadReturn(); }}
+        />
+      )}
+
       {/* Modal Aprobar */}
       {showApproveModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="bg-green-100 p-2 rounded-full">
-                <RotateCcw size={20} className="text-green-600" />
-              </div>
-              <h3 className="text-lg font-bold text-gray-900">Aprobar Devolución</h3>
-            </div>
-            <p className="text-gray-600 mb-2">
-              ¿Confirmas la aprobación de <span className="font-semibold">{supplierReturn.return_number}</span>?
-            </p>
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-5 text-sm text-amber-800">
-              ⚠️ Al aprobar se <strong>reducirá el stock</strong> de los productos devueltos. Esta acción no se puede deshacer.
-            </div>
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setShowApproveModal(false)}
-                disabled={actionLoading}
-                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleApprove}
-                disabled={actionLoading}
-                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium disabled:opacity-50 flex items-center gap-2"
-              >
-                {actionLoading && <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />}
-                Aprobar
-              </button>
-            </div>
-          </div>
-        </div>
+        <ApproveSupplierReturnModal
+          supplierReturn={supplierReturn}
+          onClose={() => setShowApproveModal(false)}
+          onApproved={() => { setShowApproveModal(false); loadReturn(); }}
+        />
       )}
 
       {/* Modal Rechazar */}

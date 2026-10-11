@@ -3,6 +3,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { useSuppliersStore } from '../../store/suppliersStore';
 import SupplierModal from '../../components/suppliers/SupplierModal';
 import LibroAuxiliarModal from '../../components/accounting/LibroAuxiliarModal';
+import useCanReadAccounting from '../../hooks/useCanReadAccounting';
 import Layout from '../../components/layout/Layout';
 import {
   PlusIcon,
@@ -25,6 +26,7 @@ const normalizeQ = (s) => (s || '').toLowerCase().normalize('NFD').replace(/[\u0
 
 /* ─── componente ──────────────────────────────────────────── */
 const SuppliersPage = () => {
+  const canReadAccounting = useCanReadAccounting();
   const {
     suppliers, stats, isLoading, pagination, filters,
     fetchSuppliers, fetchStats, setFilters, setPage,
@@ -272,13 +274,15 @@ const SuppliersPage = () => {
                           <button onClick={() => handleEdit(s)} title="Editar" className="p-1.5 rounded-lg text-blue-600 hover:bg-blue-50 transition-colors">
                             <PencilIcon className="h-4 w-4" />
                           </button>
-                          <button
-                            onClick={() => setLedgerSupplier({ id: s.id, type: 'supplier', name: s.business_name || s.name, tax_id: s.tax_id })}
-                            title="Ver Libro Auxiliar (cuentas por pagar)"
-                            className="p-1.5 rounded-lg text-indigo-600 hover:bg-indigo-50 transition-colors"
-                          >
-                            <BookOpenIcon className="h-4 w-4" />
-                          </button>
+                          {canReadAccounting && (
+                            <button
+                              onClick={() => setLedgerSupplier({ id: s.id, type: 'supplier', name: s.business_name || s.name, tax_id: s.tax_id })}
+                              title="Ver Libro Auxiliar (cuentas por pagar)"
+                              className="p-1.5 rounded-lg text-indigo-600 hover:bg-indigo-50 transition-colors"
+                            >
+                              <BookOpenIcon className="h-4 w-4" />
+                            </button>
+                          )}
                           <button
                             onClick={() => handleToggleActive(s)}
                             title={s.is_active ? 'Desactivar' : 'Activar'}

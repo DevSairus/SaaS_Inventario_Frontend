@@ -5,17 +5,24 @@ import Layout from '../../components/layout/Layout';
 import useCustomerReturnsStore from '../../store/customerReturnsStore';
 import toast from 'react-hot-toast';
 import { formatNumber } from '../../utils/formatters';
+import useIsManagement from '../../hooks/useIsManagement';
+import ApproveCustomerReturnModal from '../../components/sales/ApproveCustomerReturnModal';
+import ReverseReturnModal from '../../components/returns/ReverseReturnModal';
+import { customerReturnsApi } from '../../api/customerReturns';
+import api from '../../api/axios';
+import { CUSTOMER_RETURN_REASONS, RETURN_ITEM_CONDITIONS, labelOf } from '../../utils/returnLabels';
 
 const CustomerReturnDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { getReturnById, approveReturn, rejectReturn } = useCustomerReturnsStore();
+  // Aprobar/rechazar: checkRole('admin', 'manager', 'accountant').
+  const canManage = useIsManagement();
+  const { getReturnById, rejectReturn } = useCustomerReturnsStore();
   
   const [customerReturn, setCustomerReturn] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showApproveModal, setShowApproveModal] = useState(false);
   const [showRejectModal, setShowRejectModal] = useState(false);
-  const [approvalNotes, setApprovalNotes] = useState('');
   const [rejectionReason, setRejectionReason] = useState('');
 
   useEffect(() => {
@@ -35,15 +42,31 @@ const CustomerReturnDetailPage = () => {
     }
   };
 
-  const handleApprove = async () => {
+  const [issuingNote, setIssuingNote] = useState(false);
+  const [showReverseModal, setShowReverseModal] = useState(false);
+
+  const handleDelete = async () => {
+    if (!window.confirm(`¿Eliminar la devolución ${customerReturn.return_number}?`)) return;
     try {
-      await approveReturn(id, approvalNotes);
-      setShowApproveModal(false);
-      setApprovalNotes('');
-      toast.success('Devolución aprobada exitosamente');
+      await customerReturnsApi.delete(id);
+      toast.success('Devolución eliminada');
+      navigate('/sales/customer-returns');
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Error al eliminar');
+    }
+  };
+
+  // Reintento de la nota crédito electrónica si falló al aprobar.
+  const handleIssueCreditNote = async () => {
+    setIssuingNote(true);
+    try {
+      const res = await api.post(`/sales/customer-returns/${id}/credit-note`);
+      toast.success(res.data?.message || 'Nota crédito creada');
       loadReturnDetail();
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Error al aprobar');
+      toast.error(error.response?.data?.message || 'Error al crear la nota crédito');
+    } finally {
+      setIssuingNote(false);
     }
   };
 
@@ -63,12 +86,14 @@ const CustomerReturnDetailPage = () => {
     const badges = {
       pending: 'bg-yellow-100 text-yellow-800',
       approved: 'bg-green-100 text-green-800',
-      rejected: 'bg-red-100 text-red-800'
+      rejected: 'bg-red-100 text-red-800',
+      reversed: 'bg-gray-200 text-gray-700'
     };
     const labels = {
       pending: 'Pendiente',
       approved: 'Aprobada',
-      rejected: 'Rechazada'
+      rejected: 'Rechazada',
+      reversed: 'Reversada'
     };
     return (
       <span className={`px-3 py-1 rounded-full text-sm font-medium ${badges[status]}`}>
@@ -95,8 +120,8 @@ const CustomerReturnDetailPage = () => {
       none: 'Sin inventario'
     };
     return (
-      <span className={`px-2 py-1 rounded text-xs font-medium ${badges[destination]}`}>
-        {labels[destination]}
+      <span className={`px-2 py-1 rounded text-xs font-medium ${badges[destination] || 'bg-gray-100 text-gray-700'}`}>
+        {labels[destination] || destination || '-'}
       </span>
     );
   };
@@ -149,7 +174,15 @@ const CustomerReturnDetailPage = () => {
             </div>
             <div className="flex items-center gap-3">
               {getStatusBadge(customerReturn.status)}
-              {customerReturn.status === 'pending' && (
+              {customerReturn.status === 'approved' && canManage && (
+                <button
+                  onClick={() => setShowReverseModal(true)}
+                  className="flex items-center gap-2 border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50"
+                >
+                  Reversar devolución
+                </button>
+              )}
+              {customerReturn.status === 'pending' && canManage && (
                 <>
                   <button
                     onClick={() => setShowApproveModal(true)}
@@ -164,6 +197,12 @@ const CustomerReturnDetailPage = () => {
                   >
                     <XCircle className="w-5 h-5" />
                     Rechazar
+                  </button>
+                  <button
+                    onClick={handleDelete}
+                    className="flex items-center gap-2 border border-red-200 text-red-600 px-4 py-2 rounded-lg hover:bg-red-50"
+                  >
+                    Eliminar
                   </button>
                 </>
               )}
@@ -263,7 +302,7 @@ const CustomerReturnDetailPage = () => {
               <FileText className="w-6 h-6 text-blue-600" />
               <h2 className="text-lg font-semibold">Motivo de la Devolución</h2>
             </div>
-            <p className="text-gray-700">{customerReturn.reason}</p>
+            <p className="text-gray-700">{labelOf(CUSTOMER_RETURN_REASONS, customerReturn.reason)}</p>
           </div>
         )}
 
@@ -281,7 +320,7 @@ const CustomerReturnDetailPage = () => {
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Precio Unit.</th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Subtotal</th>
                 <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Destino</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Razón</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Condición</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -308,13 +347,24 @@ const CustomerReturnDetailPage = () => {
                     {getDestinationBadge(item.destination)}
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-500">
-                    {item.reason || '-'}
+                    {labelOf(RETURN_ITEM_CONDITIONS, item.condition)}
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+
+        {customerReturn.status === 'reversed' && (
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-5 mt-6">
+            <h3 className="font-semibold text-gray-800 mb-1">Reversada</h3>
+            <p className="text-sm text-gray-700">{customerReturn.reversal_reason}</p>
+            {customerReturn.reversed_at && <p className="text-xs text-gray-500 mt-1">{new Date(customerReturn.reversed_at).toLocaleString('es-CO')}</p>}
+            {Number(customerReturn.reversal_amount || 0) > 0 && (
+              <p className="text-sm text-gray-700 mt-1">Movimiento de dinero de la reversión: ${formatNumber(parseFloat(customerReturn.reversal_amount || 0), 2)} en {customerReturn.reversal_method || 'Efectivo'}</p>
+            )}
+          </div>
+        )}
 
         {/* Approval/Rejection Info */}
         {(customerReturn.status === 'approved' || customerReturn.status === 'rejected') && (
@@ -328,9 +378,9 @@ const CustomerReturnDetailPage = () => {
                   {customerReturn.status === 'approved' ? 'Aprobado por' : 'Rechazado por'}
                 </p>
                 <p className="font-medium">
-                  {customerReturn.status === 'approved' 
-                    ? customerReturn.approved_by_user?.name 
-                    : customerReturn.rejected_by_user?.name || 'N/A'}
+                  {(customerReturn.status === 'approved'
+                    ? customerReturn.approved_by_user?.name
+                    : customerReturn.rejected_by_user?.name) || 'N/A'}
                 </p>
               </div>
               <div>
@@ -344,6 +394,56 @@ const CustomerReturnDetailPage = () => {
                 </p>
               </div>
             </div>
+            {customerReturn.status === 'approved' && (customerReturn.credit_note || customerReturn.requires_credit_note) && (
+              <div className="mt-4">
+                <p className="text-sm text-gray-600">Nota crédito electrónica</p>
+                {customerReturn.credit_note ? (
+                  <p className="font-medium">
+                    {customerReturn.credit_note.dian_invoice_number || customerReturn.credit_note.sale_number}
+                    {' · '}
+                    {{ accepted: 'Aceptada por la DIAN', rejected: 'Rechazada', pending: 'Pendiente de envío', sending: 'Enviando' }[customerReturn.credit_note.dian_status] || customerReturn.credit_note.dian_status}
+                    {customerReturn.credit_note.dian_status === 'rejected' && customerReturn.credit_note.dian_error_message && (
+                      <span className="block text-sm text-red-600">{customerReturn.credit_note.dian_error_message}</span>
+                    )}
+                  </p>
+                ) : (
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <span className="font-medium text-orange-700">Pendiente: la factura es electrónica y no se emitió la nota crédito.</span>
+                    {canManage && (
+                      <button
+                        onClick={handleIssueCreditNote}
+                        disabled={issuingNote}
+                        className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                      >
+                        {issuingNote ? 'Emitiendo...' : 'Emitir nota crédito'}
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+            {customerReturn.status === 'approved' && customerReturn.receivable_reduction != null && (
+              <div className="mt-4 space-y-0.5 text-sm">
+                {Number(customerReturn.receivable_reduction) > 0 && (
+                  <p>Se descontó de lo que debía el cliente: <strong>${formatNumber(parseFloat(customerReturn.receivable_reduction), 2)}</strong></p>
+                )}
+                {(() => {
+                  const r = customerReturn.retention_reversal || {};
+                  const total = Number(r.retefuente || 0) + Number(r.reteiva || 0) + Number(r.reteica || 0);
+                  return total > 0 ? <p>Retenciones del cliente reversadas: <strong>${formatNumber(total, 2)}</strong></p> : null;
+                })()}
+              </div>
+            )}
+            {customerReturn.status === 'approved' && customerReturn.settlement_type && (
+              <div className="mt-4">
+                <p className="text-sm text-gray-600">Dinero a favor del cliente</p>
+                <p className="font-medium">
+                  {customerReturn.settlement_type === 'credit'
+                    ? `Quedó como saldo a favor${customerReturn.credit_advance ? ` (anticipo ${customerReturn.credit_advance.advance_number})` : ''}`
+                    : `Devuelta: ${formatNumber(parseFloat(customerReturn.refund_amount || 0), 2)} en ${customerReturn.refund_method || 'Efectivo'}`}
+                </p>
+              </div>
+            )}
             {((customerReturn.status === 'approved' && customerReturn.approval_notes) ||
               (customerReturn.status === 'rejected' && customerReturn.rejection_reason)) && (
               <div className="mt-4">
@@ -359,41 +459,22 @@ const CustomerReturnDetailPage = () => {
         )}
       </div>
 
+      {showReverseModal && (
+        <ReverseReturnModal
+          mode="customer"
+          ret={customerReturn}
+          onClose={() => setShowReverseModal(false)}
+          onReversed={() => { setShowReverseModal(false); loadReturnDetail(); }}
+        />
+      )}
+
       {/* Approve Modal */}
       {showApproveModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full">
-            <h3 className="text-lg font-bold mb-4">Aprobar Devolución</h3>
-            <p className="text-gray-600 mb-4">
-              ¿Estás seguro de aprobar la devolución {customerReturn.return_number}?
-              El stock de los productos se actualizará según el destino configurado.
-            </p>
-            <textarea
-              value={approvalNotes}
-              onChange={(e) => setApprovalNotes(e.target.value)}
-              placeholder="Notas (opcional)"
-              className="w-full border border-gray-300 rounded-lg p-2 mb-4"
-              rows="3"
-            />
-            <div className="flex gap-2 justify-end">
-              <button
-                onClick={() => {
-                  setShowApproveModal(false);
-                  setApprovalNotes('');
-                }}
-                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleApprove}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-              >
-                Aprobar
-              </button>
-            </div>
-          </div>
-        </div>
+        <ApproveCustomerReturnModal
+          customerReturn={customerReturn}
+          onClose={() => setShowApproveModal(false)}
+          onApproved={() => { setShowApproveModal(false); loadReturnDetail(); }}
+        />
       )}
 
       {/* Reject Modal */}
