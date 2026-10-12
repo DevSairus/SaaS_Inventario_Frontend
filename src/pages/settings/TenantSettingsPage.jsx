@@ -12,7 +12,7 @@ import useTenantStore from '../../store/tenantStore';
 import useAuthStore from '../../store/authStore';
 import TaxConfigSection from '../../components/settings/TaxConfigSection';
 import { invalidateRetentionCatalog } from '../../hooks/useRetentionCatalog';
-import { Building2, Receipt, ShoppingCart, Wrench, Landmark, MessageCircle } from 'lucide-react';
+import { Building2, Receipt, ShoppingCart, Wrench, Landmark, MessageCircle, Printer } from 'lucide-react';
 
 const TenantSettingsPage = () => {
   const navigate = useNavigate();
@@ -599,6 +599,31 @@ const TenantSettingsPage = () => {
                   }`} />
                 </button>
               </div>
+            </div>
+          </Card>
+
+          {/* Impresión de etiquetas (códigos de barras) */}
+          <Card>
+            <div className="p-6 flex items-center justify-between">
+              <div className="flex items-start gap-4">
+                <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600">
+                  <Printer size={20} strokeWidth={2} />
+                </div>
+                <div>
+                  <p className="font-semibold text-gray-900">Impresión de etiquetas</p>
+                  <p className="text-sm text-gray-500 mt-0.5">
+                    Ajusta la impresión de códigos de barras a tu impresora y papel: tamaño de etiqueta, columnas del rollo u hoja
+                    adhesiva, resolución y calibración.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => navigate('/settings/label-printing')}
+                className="flex-shrink-0 ml-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
+              >
+                Configurar →
+              </button>
             </div>
           </Card>
 

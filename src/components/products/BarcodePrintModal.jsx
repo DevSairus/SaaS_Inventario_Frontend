@@ -1,17 +1,22 @@
-import toast from 'react-hot-toast';
 // frontend/src/components/products/BarcodePrintModal.jsx
-// Dependencia requerida: npm install jsbarcode
-import { useState, useCallback, useEffect } from 'react';
-import { X, Printer, Package, Info, Wand2, CheckCircle, AlertCircle } from 'lucide-react';
-import JsBarcode from 'jsbarcode';
+// Imprimir etiquetas con código de barras de un producto usando el PERFIL de
+// impresión del equipo (impresora + papel, Ajustes → Impresión de etiquetas;
+// motor en utils/labelPrinting.js). Antes había 4 tamaños fijos y la página
+// salía en tamaño "auto": en impresoras genéricas el navegador escalaba o
+// corría las etiquetas.
+import { useState, useCallback, useEffect, useMemo } from 'react';
+import { Link } from 'react-router-dom';
+import toast from 'react-hot-toast';
+import { X, Printer, Package, Wand2, CheckCircle, AlertCircle, Settings } from 'lucide-react';
 import { productsAPI } from '../../api/products';
+import { labelPrintingAPI } from '../../api/labelPrinting';
+import useAuthStore from '../../store/authStore';
+import LabelPreview from '../labels/LabelPreview';
+import {
+  DEFAULT_PROFILE, pickProfile, setDeviceProfileId, printProductLabels, labelsPerPage, normalizeProfile,
+} from '../../utils/labelPrinting';
 
-const LABEL_SIZES = [
-  { id: '58x30', label: '58 × 30 mm', w: 58, h: 30, barcodeH: 28, fontSize: 6.5 },
-  { id: '58x40', label: '58 × 40 mm', w: 58, h: 40, barcodeH: 36, fontSize: 7 },
-  { id: '80x50', label: '80 × 50 mm', w: 80, h: 50, barcodeH: 42, fontSize: 8 },
-  { id: '100x60', label: '100 × 60 mm', w: 100, h: 60, barcodeH: 50, fontSize: 9 },
-];
+const MANAGE_ROLES = ['admin', 'manager'];
 
 const generateEAN13 = () => {
   const digits = Array.from({ length: 12 }, () => Math.floor(Math.random() * 10));
@@ -20,108 +25,65 @@ const generateEAN13 = () => {
   return [...digits, check].join('');
 };
 
-const generateBarcodeDataURL = (value, barcodeH) => {
-  if (!value) return null;
-  try {
-    const canvas = document.createElement('canvas');
-    JsBarcode(canvas, String(value), {
-      format: 'CODE128',
-      width: 1.5,
-      height: barcodeH,
-      displayValue: true,
-      fontSize: 10,
-      margin: 3,
-      background: '#ffffff',
-      lineColor: '#000000',
-    });
-    return canvas.toDataURL('image/png');
-  } catch (e) {
-    toast.error('No se pudo generar el código de barras.');
-    return null;
-  }
-};
-
-function LabelPreview({ barcode, product, size, showName, showSku }) {
-  const dataURL = barcode ? generateBarcodeDataURL(barcode, size.barcodeH) : null;
-
-  return (
-    <div
-      style={{
-        width: `${size.w * 2.4}px`,
-        height: `${size.h * 2.4}px`,
-        border: '1px dashed #9ca3af',
-        borderRadius: 6,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '4px 6px',
-        background: '#fff',
-        boxSizing: 'border-box',
-        gap: 2,
-      }}
-    >
-      {showName && (
-        <div style={{
-          fontSize: `${size.fontSize}pt`,
-          fontWeight: 700,
-          textAlign: 'center',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap',
-          maxWidth: '100%',
-          color: '#111',
-        }}>
-          {product.name}
-        </div>
-      )}
-      {dataURL ? (
-        <img src={dataURL} alt="barcode" style={{ maxWidth: '100%', height: 'auto', display: 'block' }} />
-      ) : (
-        <div style={{
-          fontSize: '7pt',
-          color: '#ef4444',
-          textAlign: 'center',
-          padding: '4px 6px',
-          background: '#fef2f2',
-          borderRadius: 4,
-          border: '1px dashed #fca5a5',
-        }}>
-          Sin código de barras
-        </div>
-      )}
-      {showSku && (
-        <div style={{ fontSize: `${size.fontSize - 1}pt`, color: '#555', textAlign: 'center' }}>
-          {product.sku}
-        </div>
-      )}
-    </div>
-  );
-}
-
 export default function BarcodePrintModal({ isOpen, onClose, product, onBarcodeGenerated }) {
-  const [quantity, setQuantity]         = useState(1);
-  const [selectedSize, setSelectedSize] = useState(LABEL_SIZES[1]);
-  const [showName, setShowName]         = useState(true);
-  const [showSku, setShowSku]           = useState(true);
+  const user = useAuthStore((s) => s.user);
+  const tenantId = user?.tenant_id;
+  const canManage = MANAGE_ROLES.includes(user?.role);
 
-  const [generating, setGenerating]           = useState(false);
-  const [generateStatus, setGenerateStatus]   = useState(null);
+  const [config, setConfig] = useState({ profiles: [], default_profile_id: null });
+  const [profileId, setProfileId] = useState(null);
+  const [quantity, setQuantity] = useState(1);
+  const [skip, setSkip] = useState(0);
+  const [content, setContent] = useState({});
+  const [printing, setPrinting] = useState(false);
+
+  const [generating, setGenerating] = useState(false);
+  const [generateStatus, setGenerateStatus] = useState(null);
   const [generateMessage, setGenerateMessage] = useState('');
-
-  // Barcode propio del modal: se inicializa con el del producto y
-  // se actualiza localmente cuando se genera uno nuevo, sin depender
-  // de que el prop `product` se re-renderice desde el padre.
+  // Barcode propio del modal: se inicializa con el del producto y se
+  // actualiza localmente cuando se genera uno nuevo.
   const [currentBarcode, setCurrentBarcode] = useState(null);
 
-  // Sincronizar cuando cambia el producto (al abrir el modal con otro producto)
+  useEffect(() => {
+    if (!isOpen) return;
+    labelPrintingAPI.get()
+      .then((res) => {
+        const cfg = res.data || { profiles: [] };
+        setConfig(cfg);
+        setProfileId(pickProfile(cfg, tenantId).id);
+      })
+      .catch(() => setProfileId(DEFAULT_PROFILE.id));
+  }, [isOpen, tenantId]);
+
   useEffect(() => {
     setCurrentBarcode(product?.barcode || null);
     setGenerateStatus(null);
     setGenerateMessage('');
   }, [product?.id]);
 
+  const profile = useMemo(
+    () => normalizeProfile(config.profiles.find((p) => p.id === profileId) || (config.profiles.length ? config.profiles[0] : DEFAULT_PROFILE)),
+    [config, profileId]
+  );
+
+  // Contenido: arranca con lo del perfil y se puede ajustar para esta impresión.
+  useEffect(() => {
+    setContent({
+      show_name: profile.show_name,
+      show_sku: profile.show_sku,
+      show_price: profile.show_price,
+      show_barcode_text: profile.show_barcode_text,
+    });
+    setSkip(0);
+  }, [profile]);
+
   const hasBarcode = Boolean(currentBarcode);
+  const labelData = useMemo(() => ({
+    name: product?.name,
+    sku: product?.sku,
+    barcode: currentBarcode,
+    price: product?.sale_price ?? product?.price ?? null,
+  }), [product, currentBarcode]);
 
   const handleGenerateAndSave = useCallback(async () => {
     if (!product) return;
@@ -131,16 +93,11 @@ export default function BarcodePrintModal({ isOpen, onClose, product, onBarcodeG
     try {
       const newBarcode = generateEAN13();
       const result = await productsAPI.update(product.id, { barcode: newBarcode });
-      if (result?.success) {
-        // Actualizar estado interno del modal de inmediato
-        setCurrentBarcode(newBarcode);
-        setGenerateStatus('success');
-        setGenerateMessage(`Código ${newBarcode} guardado correctamente.`);
-        // Notificar al padre para actualizar el store/lista
-        if (onBarcodeGenerated) onBarcodeGenerated(product.id, newBarcode);
-      } else {
-        throw new Error(result?.message || 'Error al guardar');
-      }
+      if (!result?.success) throw new Error(result?.message || 'Error al guardar');
+      setCurrentBarcode(newBarcode);
+      setGenerateStatus('success');
+      setGenerateMessage(`Código ${newBarcode} guardado correctamente.`);
+      if (onBarcodeGenerated) onBarcodeGenerated(product.id, newBarcode);
     } catch (err) {
       setGenerateStatus('error');
       setGenerateMessage(err?.response?.data?.message || err.message || 'No se pudo guardar el código.');
@@ -149,110 +106,34 @@ export default function BarcodePrintModal({ isOpen, onClose, product, onBarcodeG
     }
   }, [product, onBarcodeGenerated]);
 
-  const handlePrint = useCallback(() => {
-    if (!product || !hasBarcode) return;
-    const dataURL = generateBarcodeDataURL(currentBarcode, selectedSize.barcodeH);
-    if (!dataURL) return;
-
-    const labelHTML = `
-      <div class="label">
-        ${showName ? `<div class="label-name">${product.name}</div>` : ''}
-        <img src="${dataURL}" class="barcode-img" alt="barcode" />
-        ${showSku ? `<div class="label-sku">${product.sku}</div>` : ''}
-      </div>
-    `;
-
-    const labelsHTML = Array.from({ length: quantity }).map(() => labelHTML).join('');
-
-    const win = window.open('', '_blank', 'width=900,height=700');
-    win.document.write(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <meta charset="UTF-8" />
-          <title>Etiquetas – ${product.name}</title>
-          <style>
-            * { margin: 0; padding: 0; box-sizing: border-box; }
-            body {
-              background: #f3f4f6;
-              font-family: Arial, sans-serif;
-              display: flex;
-              justify-content: center;
-              padding: 12px;
-            }
-            .no-print { margin-bottom: 12px; }
-            .grid {
-              display: flex;
-              flex-wrap: wrap;
-              gap: 2mm;
-              background: white;
-              padding: 4mm;
-              border-radius: 4px;
-            }
-            .label {
-              width: ${selectedSize.w}mm;
-              height: ${selectedSize.h}mm;
-              border: 0.4pt solid #ccc;
-              display: flex;
-              flex-direction: column;
-              align-items: center;
-              justify-content: center;
-              padding: 1mm 1.5mm;
-              page-break-inside: avoid;
-              background: white;
-              gap: 0.5mm;
-            }
-            .label-name {
-              font-size: ${selectedSize.fontSize}pt;
-              font-weight: bold;
-              text-align: center;
-              width: 100%;
-              overflow: hidden;
-              text-overflow: ellipsis;
-              white-space: nowrap;
-              color: #111;
-            }
-            .barcode-img { max-width: 100%; height: auto; display: block; }
-            .label-sku   { font-size: ${selectedSize.fontSize - 1}pt; color: #444; text-align: center; }
-            @page { size: auto; margin: 3mm; }
-            @media print {
-              body { background: white; padding: 0; }
-              .no-print { display: none !important; }
-              .grid { box-shadow: none; padding: 0; background: transparent; }
-            }
-          </style>
-        </head>
-        <body>
-          <div>
-            <div class="no-print" style="text-align:center">
-              <button onclick="window.print()" style="padding:8px 24px;background:#2563eb;color:white;border:none;border-radius:6px;font-size:14px;cursor:pointer;font-weight:600;">
-                🖨️ Imprimir ${quantity} etiqueta${quantity > 1 ? 's' : ''}
-              </button>
-              <button onclick="window.close()" style="margin-left:8px;padding:8px 16px;background:#f3f4f6;color:#374151;border:1px solid #d1d5db;border-radius:6px;font-size:14px;cursor:pointer;">
-                Cerrar
-              </button>
-            </div>
-            <div class="grid">${labelsHTML}</div>
-          </div>
-        </body>
-      </html>
-    `);
-    win.document.close();
-  }, [product, quantity, selectedSize, showName, showSku, currentBarcode, hasBarcode]);
-
-  const handleClose = () => {
-    setGenerateStatus(null);
-    setGenerateMessage('');
-    onClose();
+  const handleProfileChange = (id) => {
+    setProfileId(id);
+    // Lo que se elige aquí queda como perfil de este equipo.
+    if (config.profiles.some((p) => p.id === id)) setDeviceProfileId(tenantId, id);
   };
+
+  const handlePrint = useCallback(async () => {
+    if (!product || !hasBarcode) return;
+    setPrinting(true);
+    try {
+      const { overflow } = await printProductLabels(profile, labelData, { quantity, skip, overrides: content });
+      if (overflow) toast('El código quedó más ancho que la etiqueta: revisa el perfil (margen interno o tamaño).', { icon: '⚠️' });
+    } catch {
+      toast.error('No se pudo preparar la impresión.');
+    } finally {
+      setPrinting(false);
+    }
+  }, [product, hasBarcode, profile, labelData, quantity, skip, content]);
 
   if (!isOpen || !product) return null;
 
+  const perPage = labelsPerPage(profile);
+  const rounded = profile.media !== 'sheet' && profile.fill_row && profile.columns > 1
+    ? Math.ceil(quantity / profile.columns) * profile.columns : quantity;
+
   return (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-graphite rounded-2xl w-full max-w-xl shadow-2xl flex flex-col max-h-[90vh]">
-
-        {/* Header fijo */}
+      <div className="bg-white dark:bg-graphite rounded-2xl w-full max-w-2xl shadow-2xl flex flex-col max-h-[90vh]">
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-white/10 shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center">
@@ -260,186 +141,130 @@ export default function BarcodePrintModal({ isOpen, onClose, product, onBarcodeG
             </div>
             <div>
               <h2 className="font-bold text-gray-900 dark:text-gray-100 text-sm">Imprimir etiquetas</h2>
-              <p className="text-xs text-gray-500 dark:text-gray-500 truncate max-w-[240px]">{product.name}</p>
+              <p className="text-xs text-gray-500 truncate max-w-[280px]">{product.name}</p>
             </div>
           </div>
-          <button onClick={handleClose} className="p-1.5 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg">
+          <button onClick={onClose} className="p-1.5 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg">
             <X size={18} className="text-gray-500 dark:text-gray-400" />
           </button>
         </div>
 
-        {/* Cuerpo scrolleable */}
         <div className="overflow-y-auto flex-1 p-5">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-
-            {/* Columna izquierda — Opciones */}
             <div className="space-y-4">
-
-              {/* Tamaño */}
               <div>
-                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide mb-2">
-                  Tamaño de etiqueta
-                </label>
-                <div className="grid grid-cols-2 gap-1.5">
-                  {LABEL_SIZES.map(size => (
-                    <button
-                      key={size.id}
-                      onClick={() => setSelectedSize(size)}
-                      className={`px-3 py-2 rounded-lg border text-xs font-medium transition ${
-                        selectedSize.id === size.id
-                          ? 'border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700 shadow-sm'
-                          : 'border-gray-200 dark:border-white/10 text-gray-600 dark:text-gray-400 hover:border-gray-300 hover:bg-gray-50 dark:hover:bg-white/5'
-                      }`}
-                    >
-                      {size.label}
-                    </button>
-                  ))}
-                </div>
+                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide mb-2">Impresora / papel</label>
+                {config.profiles.length > 0 ? (
+                  <select value={profileId || ''} onChange={(e) => handleProfileChange(e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-white/10 rounded-lg dark:bg-graphite-2 dark:text-gray-100">
+                    {config.profiles.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                  </select>
+                ) : (
+                  <p className="text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-graphite-2 rounded-lg p-2.5">
+                    Sin perfiles configurados: se usa una etiqueta genérica de 50 × 30 mm.
+                  </p>
+                )}
+                <Link to="/settings/label-printing" className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline mt-1.5">
+                  <Settings size={12} /> {canManage ? 'Configurar impresoras y papel' : 'Ver perfiles de impresión'}
+                </Link>
               </div>
 
-              {/* Cantidad */}
               <div>
-                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide mb-2">
-                  Cantidad de etiquetas
-                </label>
+                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide mb-2">Cantidad de etiquetas</label>
                 <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setQuantity(q => Math.max(1, q - 1))}
-                    className="w-9 h-9 rounded-lg border border-gray-200 dark:border-white/10 flex items-center justify-center text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5 font-bold text-lg"
-                  >−</button>
-                  <input
-                    type="number"
-                    min="1" max="200"
-                    value={quantity}
-                    onChange={e => setQuantity(Math.max(1, Math.min(200, parseInt(e.target.value) || 1)))}
-                    className="w-16 text-center border border-gray-200 dark:border-white/10 dark:bg-graphite-2 dark:text-gray-100 rounded-lg py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-400"
-                  />
-                  <button
-                    onClick={() => setQuantity(q => Math.min(200, q + 1))}
-                    className="w-9 h-9 rounded-lg border border-gray-200 dark:border-white/10 flex items-center justify-center text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5 font-bold text-lg"
-                  >+</button>
+                  <button onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                    className="w-9 h-9 rounded-lg border border-gray-200 dark:border-white/10 text-gray-600 dark:text-gray-400 font-bold text-lg">−</button>
+                  <input type="number" min="1" max="500" value={quantity}
+                    onChange={(e) => setQuantity(Math.max(1, Math.min(500, parseInt(e.target.value, 10) || 1)))}
+                    className="w-20 text-center border border-gray-200 dark:border-white/10 dark:bg-graphite-2 dark:text-gray-100 rounded-lg py-2 text-sm font-medium" />
+                  <button onClick={() => setQuantity((q) => Math.min(500, q + 1))}
+                    className="w-9 h-9 rounded-lg border border-gray-200 dark:border-white/10 text-gray-600 dark:text-gray-400 font-bold text-lg">+</button>
                 </div>
+                {rounded !== quantity && (
+                  <p className="text-[11px] text-gray-500 mt-1">Se imprimirán {rounded} para completar filas de {profile.columns} columnas.</p>
+                )}
               </div>
 
-              {/* Contenido */}
+              {profile.media === 'sheet' && (
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide mb-2">Etiquetas ya usadas en la hoja</label>
+                  <input type="number" min="0" max={perPage - 1} value={skip}
+                    onChange={(e) => setSkip(Math.max(0, Math.min(perPage - 1, parseInt(e.target.value, 10) || 0)))}
+                    className="w-20 text-center border border-gray-200 dark:border-white/10 dark:bg-graphite-2 dark:text-gray-100 rounded-lg py-2 text-sm" />
+                  <p className="text-[11px] text-gray-500 mt-1">Para aprovechar una hoja empezada: se salta esa cantidad de posiciones (de {perPage}).</p>
+                </div>
+              )}
+
               <div>
-                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide mb-2">
-                  Contenido de la etiqueta
-                </label>
+                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide mb-2">Contenido</label>
                 <div className="space-y-2 bg-gray-50 dark:bg-graphite-2 rounded-xl p-3">
                   {[
-                    { value: showName, set: setShowName, label: 'Nombre del producto' },
-                    { value: showSku,  set: setShowSku,  label: 'SKU / Referencia'    },
-                  ].map(({ value, set, label }) => (
-                    <label key={label} className="flex items-center gap-2.5 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={value}
-                        onChange={e => set(e.target.checked)}
-                        className="w-4 h-4 rounded text-blue-600 accent-blue-600"
-                      />
+                    ['show_name', 'Nombre del producto'],
+                    ['show_barcode_text', 'Número debajo del código'],
+                    ['show_sku', 'SKU / referencia'],
+                    ['show_price', 'Precio de venta'],
+                  ].map(([key, label]) => (
+                    <label key={key} className="flex items-center gap-2.5 cursor-pointer">
+                      <input type="checkbox" checked={!!content[key]} onChange={(e) => setContent((c) => ({ ...c, [key]: e.target.checked }))}
+                        className="w-4 h-4 rounded accent-blue-600" />
                       <span className="text-sm text-gray-700 dark:text-gray-300">{label}</span>
                     </label>
                   ))}
                 </div>
               </div>
 
-              {/* Generar código si no tiene */}
               {!hasBarcode && (
                 <div className="rounded-xl border border-orange-200 dark:border-orange-800/40 bg-orange-50 dark:bg-orange-900/30 p-3 space-y-2">
                   <div className="flex gap-2 items-start">
-                    <AlertCircle size={14} className="text-orange-500 dark:text-orange-400 shrink-0 mt-0.5" />
+                    <AlertCircle size={14} className="text-orange-500 shrink-0 mt-0.5" />
                     <p className="text-xs text-orange-700 dark:text-orange-300 leading-relaxed">
                       Este producto <strong>no tiene código de barras</strong>. Genera uno automáticamente (EAN-13) y se guardará en el producto.
                     </p>
                   </div>
-                  <button
-                    onClick={handleGenerateAndSave}
-                    disabled={generating}
-                    className="w-full flex items-center justify-center gap-2 py-2 px-3 bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-white rounded-lg text-xs font-semibold transition"
-                  >
-                    <Wand2 size={13} />
-                    {generating ? 'Generando...' : 'Generar y guardar código de barras'}
+                  <button onClick={handleGenerateAndSave} disabled={generating}
+                    className="w-full flex items-center justify-center gap-2 py-2 px-3 bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-white rounded-lg text-xs font-semibold">
+                    <Wand2 size={13} /> {generating ? 'Generando...' : 'Generar y guardar código de barras'}
                   </button>
                   {generateStatus === 'error' && (
-                    <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1">
-                      <AlertCircle size={11} /> {generateMessage}
-                    </p>
+                    <p className="text-xs text-red-600 flex items-center gap-1"><AlertCircle size={11} /> {generateMessage}</p>
                   )}
                 </div>
               )}
-
               {generateStatus === 'success' && (
                 <div className="flex gap-2 items-center bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800/40 rounded-xl p-3">
-                  <CheckCircle size={14} className="text-green-600 dark:text-green-400 shrink-0" />
+                  <CheckCircle size={14} className="text-green-600 shrink-0" />
                   <p className="text-xs text-green-700 dark:text-green-300">{generateMessage}</p>
                 </div>
               )}
-
-              {/* Tip */}
-              <div className="flex gap-2 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800/40 rounded-xl p-3">
-                <Info size={14} className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
-                <p className="text-xs text-amber-700 dark:text-amber-300 leading-relaxed">
-                  Configura el tamaño de papel en tu impresora <strong>antes de imprimir</strong> para que coincida con las etiquetas.
-                </p>
-              </div>
             </div>
 
-            {/* Columna derecha — Vista previa */}
             <div>
-              <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide mb-2">
-                Vista previa
-              </label>
-              <div className="bg-gray-100 dark:bg-graphite-2 rounded-xl p-5 flex flex-col items-center justify-center gap-3 min-h-[200px]">
-                <LabelPreview
-                  barcode={currentBarcode}
-                  product={product}
-                  size={selectedSize}
-                  showName={showName}
-                  showSku={showSku}
-                />
-                <p className="text-xs text-gray-400 dark:text-gray-500">
-                  {hasBarcode ? `Código: ${currentBarcode}` : 'Sin código de barras asignado'}
-                </p>
-              </div>
-
-              {/* Info del producto */}
-              <div className="mt-3 space-y-1">
-                <div className="flex justify-between text-xs">
-                  <span className="text-gray-500 dark:text-gray-500">SKU:</span>
-                  <span className="font-medium text-gray-800 dark:text-gray-200">{product.sku}</span>
-                </div>
-                {currentBarcode && (
-                  <div className="flex justify-between text-xs">
-                    <span className="text-gray-500 dark:text-gray-500">Cód. barras:</span>
-                    <span className="font-medium text-gray-800 dark:text-gray-200">{currentBarcode}</span>
-                  </div>
+              <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide mb-2">Vista previa</label>
+              <div className="bg-gray-100 dark:bg-graphite-2 rounded-xl p-5 flex flex-col items-center justify-center min-h-[200px]">
+                {hasBarcode ? (
+                  <LabelPreview profile={profile} data={labelData} overrides={content} maxWidthPx={260} />
+                ) : (
+                  <p className="text-xs text-gray-500">Sin código de barras asignado</p>
                 )}
               </div>
+              <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-3 leading-relaxed">
+                En el cuadro de impresión: Márgenes "Ninguno", Escala 100% y sin encabezados ni pies de página.
+              </p>
             </div>
-
           </div>
         </div>
 
-        {/* Footer fijo */}
         <div className="flex gap-3 px-5 py-4 border-t border-gray-100 dark:border-white/10 bg-gray-50 dark:bg-graphite-2 shrink-0">
-          <button
-            onClick={handleClose}
-            className="flex-1 py-2.5 border border-gray-200 dark:border-white/10 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-white dark:hover:bg-graphite-3 transition bg-white dark:bg-graphite"
-          >
+          <button onClick={onClose}
+            className="flex-1 py-2.5 border border-gray-200 dark:border-white/10 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-graphite">
             Cancelar
           </button>
-          <button
-            onClick={handlePrint}
-            disabled={!hasBarcode}
+          <button onClick={handlePrint} disabled={!hasBarcode || printing}
             title={!hasBarcode ? 'Genera un código de barras primero' : ''}
-            className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            <Printer size={16} />
-            Imprimir {quantity} etiqueta{quantity !== 1 ? 's' : ''}
+            className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed">
+            <Printer size={16} /> {printing ? 'Preparando...' : `Imprimir ${rounded} etiqueta${rounded !== 1 ? 's' : ''}`}
           </button>
         </div>
-
       </div>
     </div>
   );

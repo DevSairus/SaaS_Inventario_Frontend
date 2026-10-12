@@ -117,6 +117,7 @@ const BranchesPage = lazy(() => import('./pages/branches/BranchesPage'));
 import NoBranchAssignedPage from './pages/branches/NoBranchAssignedPage';
 const TenantSettingsPage = lazy(() => import('./pages/settings/TenantSettingsPage'));
 const WhatsAppSettingsPage = lazy(() => import('./pages/settings/WhatsAppSettingsPage'));
+const LabelPrintingSettingsPage = lazy(() => import('./pages/settings/LabelPrintingSettingsPage'));
 const ReportsPage = lazy(() => import('./pages/reports/ReportsPage'));
 const ProfilePage = lazy(() => import('./pages/profile/ProfilePage'));
 const NexaApprovalsPage = lazy(() => import('./pages/nexa/NexaApprovalsPage'));
@@ -503,6 +504,8 @@ function App() {
 
         {/* ── Configuración y Reportes ───────────────── */}
         <Route path="settings" element={<TenantRoute><Suspense fallback={<Loading fullScreen />}><TenantSettingsPage /></Suspense></TenantRoute>} />
+        {/* Perfiles de impresión de etiquetas: editar solo admin/gerente (lo controla la página y el backend). */}
+        <Route path="settings/label-printing" element={<TenantRoute><Suspense fallback={<Loading fullScreen />}><LabelPrintingSettingsPage /></Suspense></TenantRoute>} />
         <Route path="settings/whatsapp" element={<TenantRoute roles={['admin']}><Suspense fallback={<Loading fullScreen />}><WhatsAppSettingsPage /></Suspense></TenantRoute>} />
 
         <Route path="reports"  element={<TenantRoute><Suspense fallback={<Loading fullScreen />}><ReportsPage /></Suspense></TenantRoute>} />
