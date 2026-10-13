@@ -4,7 +4,7 @@ import axios from '../../api/axios';
 import ExcelJS from 'exceljs';
 
 const STATUS_LABELS = {
-  recibido: 'Recibido', diagnostico: 'Diagnóstico', en_proceso: 'En proceso',
+  recibido: 'Recibido', en_proceso: 'En proceso',
   en_espera: 'En espera', listo: 'Listo', entregado: 'Entregado', cancelado: 'Cancelado'
 };
 

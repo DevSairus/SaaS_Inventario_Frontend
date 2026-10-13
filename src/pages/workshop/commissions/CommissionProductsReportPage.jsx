@@ -17,7 +17,7 @@ const todayStr = today.toISOString().split('T')[0];
 
 const ROLE_LABEL = {
   technician: 'Técnico', admin: 'Administrador', cashier: 'Cajero',
-  sales: 'Vendedor', warehouse: 'Bodeguero',
+  seller: 'Vendedor', warehouse_keeper: 'Bodeguero', manager: 'Gerente', accountant: 'Contador',
 };
 const STATUS_COLOR = {
   recibido: 'bg-blue-100 text-blue-700', en_proceso: 'bg-yellow-100 text-yellow-700',

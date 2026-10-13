@@ -1409,6 +1409,11 @@ export default function WorkOrderDetailPage() {
                         Requiere aprobación del cliente <span className="text-amber-500">(no descuenta inventario hasta que apruebe)</span>
                       </span>
                     </label>
+                    {newItem.item_type === 'repuesto' && !newItem.requires_approval && (
+                      <p className="col-span-2 -mt-1 text-[11px] text-gray-500 dark:text-gray-400">
+                        Sin marcar, el repuesto se descuenta del inventario apenas lo agregues.
+                      </p>
+                    )}
                   </div>
 
                   <div className="flex gap-2">
