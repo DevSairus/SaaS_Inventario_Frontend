@@ -2,10 +2,11 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { usePurchasesStore } from '../../store/purchasesStore';
-import { useSuppliersStore } from '../../store/suppliersStore';
+import { suppliersAPI } from '../../api/suppliers';
 import useBranchStore from '../../store/branchStore';
 import Layout from '../../components/layout/Layout';
 import InvoiceImportModal from '../../components/purchases/InvoiceImportModal';
+import Combobox from '../../components/common/Combobox';
 import { formatDate } from '../../utils/formatters';
 import {
   PlusIcon,
@@ -51,7 +52,8 @@ const PurchasesPage = () => {
   const navigate = useNavigate();
 
   const { purchases, stats, isLoading, pagination, filters, fetchPurchases, fetchStats, setFilters, setPage, setLimit, deletePurchase } = usePurchasesStore();
-  const { fetchSuppliers, suppliers } = useSuppliersStore();
+  // Lista completa (el store de proveedores está paginado a 10 para su listado)
+  const [suppliers, setSuppliers] = useState([]);
   const { branches, fetchBranches } = useBranchStore();
 
   const [showImportModal, setShowImportModal] = useState(false);
@@ -61,7 +63,9 @@ const PurchasesPage = () => {
 
   useEffect(() => {
     fetchStats();
-    fetchSuppliers();
+    suppliersAPI.getAll({ limit: 10000, sort_by: 'name', sort_order: 'ASC' })
+      .then(res => setSuppliers(res.data || []))
+      .catch(() => {});
     fetchBranches();
   }, []);
 
@@ -205,16 +209,24 @@ const PurchasesPage = () => {
             <div className="pt-3 border-t border-gray-100 grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div className="col-span-2 sm:col-span-2">
                 <label className="block text-xs font-semibold text-gray-500 mb-1">Proveedor</label>
-                <select
-                  value={serverFilters.supplier_id}
-                  onChange={(e) => setServerFilters(f => ({ ...f, supplier_id: e.target.value }))}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500"
-                >
-                  <option value="">Todos los proveedores</option>
-                  {suppliers.map(s => (
-                    <option key={s.id} value={s.id}>{s.name}</option>
-                  ))}
-                </select>
+                <Combobox
+                  placeholder="Todos los proveedores"
+                  items={suppliers}
+                  value={serverFilters.supplier_id || null}
+                  displayValue={suppliers.find(s => String(s.id) === String(serverFilters.supplier_id))?.name || ''}
+                  onSelect={(s) => setServerFilters(f => ({ ...f, supplier_id: s.id }))}
+                  onClear={() => setServerFilters(f => ({ ...f, supplier_id: '' }))}
+                  filterFn={(s, q) => {
+                    const t = q.toLowerCase();
+                    return [s.name, s.business_name, s.tax_id].some(v => v?.toLowerCase().includes(t));
+                  }}
+                  renderItem={(s) => (
+                    <div>
+                      <p className="font-medium text-gray-800 dark:text-gray-100">{s.name}</p>
+                      {s.tax_id && <p className="text-xs text-gray-500">NIT {s.tax_id}</p>}
+                    </div>
+                  )}
+                />
               </div>
 
               <div>

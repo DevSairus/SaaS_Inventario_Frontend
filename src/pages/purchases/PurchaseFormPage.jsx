@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { usePurchasesStore } from '../../store/purchasesStore';
-import { useSuppliersStore } from '../../store/suppliersStore';
+import { suppliersAPI } from '../../api/suppliers';
 import useProductsStore from '../../store/productsStore';
 import Layout from '../../components/layout/Layout';
 import NumericInput from '../../components/inputs/NumericInput';
+import Combobox from '../../components/common/Combobox';
 import { retentionsAPI } from '../../api/retentions';
 import {
   formatCurrency,
@@ -22,7 +23,9 @@ const PurchaseFormPage = () => {
   const isEditMode = Boolean(id);
   
   const { createPurchase, updatePurchase, getPurchaseById, isLoading } = usePurchasesStore();
-  const { suppliers, fetchSuppliers } = useSuppliersStore();
+  // Lista completa de proveedores activos para el autocompletar. No se usa el
+  // store de proveedores porque está paginado (10 por página) para el listado.
+  const [suppliers, setSuppliers] = useState([]);
   const { searchProducts } = useProductsStore();
 
   const [formData, setFormData] = useState({
@@ -63,8 +66,13 @@ const PurchaseFormPage = () => {
   const [filteredProducts, setFilteredProducts] = useState([]);
 
   useEffect(() => {
-    fetchSuppliers();
+    suppliersAPI.getAll({ is_active: true, limit: 10000, sort_by: 'name', sort_order: 'ASC' })
+      .then(res => setSuppliers(res.data || []))
+      .catch(() => toast.error('Error al cargar proveedores'));
   }, []);
+
+  const supplierLabel = (s) => s ? `${s.name}${s.tax_id ? ` - ${s.tax_id}` : ''}` : '';
+  const selectedSupplier = suppliers.find(s => String(s.id) === String(formData.supplier_id));
 
   // Vista previa de retenciones (con debounce) cada vez que cambian el
   // proveedor o los ítems.
@@ -475,20 +483,29 @@ const PurchaseFormPage = () => {
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Proveedor <span className="text-red-500">*</span>
               </label>
-              <select
-                name="supplier_id"
-                value={formData.supplier_id}
-                onChange={handleFormChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                required
-              >
-                <option value="">Seleccione un proveedor</option>
-                {suppliers.filter(s => s.is_active).map(supplier => (
-                  <option key={supplier.id} value={supplier.id}>
-                    {supplier.name} {supplier.tax_id ? `- ${supplier.tax_id}` : ''}
-                  </option>
-                ))}
-              </select>
+              <Combobox
+                placeholder="Buscar proveedor por nombre o NIT..."
+                items={suppliers}
+                value={formData.supplier_id || null}
+                displayValue={supplierLabel(selectedSupplier)}
+                onSelect={(s) => handleFormChange({ target: { name: 'supplier_id', value: s.id } })}
+                onClear={() => handleFormChange({ target: { name: 'supplier_id', value: '' } })}
+                filterFn={(s, q) => {
+                  const t = q.toLowerCase();
+                  return [s.name, s.business_name, s.tax_id, s.contact_name]
+                    .some(v => v?.toLowerCase().includes(t));
+                }}
+                renderItem={(s) => (
+                  <div>
+                    <p className="font-medium text-gray-800 dark:text-gray-100">{s.name}</p>
+                    {(s.tax_id || s.business_name) && (
+                      <p className="text-xs text-gray-500">
+                        {s.tax_id ? `NIT ${s.tax_id}` : ''}{s.business_name && s.business_name !== s.name ? ` · ${s.business_name}` : ''}
+                      </p>
+                    )}
+                  </div>
+                )}
+              />
             </div>
 
             <div>
