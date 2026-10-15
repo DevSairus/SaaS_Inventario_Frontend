@@ -23,13 +23,37 @@ import {
   Monitor,
   Database,
   Facebook,
+  Crown,
 } from 'lucide-react';
 import useAuthStore from '@store/authStore';
+import { authAPI } from '@api/auth';
+import { getPlatformAccess } from '@utils/platformAccess';
 
 const SuperAdminSidebar = ({ isOpen, toggleSidebar }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
+  const { isOwner, restricted } = getPlatformAccess(user);
+
+  // is_owner / all_tenants_access pueden cambiar sin que el usuario vuelva a
+  // iniciar sesión (los edita el owner), y las sesiones viejas no los traen:
+  // se refrescan desde el perfil al montar el panel.
+  useEffect(() => {
+    authAPI.getProfile()
+      .then((res) => {
+        const profile = res?.data;
+        const current = useAuthStore.getState();
+        if (!profile || !current.user || current.user.id !== profile.id) return;
+        const isOwnerNow = profile.role === 'super_admin' && profile.is_owner === true;
+        const allTenantsNow = profile.all_tenants_access !== false;
+        if (current.user.is_owner === isOwnerNow && current.user.all_tenants_access === allTenantsNow) return;
+        current.setSession({
+          token: current.token,
+          user: { ...current.user, is_owner: isOwnerNow, all_tenants_access: allTenantsNow },
+        });
+      })
+      .catch(() => {});
+  }, []);
 
   const [openMenus, setOpenMenus] = useState({});
 
@@ -77,6 +101,7 @@ const SuperAdminSidebar = ({ isOpen, toggleSidebar }) => {
       children: [
         {
           name: 'Planes',
+          global: true,
           href: '/superadmin/subscription-plans',
           icon: Package,
           description: 'Gestionar planes disponibles',
@@ -101,12 +126,14 @@ const SuperAdminSidebar = ({ isOpen, toggleSidebar }) => {
         },
         {
           name: 'Configurar MercadoPago',
+          global: true,
           href: '/superadmin/mercadopago-config',
           icon: Settings,
           description: 'Credenciales de pago',
         },
         {
           name: 'Facturación Núcleo (NCF)',
+          global: true,
           href: '/superadmin/ncf-config',
           icon: Link2,
           description: 'Conexión con ESC DataCore',
@@ -125,12 +152,14 @@ const SuperAdminSidebar = ({ isOpen, toggleSidebar }) => {
     // todo.
     {
       name: 'Integración con Meta',
+      global: true,
       href: '/superadmin/meta-config',
       icon: Facebook,
     },
 
     {
       name: 'Conexión Ensambladora',
+      global: true,
       href: '/superadmin/ensambladora-config',
       icon: Link2,
     },
@@ -151,6 +180,7 @@ const SuperAdminSidebar = ({ isOpen, toggleSidebar }) => {
 
     {
       name: 'Migración de Tenants',
+      global: true,
       href: '/superadmin/tenant-migration',
       icon: Database,
     },
@@ -162,8 +192,15 @@ const SuperAdminSidebar = ({ isOpen, toggleSidebar }) => {
     },
     {
       name: 'Permisos',
+      global: true,
       href: '/superadmin/permissions',
       icon: Shield,
+    },
+    {
+      name: 'Usuarios de plataforma',
+      ownerOnly: true,
+      href: '/superadmin/platform-users',
+      icon: Crown,
     },
     {
       name: 'Soporte',
@@ -178,6 +215,7 @@ const SuperAdminSidebar = ({ isOpen, toggleSidebar }) => {
         },
         {
           name: 'Gestión de FAQ',
+          global: true,
           href: '/superadmin/support/faq',
           icon: HelpCircle,
           description: 'Administrar artículos de ayuda',
@@ -199,9 +237,14 @@ const SuperAdminSidebar = ({ isOpen, toggleSidebar }) => {
   ];
 
   const isSupportRole = user?.role === 'support';
-  const filteredNavigation = isSupportRole
+  // Acceso restringido (utils/platformAccess.js): fuera lo global; el
+  // ítem de usuarios de plataforma solo para el owner.
+  const visible = (item) => !(item.global && restricted) && !(item.ownerOnly && !isOwner);
+  const filteredNavigation = (isSupportRole
     ? navigation.filter((item) => item.roles?.includes('support'))
-    : navigation;
+    : navigation)
+    .filter(visible)
+    .map((item) => (item.children ? { ...item, children: item.children.filter(visible) } : item));
 
   /* -------- AUTO ABRIR SUBMENÚ ACTIVO -------- */
   useEffect(() => {
@@ -354,7 +397,7 @@ const SuperAdminSidebar = ({ isOpen, toggleSidebar }) => {
             <p className="text-xs text-gray-400 truncate">{user?.email}</p>
             <div className="mt-2">
               <span className="text-xs px-2 py-1 bg-red-600 text-white rounded-full">
-                {isSupportRole ? 'Soporte' : 'Super Admin'}
+                {isSupportRole ? 'Soporte' : isOwner ? 'Owner' : 'Super Admin'}
               </span>
             </div>
           </div>

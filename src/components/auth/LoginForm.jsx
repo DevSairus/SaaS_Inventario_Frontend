@@ -4,6 +4,7 @@ import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import useAuthStore from '@store/authStore';
 import Button from '@components/common/Button';
+import { getPlatformHome } from '../../utils/platformAccess';
 
 const LoginForm = () => {
   const navigate = useNavigate();
@@ -64,11 +65,7 @@ const LoginForm = () => {
         toast.success(`¡Bienvenido, ${result.user.first_name}!`);
 
         // Redirigir según rol
-        if (result.user.role === 'super_admin') {
-          navigate('/superadmin/dashboard');
-        } else {
-          navigate('/dashboard');
-        }
+        navigate(getPlatformHome(result.user) || '/dashboard');
       } else {
         toast.error(result.error || 'Error al iniciar sesión');
       }

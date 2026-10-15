@@ -207,4 +207,35 @@ export const superAdminAPI = {
     const response = await api.post('/superadmin/ncf-config/sincronizar-tenants');
     return response.data;
   },
+
+  // Usuarios de plataforma (solo owner) -- backend/src/routes/superadmin/platformUsers.routes.js
+  getPlatformUsers: async () => {
+    const response = await api.get('/superadmin/platform-users');
+    return response.data;
+  },
+
+  getPlatformTenantOptions: async () => {
+    const response = await api.get('/superadmin/platform-users/tenant-options');
+    return response.data;
+  },
+
+  createPlatformUser: async (data) => {
+    const response = await api.post('/superadmin/platform-users', data);
+    return response.data;
+  },
+
+  updatePlatformUser: async (id, data) => {
+    const response = await api.put(`/superadmin/platform-users/${id}`, data);
+    return response.data;
+  },
+
+  togglePlatformUserStatus: async (id) => {
+    const response = await api.patch(`/superadmin/platform-users/${id}/toggle-status`);
+    return response.data;
+  },
+
+  resetPlatformUserPassword: async (id, password) => {
+    const response = await api.put(`/superadmin/platform-users/${id}/password`, { password });
+    return response.data;
+  },
 };
