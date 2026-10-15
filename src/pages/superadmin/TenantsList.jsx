@@ -13,8 +13,6 @@ import {
   Users,
 } from 'lucide-react';
 import useSuperAdminStore from '../../store/superAdminStore';
-import useAuthStore from '../../store/authStore';
-import { getPlatformAccess } from '../../utils/platformAccess';
 import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';
 import Loading from '../../components/common/Loading';
@@ -39,8 +37,6 @@ const TenantsList = () => {
     action: null,
   });
   const [deleteModal, setDeleteModal] = useState({ open: false, tenant: null, error: null });
-  // Acceso restringido a algunas empresas: no crea ni elimina empresas.
-  const { restricted } = getPlatformAccess(useAuthStore((s) => s.user));
 
   const { tenants, tenantsPagination, isLoading, isSubmitting, fetchTenants, toggleTenantStatus, deleteTenant } =
     useSuperAdminStore();
@@ -127,13 +123,11 @@ const TenantsList = () => {
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Empresas</h1>
           <p className="text-gray-600 dark:text-gray-400">Gestión de tenants de la plataforma</p>
         </div>
-        {!restricted && (
-          <Link to="/superadmin/tenants/new">
-            <Button variant="primary" icon={Plus}>
-              Nueva Empresa
-            </Button>
-          </Link>
-        )}
+        <Link to="/superadmin/tenants/new">
+          <Button variant="primary" icon={Plus}>
+            Nueva Empresa
+          </Button>
+        </Link>
       </div>
 
       {/* Filtros */}
@@ -316,13 +310,13 @@ const TenantsList = () => {
                               icon: Power,
                               onClick: () => handleToggleStatus(tenant),
                             },
-                            !restricted && {
+                            {
                               label: 'Eliminar',
                               icon: Trash2,
                               onClick: () => handleDelete(tenant),
                               className: 'text-red-600',
                             },
-                          ].filter(Boolean)}
+                          ]}
                         />
                       </td>
                     </tr>

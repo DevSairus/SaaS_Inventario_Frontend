@@ -7,8 +7,6 @@ import {
   Activity,
 } from 'lucide-react';
 import useSuperAdminStore from '../../store/superAdminStore';
-import useAuthStore from '../../store/authStore';
-import { getPlatformAccess } from '../../utils/platformAccess';
 import Card from '../../components/common/Card';
 import Loading from '../../components/common/Loading';
 import Badge from '../../components/common/Badge';
@@ -17,7 +15,6 @@ import { Link } from 'react-router-dom';
 
 const Dashboard = () => {
   const { dashboard, expiringTrials, isLoading, fetchDashboard, fetchExpiringTrials } = useSuperAdminStore();
-  const { restricted } = getPlatformAccess(useAuthStore((s) => s.user));
 
   useEffect(() => {
     fetchDashboard();
@@ -277,16 +274,14 @@ const Dashboard = () => {
       {/* Quick Actions */}
       <Card title="Acciones Rápidas">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {!restricted && (
-            <Link
-              to="/superadmin/tenants/new"
-              className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-primary-500 hover:bg-primary-50 transition-colors text-center"
-            >
-              <Building2 className="w-8 h-8 mx-auto mb-2 text-gray-400" />
-              <p className="font-medium text-gray-900">Nueva Empresa</p>
-              <p className="text-sm text-gray-500">Registrar nuevo cliente</p>
-            </Link>
-          )}
+          <Link
+            to="/superadmin/tenants/new"
+            className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-primary-500 hover:bg-primary-50 transition-colors text-center"
+          >
+            <Building2 className="w-8 h-8 mx-auto mb-2 text-gray-400" />
+            <p className="font-medium text-gray-900">Nueva Empresa</p>
+            <p className="text-sm text-gray-500">Registrar nuevo cliente</p>
+          </Link>
 
           <Link
             to="/superadmin/tenants"

@@ -33,7 +33,7 @@ const SuperAdminSidebar = ({ isOpen, toggleSidebar }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
-  const { isOwner, restricted } = getPlatformAccess(user);
+  const { isOwner } = getPlatformAccess(user);
 
   // is_owner / all_tenants_access pueden cambiar sin que el usuario vuelva a
   // iniciar sesión (los edita el owner), y las sesiones viejas no los traen:
@@ -101,7 +101,6 @@ const SuperAdminSidebar = ({ isOpen, toggleSidebar }) => {
       children: [
         {
           name: 'Planes',
-          global: true,
           href: '/superadmin/subscription-plans',
           icon: Package,
           description: 'Gestionar planes disponibles',
@@ -126,14 +125,12 @@ const SuperAdminSidebar = ({ isOpen, toggleSidebar }) => {
         },
         {
           name: 'Configurar MercadoPago',
-          global: true,
           href: '/superadmin/mercadopago-config',
           icon: Settings,
           description: 'Credenciales de pago',
         },
         {
           name: 'Facturación Núcleo (NCF)',
-          global: true,
           href: '/superadmin/ncf-config',
           icon: Link2,
           description: 'Conexión con ESC DataCore',
@@ -152,14 +149,12 @@ const SuperAdminSidebar = ({ isOpen, toggleSidebar }) => {
     // todo.
     {
       name: 'Integración con Meta',
-      global: true,
       href: '/superadmin/meta-config',
       icon: Facebook,
     },
 
     {
       name: 'Conexión Ensambladora',
-      global: true,
       href: '/superadmin/ensambladora-config',
       icon: Link2,
     },
@@ -180,7 +175,6 @@ const SuperAdminSidebar = ({ isOpen, toggleSidebar }) => {
 
     {
       name: 'Migración de Tenants',
-      global: true,
       href: '/superadmin/tenant-migration',
       icon: Database,
     },
@@ -192,7 +186,6 @@ const SuperAdminSidebar = ({ isOpen, toggleSidebar }) => {
     },
     {
       name: 'Permisos',
-      global: true,
       href: '/superadmin/permissions',
       icon: Shield,
     },
@@ -215,7 +208,6 @@ const SuperAdminSidebar = ({ isOpen, toggleSidebar }) => {
         },
         {
           name: 'Gestión de FAQ',
-          global: true,
           href: '/superadmin/support/faq',
           icon: HelpCircle,
           description: 'Administrar artículos de ayuda',
@@ -237,9 +229,8 @@ const SuperAdminSidebar = ({ isOpen, toggleSidebar }) => {
   ];
 
   const isSupportRole = user?.role === 'support';
-  // Acceso restringido (utils/platformAccess.js): fuera lo global; el
-  // ítem de usuarios de plataforma solo para el owner.
-  const visible = (item) => !(item.global && restricted) && !(item.ownerOnly && !isOwner);
+  // El ítem de usuarios de plataforma es solo para el owner (utils/platformAccess.js).
+  const visible = (item) => !(item.ownerOnly && !isOwner);
   const filteredNavigation = (isSupportRole
     ? navigation.filter((item) => item.roles?.includes('support'))
     : navigation)

@@ -226,13 +226,10 @@ function SuperAdminRoute({ children, roles }) {
   return children;
 }
 
-// Dentro del panel superadmin (utils/platformAccess.js):
-//   `owner`  -> solo el owner (usuarios de plataforma).
-//   `global` -> funciones globales: no para usuarios con acceso restringido.
-function PlatformAccessRoute({ children, owner = false, global = false }) {
+// Pantallas solo del owner (usuarios de plataforma) -- utils/platformAccess.js.
+function OwnerRoute({ children }) {
   const user = useAuthStore((s) => s.user);
-  const { isOwner, restricted } = getPlatformAccess(user);
-  if ((owner && !isOwner) || (global && restricted)) return <Navigate to={getPlatformHome(user) || ROUTES.SUPERADMIN_DASHBOARD} replace />;
+  if (!getPlatformAccess(user).isOwner) return <Navigate to={getPlatformHome(user) || ROUTES.SUPERADMIN_DASHBOARD} replace />;
   return children;
 }
 
@@ -330,27 +327,27 @@ function App() {
           <Route index element={<Navigate to="/superadmin/dashboard" replace />} />
           <Route path="dashboard"           element={<Suspense fallback={<Loading fullScreen />}><SuperAdminDashboard /></Suspense>} />
           <Route path="tenants"             element={<Suspense fallback={<Loading fullScreen />}><TenantsList /></Suspense>} />
-          <Route path="tenants/new"         element={<PlatformAccessRoute global><Suspense fallback={<Loading fullScreen />}><TenantForm /></Suspense></PlatformAccessRoute>} />
+          <Route path="tenants/new"         element={<Suspense fallback={<Loading fullScreen />}><TenantForm /></Suspense>} />
           <Route path="tenants/:id"         element={<Suspense fallback={<Loading fullScreen />}><TenantDetail /></Suspense>} />
           <Route path="tenants/:id/edit"    element={<Suspense fallback={<Loading fullScreen />}><TenantForm /></Suspense>} />
           <Route path="tenants/:id/users"   element={<Suspense fallback={<Loading fullScreen />}><TenantUsers /></Suspense>} />
           <Route path="tenants/:id/subscription" element={<Suspense fallback={<Loading fullScreen />}><SubscriptionManagement /></Suspense>} />
-          <Route path="subscription-plans"  element={<PlatformAccessRoute global><Suspense fallback={<Loading fullScreen />}><SubscriptionPlansManagement /></Suspense></PlatformAccessRoute>} />
+          <Route path="subscription-plans"  element={<Suspense fallback={<Loading fullScreen />}><SubscriptionPlansManagement /></Suspense>} />
           <Route path="subscriptions"       element={<Suspense fallback={<Loading fullScreen />}><SuperAdminSubscriptionsList /></Suspense>} />
           <Route path="subscriptions/:id"   element={<Suspense fallback={<Loading fullScreen />}><SubscriptionManagement /></Suspense>} />
           <Route path="subscription-invoices" element={<Suspense fallback={<Loading fullScreen />}><SubscriptionInvoicesManagement /></Suspense>} />
-          <Route path="mercadopago-config"  element={<PlatformAccessRoute global><Suspense fallback={<Loading fullScreen />}><SuperAdminMercadoPagoConfig /></Suspense></PlatformAccessRoute>} />
-          <Route path="ncf-config"          element={<PlatformAccessRoute global><Suspense fallback={<Loading fullScreen />}><SuperAdminNcfConfig /></Suspense></PlatformAccessRoute>} />
-          <Route path="meta-config"         element={<PlatformAccessRoute global><Suspense fallback={<Loading fullScreen />}><SuperAdminMetaConfig /></Suspense></PlatformAccessRoute>} />
-          <Route path="ensambladora-config" element={<PlatformAccessRoute global><Suspense fallback={<Loading fullScreen />}><SuperAdminEnsambladoraConfig /></Suspense></PlatformAccessRoute>} />
-          <Route path="tenant-migration"    element={<PlatformAccessRoute global><Suspense fallback={<Loading fullScreen />}><TenantMigrationStatus /></Suspense></PlatformAccessRoute>} />
+          <Route path="mercadopago-config"  element={<Suspense fallback={<Loading fullScreen />}><SuperAdminMercadoPagoConfig /></Suspense>} />
+          <Route path="ncf-config"          element={<Suspense fallback={<Loading fullScreen />}><SuperAdminNcfConfig /></Suspense>} />
+          <Route path="meta-config"         element={<Suspense fallback={<Loading fullScreen />}><SuperAdminMetaConfig /></Suspense>} />
+          <Route path="ensambladora-config" element={<Suspense fallback={<Loading fullScreen />}><SuperAdminEnsambladoraConfig /></Suspense>} />
+          <Route path="tenant-migration"    element={<Suspense fallback={<Loading fullScreen />}><TenantMigrationStatus /></Suspense>} />
           <Route path="announcements"       element={<Suspense fallback={<Loading fullScreen />}><AnnouncementsManagement /></Suspense>} />
           <Route path="blog"                element={<Suspense fallback={<Loading fullScreen />}><BlogManagement /></Suspense>} />
           <Route path="blog/nuevo"          element={<Suspense fallback={<Loading fullScreen />}><BlogPostForm /></Suspense>} />
           <Route path="blog/:id"            element={<Suspense fallback={<Loading fullScreen />}><BlogPostForm /></Suspense>} />
           <Route path="analytics"           element={<Suspense fallback={<Loading fullScreen />}><Analytics /></Suspense>} />
-          <Route path="permissions"         element={<PlatformAccessRoute global><Suspense fallback={<Loading fullScreen />}><RolePermissionsPage /></Suspense></PlatformAccessRoute>} />
-          <Route path="platform-users"      element={<PlatformAccessRoute owner><Suspense fallback={<Loading fullScreen />}><PlatformUsers /></Suspense></PlatformAccessRoute>} />
+          <Route path="permissions"         element={<Suspense fallback={<Loading fullScreen />}><RolePermissionsPage /></Suspense>} />
+          <Route path="platform-users"      element={<OwnerRoute><Suspense fallback={<Loading fullScreen />}><PlatformUsers /></Suspense></OwnerRoute>} />
         </Route>
 
         {/* Soporte SuperAdmin — accesible para super_admin y support */}
@@ -360,7 +357,7 @@ function App() {
         >
           <Route path="support/tickets"     element={<Suspense fallback={<Loading fullScreen />}><SupportInbox /></Suspense>} />
           <Route path="support/tickets/:id" element={<Suspense fallback={<Loading fullScreen />}><SupportTicketDetail /></Suspense>} />
-          <Route path="support/faq"         element={<PlatformAccessRoute global><Suspense fallback={<Loading fullScreen />}><FaqManagement /></Suspense></PlatformAccessRoute>} />
+          <Route path="support/faq"         element={<Suspense fallback={<Loading fullScreen />}><FaqManagement /></Suspense>} />
           <Route path="support/stats"       element={<Suspense fallback={<Loading fullScreen />}><SupportAnalytics /></Suspense>} />
           <Route path="support/remote-sessions" element={<Suspense fallback={<Loading fullScreen />}><RemoteSessionsHistory /></Suspense>} />
         </Route>

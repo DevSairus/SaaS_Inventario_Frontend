@@ -2,7 +2,7 @@
 // Mismo criterio que backend/src/middleware/platformScope.js -- acá es solo
 // para mostrar/ocultar menús; el backend vuelve a validar cada request.
 //   isOwner     -> administra usuarios de plataforma.
-//   restricted  -> solo ve sus empresas asignadas y nada global.
+//   restricted  -> mismas funciones, pero solo ve sus empresas asignadas.
 // Sesiones previas al rol owner no traen los campos: se tratan como antes
 // (sin restricción, no owner) hasta que el layout refresca el perfil.
 export function getPlatformAccess(user) {

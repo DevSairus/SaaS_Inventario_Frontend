@@ -283,8 +283,8 @@ const PlatformUsers = () => {
                 <span>
                   <span className="font-medium text-gray-900 dark:text-gray-100">Acceso a todas las empresas</span>
                   <span className="block text-sm text-gray-600 dark:text-gray-400">
-                    Si lo desactivas, solo ve las empresas seleccionadas y no puede usar funciones globales
-                    (planes, integraciones, migraciones, permisos).
+                    Si lo desactivas, conserva todas las funciones (planes, integraciones, permisos...)
+                    pero solo ve y opera las empresas seleccionadas. Las empresas que cree se le asignan solas.
                   </span>
                 </span>
               </label>
