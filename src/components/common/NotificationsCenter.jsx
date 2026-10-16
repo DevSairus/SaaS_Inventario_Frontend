@@ -135,6 +135,10 @@ function NotificationsCenter() {
   const enabledModules = useTenantStore((s) => s.enabledModules);
   const hasCrm = enabledModules !== null && enabledModules.includes('crm');
   const hasWorkshop = enabledModules !== null && enabledModules.includes('workshop');
+  // Mismos gates que el backend: /api/payable-alerts exige 'treasury' y
+  // /api/customer-advance-alerts exige 'receivables' (403 si no están).
+  const hasTreasury = enabledModules !== null && enabledModules.includes('treasury');
+  const hasReceivables = enabledModules !== null && enabledModules.includes('receivables');
 
   const bundle = useNotificationsBundleStore((s) => s.data);
 
@@ -163,13 +167,17 @@ function NotificationsCenter() {
       getStockAlerts({ status: 'active', limit: 500 })
         .then(r => r?.success && setStockProducts(mapStockAlertsToProducts(r.data)))
         .catch(() => {}),
-      getPayableAlerts({ status: 'active', limit: 500, sort_by: 'days_to_due', sort_order: 'ASC' })
-        .then(r => r?.success && setPayable(r.data || []))
-        .catch(() => {}),
-      getAdvanceAlerts({ status: 'active', limit: 500, sort_by: 'days_since_received', sort_order: 'DESC' })
-        .then(r => r?.success && setAdvance(r.data || []))
-        .catch(() => {}),
     ];
+    if (hasTreasury) {
+      jobs.push(getPayableAlerts({ status: 'active', limit: 500, sort_by: 'days_to_due', sort_order: 'ASC' })
+        .then(r => r?.success && setPayable(r.data || []))
+        .catch(() => {}));
+    }
+    if (hasReceivables) {
+      jobs.push(getAdvanceAlerts({ status: 'active', limit: 500, sort_by: 'days_since_received', sort_order: 'DESC' })
+        .then(r => r?.success && setAdvance(r.data || []))
+        .catch(() => {}));
+    }
     if (hasCrm) {
       jobs.push(crmApi.getNotificationsSummary().then(r => setCrmSummary(r.data.data)).catch(() => {}));
     }
@@ -202,7 +210,7 @@ function NotificationsCenter() {
     }
     await Promise.allSettled(jobs);
     setRefreshing(false);
-  }, [hasCrm, hasWorkshop]);
+  }, [hasCrm, hasWorkshop, hasTreasury, hasReceivables]);
 
   // Refresco al abrir (acción del usuario, no un timer) -- mismo criterio
   // que cada campana individual tenía antes.
