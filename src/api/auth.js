@@ -33,7 +33,7 @@ export const authAPI = {
 
   // Cambiar contraseña
   changePassword: async (data) => {
-    const response = await api.post('/auth/change-password', data);
+    const response = await api.put('/users/change-password', data);
     return response.data;
   },
 

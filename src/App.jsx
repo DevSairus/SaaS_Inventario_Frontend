@@ -182,7 +182,8 @@ const DianConfigPage = lazy(() => import('./pages/dian/DianConfigPage'));
 const DianEventsPage = lazy(() => import('./pages/dian/DianEventsPage'));
 
 // Soporte — Cliente
-const SupportFAQ = lazy(() => import('./pages/support/SupportFAQ'));
+const ManualsHub = lazy(() => import('./pages/support/manuals/ManualsHub'));
+const ManualReader = lazy(() => import('./pages/support/manuals/ManualReader'));
 const MyTickets = lazy(() => import('./pages/support/MyTickets'));
 const TicketDetail = lazy(() => import('./pages/support/TicketDetail'));
 const CreateTicket = lazy(() => import('./pages/support/CreateTicket'));
@@ -190,7 +191,6 @@ const CreateTicket = lazy(() => import('./pages/support/CreateTicket'));
 // Soporte — SuperAdmin
 const SupportInbox = lazy(() => import('./pages/superadmin/support/SupportInbox'));
 const SupportTicketDetail = lazy(() => import('./pages/superadmin/support/SupportTicketDetail'));
-const FaqManagement = lazy(() => import('./pages/superadmin/support/FaqManagement'));
 const SupportAnalytics = lazy(() => import('./pages/superadmin/support/SupportAnalytics'));
 const RemoteSessionsHistory = lazy(() => import('./pages/superadmin/support/RemoteSessionsHistory'));
 
@@ -357,7 +357,6 @@ function App() {
         >
           <Route path="support/tickets"     element={<Suspense fallback={<Loading fullScreen />}><SupportInbox /></Suspense>} />
           <Route path="support/tickets/:id" element={<Suspense fallback={<Loading fullScreen />}><SupportTicketDetail /></Suspense>} />
-          <Route path="support/faq"         element={<Suspense fallback={<Loading fullScreen />}><FaqManagement /></Suspense>} />
           <Route path="support/stats"       element={<Suspense fallback={<Loading fullScreen />}><SupportAnalytics /></Suspense>} />
           <Route path="support/remote-sessions" element={<Suspense fallback={<Loading fullScreen />}><RemoteSessionsHistory /></Suspense>} />
         </Route>
@@ -535,7 +534,10 @@ function App() {
         <Route path="dian/eventos" element={<TenantRoute roles={MGMT_ROLES}><Suspense fallback={<Loading fullScreen />}><DianEventsPage /></Suspense></TenantRoute>} />
 
         {/* ── Soporte ──────────────────────────────── */}
-        <Route path="support"              element={<TenantRoute><Suspense fallback={<Loading fullScreen />}><SupportFAQ /></Suspense></TenantRoute>} />
+        {/* El Centro de Ayuda son los manuales (la FAQ se retiró: duplicaba los manuales y se desactualizaba). */}
+        <Route path="support"              element={<Navigate to="/support/manuals" replace />} />
+        <Route path="support/manuals"      element={<TenantRoute><Suspense fallback={<Loading fullScreen />}><ManualsHub /></Suspense></TenantRoute>} />
+        <Route path="support/manuals/:slug" element={<TenantRoute><Suspense fallback={<Loading fullScreen />}><ManualReader /></Suspense></TenantRoute>} />
         <Route path="support/new-ticket"   element={<TenantRoute><Suspense fallback={<Loading fullScreen />}><CreateTicket /></Suspense></TenantRoute>} />
         <Route path="support/tickets"      element={<TenantRoute><Suspense fallback={<Loading fullScreen />}><MyTickets /></Suspense></TenantRoute>} />
         <Route path="support/tickets/:id"  element={<TenantRoute><Suspense fallback={<Loading fullScreen />}><TicketDetail /></Suspense></TenantRoute>} />

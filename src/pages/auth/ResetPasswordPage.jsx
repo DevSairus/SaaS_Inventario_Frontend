@@ -32,7 +32,7 @@ function ResetPasswordPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    if (password.length < 6) { setError('La contraseña debe tener al menos 6 caracteres'); return; }
+    if (password.length < 8) { setError('La contraseña debe tener al menos 8 caracteres'); return; }
     if (password !== confirmPassword) { setError('Las contraseñas no coinciden'); return; }
 
     setLoading(true);
@@ -94,7 +94,7 @@ function ResetPasswordPage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
             </svg>
           </div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">Control de Inventario</h1>
+          <h1 className="text-2xl font-bold text-white tracking-tight">Pitbox</h1>
         </div>
 
         <div className="glass rounded-2xl overflow-hidden">
@@ -127,7 +127,7 @@ function ResetPasswordPage() {
                       </svg>
                       <input type={showPass ? 'text' : 'password'} required value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        className="inp w-full pl-10 pr-12 py-3 rounded-xl text-sm" placeholder="Mínimo 6 caracteres" />
+                        className="inp w-full pl-10 pr-12 py-3 rounded-xl text-sm" placeholder="Mínimo 8 caracteres" />
                       <button type="button" onClick={() => setShowPass(!showPass)}
                         className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors">
                         {showPass

@@ -58,7 +58,8 @@ const useAuthStore = create((set) => ({
       set({ isLoading: false });
       return { success: false, error: response.message || 'Error al iniciar sesión' };
     } catch (error) {
-      const errorMessage = error.response?.data?.message || 'Error al iniciar sesión';
+      // El rate limiter de login responde en `error`, no en `message`.
+      const errorMessage = error.response?.data?.message || error.response?.data?.error || 'Error al iniciar sesión';
       set({
         error: errorMessage,
         isLoading: false,

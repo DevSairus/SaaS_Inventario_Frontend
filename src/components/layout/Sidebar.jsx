@@ -6,6 +6,11 @@ import useAuthStore from "../../store/authStore";
 import useTenantStore from "../../store/tenantStore";
 import NexaIcon from "../common/NexaIcon";
 
+const ROLE_LABELS = {
+  super_admin: "Super Admin", admin: "Administrador", manager: "Gerente", accountant: "Contador",
+  seller: "Vendedor", warehouse_keeper: "Bodeguero", technician: "Técnico", user: "Usuario", viewer: "Visualizador",
+};
+
 const I = {
   dashboard: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="w-[17px] h-[17px] shrink-0"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>,
   wrench:    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="w-[17px] h-[17px] shrink-0"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>,
@@ -183,11 +188,12 @@ const NAV = [
     ],
   },
   { id: "reports",  label: "Informes", icon: "chart", path: "/reports" },
-  { id: "nexa", label: "Aprobaciones NEXA", icon: "nexa", path: "/nexa/aprobaciones", module: "ai_assistant" },
+  // aiProposals.controller.js: solo admin/manager/accountant (y super_admin).
+  { id: "nexa", label: "Aprobaciones NEXA", icon: "nexa", path: "/nexa/aprobaciones", module: "ai_assistant", roles: ["admin", "super_admin", "manager", "accountant"] },
   {
     id: "support", label: "Soporte", icon: "headset",
     children: [
-      { label: "Centro de Ayuda", path: "/support" },
+      { label: "Centro de Ayuda", path: "/support/manuals" },
       { label: "Mis Tickets",     path: "/support/tickets" },
     ],
   },
@@ -364,10 +370,10 @@ export default function Sidebar({ isCollapsed, setIsCollapsed, isMobileOpen, set
               <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[#CF3A0B] to-[#E84510] flex items-center justify-center text-white text-[10px] font-bold shrink-0">
                 {(user?.first_name?.[0] ?? "U").toUpperCase()}
               </div>
-              <div className="flex-1 min-w-0">
+              <Link to="/profile" title="Mi Perfil" className="flex-1 min-w-0 hover:opacity-80">
                 <p className="text-[11.5px] font-medium text-gray-200 truncate leading-tight">{user?.first_name} {user?.last_name}</p>
-                <p className="text-[10.5px] text-gray-500 capitalize truncate leading-tight">{user?.role ?? "usuario"}</p>
-              </div>
+                <p className="text-[10.5px] text-gray-500 truncate leading-tight">{ROLE_LABELS[user?.role] ?? user?.role ?? "Usuario"}</p>
+              </Link>
               <button onClick={handleLogout} title="Cerrar sesión" className="p-1 rounded-md text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-colors shrink-0">
                 {I.logout}
               </button>

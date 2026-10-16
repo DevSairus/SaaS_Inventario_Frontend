@@ -1,7 +1,5 @@
 import { create } from 'zustand';
 import {
-  getFaq,
-  submitFaqFeedback,
   createTicket,
   getMyTickets,
   getTicketDetail,
@@ -10,40 +8,12 @@ import {
 } from '../api/support';
 
 const useSupportStore = create((set, get) => ({
-  // FAQ
-  faqCategories: [],
-  faqLoading: false,
-
   // Tickets
   tickets: [],
   ticketsPagination: { page: 1, pages: 1, total: 0 },
   ticketsLoading: false,
   currentTicket: null,
   ticketLoading: false,
-
-  // Actions — FAQ
-  fetchFaq: async () => {
-    set({ faqLoading: true });
-    try {
-      const data = await getFaq();
-      if (data.success) {
-        set({ faqCategories: data.data });
-      }
-    } catch (err) {
-      // silent
-    } finally {
-      set({ faqLoading: false });
-    }
-  },
-
-  submitFeedback: async (articleId, helpful) => {
-    try {
-      await submitFaqFeedback(articleId, helpful);
-      return true;
-    } catch {
-      return false;
-    }
-  },
 
   // Actions — Tickets
   fetchTickets: async (params = {}) => {

@@ -65,10 +65,10 @@ const CreateTicket = () => {
     <Layout>
     <div className="p-6 max-w-2xl mx-auto">
       <button
-        onClick={() => navigate('/support')}
+        onClick={() => navigate('/support/manuals')}
         className="text-sm text-indigo-600 hover:text-indigo-800 mb-4 inline-block"
       >
-        &larr; Volver a Soporte
+        &larr; Volver al Centro de Ayuda
       </button>
 
       <h1 className="text-2xl font-bold text-gray-900 mb-1">Escalar a Soporte</h1>
@@ -157,7 +157,7 @@ const CreateTicket = () => {
         <div className="flex gap-3 pt-2">
           <button
             type="button"
-            onClick={() => navigate('/support')}
+            onClick={() => navigate('/support/manuals')}
             className="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium transition-colors"
           >
             Cancelar

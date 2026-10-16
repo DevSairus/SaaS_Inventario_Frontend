@@ -1,12 +1,5 @@
 import { create } from 'zustand';
 import {
-  getFaqCategories,
-  createFaqCategory,
-  updateFaqCategory,
-  deleteFaqCategory,
-  createFaqArticle,
-  updateFaqArticle,
-  deleteFaqArticle,
   getSupportTickets,
   getSupportTicketDetail,
   updateSupportTicket,
@@ -15,10 +8,6 @@ import {
 } from '../api/superadminSupport';
 
 const useSuperAdminSupportStore = create((set, get) => ({
-  // FAQ
-  faqCategories: [],
-  faqLoading: false,
-
   // Tickets
   tickets: [],
   ticketsPagination: { page: 1, pages: 1, total: 0 },
@@ -29,65 +18,6 @@ const useSuperAdminSupportStore = create((set, get) => ({
   // Stats
   stats: null,
   statsLoading: false,
-
-  // ===== FAQ =====
-  fetchFaqCategories: async () => {
-    set({ faqLoading: true });
-    try {
-      const data = await getFaqCategories();
-      if (data.success) set({ faqCategories: data.data });
-    } catch { /* silent */ } finally {
-      set({ faqLoading: false });
-    }
-  },
-
-  createCategory: async (categoryData) => {
-    try {
-      const data = await createFaqCategory(categoryData);
-      if (data.success) await get().fetchFaqCategories();
-      return data.success;
-    } catch { return false; }
-  },
-
-  updateCategory: async (id, categoryData) => {
-    try {
-      const data = await updateFaqCategory(id, categoryData);
-      if (data.success) await get().fetchFaqCategories();
-      return data.success;
-    } catch { return false; }
-  },
-
-  deleteCategory: async (id) => {
-    try {
-      const data = await deleteFaqCategory(id);
-      if (data.success) await get().fetchFaqCategories();
-      return data.success;
-    } catch { return false; }
-  },
-
-  createArticle: async (articleData) => {
-    try {
-      const data = await createFaqArticle(articleData);
-      if (data.success) await get().fetchFaqCategories();
-      return data.success;
-    } catch { return false; }
-  },
-
-  updateArticle: async (id, articleData) => {
-    try {
-      const data = await updateFaqArticle(id, articleData);
-      if (data.success) await get().fetchFaqCategories();
-      return data.success;
-    } catch { return false; }
-  },
-
-  deleteArticle: async (id) => {
-    try {
-      const data = await deleteFaqArticle(id);
-      if (data.success) await get().fetchFaqCategories();
-      return data.success;
-    } catch { return false; }
-  },
 
   // ===== Tickets =====
   fetchTickets: async (params = {}) => {

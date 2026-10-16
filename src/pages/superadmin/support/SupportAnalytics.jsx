@@ -4,7 +4,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from 'recharts';
 import {
-  BarChart3, Ticket, Clock, Star, ThumbsUp, ThumbsDown,
+  BarChart3, Ticket, Clock, Star,
   Loader2, Calendar,
 } from 'lucide-react';
 import useSuperAdminSupportStore from '../../../store/superAdminSupportStore';
@@ -47,7 +47,7 @@ export default function SupportAnalytics() {
 
   if (!stats) return null;
 
-  const { summary, by_status, by_priority, by_category, by_tenant, monthly, faq } = stats;
+  const { summary, by_status, by_priority, by_category, by_tenant, monthly } = stats;
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
@@ -220,52 +220,6 @@ export default function SupportAnalytics() {
         </div>
       )}
 
-      {/* FAQ Effectiveness */}
-      {faq.length > 0 && (
-        <div className="bg-white rounded-xl border border-gray-200 p-5 dark:bg-graphite dark:border-white/10">
-          <h3 className="font-semibold text-gray-800 mb-4 dark:text-gray-200">Efectividad de FAQ</h3>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-gray-500 border-b dark:text-gray-500 dark:border-white/10">
-                  <th className="pb-2 font-medium">Artículo</th>
-                  <th className="pb-2 font-medium text-center">
-                    <span className="inline-flex items-center gap-1"><ThumbsUp className="w-3 h-3" /> Útil</span>
-                  </th>
-                  <th className="pb-2 font-medium text-center">
-                    <span className="inline-flex items-center gap-1"><ThumbsDown className="w-3 h-3" /> No útil</span>
-                  </th>
-                  <th className="pb-2 font-medium text-center">Efectividad</th>
-                </tr>
-              </thead>
-              <tbody>
-                {faq.map((a) => {
-                  const total = (a.helpful_count || 0) + (a.not_helpful_count || 0);
-                  const pct = total > 0 ? Math.round(((a.helpful_count || 0) / total) * 100) : null;
-                  return (
-                    <tr key={a.id} className="border-b last:border-b-0 dark:border-white/10">
-                      <td className="py-2 text-gray-800 max-w-xs truncate dark:text-gray-200">{a.question}</td>
-                      <td className="py-2 text-center text-green-600 dark:text-green-400">{a.helpful_count || 0}</td>
-                      <td className="py-2 text-center text-red-500 dark:text-red-400">{a.not_helpful_count || 0}</td>
-                      <td className="py-2 text-center">
-                        {pct != null ? (
-                          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                            pct >= 70 ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' : pct >= 40 ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
-                          }`}>
-                            {pct}%
-                          </span>
-                        ) : (
-                          <span className="text-gray-400 text-xs dark:text-gray-500">Sin datos</span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

@@ -551,8 +551,9 @@ const UserForm = () => {
           <Button variant="outline" onClick={() => setPlanLimitModal(null)}>
             Cerrar
           </Button>
-          <Button variant="primary" onClick={() => navigate('/subscription')}>
-            Actualizar plan
+          {/* No hay pantalla de suscripción para el tenant: el cambio de plan se pide a soporte. */}
+          <Button variant="primary" onClick={() => navigate('/support/new-ticket')}>
+            Solicitar más usuarios
           </Button>
         </div>
       </Modal>

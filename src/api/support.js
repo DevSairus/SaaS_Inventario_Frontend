@@ -1,16 +1,5 @@
 import api from './axios';
 
-// FAQ
-export const getFaq = async () => {
-  const response = await api.get('/support/faq');
-  return response.data;
-};
-
-export const submitFaqFeedback = async (articleId, helpful) => {
-  const response = await api.post(`/support/faq/${articleId}/feedback`, { helpful });
-  return response.data;
-};
-
 // Tickets
 export const createTicket = async (data, files) => {
   const formData = new FormData();

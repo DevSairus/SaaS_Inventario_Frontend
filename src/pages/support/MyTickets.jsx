@@ -45,10 +45,10 @@ const MyTickets = () => {
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-500">Historial de tus solicitudes de soporte</p>
         </div>
         <button
-          onClick={() => navigate('/support')}
+          onClick={() => navigate('/support/manuals')}
           className="text-sm text-indigo-600 hover:text-indigo-800 font-medium"
         >
-          &larr; Volver a FAQ
+          &larr; Volver al Centro de Ayuda
         </button>
       </div>
 

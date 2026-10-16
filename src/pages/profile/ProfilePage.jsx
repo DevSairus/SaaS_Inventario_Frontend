@@ -29,8 +29,8 @@ const ProfilePage = () => {
     }
     if (!passwordData.new_password) {
       newErrors.new_password = 'Nueva contraseña requerida';
-    } else if (passwordData.new_password.length < 6) {
-      newErrors.new_password = 'Mínimo 6 caracteres';
+    } else if (passwordData.new_password.length < 8) {
+      newErrors.new_password = 'Mínimo 8 caracteres';
     }
     if (passwordData.new_password !== passwordData.confirm_password) {
       newErrors.confirm_password = 'Las contraseñas no coinciden';
@@ -70,7 +70,9 @@ const ProfilePage = () => {
     const roles = {
       admin: 'Administrador',
       manager: 'Gerente',
+      accountant: 'Contador',
       seller: 'Vendedor',
+      technician: 'Técnico',
       warehouse_keeper: 'Bodeguero',
       user: 'Usuario',
       viewer: 'Visualizador'
@@ -168,7 +170,7 @@ const ProfilePage = () => {
                 }}
                 error={errors.new_password}
                 placeholder="••••••••"
-                helperText="Mínimo 6 caracteres"
+                helperText="Mínimo 8 caracteres"
               />
 
               <Input

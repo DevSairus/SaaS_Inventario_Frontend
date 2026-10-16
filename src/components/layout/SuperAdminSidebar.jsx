@@ -19,7 +19,6 @@ import {
   Link2,
   Headphones,
   Inbox,
-  HelpCircle,
   Monitor,
   Database,
   Facebook,
@@ -205,12 +204,6 @@ const SuperAdminSidebar = ({ isOpen, toggleSidebar }) => {
           href: '/superadmin/support/tickets',
           icon: Inbox,
           description: 'Gestionar tickets de soporte',
-        },
-        {
-          name: 'Gestión de FAQ',
-          href: '/superadmin/support/faq',
-          icon: HelpCircle,
-          description: 'Administrar artículos de ayuda',
         },
         {
           name: 'Estadísticas',

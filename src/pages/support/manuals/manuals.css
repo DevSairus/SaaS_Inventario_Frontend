@@ -1,0 +1,49 @@
+/* Estilos de lectura de los manuales de usuario */
+.manual-prose { color: #374151; font-size: 0.95rem; line-height: 1.7; }
+.manual-prose p { margin: 0 0 0.9rem; }
+.manual-prose strong { color: #111827; font-weight: 600; }
+.manual-prose h4 { margin: 1.4rem 0 0.5rem; font-size: 0.95rem; font-weight: 700; color: #111827; }
+.manual-prose ul, .manual-prose ol { margin: 0 0 1rem; padding-left: 1.4rem; }
+.manual-prose ul { list-style: disc; }
+.manual-prose ol { list-style: decimal; }
+.manual-prose li { margin: 0.3rem 0; padding-left: 0.2rem; }
+.manual-prose li::marker { color: #6366f1; }
+.manual-prose a.xref { color: #4f46e5; text-decoration: underline; text-decoration-color: rgba(79,70,229,.35); text-underline-offset: 2px; }
+.manual-prose a.xref:hover { text-decoration-color: currentColor; }
+
+.manual-prose .tbl-wrap { overflow-x: auto; margin: 0.4rem 0 1.2rem; border: 1px solid #e5e7eb; border-radius: 0.6rem; }
+.manual-prose table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+.manual-prose th { background: #eef2ff; color: #312e81; text-align: left; font-weight: 600; padding: 0.55rem 0.8rem; border-bottom: 1px solid #e5e7eb; white-space: nowrap; }
+.manual-prose td { padding: 0.55rem 0.8rem; border-top: 1px solid #f1f5f9; vertical-align: top; }
+.manual-prose tbody tr:nth-child(even) td { background: #fafafa; }
+.manual-prose td > p:last-child, .manual-prose td > ul:last-child { margin-bottom: 0; }
+.manual-prose td ul, .manual-prose td ol { margin-bottom: 0.3rem; }
+
+.manual-prose .callout { margin: 1rem 0; padding: 0.75rem 1rem; border-radius: 0.6rem; border-left: 4px solid; font-size: 0.9rem; line-height: 1.6; }
+.manual-prose .callout .callout-label { display: block; margin-bottom: 0.15rem; font-size: 0.72rem; letter-spacing: .06em; text-transform: uppercase; }
+.manual-prose .callout.important { background: #fffbeb; border-color: #b45309; }
+.manual-prose .callout.important .callout-label { color: #b45309; }
+.manual-prose .callout.note { background: #eff6ff; border-color: #1d4ed8; }
+.manual-prose .callout.note .callout-label { color: #1d4ed8; }
+
+.manual-prose mark.manual-hit { background: #fde68a; color: inherit; border-radius: 3px; padding: 0 1px; }
+.manual-prose mark.manual-hit.is-current { background: #fb923c; color: #fff; }
+
+/* Modo oscuro (la app usa darkMode: 'class') */
+.dark .manual-prose { color: #cbd5e1; }
+.dark .manual-prose strong, .dark .manual-prose h4 { color: #f1f5f9; }
+.dark .manual-prose a.xref { color: #a5b4fc; text-decoration-color: rgba(165,180,252,.4); }
+.dark .manual-prose li::marker { color: #818cf8; }
+.dark .manual-prose .tbl-wrap { border-color: rgba(255,255,255,.1); }
+.dark .manual-prose th { background: rgba(99,102,241,.15); color: #c7d2fe; border-color: rgba(255,255,255,.1); }
+.dark .manual-prose td { border-color: rgba(255,255,255,.06); }
+.dark .manual-prose tbody tr:nth-child(even) td { background: rgba(255,255,255,.02); }
+.dark .manual-prose .callout.important { background: rgba(180,83,9,.15); border-color: #f59e0b; }
+.dark .manual-prose .callout.important .callout-label { color: #fbbf24; }
+.dark .manual-prose .callout.note { background: rgba(29,78,216,.15); border-color: #60a5fa; }
+.dark .manual-prose .callout.note .callout-label { color: #93c5fd; }
+.dark .manual-prose mark.manual-hit { background: rgba(250,204,21,.35); }
+.dark .manual-prose mark.manual-hit.is-current { background: #ea580c; }
+
+/* Que el ancla no quede tapada por la cabecera al saltar a una sección */
+.manual-anchor { scroll-margin-top: 8rem; }

@@ -1,41 +1,5 @@
 import api from './axios';
 
-// FAQ CRUD
-export const getFaqCategories = async () => {
-  const response = await api.get('/superadmin/support/faq/categories');
-  return response.data;
-};
-
-export const createFaqCategory = async (data) => {
-  const response = await api.post('/superadmin/support/faq/categories', data);
-  return response.data;
-};
-
-export const updateFaqCategory = async (id, data) => {
-  const response = await api.put(`/superadmin/support/faq/categories/${id}`, data);
-  return response.data;
-};
-
-export const deleteFaqCategory = async (id) => {
-  const response = await api.delete(`/superadmin/support/faq/categories/${id}`);
-  return response.data;
-};
-
-export const createFaqArticle = async (data) => {
-  const response = await api.post('/superadmin/support/faq/articles', data);
-  return response.data;
-};
-
-export const updateFaqArticle = async (id, data) => {
-  const response = await api.put(`/superadmin/support/faq/articles/${id}`, data);
-  return response.data;
-};
-
-export const deleteFaqArticle = async (id) => {
-  const response = await api.delete(`/superadmin/support/faq/articles/${id}`);
-  return response.data;
-};
-
 // Tickets
 export const getSupportTickets = async (params = {}) => {
   const response = await api.get('/superadmin/support/tickets', { params });
