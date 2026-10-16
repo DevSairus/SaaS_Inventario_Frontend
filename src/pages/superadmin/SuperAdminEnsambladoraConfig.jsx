@@ -180,7 +180,7 @@ const SuperAdminEnsambladoraConfig = () => {
               </select>
               {form.tenant_id && (
                 <p className="mt-1 text-xs text-gray-500 dark:text-gray-500">
-                  tenant_id (pasáselo a quien crea el CSA/PDV en Ensambladora):{' '}
+                  tenant_id (pásaselo a quien crea el CSA/PDV en Ensambladora):{' '}
                   <CampoCopiable valor={form.tenant_id} />
                 </p>
               )}

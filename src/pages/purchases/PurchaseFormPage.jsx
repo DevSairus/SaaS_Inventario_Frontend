@@ -159,7 +159,8 @@ const PurchaseFormPage = () => {
         supplier_id: purchase.supplier_id || '',
         purchase_date: purchase.purchase_date || '',
         expected_delivery_date: purchase.expected_delivery_date || '',
-        payment_method: purchase.payment_method || '',
+        // 'credit' ya no es un medio de pago (INV-3): el crédito lo define el plazo
+        payment_method: purchase.payment_method === 'credit' ? '' : (purchase.payment_method || ''),
         payment_terms: purchase.payment_terms ?? '',
         due_date: purchase.due_date || '',
         invoice_number: purchase.invoice_number || '',
@@ -550,7 +551,6 @@ const PurchaseFormPage = () => {
                 <option value="cash">Efectivo</option>
                 <option value="transfer">Transferencia</option>
                 <option value="check">Cheque</option>
-                <option value="credit">Crédito</option>
               </select>
             </div>
 

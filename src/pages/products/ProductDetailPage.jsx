@@ -13,6 +13,7 @@ import SuppliersSection from '../../components/products/SuppliersSection';
 import { ArrowLeft, Package, Users, Truck, Car, Activity, Edit3, ZoomIn } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { productsAPI } from '../../api/products';
+import useAuthStore from '../../store/authStore';
 
 const COP = (n) =>
   new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(n || 0);
@@ -32,6 +33,9 @@ export default function ProductDetailPage() {
   const { categories, fetchCategories } = useCategoriesStore();
   const [activeTab, setActiveTab] = useState('general');
   const [showEditModal, setShowEditModal] = useState(false);
+  // Mismos roles que PRODUCTS_WRITE_ROLES en el backend
+  const role = useAuthStore((s) => s.user?.role);
+  const canEditProducts = ['admin', 'manager', 'warehouse_keeper', 'super_admin'].includes(role);
   const [showImageViewer, setShowImageViewer] = useState(false);
   const [showInProcess, setShowInProcess] = useState(false);
   const [inProcessDocs, setInProcessDocs] = useState(null);
@@ -138,13 +142,13 @@ export default function ProductDetailPage() {
               </div>
             </div>
           </div>
-          <button
+          {canEditProducts && <button
             onClick={() => setShowEditModal(true)}
             className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
           >
             <Edit3 className="w-4 h-4" />
             Editar
-          </button>
+          </button>}
         </div>
 
         {/* Stats rápidas */}
@@ -326,11 +330,11 @@ export default function ProductDetailPage() {
         )}
 
         {activeTab === 'equivalencias' && (
-          <EquivalencesSection productId={id} />
+          <EquivalencesSection productId={id} readOnly={!canEditProducts} />
         )}
 
         {activeTab === 'vehiculos' && (
-          <VehicleApplicationsSection productId={id} />
+          <VehicleApplicationsSection productId={id} readOnly={!canEditProducts} />
         )}
 
         {activeTab === 'movimientos' && (

@@ -875,8 +875,9 @@ function SaleFormPage() {
         } else if (isCrmQuoteMode) {
           toast.success('Cotización creada exitosamente');
         } else {
-          const docLabel = docType === 'factura' ? 'Factura' : docType === 'cotizacion' ? 'Cotización' : 'Remisión';
-          toast.success(`${docLabel} creada exitosamente`);
+          // Fuera del modo cotización la venta nace siempre como borrador sin
+          // tipo de documento (se elige al confirmarla).
+          toast.success('Borrador de venta guardado');
         }
         navigate(`/sales/${result.id}`);
       }

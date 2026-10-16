@@ -91,7 +91,7 @@ export default function SyncMonitorPage() {
       await ensambladoraSyncApi.marcarRevisado(eventId, revisadoPor);
       await load({ silent: true });
     } catch (err) {
-      toast.error('No se pudo marcar como revisado');
+      toast.error(err.response?.data?.message || 'No se pudo marcar como revisado');
     } finally {
       setMarcandoId(null);
     }

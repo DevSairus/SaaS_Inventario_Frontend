@@ -50,7 +50,7 @@ export default function MetaIntegrationSettingsPage() {
 
   const handleConnectOwn = async () => {
     if (!ownForm.own_app_id.trim() || !ownForm.own_app_secret.trim()) {
-      toast.error('Completá el App ID y el App Secret de tu App de Meta');
+      toast.error('Completa el App ID y el App Secret de tu App de Meta');
       return;
     }
     setConnecting('own');
@@ -167,17 +167,17 @@ export default function MetaIntegrationSettingsPage() {
               </div>
               <h2 className="font-semibold text-gray-800">Usar mi propia cuenta de Meta</h2>
               <p className="text-sm text-gray-500">
-                Conectá tu propia App de Meta for Developers — tus campañas y anuncios siguen exactamente igual, Pitbox solo lee los leads nuevos con tus propias credenciales.
+                Conecta tu propia App de Meta for Developers — tus campañas y anuncios siguen exactamente igual, Pitbox solo lee los leads nuevos con tus propias credenciales.
               </p>
 
               <details className="text-xs text-gray-500 bg-gray-50 rounded-lg p-2.5 space-y-1.5">
                 <summary className="cursor-pointer font-medium text-gray-600">¿Dónde consigo esto?</summary>
-                <p>1. Creá una App en <span className="font-mono">developers.facebook.com/apps</span> (tipo "Empresa").</p>
-                <p>2. En Facebook Login, agregá este Redirect URI:</p>
+                <p>1. Crea una App en <span className="font-mono">developers.facebook.com/apps</span> (tipo "Empresa").</p>
+                <p>2. En Facebook Login, agrega este Redirect URI:</p>
                 <p className="font-mono bg-white border border-gray-200 rounded px-1.5 py-1 break-all select-all">{OAUTH_REDIRECT_URI}</p>
-                <p>3. En Webhooks, suscribí el objeto Page al campo <span className="font-mono">leadgen</span> con esta URL:</p>
+                <p>3. En Webhooks, suscribe el objeto Page al campo <span className="font-mono">leadgen</span> con esta URL:</p>
                 <p className="font-mono bg-white border border-gray-200 rounded px-1.5 py-1 break-all select-all">{WEBHOOK_URL}</p>
-                <p>4. Elegí ahí un Verify Token (cualquier texto) y repetilo abajo.</p>
+                <p>4. Elige ahí un Verify Token (cualquier texto) y repítelo abajo.</p>
               </details>
 
               <div className="space-y-2">
@@ -215,7 +215,7 @@ export default function MetaIntegrationSettingsPage() {
               </div>
               <h2 className="font-semibold text-gray-800">Usar el servicio de Pitbox</h2>
               <p className="text-sm text-gray-500">
-                No tenés cuenta de Meta Business todavía — usamos nuestra propia página compartida. Un asesor de soporte te ayuda a vincular tus formularios.
+                No tienes cuenta de Meta Business todavía — usamos nuestra propia página compartida. Un asesor de soporte te ayuda a vincular tus formularios.
               </p>
               <Button variant="secondary" onClick={handleConnectPitbox} disabled={connecting === 'pitbox'}>
                 {connecting === 'pitbox' ? 'Activando...' : 'Activar servicio Pitbox'}

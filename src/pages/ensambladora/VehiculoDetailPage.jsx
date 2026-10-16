@@ -275,7 +275,7 @@ export default function VehiculoDetailPage() {
                 <button
                   onClick={() => load({ forzarOnline: true })}
                   disabled={refreshing}
-                  title="Forzar consulta en línea al Core"
+                  title="Actualizar datos desde la ensambladora"
                   className="p-2 rounded-lg border border-gray-200 dark:border-white/10 text-gray-500 hover:text-primary-600 disabled:opacity-40"
                 >
                   <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />

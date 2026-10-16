@@ -77,7 +77,7 @@ function StatusPill({ status, paid }) {
 }
 
 // ── Vista: recompensas ───────────────────────────────────────────────────
-function RewardsTab({ canManage }) {
+function RewardsTab({ canManage, canApprove }) {
   const [rows, setRows] = useState([]);
   const [summary, setSummary] = useState(null);
   const [unmatched, setUnmatched] = useState([]);
@@ -229,7 +229,7 @@ function RewardsTab({ canManage }) {
                       )}
                     </td>
                     <td className="px-4 py-2.5 text-right whitespace-nowrap">
-                      {canManage && (
+                      {canApprove && (
                         <div className="inline-flex items-center gap-1">
                           {r.status === 'pendiente_aprobacion' && (
                             <button
@@ -706,6 +706,9 @@ function RulesTab() {
 export default function RewardsPage() {
   const user = useAuthStore(s => s.user);
   const canManage = ['admin', 'manager', 'super_admin'].includes(user?.role);
+  // Aprobar / Reintentar nómina / Revincular: el backend solo los acepta de admin
+  // (routes/crm/rewards.routes.js) -- el gerente ve pero no actúa.
+  const canApprove = ['admin', 'super_admin'].includes(user?.role);
   const [tab, setTab] = useState('rewards');
 
   const TABS = [
@@ -745,7 +748,7 @@ export default function RewardsPage() {
           ))}
         </div>
 
-        {tab === 'rewards' && <RewardsTab canManage={canManage} />}
+        {tab === 'rewards' && <RewardsTab canManage={canManage} canApprove={canApprove} />}
         {tab === 'badges' && <BadgesTab />}
         {tab === 'rules' && canManage && <RulesTab />}
       </div>

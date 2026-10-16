@@ -627,14 +627,24 @@ export default function WhatsAppInboxPage() {
 
         {!operational && isAdmin && (
           <div className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm flex flex-wrap items-center justify-between gap-3">
-            <p className="text-gray-600">Activa el modo demo para mostrar el WhatsApp de Pitbox sin Meta.</p>
-            <button
-              type="button"
-              onClick={enableDemo}
-              className="px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700"
-            >
-              Activar modo demo
-            </button>
+            <p className="text-gray-600">
+              Conecta el número de WhatsApp del negocio para empezar a chatear, o activa el modo demo para mostrar el WhatsApp de Pitbox sin Meta.
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <Link
+                to="/settings/whatsapp"
+                className="px-3 py-1.5 rounded-lg bg-[#008069] text-white text-xs font-semibold hover:bg-[#006e5a]"
+              >
+                Conectar número
+              </Link>
+              <button
+                type="button"
+                onClick={enableDemo}
+                className="px-3 py-1.5 rounded-lg bg-white border border-emerald-300 text-emerald-700 text-xs font-semibold hover:bg-emerald-50"
+              >
+                Activar modo demo
+              </button>
+            </div>
           </div>
         )}
 
@@ -698,7 +708,15 @@ export default function WhatsAppInboxPage() {
               )}
               {!loadingList && conversations.length === 0 && (
                 <p className="text-sm text-gray-400 text-center py-10 px-4">
-                  Sin conversaciones. {demoMode ? 'Corre el seed demo o simula un mensaje.' : 'Conecta Meta o activa el modo demo.'}
+                  Sin conversaciones.{' '}
+                  {demoMode ? 'Corre el seed demo o simula un mensaje.' : operational ? '' : isAdmin ? (
+                    <>
+                      <Link to="/settings/whatsapp" className="text-emerald-700 font-medium hover:underline">
+                        Conecta tu número
+                      </Link>{' '}
+                      en Configuración → WhatsApp Business o activa el modo demo.
+                    </>
+                  ) : 'Pide a un administrador que conecte el número en Configuración → WhatsApp Business.'}
                 </p>
               )}
               {conversations.map((conv) => {
@@ -900,7 +918,7 @@ export default function WhatsAppInboxPage() {
                             placeholder={
                               pendingFile
                                 ? 'Caption opcional…'
-                                : operational ? 'Escribe un mensaje' : 'Activa demo o conecta Meta'
+                                : operational ? 'Escribe un mensaje' : 'Conecta el número en Configuración → WhatsApp Business o activa el demo'
                             }
                             disabled={!operational}
                             className="flex-1 resize-none text-sm rounded-xl border-0 px-3 py-2.5 focus:ring-2 focus:ring-emerald-500/40 outline-none disabled:bg-gray-100"

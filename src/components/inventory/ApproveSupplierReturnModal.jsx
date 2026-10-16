@@ -43,7 +43,7 @@ export default function ApproveSupplierReturnModal({ supplierReturn, onClose, on
       <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
         <h3 className="text-lg font-bold text-gray-900 mb-2">Aprobar Devolución {supplierReturn.return_number}</h3>
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4 text-sm text-amber-800">
-          Al aprobar se <strong>reduce el stock</strong> de los productos devueltos. No se puede deshacer.
+          Al aprobar se <strong>reduce el stock</strong> de los productos devueltos. Si fue un error, después podrás reversarla desde el detalle de la devolución.
           {preview?.needs_support_adjustment && ' La compra tiene Documento Soporte aceptado: se emitirá la Nota de Ajuste ante la DIAN.'}
         </div>
 

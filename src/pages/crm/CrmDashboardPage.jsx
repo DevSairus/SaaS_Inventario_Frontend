@@ -24,7 +24,7 @@ const LOST_REASON_LABEL = {
 
 const SOURCE_LABEL = {
   walk_in: 'Mostrador', whatsapp: 'WhatsApp', llamada: 'Llamada', referido: 'Referido',
-  redes: 'Redes sociales', web: 'Web', recompra_recurrente: 'Recompra automática', meta_ads: 'Meta Ads',
+  redes: 'Redes sociales', web: 'Web', recompra_recurrente: 'Recompra recurrente', meta_ads: 'Meta Ads',
 };
 
 function customerName(c) {

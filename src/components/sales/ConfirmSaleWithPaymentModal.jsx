@@ -63,7 +63,12 @@ const ConfirmSaleWithPaymentModal = ({
   // ID del cliente de la venta -- si viene, se consultan sus anticipos
   // disponibles (Cartera) para poder aplicarlos como parte del pago.
   customerId = null,
+  // 'confirm' = confirmar un borrador (elige tipo de documento y forma de
+  // pago); 'payment' = registrar un abono sobre una venta ya confirmada (el
+  // documento ya existe y "Crédito" no tiene sentido: sería no pagar nada).
+  mode = 'confirm',
 }) => {
+  const isPaymentMode = mode === 'payment';
   const docTypes = DOC_TYPES.filter(t => t.value !== 'cotizacion' || !hideQuoteOption || currentDocType === 'cotizacion');
   const [docType, setDocType]           = useState(currentDocType || 'remision');
   const [paymentMethod, setPaymentMethod] = useState('cash');
@@ -230,7 +235,7 @@ const ConfirmSaleWithPaymentModal = ({
     if (!paymentMethod) return;
     const finalAmount = paymentType === 'credit' ? 0 : parseFloat(paidAmount);
     if (paymentType === 'partial' && (finalAmount <= 0 || finalAmount >= effectiveTotal)) return;
-    if ((paymentType === 'partial' || paymentType === 'credit') && effectiveCreditDays <= 0) return;
+    if (!isPaymentMode && (paymentType === 'partial' || paymentType === 'credit') && effectiveCreditDays <= 0) return;
     if (paymentMethod === 'cash' && cashReceived !== '' && cashReceivedNum < amountToPay) return;
 
     onConfirm({
@@ -247,7 +252,7 @@ const ConfirmSaleWithPaymentModal = ({
 
   const pendingAmount = effectiveTotal - parseFloat(paidAmount || 0);
   const paymentMethods = PAYMENT_METHODS_LIST;
-  const needsCreditSection = paymentType === 'partial' || paymentType === 'credit';
+  const needsCreditSection = !isPaymentMode && (paymentType === 'partial' || paymentType === 'credit');
   const dueDate = getDueDate();
   const isCash = paymentMethod === 'cash';
   const quickAmounts = isCash && paymentType !== 'credit'
@@ -267,7 +272,7 @@ const ConfirmSaleWithPaymentModal = ({
               <div className="flex items-center justify-between">
                 <h3 className="text-xl font-bold text-white flex items-center gap-2">
                   <CreditCardIcon className="w-6 h-6" />
-                  Confirmar Venta
+                  {isPaymentMode ? 'Registrar Pago' : 'Confirmar Venta'}
                 </h3>
                 <button type="button" onClick={onClose} className="text-white hover:text-gray-200 transition-colors">
                   <XMarkIcon className="w-6 h-6" />
@@ -277,7 +282,8 @@ const ConfirmSaleWithPaymentModal = ({
 
             <div className="px-6 py-5 space-y-5">
 
-              {/* ── Tipo de documento ── */}
+              {/* ── Tipo de documento (solo al confirmar) ── */}
+              {!isPaymentMode && (
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Tipo de documento
@@ -299,10 +305,11 @@ const ConfirmSaleWithPaymentModal = ({
                   ))}
                 </div>
               </div>
+              )}
 
               {/* Total */}
               <div className="bg-gray-50 rounded-lg p-4 border-2 border-gray-200">
-                <p className="text-sm text-gray-600 mb-1">Total de la Venta</p>
+                <p className="text-sm text-gray-600 mb-1">{isPaymentMode ? 'Saldo pendiente' : 'Total de la Venta'}</p>
                 <p className="text-3xl font-bold text-gray-900">${saleTotal.toLocaleString('es-CO')}</p>
               </div>
 
@@ -377,13 +384,13 @@ const ConfirmSaleWithPaymentModal = ({
               {/* Tipo de pago */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-3">Tipo de Pago</label>
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                <div className={`grid grid-cols-2 gap-2 ${isPaymentMode ? 'sm:grid-cols-3' : 'sm:grid-cols-4'}`}>
                   {[
                     { key: 'full',    label: 'Contado',  color: 'green',  emoji: '✅' },
                     { key: 'partial', label: 'Parcial',  color: 'yellow', emoji: '🕐' },
-                    { key: 'credit',  label: 'Crédito',  color: 'red',    emoji: '📋' },
+                    !isPaymentMode && { key: 'credit',  label: 'Crédito',  color: 'red',    emoji: '📋' },
                     { key: 'mixed',   label: 'Mixto',    color: 'purple', emoji: '🔀' },
-                  ].map(({ key, label, color, emoji }) => (
+                  ].filter(Boolean).map(({ key, label, color, emoji }) => (
                     <button key={key} type="button" onClick={() => setPaymentType(key)}
                       className={`px-3 py-2.5 rounded-lg border-2 text-sm font-medium transition-all flex flex-col items-center gap-0.5 ${
                         paymentType === key
@@ -704,7 +711,7 @@ const ConfirmSaleWithPaymentModal = ({
                     </svg>
                     Procesando...
                   </span>
-                ) : '✓ Confirmar Venta'}
+                ) : (isPaymentMode ? '✓ Registrar Pago' : '✓ Confirmar Venta')}
               </button>
             </div>
           </form>

@@ -5,6 +5,7 @@ import useProductsStore from '../../store/productsStore';
 import useBranchStore from '../../store/branchStore';
 import Layout from '../../components/layout/Layout';
 import { formatCurrency } from '../../utils/formatters';
+import { MOVEMENT_REASONS, getMovementReasonLabel } from '../../constants/movementReasons';
 
 const MovementsPage = () => {
   const {
@@ -91,20 +92,7 @@ const MovementsPage = () => {
     );
   };
 
-  const getReasonLabel = (reason) => {
-    const labels = {
-      sale: 'Venta',
-      sale_reversal: 'Reversión Venta',
-      purchase_receipt: 'Recepción Compra',
-      purchase_reversal: 'Reversión Compra',
-      adjustment_in: 'Ajuste Entrada',
-      adjustment_out: 'Ajuste Salida',
-      transfer_in: 'Transferencia Entrada',
-      transfer_out: 'Transferencia Salida',
-      initial_stock: 'Stock Inicial'
-    };
-    return labels[reason] || reason;
-  };
+  const getReasonLabel = getMovementReasonLabel;
 
   return (
     <Layout>
@@ -156,11 +144,9 @@ const MovementsPage = () => {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">Todas las razones</option>
-                  <option value="sale">Venta</option>
-                  <option value="sale_reversal">Reversión Venta</option>
-                  <option value="purchase_receipt">Recepción Compra</option>
-                  <option value="adjustment_in">Ajuste Entrada</option>
-                  <option value="adjustment_out">Ajuste Salida</option>
+                  {MOVEMENT_REASONS.map(r => (
+                    <option key={r.value} value={r.value}>{r.label}</option>
+                  ))}
                 </select>
               </div>
 
@@ -383,7 +369,7 @@ const MovementsPage = () => {
                           {formatMovementDate(mov.movement_date)}
                         </td>
                         <td className="px-4 py-2">{getTypeBadge(mov.direction)}</td>
-                        <td className="px-4 py-2 text-sm text-gray-600">{mov.movement_reason}</td>
+                        <td className="px-4 py-2 text-sm text-gray-600">{getReasonLabel(mov.movement_reason)}</td>
                         <td className="px-4 py-2 text-right text-sm font-medium text-green-600">
                           {mov.direction === 'in' ? mov.quantity : '-'}
                         </td>

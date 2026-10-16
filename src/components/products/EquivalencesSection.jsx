@@ -7,7 +7,7 @@ import toast from 'react-hot-toast';
 const COP = (n) =>
   new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(n || 0);
 
-export default function EquivalencesSection({ productId }) {
+export default function EquivalencesSection({ productId, readOnly = false }) {
   const { groups, isLoading, fetchEquivalences, removeFromGroup, updateMember } = useEquivalencesStore();
   const [showModal, setShowModal] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState({});
@@ -52,6 +52,7 @@ export default function EquivalencesSection({ productId }) {
               : `${groups.length} grupo${groups.length !== 1 ? 's' : ''} de equivalencia`}
           </p>
         </div>
+        {!readOnly && (
         <button
           onClick={() => setShowModal(true)}
           className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
@@ -59,6 +60,7 @@ export default function EquivalencesSection({ productId }) {
           <Plus className="w-4 h-4" />
           Agregar Equivalencia
         </button>
+        )}
       </div>
 
       {/* Empty state */}
@@ -70,13 +72,13 @@ export default function EquivalencesSection({ productId }) {
             <p className="text-sm text-gray-400 mt-1 mb-4">
               Crea un grupo para relacionar este producto con otros repuestos intercambiables
             </p>
-            <button
+            {!readOnly && <button
               onClick={() => setShowModal(true)}
               className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100"
             >
               <Plus className="w-4 h-4" />
               Crear primer grupo
-            </button>
+            </button>}
           </div>
         </div>
       )}
@@ -102,7 +104,7 @@ export default function EquivalencesSection({ productId }) {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              {confirmDelete === group.group_id ? (
+              {readOnly ? null : confirmDelete === group.group_id ? (
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-red-600">¿Salir del grupo?</span>
                   <button
@@ -182,7 +184,7 @@ export default function EquivalencesSection({ productId }) {
                         </td>
                         <td className="px-4 py-2.5 text-sm text-right text-gray-700">{COP(member.sale_price)}</td>
                         <td className="px-4 py-2.5 text-center">
-                          {!isCurrentProduct && member.role !== 'referencia' && (
+                          {!readOnly && !isCurrentProduct && member.role !== 'referencia' && (
                             <button
                               onClick={() => handleSetReference(group.group_id, member.member_id)}
                               className="p-1 text-gray-400 hover:text-amber-600 rounded hover:bg-amber-50 transition-colors"

@@ -302,7 +302,7 @@ export default function CommissionCategoriesPage() {
                 <button onClick={() => setRatesCategory(null)}><X size={16} className="text-gray-400" /></button>
               </div>
               <p className="text-xs text-gray-400">
-                Dejá el campo vacío para usar el % por defecto de la categoría ({ratesCategory.default_percentage}%).
+                Deja el campo vacío para usar el % por defecto de la categoría ({ratesCategory.default_percentage}%).
               </p>
               <div className="space-y-2 max-h-72 overflow-y-auto">
                 {technicians.map(t => (

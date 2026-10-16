@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Send, CheckCircle, Package, Calendar, Warehouse } from 'lucide-react';
+import { ArrowLeft, Send, CheckCircle, XCircle, Package, Calendar, Warehouse } from 'lucide-react';
 import Layout from '../../components/layout/Layout';
 import axios from 'axios';
 import toast from 'react-hot-toast';
@@ -16,6 +16,8 @@ const TransferDetailPage = () => {
   const [loading, setLoading] = useState(true);
   const [showSendModal, setShowSendModal] = useState(false);
   const [shippingNotes, setShippingNotes] = useState('');
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancelNotes, setCancelNotes] = useState('');
 
   useEffect(() => {
     loadTransfer();
@@ -53,6 +55,22 @@ const TransferDetailPage = () => {
     }
   };
 
+  const handleCancel = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.put(`${API_BASE}/inventory/transfers/${id}/cancel`,
+        { notes: cancelNotes || undefined },
+        { headers: { Authorization: `Bearer ${token}` }}
+      );
+      setShowCancelModal(false);
+      setCancelNotes('');
+      toast.success('Transferencia cancelada');
+      loadTransfer();
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Error al cancelar');
+    }
+  };
+
   const handleReceive = () => {
     navigate(`/inventory/transfers/${id}/receive`);
   };
@@ -60,15 +78,15 @@ const TransferDetailPage = () => {
   const getStatusBadge = (status) => {
     const badges = {
       draft: 'bg-gray-100 text-gray-800',
-      in_transit: 'bg-blue-100 text-blue-800',
-      completed: 'bg-green-100 text-green-800',
+      sent: 'bg-blue-100 text-blue-800',
+      received: 'bg-green-100 text-green-800',
       cancelled: 'bg-red-100 text-red-800'
     };
     const labels = {
       draft: 'Borrador',
-      in_transit: 'En Tránsito',
-      completed: 'Completada',
-      cancelled: 'Cancelada'
+      sent: 'Enviado',
+      received: 'Recibido',
+      cancelled: 'Cancelado'
     };
     return (
       <span className={`px-3 py-1 rounded-full text-sm font-medium ${badges[status]}`}>
@@ -134,13 +152,22 @@ const TransferDetailPage = () => {
                   Enviar
                 </button>
               )}
-              {transfer.status === 'in_transit' && (
+              {transfer.status === 'sent' && (
                 <button
                   onClick={handleReceive}
                   className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
                 >
                   <CheckCircle className="w-5 h-5" />
                   Recibir
+                </button>
+              )}
+              {(transfer.status === 'draft' || transfer.status === 'sent') && (
+                <button
+                  onClick={() => setShowCancelModal(true)}
+                  className="flex items-center gap-2 border border-red-300 text-red-600 px-4 py-2 rounded-lg hover:bg-red-50"
+                >
+                  <XCircle className="w-5 h-5" />
+                  Cancelar
                 </button>
               )}
             </div>
@@ -330,6 +357,42 @@ const TransferDetailPage = () => {
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
               >
                 Enviar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showCancelModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+            <h3 className="text-lg font-bold mb-4">Cancelar Transferencia</h3>
+            <p className="text-gray-600 mb-4">
+              ¿Estás seguro de cancelar la transferencia {transfer.transfer_number}?
+              {transfer.status === 'sent' && ' La mercancía ya salió: el stock vuelve a la bodega origen.'}
+            </p>
+            <textarea
+              value={cancelNotes}
+              onChange={(e) => setCancelNotes(e.target.value)}
+              placeholder="Motivo de cancelación (opcional)"
+              className="w-full border border-gray-300 rounded-lg p-2 mb-4"
+              rows="3"
+            />
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => {
+                  setShowCancelModal(false);
+                  setCancelNotes('');
+                }}
+                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+              >
+                Volver
+              </button>
+              <button
+                onClick={handleCancel}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+              >
+                Cancelar transferencia
               </button>
             </div>
           </div>

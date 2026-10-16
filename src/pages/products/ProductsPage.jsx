@@ -17,6 +17,8 @@ import { Car, X } from 'lucide-react';
 function ProductsPage() {
   const navigate = useNavigate();
   const { user } = useAuthStore();
+  // Mismos roles que PRODUCTS_WRITE_ROLES en backend/src/routes/inventory/products.routes.js
+  const canEditProducts = ['admin', 'manager', 'warehouse_keeper', 'super_admin'].includes(user?.role);
   const { categories, fetchCategories } = useCategoriesStore();
   const {
     products,
@@ -186,6 +188,7 @@ function ProductsPage() {
           <p className="text-sm text-gray-500 mt-0.5 dark:text-gray-500">Gestiona el catálogo de productos y control de inventario</p>
         </div>
         <div className="flex gap-2 flex-wrap">
+          {canEditProducts && (
           <button
             onClick={() => setIsImportModalOpen(true)}
             className="inline-flex items-center gap-2 px-4 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 shadow-sm dark:border-white/10 dark:text-gray-300 dark:bg-graphite-2 dark:hover:bg-white/10"
@@ -195,6 +198,7 @@ function ProductsPage() {
             </svg>
             Importar
           </button>
+          )}
           <button
             onClick={handleExport}
             className="inline-flex items-center gap-2 px-4 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 shadow-sm dark:border-white/10 dark:text-gray-300 dark:bg-graphite-2 dark:hover:bg-white/10"
@@ -204,6 +208,7 @@ function ProductsPage() {
             </svg>
             Exportar
           </button>
+          {canEditProducts && (
           <button
             onClick={handleCreate}
             className="inline-flex items-center gap-2 px-4 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-sm font-semibold shadow-sm transition-colors"
@@ -213,6 +218,7 @@ function ProductsPage() {
             </svg>
             Nuevo Producto
           </button>
+          )}
         </div>
       </div>
 
@@ -580,6 +586,7 @@ function ProductsPage() {
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
                               </svg>
                             </button>
+                            {canEditProducts && (<>
                             <button
                               onClick={() => handleEdit(product)}
                               className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
@@ -610,6 +617,7 @@ function ProductsPage() {
                                 </svg>
                               </button>
                             )}
+                            </>)}
                           </div>
                         </td>
                       </tr>

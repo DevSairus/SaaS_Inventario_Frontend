@@ -133,32 +133,6 @@ const useSalesStore = create((set, get) => ({
     }
   },
 
-  // Marcar como entregada
-  markAsDelivered: async (id, deliveryDate) => {
-    set({ loading: true, error: null });
-    try {
-      const response = await salesApi.markDelivered(id, deliveryDate);
-      
-      const updatedSales = get().sales.map(sale => 
-        sale.id === id ? { ...sale, status: 'delivered', delivery_date: deliveryDate } : sale
-      );
-      
-      set({ 
-        sales: updatedSales,
-        currentSale: response.data.data,
-        loading: false 
-      });
-      
-      return response.data.data;
-    } catch (error) {
-      set({ 
-        error: error.response?.data?.message || 'Error actualizando venta', 
-        loading: false 
-      });
-      throw error;
-    }
-  },
-
   // Actualizar venta
   updateSale: async (id, data) => {
     set({ loading: true, error: null });

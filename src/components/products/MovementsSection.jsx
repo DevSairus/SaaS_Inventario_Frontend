@@ -1,21 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useMovementsStore } from '../../store/movementsStore';
 import { Activity } from 'lucide-react';
-
-const REASON_LABELS = {
-  sale: 'Venta',
-  sale_reversal: 'Reversión Venta',
-  purchase_receipt: 'Recepción Compra',
-  purchase_reversal: 'Reversión Compra',
-  adjustment_in: 'Ajuste Entrada',
-  adjustment_out: 'Ajuste Salida',
-  transfer_in: 'Transferencia Entrada',
-  transfer_out: 'Transferencia Salida',
-  internal_consumption: 'Consumo Interno',
-  supplier_return: 'Devolución a Proveedor',
-  customer_return: 'Devolución de Cliente',
-  initial_stock: 'Stock Inicial'
-};
+import { getMovementReasonLabel } from '../../constants/movementReasons';
 
 const formatMovementDate = (value) => {
   if (!value) return 'Sin fecha';
@@ -110,7 +96,7 @@ export default function MovementsSection({ productId }) {
                   <td className="px-4 py-2.5 text-sm text-gray-600">{formatMovementDate(mov.movement_date)}</td>
                   <td className="px-4 py-2.5"><TypeBadge direction={mov.direction} /></td>
                   <td className="px-4 py-2.5 text-sm text-gray-700">
-                    {REASON_LABELS[mov.movement_reason] || mov.movement_reason}
+                    {getMovementReasonLabel(mov.movement_reason)}
                   </td>
                   <td className="px-4 py-2.5 text-right text-sm font-medium text-gray-900">{mov.quantity}</td>
                   <td className="px-4 py-2.5 text-right text-sm font-semibold text-gray-900">{mov.new_stock}</td>

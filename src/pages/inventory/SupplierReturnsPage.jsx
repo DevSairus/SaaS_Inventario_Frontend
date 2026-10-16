@@ -116,7 +116,7 @@ const SupplierReturnsPage = () => {
               </div>
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <button
                 onClick={() => setFilters(prev => ({ ...prev, status: '', page: 1 }))}
                 className={`px-4 py-2 rounded-lg ${!filters.status ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700'}`}
@@ -134,6 +134,18 @@ const SupplierReturnsPage = () => {
                 className={`px-4 py-2 rounded-lg ${filters.status === 'approved' ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-700'}`}
               >
                 Aprobadas
+              </button>
+              <button
+                onClick={() => setFilters(prev => ({ ...prev, status: 'rejected', page: 1 }))}
+                className={`px-4 py-2 rounded-lg ${filters.status === 'rejected' ? 'bg-red-600 text-white' : 'bg-gray-100 text-gray-700'}`}
+              >
+                Rechazadas
+              </button>
+              <button
+                onClick={() => setFilters(prev => ({ ...prev, status: 'reversed', page: 1 }))}
+                className={`px-4 py-2 rounded-lg ${filters.status === 'reversed' ? 'bg-gray-600 text-white' : 'bg-gray-100 text-gray-700'}`}
+              >
+                Reversadas
               </button>
             </div>
           </div>

@@ -22,7 +22,7 @@ const ACCION_LABELS = {
 
 const accionLabel = (accion) => {
   if (ACCION_LABELS[accion]) return ACCION_LABELS[accion];
-  if (accion?.startsWith('evento_core_')) return `Evento Core: ${accion.replace('evento_core_', '')}`;
+  if (accion?.startsWith('evento_core_')) return `Evento de la ensambladora: ${accion.replace('evento_core_', '')}`;
   return accion;
 };
 
@@ -53,7 +53,7 @@ export default function AuditoriaPage() {
       const res = await ensambladoraAuditoriaApi.list(filtros);
       setRegistros(res.data?.data ?? []);
     } catch (err) {
-      toast.error('No se pudo cargar el log de auditoría');
+      toast.error(err.response?.data?.message || 'No se pudo cargar el log de auditoría');
     } finally {
       setLoading(false);
       setRefreshing(false);

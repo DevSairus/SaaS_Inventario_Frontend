@@ -620,6 +620,7 @@ const PurchaseDetailPage = () => {
         purchaseTotal={Math.max(parseFloat(purchase?.total_amount || 0) - parseFloat(purchase?.total_retentions || 0), 0)}
         retentions={parseFloat(purchase?.total_retentions || 0)}
         defaultCreditDays={purchase?.payment_terms || 0}
+        defaultPaymentMethod={purchase?.payment_method}
         loading={confirmingPurchase}
       />
 

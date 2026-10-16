@@ -34,8 +34,9 @@ export default function ComprobanteAcciones({ tipo, id }) {
       const res = await ensambladoraComprobantesApi.generarShareToken(tipo, id);
       setShareUrl(res.data?.data?.share_url || null);
       setWhatsappUrl(res.data?.data?.whatsapp_url || null);
-    } catch {
-      toast.error('No se pudo generar el link de seguimiento.');
+    } catch (err) {
+      // 403 de rol trae su propio mensaje ("Tu rol (...) no tiene permiso...")
+      toast.error(err.response?.data?.message || 'No se pudo generar el link de seguimiento.');
     } finally {
       setCompartiendo(false);
     }

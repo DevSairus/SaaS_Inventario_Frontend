@@ -20,10 +20,12 @@ const ConfirmPurchaseWithPaymentModal = ({
   purchaseTotal,      // NETO a pagar al proveedor (total - retenciones)
   retentions = 0,     // retenciones practicadas (informativo)
   defaultCreditDays,  // plazo por defecto del proveedor, si lo tiene
+  defaultPaymentMethod, // medio elegido al crear la compra
   loading = false,
 }) => {
   const [bankAccountId, setBankAccountId] = useState(null);
-  const [paymentMethod, setPaymentMethod] = useState('cash');
+  const initialMethod = PAYMENT_METHODS_LIST.some(m => m.value === defaultPaymentMethod) ? defaultPaymentMethod : 'cash';
+  const [paymentMethod, setPaymentMethod] = useState(initialMethod);
   const [paidAmount, setPaidAmount]       = useState(purchaseTotal);
   const [paymentType, setPaymentType]     = useState(defaultCreditDays > 0 ? 'credit' : 'full');
   const [creditDays, setCreditDays]       = useState(defaultCreditDays || 30);
@@ -35,10 +37,10 @@ const ConfirmPurchaseWithPaymentModal = ({
       setPaymentType(defaultCreditDays > 0 ? 'credit' : 'full');
       setCreditDays(defaultCreditDays || 30);
       setCustomDays('');
-      setPaymentMethod('cash');
+      setPaymentMethod(initialMethod);
       setBankAccountId(null);
     }
-  }, [isOpen, purchaseTotal, defaultCreditDays]);
+  }, [isOpen, purchaseTotal, defaultCreditDays, initialMethod]);
 
   if (!isOpen) return null;
 

@@ -35,10 +35,6 @@ const salesApi = {
   // Cancelar venta
   cancel: (id) => api.post(`/sales/${id}/cancel`),
 
-  // Marcar como entregada
-  markDelivered: (id, deliveryDate) => 
-    api.post(`/sales/${id}/deliver`, { delivery_date: deliveryDate }),
-
   // Registrar pago
   registerPayment: (id, paymentData) => 
     api.post(`/sales/${id}/payments`, paymentData),

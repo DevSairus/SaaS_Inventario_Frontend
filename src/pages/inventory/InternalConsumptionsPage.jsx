@@ -5,9 +5,13 @@ import Layout from '../../components/layout/Layout';
 import useInternalConsumptionsStore from '../../store/internalConsumptionsStore';
 import toast from 'react-hot-toast';
 import { formatNumber } from '../../utils/formatters';
+import useAuthStore from '../../store/authStore';
 
 const InternalConsumptionsPage = () => {
   const navigate = useNavigate();
+  // Aprobar/rechazar: mismos roles que CONSUMPTION_APPROVE_ROLES en el backend
+  const role = useAuthStore((s) => s.user?.role);
+  const canApprove = ['admin', 'manager', 'super_admin'].includes(role);
   const {
     consumptions,
     loading,
@@ -218,7 +222,7 @@ const InternalConsumptionsPage = () => {
                         >
                           <Eye className="w-5 h-5" />
                         </button>
-                        {consumption.status === 'pending' && (
+                        {consumption.status === 'pending' && canApprove && (
                           <>
                             <button
                               onClick={() => {

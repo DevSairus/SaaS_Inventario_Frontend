@@ -10,7 +10,7 @@ const VEHICLE_TYPES = [
   { value: 'otro', label: 'Otro' },
 ];
 
-export default function VehicleApplicationsSection({ productId }) {
+export default function VehicleApplicationsSection({ productId, readOnly = false }) {
   const { applications, isLoading, fetchApplications, addApplication, updateApplication, removeApplication, fetchBrandsAndLines, brandsAndLines } = useVehicleApplicationsStore();
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -126,6 +126,7 @@ export default function VehicleApplicationsSection({ productId }) {
               : `${applications.length} aplicación(es) vehicular(es)`}
           </p>
         </div>
+        {!readOnly && (
         <button
           onClick={() => { resetForm(); setShowForm(true); }}
           className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
@@ -133,6 +134,7 @@ export default function VehicleApplicationsSection({ productId }) {
           <Plus className="w-4 h-4" />
           Agregar Aplicación
         </button>
+        )}
       </div>
 
       {/* Form */}
@@ -304,13 +306,13 @@ export default function VehicleApplicationsSection({ productId }) {
             <p className="text-sm text-gray-400 dark:text-gray-500 mt-1 mb-4">
               Define a qué vehículos le sirve este repuesto
             </p>
-            <button
+            {!readOnly && <button
               onClick={() => { resetForm(); setShowForm(true); }}
               className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 dark:bg-blue-900/30 dark:text-blue-300 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/50"
             >
               <Plus className="w-4 h-4" />
               Agregar primera aplicación
-            </button>
+            </button>}
           </div>
         </div>
       )}
@@ -344,7 +346,7 @@ export default function VehicleApplicationsSection({ productId }) {
                     <td className="px-4 py-2.5 text-sm text-gray-500 dark:text-gray-500">{yearRange}</td>
                     <td className="px-4 py-2.5 text-sm text-gray-500 dark:text-gray-500">{app.engine || '—'}</td>
                     <td className="px-4 py-2.5 text-center">
-                      <div className="flex items-center justify-center gap-1">
+                      {!readOnly && <div className="flex items-center justify-center gap-1">
                         <button
                           onClick={() => handleEdit(app)}
                           className="p-1 text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 rounded hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors"
@@ -378,7 +380,7 @@ export default function VehicleApplicationsSection({ productId }) {
                             <Trash2 className="w-4 h-4" />
                           </button>
                         )}
-                      </div>
+                      </div>}
                     </td>
                   </tr>
                 );

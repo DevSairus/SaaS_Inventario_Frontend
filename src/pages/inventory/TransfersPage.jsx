@@ -68,14 +68,12 @@ const TransfersPage = () => {
     const badges = {
       draft: 'bg-gray-100 text-gray-800',
       sent: 'bg-blue-100 text-blue-800',
-      in_transit: 'bg-yellow-100 text-yellow-800',
       received: 'bg-green-100 text-green-800',
       cancelled: 'bg-red-100 text-red-800'
     };
     const labels = {
       draft: 'Borrador',
       sent: 'Enviado',
-      in_transit: 'En Tránsito',
       received: 'Recibido',
       cancelled: 'Cancelado'
     };
@@ -234,6 +232,7 @@ const TransfersPage = () => {
                           </>
                         )}
                         {transfer.status === 'sent' && (
+                          <>
                           <button
                             onClick={() => navigate(`/inventory/transfers/${transfer.id}/receive`)}
                             className="text-green-600 hover:text-green-900"
@@ -241,6 +240,17 @@ const TransfersPage = () => {
                           >
                             <CheckCircle className="w-5 h-5" />
                           </button>
+                          <button
+                            onClick={() => {
+                              setSelectedTransfer(transfer);
+                              setShowCancelModal(true);
+                            }}
+                            className="text-red-600 hover:text-red-900"
+                            title="Cancelar"
+                          >
+                            <XCircle className="w-5 h-5" />
+                          </button>
+                          </>
                         )}
                       </div>
                     </td>
@@ -318,6 +328,7 @@ const TransfersPage = () => {
             <h3 className="text-lg font-bold mb-4">Cancelar Transferencia</h3>
             <p className="text-gray-600 mb-4">
               ¿Estás seguro de cancelar la transferencia {selectedTransfer?.transfer_number}?
+              {selectedTransfer?.status === 'sent' && ' La mercancía ya salió: el stock vuelve a la bodega origen.'}
             </p>
             <textarea
               value={cancelNotes}

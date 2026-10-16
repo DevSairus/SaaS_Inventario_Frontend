@@ -11,6 +11,7 @@ import {
   PencilIcon,
   ClockIcon,
   EllipsisVerticalIcon,
+  TrashIcon,
 } from '@heroicons/react/24/outline';
 import { RotateCcw, AlertTriangle, FileText, Wrench, Link2 } from 'lucide-react';
 import Button from '../../components/common/Button';
@@ -38,13 +39,14 @@ import ConvertQuoteToWorkOrderModal from '../../components/sales/ConvertQuoteToW
 import { groupDocumentItems } from '../../components/combos/comboUtils';
 import { saleBalance } from '../../utils/saleAmounts';
 import useIsManagement from '../../hooks/useIsManagement';
+import { SALE_STATUS_LABELS, PAYMENT_STATUS_LABELS } from '../../constants/salesStatus';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 export default function SaleDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { currentSale, loading, fetchSaleById, confirmSale, cancelSale } = useSalesStore();
+  const { currentSale, loading, fetchSaleById, confirmSale, cancelSale, deleteSale } = useSalesStore();
   const { features, enabledModules, fetchFeatures } = useTenantStore();
   const hideRemisionTax = features?.hide_remision_tax === true;
   const [confirmDialog, setConfirmDialog] = useState({ show: false, action: null });
@@ -244,6 +246,20 @@ export default function SaleDetailPage() {
     }
   };
 
+  // Solo borradores: no han movido inventario, caja ni contabilidad.
+  const handleDelete = async () => {
+    try {
+      await deleteSale(id);
+      setConfirmDialog({ show: false, action: null });
+      toast.success('Borrador eliminado');
+      navigate('/sales');
+    } catch (error) {
+      setConfirmDialog({ show: false, action: null });
+      toast.error('Error eliminando el borrador: ' + (error.response?.data?.message || error.message));
+      fetchSaleById(id);
+    }
+  };
+
   // Remisión → factura electrónica (services/sales/remisionInvoicing.service.js)
   const handleConvertToInvoice = async () => {
     setConfirmDialog({ show: false, action: null });
@@ -379,15 +395,13 @@ export default function SaleDetailPage() {
   };
 
   const getStatusBadge = (status) => {
-    const variants = { draft: 'secondary', pending: 'info', completed: 'success', cancelled: 'danger' };
-    const labels   = { draft: 'Borrador', pending: 'Confirmada', completed: 'Entregada', cancelled: 'Cancelada' };
-    return <Badge variant={variants[status]}>{labels[status]}</Badge>;
+    const st = SALE_STATUS_LABELS[status];
+    return <Badge variant={st?.variant}>{st?.label || status}</Badge>;
   };
 
   const getPaymentStatusBadge = (status) => {
-    const variants = { pending: 'warning', partial: 'info', paid: 'success' };
-    const labels   = { pending: 'Pendiente (A Crédito)', partial: 'Pago Parcial', paid: 'Pagado' };
-    return <Badge variant={variants[status]}>{labels[status]}</Badge>;
+    const pt = PAYMENT_STATUS_LABELS[status];
+    return <Badge variant={pt?.variant}>{pt?.label || status}</Badge>;
   };
 
   const getPaymentMethodLabel = (method) => {
@@ -491,6 +505,13 @@ export default function SaleDetailPage() {
                     onClick={() => setConfirmDialog({ show: true, action: 'cancel' })}
                   >
                     Cancelar
+                  </Button>
+                  <Button
+                    variant="danger"
+                    icon={TrashIcon}
+                    onClick={() => setConfirmDialog({ show: true, action: 'delete' })}
+                  >
+                    Eliminar
                   </Button>
                 </>
               )}
@@ -667,7 +688,7 @@ export default function SaleDetailPage() {
               {sale.document_type === 'remision'   ? 'Remisión · '   :
                sale.document_type === 'factura'    ? 'Factura · '    :
                sale.document_type === 'cotizacion' ? 'Cotización · ' : ''}
-              Estado: {sale.status === 'draft' ? 'Borrador' : sale.status === 'pending' ? 'Confirmada' : sale.status === 'completed' ? 'Entregada' : 'Cancelada'}
+              Estado: {SALE_STATUS_LABELS[sale.status]?.label || sale.status}
             </p>
           </div>
 
@@ -1182,6 +1203,7 @@ export default function SaleDetailPage() {
             isOpen={showConfirmWithPayment}
             onClose={() => setShowConfirmWithPayment(false)}
             onConfirm={handleConfirmWithPayment}
+            mode={sale.status === 'draft' ? 'confirm' : 'payment'}
             saleTotal={Math.max(0, (sale?.total_amount || 0) - (sale?.paid_amount || 0))}
             currentDocType={sale?.document_type}
             hideQuoteOption={enabledModules?.includes('crm')}
@@ -1193,9 +1215,19 @@ export default function SaleDetailPage() {
             open={confirmDialog.show && confirmDialog.action === 'cancel'}
             onCancel={() => setConfirmDialog({ show: false, action: null })}
             onConfirm={handleCancel}
-            title="Cancelar Venta"
-            message="¿Estás seguro de cancelar esta venta? Si ya fue confirmada, se revertirá el inventario."
-            confirmText="Cancelar Venta"
+            title="Cancelar borrador"
+            message="¿Cancelar este borrador? Quedará en el historial como venta cancelada."
+            confirmText="Cancelar borrador"
+            confirmVariant="danger"
+          />
+
+          <ConfirmDialog
+            open={confirmDialog.show && confirmDialog.action === 'delete'}
+            onCancel={() => setConfirmDialog({ show: false, action: null })}
+            onConfirm={handleDelete}
+            title="Eliminar borrador"
+            message={`¿Eliminar el borrador ${sale.sale_number}? Se borrará definitivamente y no se puede recuperar.`}
+            confirmText="Eliminar"
             confirmVariant="danger"
           />
 

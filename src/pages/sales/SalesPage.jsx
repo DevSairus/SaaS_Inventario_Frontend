@@ -10,20 +10,11 @@ import ConfirmDialog from '../../components/common/ConfirmDialog';
 import salesApi from '../../api/sales';
 import toast from 'react-hot-toast';
 import { formatCurrency, formatDate } from '../../utils/formatters';
+import { SALE_STATUS_LABELS, PAYMENT_STATUS_LABELS } from '../../constants/salesStatus';
 import { PlusIcon, MagnifyingGlassIcon, FunnelIcon } from '@heroicons/react/24/outline';
 
-const STATUS_LABELS = {
-  draft:     { label: 'Borrador',   cls: 'bg-gray-100 text-gray-700 dark:bg-white/10 dark:text-gray-300' },
-  pending:   { label: 'Confirmada', cls: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' },
-  completed: { label: 'Entregada',  cls: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' },
-  cancelled: { label: 'Cancelada',  cls: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' },
-};
-
-const PAYMENT_LABELS = {
-  pending: { label: 'Sin pagar',    cls: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300' },
-  partial: { label: 'Pago parcial', cls: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300' },
-  paid:    { label: 'Pagado',       cls: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' },
-};
+const STATUS_LABELS = SALE_STATUS_LABELS;
+const PAYMENT_LABELS = PAYMENT_STATUS_LABELS;
 
 const DOC_LABELS = {
   remision:     'Remisión',

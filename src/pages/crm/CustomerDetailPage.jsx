@@ -21,23 +21,19 @@ import {
 } from '@heroicons/react/24/outline';
 import Modal from '../../components/common/Modal';
 import Input from '../../components/common/Input';
-import PhoneCountryCodeSelect, { DEFAULT_COUNTRY_CODE } from '../../components/common/PhoneCountryCodeSelect';
+import CustomerFormModal from '../../components/customers/CustomerFormModal';
 import Button from '../../components/common/Button';
 import toast from 'react-hot-toast';
 import { customerAdvancesAPI } from '../../api/customerAdvances';
 import RegisterAdvanceModal from '../../components/finance/RegisterAdvanceModal';
+import { SALE_STATUS_LABELS } from '../../constants/salesStatus';
 
 const COP = n => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(n || 0);
 const fmtDate = d => d ? new Date(d).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
 const fmtDateTime = d => d ? new Date(d).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—';
 const daysBetween = d => Math.ceil((new Date(d) - new Date()) / 86400000);
 
-const SALE_STATUS = {
-  draft:     { label: 'Borrador',   cls: 'bg-gray-100 text-gray-600 dark:bg-white/5 dark:text-gray-500' },
-  pending:   { label: 'Pendiente',  cls: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300' },
-  completed: { label: 'Completada', cls: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' },
-  cancelled: { label: 'Cancelada',  cls: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-300' },
-};
+const SALE_STATUS = SALE_STATUS_LABELS;
 
 const OT_STATUS = {
   recibido:   { label: 'Recibido',   cls: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' },
@@ -92,8 +88,6 @@ export default function CustomerDetailPage() {
   const [timelineLimit, setTimelineLimit] = useState(15);
 
   const [editModal, setEditModal] = useState(false);
-  const [editForm,  setEditForm]  = useState({});
-  const [saving,    setSaving]    = useState(false);
 
   const [advances, setAdvances] = useState([]);
   const [showRegisterAdvance, setShowRegisterAdvance] = useState(false);
@@ -156,34 +150,11 @@ export default function CustomerDetailPage() {
 
   useEffect(() => { load(); }, [load]);
 
-  const openEdit = () => {
-    setEditForm({
-      full_name:     customer.full_name || `${customer.first_name||''} ${customer.last_name||''}`.trim(),
-      tax_id:        customer.tax_id || '',
-      phone:         customer.phone || '',
-      mobile:        customer.mobile || '',
-      mobile_country_code: customer.mobile_country_code || DEFAULT_COUNTRY_CODE,
-      email:         customer.email || '',
-      address:       customer.address || '',
-      city:          customer.city || '',
-      notes:         customer.notes || '',
-      customer_type: customer.customer_type || 'individual',
-      business_name: customer.business_name || '',
-    });
-    setEditModal(true);
-  };
-
-  const handleSave = async (e) => {
-    e.preventDefault();
-    setSaving(true);
-    try {
-      const res = await customersApi.update(id, editForm);
-      setCustomer(c => ({ ...c, ...res.data.data }));
-      setEditModal(false);
-      toast.success('Cliente actualizado');
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Error al actualizar');
-    } finally { setSaving(false); }
+  // Tras editar se mezcla lo devuelto por el backend y se recarga la ficha
+  // (timeline/LTV/cartera) para que todo refleje los datos nuevos.
+  const handleEditSaved = (saved) => {
+    if (saved) setCustomer(c => ({ ...c, ...saved }));
+    load();
   };
 
   const openInteraction = () => {
@@ -334,7 +305,7 @@ export default function CustomerDetailPage() {
                 <UserCheck className="h-4 w-4" /> Cuenta asignada
               </button>
             )}
-            <button onClick={openEdit}
+            <button onClick={() => setEditModal(true)}
               className="flex items-center gap-2 px-4 py-2 bg-gradient-to-br from-accent to-accent-soft text-white rounded-lg text-sm font-medium shadow-sm shadow-accent/30 hover:shadow-md transition-all">
               <PencilIcon className="h-4 w-4" /> Editar
             </button>
@@ -706,60 +677,9 @@ export default function CustomerDetailPage() {
 
       </div>
 
-      {/* Modal editar */}
-      <Modal isOpen={editModal} onClose={() => setEditModal(false)} title="Editar Cliente" size="lg">
-        <form onSubmit={handleSave} className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Tipo *</label>
-              <select value={editForm.customer_type}
-                onChange={e => setEditForm(f => ({ ...f, customer_type: e.target.value }))}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2">
-                <option value="individual">Persona Natural</option>
-                <option value="company">Empresa</option>
-              </select>
-            </div>
-            <Input label="Nombre completo *" value={editForm.full_name}
-              onChange={e => setEditForm(f => ({ ...f, full_name: e.target.value }))} required />
-          </div>
-          {editForm.customer_type === 'company' && (
-            <Input label="Razón Social" value={editForm.business_name}
-              onChange={e => setEditForm(f => ({ ...f, business_name: e.target.value }))} />
-          )}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Input label="Cédula / NIT" value={editForm.tax_id} onChange={e => setEditForm(f => ({ ...f, tax_id: e.target.value }))} />
-            <Input label="Email" type="email" value={editForm.email} onChange={e => setEditForm(f => ({ ...f, email: e.target.value }))} />
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Input label="Teléfono" value={editForm.phone} onChange={e => setEditForm(f => ({ ...f, phone: e.target.value }))} />
-            <Input label="Ciudad" value={editForm.city} onChange={e => setEditForm(f => ({ ...f, city: e.target.value }))} />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Celular</label>
-            <div className="flex gap-2">
-              <PhoneCountryCodeSelect value={editForm.mobile_country_code}
-                onChange={e => setEditForm(f => ({ ...f, mobile_country_code: e.target.value }))} />
-              <input type="tel" value={editForm.mobile}
-                onChange={e => setEditForm(f => ({ ...f, mobile: e.target.value }))}
-                placeholder="Ej: 3001234567"
-                className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm" />
-            </div>
-            <p className="text-xs text-gray-400 mt-1">Se usa para WhatsApp — el indicativo es obligatorio para enviar por Meta.</p>
-          </div>
-          <Input label="Dirección" value={editForm.address} onChange={e => setEditForm(f => ({ ...f, address: e.target.value }))} />
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Notas</label>
-            <textarea value={editForm.notes} onChange={e => setEditForm(f => ({ ...f, notes: e.target.value }))}
-              rows="2" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
-          </div>
-          <div className="flex justify-end gap-2 pt-4 border-t">
-            <Button type="button" variant="secondary" onClick={() => setEditModal(false)}>Cancelar</Button>
-            <Button type="submit" variant="primary" disabled={saving}>
-              {saving ? 'Guardando...' : 'Guardar cambios'}
-            </Button>
-          </div>
-        </form>
-      </Modal>
+      {/* Modal editar — mismo formulario completo del listado de clientes */}
+      <CustomerFormModal isOpen={editModal} onClose={() => setEditModal(false)}
+        customer={customer} onSaved={handleEditSaved} />
 
       {/* Modal registrar interacción */}
       {hasCrm && (
