@@ -137,45 +137,65 @@ export default function SaleDetailPage() {
   const handleConfirmWithPayment = async (paymentData) => {
     try {
       setConfirmingPayment(true);
-      const { advance_applications, ...saleConfirmData } = paymentData;
+      const { advance_applications, excess_advance_amount, ...saleConfirmData } = paymentData;
       const cashPortion = saleConfirmData.paid_amount ?? currentSale?.total_amount;
+      const excessAdvance = parseFloat(excess_advance_amount || 0);
+      let createdAdvanceMsg = null;
 
       if (['pending', 'completed'].includes(currentSale?.status)) {
+        // Venta ya confirmada: los anticipos seleccionados se aplican ANTES
+        // del abono, para que el backend calcule bien el excedente (pago
+        // mayor al saldo) que queda como anticipo nuevo.
+        if (advance_applications && advance_applications.length > 0) {
+          await customerAdvancesAPI.applyToSale(id, advance_applications);
+        }
         // Si el anticipo cubre todo el saldo, paid_amount llega en 0 -- no
         // hay nada que registrar como abono (registerPayment exige monto > 0).
         if (saleConfirmData.payment_method === 'mixed' && saleConfirmData.payment_splits?.length) {
           // Pago mixto sobre una venta ya confirmada: un abono por medio de
           // pago, cada uno a su caja/cuenta bancaria.
           for (const split of saleConfirmData.payment_splits) {
-            await salesApi.registerPayment(id, {
+            // Con excedente a anticipo, los últimos medios cubren el saldo y
+            // lo que sobra de cada uno queda como anticipo con ese medio.
+            const res = await salesApi.registerPayment(id, {
               amount: split.amount,
               payment_method: split.method,
               bank_account_id: split.bank_account_id,
               payment_date: toLocalDateString(),
+              excess_to_advance: excessAdvance > 0 || undefined,
             });
+            if (res?.data?.advance) createdAdvanceMsg = res.data.message;
           }
         } else if (parseFloat(cashPortion || 0) > 0) {
-          await salesApi.registerPayment(id, {
-            amount: cashPortion,
+          const res = await salesApi.registerPayment(id, {
+            amount: parseFloat(cashPortion) + excessAdvance,
             payment_method: saleConfirmData.payment_method,
             bank_account_id: saleConfirmData.bank_account_id,
             payment_date: toLocalDateString(),
+            excess_to_advance: excessAdvance > 0 || undefined,
           });
+          if (res?.data?.advance) createdAdvanceMsg = res.data.message;
         }
       } else {
         // advance_amount: el backend lo cuenta como pago para decidir
         // contado/crédito (XML DIAN), aunque el anticipo se aplique después.
         const advanceAmount = (advance_applications || []).reduce((s, a) => s + parseFloat(a.amount || 0), 0);
-        await confirmSale(id, { ...saleConfirmData, advance_amount: advanceAmount || undefined });
+        await confirmSale(id, {
+          ...saleConfirmData,
+          advance_amount: advanceAmount || undefined,
+          excess_advance_amount: excessAdvance > 0 ? excessAdvance : undefined,
+        });
+        if (excessAdvance > 0) createdAdvanceMsg = `Excedente de $${excessAdvance.toLocaleString('es-CO')} guardado como anticipo del cliente`;
+
+        // Aplicar anticipo(s) seleccionados en el modal (Cartera) -- se hace
+        // aparte porque el backend no permite aplicar anticipos sobre una
+        // venta en borrador, así que va después de confirmar.
+        if (advance_applications && advance_applications.length > 0) {
+          await customerAdvancesAPI.applyToSale(id, advance_applications);
+        }
       }
 
-      // Aplicar anticipo(s) seleccionados en el modal (Cartera) -- se hace
-      // aparte porque el backend no permite aplicar anticipos sobre una
-      // venta en borrador, así que siempre va después de confirmar/abonar.
-      if (advance_applications && advance_applications.length > 0) {
-        await customerAdvancesAPI.applyToSale(id, advance_applications);
-      }
-
+      if (createdAdvanceMsg) toast.success(createdAdvanceMsg, { duration: 6000 });
       setShowConfirmWithPayment(false);
       fetchSaleById(id);
     } catch (error) {
@@ -1204,11 +1224,12 @@ export default function SaleDetailPage() {
             onClose={() => setShowConfirmWithPayment(false)}
             onConfirm={handleConfirmWithPayment}
             mode={sale.status === 'draft' ? 'confirm' : 'payment'}
-            saleTotal={Math.max(0, (sale?.total_amount || 0) - (sale?.paid_amount || 0))}
+            saleTotal={Math.max(0, (sale?.total_amount || 0) - (sale?.paid_amount || 0) - (parseFloat(sale?.returned_amount) || 0))}
             currentDocType={sale?.document_type}
             hideQuoteOption={enabledModules?.includes('crm')}
             loading={confirmingPayment}
             customerId={enabledModules?.includes('receivables') ? sale?.customer_id : null}
+            canCreateAdvance={!!sale?.customer_id && !!enabledModules?.includes('receivables')}
           />
 
           <ConfirmDialog

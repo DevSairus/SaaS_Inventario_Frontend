@@ -7,6 +7,8 @@ import toast from 'react-hot-toast';
 import { PlusIcon, XMarkIcon, CheckIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { formatCurrency } from '../../utils/formatters';
 import NumericInput from '../../components/inputs/NumericInput';
+import Combobox, { HighlightMatch } from '../../components/common/Combobox';
+import ThirdPartyPicker, { ThirdPartyBadge } from '../../components/accounting/ThirdPartyPicker';
 
 const STATUS_STYLES = {
   draft: 'bg-yellow-100 text-yellow-800',
@@ -20,12 +22,33 @@ const toLocalDateString = (date) => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
 
-const emptyLine = () => ({ account_id: '', debit: '', credit: '', description: '' });
+const emptyLine = () => ({ account_id: '', debit: '', credit: '', description: '', third_party: null });
+
+// "Cliente: Juan Pérez · 123" para mostrar el tercero en una celda
+const ThirdPartyCell = ({ tp, muted = false, extra = 0 }) => {
+  if (!tp) return <span className="text-gray-300">—</span>;
+  return (
+    <div className={`min-w-0 ${muted ? 'opacity-70' : ''}`}>
+      <div className="flex items-center gap-1.5">
+        <span className="truncate text-gray-800 dark:text-gray-200">{tp.name}</span>
+        <ThirdPartyBadge type={tp.type} />
+      </div>
+      {(tp.tax_id || extra > 1) && (
+        <div className="text-xs text-gray-400">
+          {tp.tax_id}{extra > 1 ? `${tp.tax_id ? ' · ' : ''}+${extra - 1} tercero(s) más` : ''}
+        </div>
+      )}
+    </div>
+  );
+};
 
 const JournalEntriesPage = () => {
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({ status: '', source_type: '', from: '', to: '', branch_id: '' });
+  const [thirdPartyFilter, setThirdPartyFilter] = useState(null);
+  const [searchText, setSearchText] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const { branches, fetchBranches } = useBranchStore();
   const [selected, setSelected] = useState(null);
   const [showCreate, setShowCreate] = useState(false);
@@ -34,7 +57,11 @@ const JournalEntriesPage = () => {
   const [entryForm, setEntryForm] = useState({ entry_date: toLocalDateString(new Date()), description: '', lines: [emptyLine(), emptyLine()] });
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => { load(); }, [filters]);
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(searchText.trim()), 350);
+    return () => clearTimeout(t);
+  }, [searchText]);
+  useEffect(() => { load(); }, [filters, thirdPartyFilter, debouncedSearch]);
   useEffect(() => { fetchBranches(); }, []);
 
   const load = async () => {
@@ -42,6 +69,8 @@ const JournalEntriesPage = () => {
       setLoading(true);
       const params = {};
       Object.entries(filters).forEach(([k, v]) => { if (v) params[k] = v; });
+      if (thirdPartyFilter) params.third_party_id = thirdPartyFilter.id;
+      if (debouncedSearch) params.q = debouncedSearch;
       const res = await journalEntriesAPI.getAll(params);
       setEntries(res.data || []);
     } catch (error) {
@@ -122,6 +151,7 @@ const JournalEntriesPage = () => {
           debit: Number(l.debit) > 0 ? l.debit : '',
           credit: Number(l.credit) > 0 ? l.credit : '',
           description: l.description || '',
+          third_party: l.third_party || (l.third_party_id ? { id: l.third_party_id, name: 'Tercero', tax_id: '' } : null),
         })),
       });
       setSelected(null);
@@ -160,7 +190,13 @@ const JournalEntriesPage = () => {
         description: entryForm.description,
         lines: entryForm.lines
           .filter((l) => l.account_id && (Number(l.debit) > 0 || Number(l.credit) > 0))
-          .map((l) => ({ account_id: l.account_id, debit: Number(l.debit || 0), credit: Number(l.credit || 0), description: l.description })),
+          .map((l) => ({
+            account_id: l.account_id,
+            debit: Number(l.debit || 0),
+            credit: Number(l.credit || 0),
+            description: l.description,
+            third_party_id: l.third_party?.id || null,
+          })),
       };
       if (editingId) {
         await journalEntriesAPI.update(editingId, payload);
@@ -206,6 +242,19 @@ const JournalEntriesPage = () => {
           <input type="date" value={filters.from} onChange={(e) => setFilters((f) => ({ ...f, from: e.target.value }))} className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm" />
           <span className="text-gray-400 text-sm">a</span>
           <input type="date" value={filters.to} onChange={(e) => setFilters((f) => ({ ...f, to: e.target.value }))} className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm" />
+          <input
+            type="search"
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+            placeholder="N° o descripción..."
+            className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm w-44"
+          />
+          <ThirdPartyPicker
+            value={thirdPartyFilter}
+            onChange={setThirdPartyFilter}
+            placeholder="Filtrar por tercero..."
+            className="w-64"
+          />
           {branches.length > 1 && (
             <select value={filters.branch_id} onChange={(e) => setFilters((f) => ({ ...f, branch_id: e.target.value }))} className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm">
               <option value="">Todas las sedes</option>
@@ -219,22 +268,23 @@ const JournalEntriesPage = () => {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  {['N°', 'Fecha', 'Origen', 'Descripción', 'Débito', 'Crédito', 'Estado', ''].map((h) => (
+                  {['N°', 'Fecha', 'Origen', 'Tercero', 'Descripción', 'Débito', 'Crédito', 'Estado', ''].map((h) => (
                     <th key={h} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {loading && <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400">Cargando...</td></tr>}
-                {!loading && entries.length === 0 && <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400">Sin asientos</td></tr>}
+                {loading && <tr><td colSpan={9} className="px-4 py-8 text-center text-gray-400">Cargando...</td></tr>}
+                {!loading && entries.length === 0 && <tr><td colSpan={9} className="px-4 py-8 text-center text-gray-400">Sin asientos</td></tr>}
                 {!loading && entries.map((entry) => (
                   <tr key={entry.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => openDetail(entry.id)}>
-                    <td className="px-4 py-2.5 text-sm font-mono text-gray-600">{entry.entry_number}</td>
-                    <td className="px-4 py-2.5 text-sm text-gray-600">{entry.entry_date}</td>
+                    <td className="px-4 py-2.5 text-sm font-mono text-gray-600 whitespace-nowrap">{entry.entry_number}</td>
+                    <td className="px-4 py-2.5 text-sm text-gray-600 whitespace-nowrap">{entry.entry_date}</td>
                     <td className="px-4 py-2.5 text-sm text-gray-600">{SOURCE_TYPE_LABELS[entry.source_type] || entry.source_type}</td>
-                    <td className="px-4 py-2.5 text-sm text-gray-600 max-w-xs truncate">{entry.description}</td>
-                    <td className="px-4 py-2.5 text-sm text-gray-900">{formatCurrency(entry.total_debit)}</td>
-                    <td className="px-4 py-2.5 text-sm text-gray-900">{formatCurrency(entry.total_credit)}</td>
+                    <td className="px-4 py-2.5 text-sm max-w-[16rem]"><ThirdPartyCell tp={entry.third_party} extra={entry.third_party?.count} /></td>
+                    <td className="px-4 py-2.5 text-sm text-gray-600 max-w-xs truncate" title={entry.description}>{entry.description}</td>
+                    <td className="px-4 py-2.5 text-sm text-gray-900 whitespace-nowrap">{formatCurrency(entry.total_debit)}</td>
+                    <td className="px-4 py-2.5 text-sm text-gray-900 whitespace-nowrap">{formatCurrency(entry.total_credit)}</td>
                     <td className="px-4 py-2.5">
                       <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${STATUS_STYLES[entry.status]}`}>{STATUS_LABELS[entry.status]}</span>
                     </td>
@@ -256,19 +306,31 @@ const JournalEntriesPage = () => {
       {/* Detalle */}
       {selected && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl">
-            <div className="px-5 py-4 border-b border-gray-200 flex items-center justify-between">
-              <div>
-                <h3 className="font-semibold text-gray-900">{selected.entry_number}</h3>
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+            <div className="px-5 py-4 border-b border-gray-200 flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <h3 className="font-semibold text-gray-900">
+                  {selected.entry_number}
+                  <span className="ml-2 text-xs font-normal text-gray-500">{SOURCE_TYPE_LABELS[selected.source_type] || selected.source_type}</span>
+                </h3>
                 <p className="text-xs text-gray-500">{selected.entry_date} — {selected.description}</p>
+                {selected.third_party && (
+                  <div className="mt-1.5 inline-flex items-center gap-2 text-sm bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1">
+                    <span className="text-xs text-gray-500">Tercero:</span>
+                    <span className="font-medium text-gray-900">{selected.third_party.name}</span>
+                    {selected.third_party.tax_id && <span className="text-xs text-gray-500">{selected.third_party.tax_id}</span>}
+                    <ThirdPartyBadge type={selected.third_party.type} />
+                  </div>
+                )}
               </div>
               <button onClick={() => setSelected(null)}><XMarkIcon className="w-5 h-5 text-gray-400" /></button>
             </div>
-            <div className="px-5 py-4">
+            <div className="px-5 py-4 overflow-y-auto">
               <table className="min-w-full text-sm">
                 <thead>
                   <tr className="text-xs text-gray-500 uppercase">
                     <th className="text-left py-1.5">Cuenta</th>
+                    <th className="text-left py-1.5 pl-3">Tercero</th>
                     <th className="text-right py-1.5">Débito</th>
                     <th className="text-right py-1.5">Crédito</th>
                   </tr>
@@ -280,6 +342,7 @@ const JournalEntriesPage = () => {
                         <div className="text-gray-900">{l.account?.code} - {l.account?.name}</div>
                         {l.description && <div className="text-xs text-gray-400">{l.description}</div>}
                       </td>
+                      <td className="py-2 pl-3 max-w-[14rem]"><ThirdPartyCell tp={l.third_party} /></td>
                       <td className="py-2 text-right">{Number(l.debit) > 0 ? formatCurrency(l.debit) : '—'}</td>
                       <td className="py-2 text-right">{Number(l.credit) > 0 ? formatCurrency(l.credit) : '—'}</td>
                     </tr>
@@ -287,7 +350,7 @@ const JournalEntriesPage = () => {
                 </tbody>
                 <tfoot>
                   <tr className="font-semibold border-t border-gray-200">
-                    <td className="py-2">Total</td>
+                    <td className="py-2" colSpan={2}>Total</td>
                     <td className="py-2 text-right">{formatCurrency(selected.total_debit)}</td>
                     <td className="py-2 text-right">{formatCurrency(selected.total_credit)}</td>
                   </tr>
@@ -326,7 +389,7 @@ const JournalEntriesPage = () => {
       {/* Crear asiento manual */}
       {showCreate && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
             <form onSubmit={handleCreateEntry}>
               <div className="px-5 py-4 border-b border-gray-200 flex items-center justify-between">
                 <h3 className="font-semibold text-gray-900">{editingId ? 'Editar Asiento Manual' : 'Nuevo Asiento Manual'}</h3>
@@ -345,17 +408,37 @@ const JournalEntriesPage = () => {
                 </div>
 
                 <div className="space-y-2">
-                  {entryForm.lines.map((line, idx) => (
-                    <div key={idx} className="flex items-center gap-2">
-                      <select value={line.account_id} onChange={(e) => updateLine(idx, 'account_id', e.target.value)} className="flex-1 px-2 py-1.5 border border-gray-300 rounded-lg text-sm">
-                        <option value="">Seleccionar cuenta...</option>
-                        {accounts.map((a) => <option key={a.id} value={a.id}>{a.code} - {a.name}</option>)}
-                      </select>
-                      <NumericInput placeholder="Débito" value={line.debit} onChange={(e) => updateLine(idx, 'debit', e.target.value)} className="w-28 px-2 py-1.5 border border-gray-300 rounded-lg text-sm" />
-                      <NumericInput placeholder="Crédito" value={line.credit} onChange={(e) => updateLine(idx, 'credit', e.target.value)} className="w-28 px-2 py-1.5 border border-gray-300 rounded-lg text-sm" />
-                      <button type="button" onClick={() => removeLine(idx)} className="text-gray-400 hover:text-red-600"><TrashIcon className="w-4 h-4" /></button>
-                    </div>
-                  ))}
+                  <div className="hidden md:grid grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_7rem_7rem_1.5rem] gap-2 text-[11px] font-medium text-gray-500 uppercase px-0.5">
+                    <span>Cuenta</span><span>Tercero</span><span>Débito</span><span>Crédito</span><span />
+                  </div>
+                  {entryForm.lines.map((line, idx) => {
+                    const acc = accounts.find((a) => a.id === line.account_id);
+                    return (
+                      <div key={idx} className="grid grid-cols-1 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_7rem_7rem_1.5rem] gap-2 items-center pb-2 md:pb-0 border-b md:border-0 border-gray-100">
+                        <Combobox
+                          placeholder="Buscar cuenta por código o nombre..."
+                          items={accounts}
+                          value={line.account_id || null}
+                          displayValue={acc ? `${acc.code} - ${acc.name}` : ''}
+                          onSelect={(a) => updateLine(idx, 'account_id', a.id)}
+                          onClear={() => updateLine(idx, 'account_id', '')}
+                          getSearchText={(a) => `${a.code} ${a.name}`}
+                          filterFn={(a, q) => String(a.code).startsWith(q.trim())}
+                          panelMinWidth={360}
+                          renderItem={(a, q) => (
+                            <div className="flex gap-2">
+                              <span className="font-mono text-gray-500 w-20 flex-shrink-0"><HighlightMatch text={a.code} query={q} /></span>
+                              <span className="text-gray-800 dark:text-gray-200"><HighlightMatch text={a.name} query={q} /></span>
+                            </div>
+                          )}
+                        />
+                        <ThirdPartyPicker value={line.third_party} onChange={(tp) => updateLine(idx, 'third_party', tp)} />
+                        <NumericInput placeholder="Débito" value={line.debit} onChange={(e) => updateLine(idx, 'debit', e.target.value)} className="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm" />
+                        <NumericInput placeholder="Crédito" value={line.credit} onChange={(e) => updateLine(idx, 'credit', e.target.value)} className="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm" />
+                        <button type="button" onClick={() => removeLine(idx)} className="text-gray-400 hover:text-red-600 justify-self-end md:justify-self-center"><TrashIcon className="w-4 h-4" /></button>
+                      </div>
+                    );
+                  })}
                   <button type="button" onClick={addLine} className="text-sm text-indigo-600 hover:underline">+ Agregar línea</button>
                 </div>
 

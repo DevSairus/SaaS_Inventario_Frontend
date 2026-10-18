@@ -32,6 +32,7 @@ const AccountsReceivablePage = () => {
   const [paymentMethod, setPaymentMethod] = useState('Efectivo');
   const [bankAccountId, setBankAccountId] = useState(null);
   const [paymentNotes, setPaymentNotes] = useState('');
+  const [excessToAdvance, setExcessToAdvance] = useState(false);
   const [view, setView] = useState('by-customer'); // 'by-customer' o 'all-invoices'
   const [applyAdvanceTarget, setApplyAdvanceTarget] = useState(null);
   const [filters, setFilters] = useState({
@@ -59,9 +60,18 @@ const AccountsReceivablePage = () => {
     }
   };
 
+  // Pago mayor al saldo: la diferencia puede quedar como anticipo del cliente
+  const paymentExcess = selectedInvoice && !selectedInvoice.is_opening_balance
+    ? Math.max(0, Math.round((parseFloat(paymentAmount || 0) - parseFloat(selectedInvoice.balance || 0)) * 100) / 100)
+    : 0;
+
   const handleRegisterPayment = async () => {
     if (!selectedInvoice || !paymentAmount || parseFloat(paymentAmount) <= 0) {
       toast('Por favor ingrese un monto válido');
+      return;
+    }
+    if (paymentExcess > 0 && !excessToAdvance) {
+      toast.error(`El monto supera el saldo en ${formatCurrency(paymentExcess)}. Ajusta el monto o marca "dejar como anticipo".`);
       return;
     }
 
@@ -76,12 +86,14 @@ const AccountsReceivablePage = () => {
           notes: paymentNotes
         });
       } else {
-        await salesApi.registerPayment(selectedInvoice.id, {
+        const res = await salesApi.registerPayment(selectedInvoice.id, {
           amount: parseFloat(paymentAmount),
           payment_method: paymentMethod,
           bank_account_id: paymentMethod !== 'Efectivo' ? bankAccountId : null,
-          notes: paymentNotes
+          notes: paymentNotes,
+          excess_to_advance: paymentExcess > 0 && excessToAdvance ? true : undefined,
         });
+        if (res?.data?.advance) toast.success(res.data.message, { duration: 6000 });
       }
       
       setShowPaymentModal(false);
@@ -89,6 +101,7 @@ const AccountsReceivablePage = () => {
       setPaymentAmount('');
       setBankAccountId(null);
       setPaymentNotes('');
+      setExcessToAdvance(false);
       toast.success('Pago registrado');
       loadData();
     } catch (error) {
@@ -586,6 +599,25 @@ const AccountsReceivablePage = () => {
                     <BankAccountSelect value={bankAccountId} onChange={setBankAccountId} />
                   )}
 
+                  {paymentExcess > 0 && (
+                    <label className={`flex items-start gap-3 rounded-lg border-2 px-3 py-2.5 cursor-pointer ${excessToAdvance ? 'border-teal-400 bg-teal-50' : 'border-amber-300 bg-amber-50'}`}>
+                      <input
+                        type="checkbox"
+                        className="mt-0.5 h-4 w-4 rounded border-gray-300 text-teal-600 focus:ring-teal-500"
+                        checked={excessToAdvance}
+                        onChange={(e) => setExcessToAdvance(e.target.checked)}
+                      />
+                      <span className="text-sm">
+                        <span className="font-semibold text-gray-900">
+                          Dejar {formatCurrency(paymentExcess)} como anticipo del cliente
+                        </span>
+                        <span className="block text-xs text-gray-500 mt-0.5">
+                          El pago supera el saldo. Se abona {formatCurrency(selectedInvoice.balance)} a la factura y la diferencia queda como anticipo con el mismo medio de pago ({paymentMethod}).
+                        </span>
+                      </span>
+                    </label>
+                  )}
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700">
                       Notas (Opcional)
@@ -616,6 +648,7 @@ const AccountsReceivablePage = () => {
                     setSelectedInvoice(null);
                     setPaymentAmount('');
                     setPaymentNotes('');
+                    setExcessToAdvance(false);
                   }}
                   className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
                 >

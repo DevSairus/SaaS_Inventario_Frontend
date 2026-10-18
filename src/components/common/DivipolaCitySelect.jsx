@@ -1,7 +1,8 @@
 // frontend/src/components/common/DivipolaCitySelect.jsx
 import { useState, useEffect, useMemo } from 'react';
 import { getDivipola } from '../../api/dian';
-import Combobox from './Combobox';
+import Combobox, { HighlightMatch } from './Combobox';
+import { matchesSearch } from './searchDropdown';
 
 /**
  * Selector Departamento → Ciudad con autocomplete, respaldado por el
@@ -95,7 +96,7 @@ export default function DivipolaCitySelect({
   };
 
   const filterByName = (item, query) =>
-    item.name.toLowerCase().includes(query.toLowerCase()) || item.code.includes(query);
+    matchesSearch(query, item.name) || String(item.code).includes(query.trim());
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -112,7 +113,7 @@ export default function DivipolaCitySelect({
           onClear={handleClearDept}
           filterFn={filterByName}
           disabled={disabled || loading}
-          renderItem={item => <span>{item.name}</span>}
+          renderItem={(item, q) => <span><HighlightMatch text={item.name} query={q} /></span>}
         />
       </div>
       <div>
@@ -130,9 +131,9 @@ export default function DivipolaCitySelect({
           onClear={handleClearCity}
           filterFn={filterByName}
           disabled={disabled || loading}
-          renderItem={item => (
+          renderItem={(item, q) => (
             <span>
-              {item.name}
+              <HighlightMatch text={item.name} query={q} />
               <span className="text-gray-400 ml-1.5 text-xs">({item.code})</span>
             </span>
           )}

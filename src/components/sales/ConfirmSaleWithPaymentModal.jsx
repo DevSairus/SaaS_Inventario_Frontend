@@ -47,6 +47,33 @@ const PAYMENT_METHODS_LIST = [
 
 const emptyMixedRow = () => ({ method: 'cash', amount: '' });
 
+// Casilla "dejar el excedente como anticipo" (pago mayor al valor a cobrar)
+const ExcessAdvanceToggle = ({ amount, checked, onChange, disabled, hint }) => (
+  <label className={`flex items-start gap-3 rounded-lg border-2 px-3 py-2.5 transition-all ${
+    disabled ? 'border-gray-200 bg-gray-50 opacity-70 cursor-not-allowed'
+      : checked ? 'border-teal-400 bg-teal-50 cursor-pointer' : 'border-teal-200 bg-white cursor-pointer hover:border-teal-300'
+  }`}>
+    <input
+      type="checkbox"
+      className="mt-0.5 h-4 w-4 rounded border-gray-300 text-teal-600 focus:ring-teal-500"
+      checked={checked && !disabled}
+      disabled={disabled}
+      onChange={(e) => onChange(e.target.checked)}
+    />
+    <span className="text-sm">
+      <span className="font-semibold text-teal-800 flex items-center gap-1.5">
+        <WalletIcon className="w-4 h-4" />
+        Dejar ${amount.toLocaleString('es-CO')} como anticipo del cliente
+      </span>
+      <span className="block text-xs text-gray-500 mt-0.5">
+        {disabled
+          ? 'Requiere una venta con cliente y el módulo de Cartera activo.'
+          : hint || 'Al guardar se crea el anticipo a favor del cliente por la diferencia.'}
+      </span>
+    </span>
+  </label>
+);
+
 const ConfirmSaleWithPaymentModal = ({
   isOpen,
   onClose,
@@ -67,6 +94,9 @@ const ConfirmSaleWithPaymentModal = ({
   // pago); 'payment' = registrar un abono sobre una venta ya confirmada (el
   // documento ya existe y "Crédito" no tiene sentido: sería no pagar nada).
   mode = 'confirm',
+  // Permite dejar el excedente (cliente paga más que el total) como anticipo
+  // a su favor: requiere cliente y el módulo de Cartera.
+  canCreateAdvance = false,
 }) => {
   const isPaymentMode = mode === 'payment';
   const docTypes = DOC_TYPES.filter(t => t.value !== 'cotizacion' || !hideQuoteOption || currentDocType === 'cotizacion');
@@ -79,6 +109,7 @@ const ConfirmSaleWithPaymentModal = ({
   const [useCustomDays, setUseCustomDays] = useState(false);
   const [cashReceived, setCashReceived]   = useState('');
   const [bankAccountId, setBankAccountId] = useState(null);
+  const [excessToAdvance, setExcessToAdvance] = useState(false);
 
   // Mixed payment state
   const [mixedRows, setMixedRows] = useState([emptyMixedRow(), emptyMixedRow()]);
@@ -102,6 +133,7 @@ const ConfirmSaleWithPaymentModal = ({
       setUseCustomDays(false);
       setCashReceived('');
       setBankAccountId(null);
+      setExcessToAdvance(false);
       setMixedRows([emptyMixedRow(), emptyMixedRow()]);
       setSelectedAdvances({});
       setAdvances([]);
@@ -165,7 +197,7 @@ const ConfirmSaleWithPaymentModal = ({
   }, [paymentType, effectiveTotal]);
 
   useEffect(() => {
-    if (paymentMethod !== 'cash') setCashReceived('');
+    setCashReceived('');
   }, [paymentMethod]);
 
   const effectiveCreditDays = useCustomDays ? parseInt(customDays || 0) : creditDays;
@@ -177,15 +209,27 @@ const ConfirmSaleWithPaymentModal = ({
     return d.toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' });
   };
 
+  // "Monto recibido" aplica a cualquier medio (no solo efectivo): si el
+  // cliente entrega/transfiere más de lo que se cobra, la diferencia es
+  // cambio (efectivo) o puede quedar como anticipo a su favor.
   const amountToPay       = paymentType === 'credit' ? 0 : parseFloat(paidAmount || 0);
   const cashReceivedNum   = parseFloat(cashReceived || 0);
-  const cashChange        = paymentMethod === 'cash' && cashReceived !== '' ? cashReceivedNum - amountToPay : null;
+  const cashChange        = cashReceived !== '' ? cashReceivedNum - amountToPay : null;
   const cashChangePositive = cashChange !== null && cashChange >= 0;
+  const singleExcess      = paymentType === 'full' && cashChange !== null && cashChange > 0.5 ? Math.round(cashChange * 100) / 100 : 0;
 
   // Mixed totals -- se reparte lo que falta por cobrar después del anticipo
   const mixedTotal = mixedRows.reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0);
   const mixedRemaining = effectiveTotal - mixedTotal;
-  const mixedValid = Math.abs(mixedRemaining) < 1 && mixedRows.every(r => parseFloat(r.amount) > 0);
+  const mixedExcess = paymentType === 'mixed' && mixedRemaining < -0.5 ? Math.round(-mixedRemaining * 100) / 100 : 0;
+  const mixedRowsOk = mixedRows.every(r => parseFloat(r.amount) > 0);
+  const mixedValid = mixedRowsOk && (Math.abs(mixedRemaining) < 1 || (mixedExcess > 0 && excessToAdvance && canCreateAdvance));
+
+  const excessAmount = paymentType === 'mixed' ? mixedExcess : singleExcess;
+  const willCreateAdvance = canCreateAdvance && excessToAdvance && excessAmount > 0;
+  // Pagos electrónicos (transferencia, tarjeta...) no tienen "cambio": si
+  // llegó de más, hay que dejarlo como anticipo o corregir el monto.
+  const nonCashExcessUnhandled = paymentType !== 'mixed' && paymentMethod !== 'cash' && singleExcess > 0 && !willCreateAdvance;
 
   const updateMixedRow = (index, field, value) => {
     setMixedRows(prev => prev.map((r, i) => i === index ? { ...r, [field]: value } : r));
@@ -227,6 +271,7 @@ const ConfirmSaleWithPaymentModal = ({
           amount: parseFloat(r.amount),
           bank_account_id: r.method !== 'cash' ? (r.bank_account_id || null) : null,
         })),
+        excess_advance_amount: willCreateAdvance ? mixedExcess : undefined,
         advance_applications: advanceApplications,
       });
       return;
@@ -236,7 +281,8 @@ const ConfirmSaleWithPaymentModal = ({
     const finalAmount = paymentType === 'credit' ? 0 : parseFloat(paidAmount);
     if (paymentType === 'partial' && (finalAmount <= 0 || finalAmount >= effectiveTotal)) return;
     if (!isPaymentMode && (paymentType === 'partial' || paymentType === 'credit') && effectiveCreditDays <= 0) return;
-    if (paymentMethod === 'cash' && cashReceived !== '' && cashReceivedNum < amountToPay) return;
+    if (cashReceived !== '' && cashReceivedNum < amountToPay) return;
+    if (nonCashExcessUnhandled) return;
 
     onConfirm({
       document_type: docType,
@@ -244,6 +290,7 @@ const ConfirmSaleWithPaymentModal = ({
       paid_amount: finalAmount,
       bank_account_id: paymentMethod !== 'cash' && finalAmount > 0 ? bankAccountId : null,
       credit_days: paymentType !== 'full' ? effectiveCreditDays : undefined,
+      excess_advance_amount: willCreateAdvance ? singleExcess : undefined,
       advance_applications: advanceApplications,
     });
   };
@@ -464,7 +511,7 @@ const ConfirmSaleWithPaymentModal = ({
                       ? 'bg-amber-50 border-amber-300 text-amber-800'
                       : 'bg-red-50 border-red-300 text-red-800'
                   }`}>
-                    <span>{mixedValid ? '✅ Total cubierto' : mixedRemaining > 0 ? '⚠️ Falta cubrir' : '❌ Excede el total'}</span>
+                    <span>{mixedValid ? (mixedExcess > 0 ? '✅ Total cubierto + anticipo' : '✅ Total cubierto') : mixedRemaining > 0 ? '⚠️ Falta cubrir' : '❌ Excede el total'}</span>
                     <span>
                       {mixedValid
                         ? `$${effectiveTotal.toLocaleString('es-CO')}`
@@ -472,6 +519,15 @@ const ConfirmSaleWithPaymentModal = ({
                       }
                     </span>
                   </div>
+                  {mixedExcess > 0 && (
+                    <ExcessAdvanceToggle
+                      amount={mixedExcess}
+                      checked={excessToAdvance}
+                      onChange={setExcessToAdvance}
+                      disabled={!canCreateAdvance}
+                      hint="Se descuenta de los últimos medios de pago de la lista."
+                    />
+                  )}
 
                   {/* Desglose rápido */}
                   {mixedRows.some(r => parseFloat(r.amount) > 0) && (
@@ -530,15 +586,17 @@ const ConfirmSaleWithPaymentModal = ({
                 </div>
               )}
 
-              {/* Efectivo: cambio */}
-              {isCash && paymentType !== 'credit' && paymentType !== 'mixed' && (
+              {/* Monto recibido: cambio (efectivo) o excedente → anticipo */}
+              {(paymentType === 'full' || (isCash && paymentType === 'partial')) && (
                 <div className="rounded-xl border-2 border-emerald-100 bg-emerald-50 p-4 space-y-3">
                   <div className="flex items-center gap-2 text-emerald-800 font-semibold text-sm">
                     <BanknotesIcon className="w-4 h-4" />
-                    Cobro en efectivo
+                    {isCash ? 'Cobro en efectivo' : 'Monto recibido (opcional)'}
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-emerald-700 mb-2">Monto recibido del cliente</label>
+                    <label className="block text-xs font-medium text-emerald-700 mb-2">
+                      {isCash ? 'Monto recibido del cliente' : 'Si el cliente pagó más del valor a cobrar, escribe lo que realmente recibiste'}
+                    </label>
                     <div className="relative">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-600 font-bold">$</span>
                       <NumericInput
@@ -576,11 +634,27 @@ const ConfirmSaleWithPaymentModal = ({
                             : <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                           }
                           <span className={`text-sm font-semibold ${cashChangePositive ? 'text-green-700' : 'text-red-600'}`}>
-                            {cashChangePositive ? 'Cambio a entregar:' : 'Monto insuficiente'}
+                            {!cashChangePositive ? 'Monto insuficiente' : willCreateAdvance ? 'Queda como anticipo:' : isCash ? 'Cambio a entregar:' : 'Excedente recibido:'}
                           </span>
                         </div>
                         {cashChangePositive && (
                           <span className="text-xl font-bold text-green-700">${cashChange.toLocaleString('es-CO')}</span>
+                        )}
+                      </div>
+                    )}
+                    {singleExcess > 0 && (
+                      <div className="mt-3">
+                        <ExcessAdvanceToggle
+                          amount={singleExcess}
+                          checked={excessToAdvance}
+                          onChange={setExcessToAdvance}
+                          disabled={!canCreateAdvance}
+                          hint={`Se registra con el mismo medio de pago (${PAYMENT_METHODS_LIST.find(m => m.value === paymentMethod)?.label || paymentMethod})${!isCash ? ' y cuenta bancaria' : ''}.`}
+                        />
+                        {nonCashExcessUnhandled && (
+                          <p className="mt-2 text-xs text-red-600">
+                            Un pago {PAYMENT_METHODS_LIST.find(m => m.value === paymentMethod)?.label?.toLowerCase()} no da cambio: deja el excedente como anticipo o corrige el monto recibido.
+                          </p>
                         )}
                       </div>
                     )}
@@ -665,7 +739,12 @@ const ConfirmSaleWithPaymentModal = ({
                       </span>
                     </div>
                   )}
-                  {isCash && cashChangePositive && cashChange > 0 && (
+                  {willCreateAdvance ? (
+                    <div className="flex justify-between pt-2 border-t border-blue-300">
+                      <span className="text-gray-600">Anticipo a favor del cliente:</span>
+                      <span className="font-bold text-teal-600 text-base">${excessAmount.toLocaleString('es-CO')}</span>
+                    </div>
+                  ) : isCash && cashChangePositive && cashChange > 0 && (
                     <div className="flex justify-between pt-2 border-t border-blue-300">
                       <span className="text-gray-600">Cambio:</span>
                       <span className="font-bold text-emerald-600 text-base">${cashChange.toLocaleString('es-CO')}</span>
@@ -700,7 +779,8 @@ const ConfirmSaleWithPaymentModal = ({
                   loading ||
                   advanceOverBalance ||
                   (!advanceCoversAll && paymentType === 'mixed' && !mixedValid) ||
-                  (!advanceCoversAll && paymentType !== 'mixed' && isCash && cashReceived !== '' && !cashChangePositive)
+                  (!advanceCoversAll && paymentType !== 'mixed' && cashReceived !== '' && !cashChangePositive) ||
+                  (!advanceCoversAll && nonCashExcessUnhandled)
                 }
                 className="w-full sm:w-auto inline-flex justify-center rounded-lg px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-base font-medium text-white hover:from-indigo-700 hover:to-purple-700 disabled:opacity-50 shadow-sm transition-all">
                 {loading ? (

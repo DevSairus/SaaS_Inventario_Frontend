@@ -9,7 +9,8 @@ import { productsAPI } from '../../api/products';
 import { workOrdersApi } from '../../api/workshop';
 import { workOrdersApiOffline } from '../../api/workshopOffline';
 import axios from '../../api/axios';
-import Combobox from '../../components/common/Combobox';
+import Combobox, { HighlightMatch } from '../../components/common/Combobox';
+import { FloatingPanel, useListNavigation, optionCls } from '../../components/common/searchDropdown';
 import BarcodeScanner from '../../components/common/BarcodeScanner';
 import {
   ArrowLeft, Wrench, Car, User, Package, Plus, Trash2, Pencil,
@@ -326,6 +327,7 @@ export default function WorkOrderDetailPage() {
       return;
     }
     setIsSearching(true);
+    let stale = false;
     const timer = setTimeout(async () => {
       try {
         const vehicleParams = {};
@@ -357,15 +359,25 @@ export default function WorkOrderDetailPage() {
           } catch { /* silencioso */ }
         }
 
-        setSearchResults(results);
+        if (!stale) setSearchResults(results);
       } catch {
-        setSearchResults([]);
+        if (!stale) setSearchResults([]);
       } finally {
-        setIsSearching(false);
+        if (!stale) setIsSearching(false);
       }
     }, 300);
-    return () => clearTimeout(timer);
+    return () => { stale = true; clearTimeout(timer); };
   }, [searchTerm, order?.vehicle]);
+
+  // Teclado sobre los resultados de la búsqueda de productos
+  const productSearchAnchorRef = useRef(null);
+  const productNav = useListNavigation({
+    count: searchResults.length,
+    open: !newItem.product_id && searchResults.length > 0,
+    resetKey: searchResults,
+    onPick: (i) => searchResults[i] && handleSelectProduct(searchResults[i]),
+    onClose: () => setSearchResults([]),
+  });
 
   // ── Combos: agregar / quitar / cambiar presentación (requieren conexión) ──
   const handleAddCombo = async ({ combo, quantity, show_breakdown, items, requires_approval }) => {
@@ -1247,12 +1259,14 @@ export default function WorkOrderDetailPage() {
                   <div className="relative">
                     <label className="text-xs font-medium text-gray-600 mb-1 block">Buscar producto</label>
                     <div className="flex gap-2">
-                      <div className="relative flex-1">
+                      <div className="relative flex-1" ref={productSearchAnchorRef}>
                         <input
                           autoFocus
                           type="text"
+                          autoComplete="off"
                           value={searchTerm}
                           onChange={e => setSearchTerm(e.target.value)}
+                          onKeyDown={productNav.onKeyDown}
                           placeholder="Nombre, SKU o código de barras..."
                           className={inputCls}
                         />
@@ -1294,11 +1308,19 @@ export default function WorkOrderDetailPage() {
                     {/* Lista de resultados — overlay más ancho que el campo de búsqueda
                         (se sale de la columna de 2/3 del grid en pantallas grandes) para
                         que quepa cómodo el costo interno junto al precio y el stock. */}
-                    {!newItem.product_id && searchResults.length > 0 && (
-                      <div className="absolute z-20 mt-1 left-0 w-full xl:w-[150%] max-h-72 overflow-y-auto border border-gray-200 rounded-lg bg-white shadow-lg divide-y divide-gray-50">
-                        {searchResults.map(p => (
-                          <button key={p.id} onClick={() => handleSelectProduct(p)}
-                            className="w-full text-left px-3 py-2.5 hover:bg-blue-50 transition">
+                    <FloatingPanel
+                      ref={productNav.listRef}
+                      anchorRef={productSearchAnchorRef}
+                      open={!newItem.product_id && searchResults.length > 0}
+                      minWidth={560}
+                      maxHeight={360}
+                      footer={`${searchResults.length} resultado(s) · ↑↓ para moverse · Enter para elegir · Esc para cerrar`}
+                    >
+                        {searchResults.map((p, index) => (
+                          <div key={p.id} data-index={index} role="option"
+                            onClick={() => handleSelectProduct(p)}
+                            onMouseEnter={() => productNav.setActiveIndex(index)}
+                            className={`${optionCls(index === productNav.activeIndex, false)} ${isSearching ? 'opacity-60' : ''}`}>
                             <div className="flex items-center justify-between gap-3">
                               {p.image_url && (
                                 <div className="shrink-0 w-10 h-10 rounded-lg overflow-hidden border border-gray-200 bg-gray-50">
@@ -1306,14 +1328,15 @@ export default function WorkOrderDetailPage() {
                                     src={p.image_url.startsWith('http') ? p.image_url : `${import.meta.env.VITE_API_URL?.replace('/api','') ?? ''}${p.image_url}`}
                                     alt={p.name}
                                     className="w-full h-full object-cover"
+                                    loading="lazy"
                                     onError={(e) => { e.target.parentElement.style.display='none'; }}
                                   />
                                 </div>
                               )}
                               <div className="min-w-0 flex-1">
-                                <p className="text-sm font-medium text-gray-900 truncate">{p.name}</p>
+                                <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate"><HighlightMatch text={p.name} query={searchTerm} /></p>
                                 <p className="text-xs text-gray-400">
-                                  {p.sku && <span className="mr-2">{p.sku}</span>}
+                                  {p.sku && <span className="mr-2 font-mono"><HighlightMatch text={p.sku} query={searchTerm} /></span>}
                                   {p.product_type === 'service'
                                     ? <span className="text-purple-600">Servicio</span>
                                     : <span className={p.current_stock > 0 ? 'text-green-600' : 'text-red-500'}>
@@ -1355,10 +1378,9 @@ export default function WorkOrderDetailPage() {
                                 )}
                               </div>
                             </div>
-                          </button>
+                          </div>
                         ))}
-                      </div>
-                    )}
+                    </FloatingPanel>
                   </div>
                   )}
 
@@ -1861,17 +1883,17 @@ export default function WorkOrderDetailPage() {
                       const c = customers.find(c => c.id === selectedCustomerId);
                       return c ? (c.business_name || `${c.first_name || ''} ${c.last_name || ''}`.trim()) : '';
                     })()}
-                    onSelect={c => setSelectedCustomerId(c.id)}
-                    onClear={() => setSelectedCustomerId('')}
-                    filterFn={(c, q) => {
-                      const s = q.toLowerCase();
-                      const n = (c.business_name || `${c.first_name || ''} ${c.last_name || ''}`).toLowerCase();
-                      return n.includes(s) || (c.phone || '').includes(s) || (c.tax_id || '').includes(s);
+                    onSelect={c => {
+                      setCustomers(prev => (prev.some(x => x.id === c.id) ? prev : [...prev, c]));
+                      setSelectedCustomerId(c.id);
                     }}
-                    renderItem={c => (
+                    onClear={() => setSelectedCustomerId('')}
+                    remoteSearch={q => axios.get('/customers', { params: { search: q, limit: 30 } }).then(r => r.data.data || [])}
+                    getSearchText={c => `${c.business_name || ''} ${c.first_name || ''} ${c.last_name || ''} ${c.phone || ''} ${c.tax_id || ''}`}
+                    renderItem={(c, q) => (
                       <div>
                         <p className="text-sm font-medium text-gray-900 dark:text-gray-200">
-                          {c.business_name || `${c.first_name || ''} ${c.last_name || ''}`}
+                          <HighlightMatch text={c.business_name || `${c.first_name || ''} ${c.last_name || ''}`} query={q} />
                         </p>
                         {c.phone && <p className="text-xs text-gray-400">{c.phone}</p>}
                       </div>
@@ -1932,9 +1954,9 @@ export default function WorkOrderDetailPage() {
                     })()}
                     onSelect={t => setSelectedTechId(t.id)}
                     onClear={() => setSelectedTechId('')}
-                    filterFn={(t, q) => `${t.first_name} ${t.last_name}`.toLowerCase().includes(q.toLowerCase())}
-                    renderItem={t => (
-                      <span className="font-medium text-gray-800 dark:text-gray-200">{t.first_name} {t.last_name}</span>
+                    getSearchText={t => `${t.first_name} ${t.last_name}`}
+                    renderItem={(t, q) => (
+                      <span className="font-medium text-gray-800 dark:text-gray-200"><HighlightMatch text={`${t.first_name} ${t.last_name}`} query={q} /></span>
                     )}
                   />
                   <div className="flex gap-2">
@@ -1982,8 +2004,8 @@ export default function WorkOrderDetailPage() {
                     })()}
                     onSelect={w => setSelectedWarehouseId(w.id)}
                     onClear={() => setSelectedWarehouseId('')}
-                    filterFn={(w, q) => w.name.toLowerCase().includes(q.toLowerCase())}
-                    renderItem={w => <span className="font-medium text-gray-800 dark:text-gray-200">{w.name}</span>}
+                    getSearchText={w => w.name}
+                    renderItem={(w, q) => <span className="font-medium text-gray-800 dark:text-gray-200"><HighlightMatch text={w.name} query={q} /></span>}
                   />
                   <div className="flex gap-2">
                     <button onClick={() => setEditingWarehouse(false)}

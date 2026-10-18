@@ -6,7 +6,7 @@ import { suppliersAPI } from '../../api/suppliers';
 import useBranchStore from '../../store/branchStore';
 import Layout from '../../components/layout/Layout';
 import InvoiceImportModal from '../../components/purchases/InvoiceImportModal';
-import Combobox from '../../components/common/Combobox';
+import Combobox, { HighlightMatch } from '../../components/common/Combobox';
 import { formatDate } from '../../utils/formatters';
 import {
   PlusIcon,
@@ -216,14 +216,11 @@ const PurchasesPage = () => {
                   displayValue={suppliers.find(s => String(s.id) === String(serverFilters.supplier_id))?.name || ''}
                   onSelect={(s) => setServerFilters(f => ({ ...f, supplier_id: s.id }))}
                   onClear={() => setServerFilters(f => ({ ...f, supplier_id: '' }))}
-                  filterFn={(s, q) => {
-                    const t = q.toLowerCase();
-                    return [s.name, s.business_name, s.tax_id].some(v => v?.toLowerCase().includes(t));
-                  }}
-                  renderItem={(s) => (
+                  getSearchText={(s) => [s.name, s.business_name, s.tax_id].filter(Boolean).join(' ')}
+                  renderItem={(s, q) => (
                     <div>
-                      <p className="font-medium text-gray-800 dark:text-gray-100">{s.name}</p>
-                      {s.tax_id && <p className="text-xs text-gray-500">NIT {s.tax_id}</p>}
+                      <p className="font-medium text-gray-800 dark:text-gray-100"><HighlightMatch text={s.name} query={q} /></p>
+                      {s.tax_id && <p className="text-xs text-gray-500">NIT <HighlightMatch text={s.tax_id} query={q} /></p>}
                     </div>
                   )}
                 />

@@ -18,6 +18,13 @@ export const journalEntriesAPI = {
   reverse: async (id, reason) => (await api.patch(`/accounting/journal-entries/${id}/reverse`, { reason })).data,
 };
 
+// Terceros contables (clientes, proveedores y empleados en un solo buscador)
+export const thirdPartiesAPI = {
+  search: async (q, params = {}) => (await api.get('/accounting/third-parties', { params: { q, ...params } })).data,
+};
+
+export const THIRD_PARTY_TYPE_LABELS = { customer: 'Cliente', supplier: 'Proveedor', employee: 'Empleado' };
+
 // ICA por municipio (configuración, pre-liquidación y causación)
 export const icaAPI = {
   getConfig: async () => (await api.get('/accounting/ica/config')).data,
@@ -239,6 +246,29 @@ export const SOURCE_TYPE_LABELS = {
   payroll_payment: 'Pago de nómina',
   payroll_cesantias_year_end: 'Causación anual de cesantías',
   payroll_provision_adjustment: 'Ajuste anual de provisiones de nómina',
+  payment: 'Recaudo de cartera',
+  purchase_payment: 'Pago a proveedor',
+  expense_payment: 'Pago de gasto',
+  work_order_payment: 'Abono de OT',
+  customer_return: 'Devolución de cliente',
+  supplier_return: 'Devolución a proveedor',
+  credit_note: 'Nota crédito',
+  debit_note: 'Nota débito',
+  customer_advance: 'Anticipo de cliente',
+  customer_advance_application: 'Aplicación de anticipo',
+  customer_advance_refund: 'Devolución de anticipo',
+  customer_advance_reassignment: 'Traslado de anticipo',
+  fixed_asset_depreciation: 'Depreciación',
+  loan_payment: 'Pago de préstamo',
+  reclassification: 'Reclasificación',
+  ica_settlement: 'Liquidación ICA',
+  ica_autoretention: 'Autorretención ICA',
+  opening_balance: 'Saldo inicial',
+  year_end_close: 'Cierre de año',
+  internal_consumption: 'Consumo interno',
+  inventory_adjustment: 'Ajuste de inventario',
+  product_initial_stock: 'Inventario inicial',
+  product_bulk_import: 'Importación de inventario',
 };
 
 // Clasificación tributaria de compras (pantalla del contador): concepto de

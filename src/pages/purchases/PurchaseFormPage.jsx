@@ -3,9 +3,10 @@ import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { usePurchasesStore } from '../../store/purchasesStore';
 import { suppliersAPI } from '../../api/suppliers';
 import useProductsStore from '../../store/productsStore';
+import ProductSearchInput from '../../components/common/ProductSearchInput';
 import Layout from '../../components/layout/Layout';
 import NumericInput from '../../components/inputs/NumericInput';
-import Combobox from '../../components/common/Combobox';
+import Combobox, { HighlightMatch } from '../../components/common/Combobox';
 import { retentionsAPI } from '../../api/retentions';
 import {
   formatCurrency,
@@ -62,8 +63,6 @@ const PurchaseFormPage = () => {
 
   // Estados para búsqueda de productos
   const [productSearch, setProductSearch] = useState('');
-  const [showProductDropdown, setShowProductDropdown] = useState(false);
-  const [filteredProducts, setFilteredProducts] = useState([]);
 
   useEffect(() => {
     suppliersAPI.getAll({ is_active: true, limit: 10000, sort_by: 'name', sort_order: 'ASC' })
@@ -214,32 +213,6 @@ const PurchaseFormPage = () => {
     }
   };
 
-  // Buscar productos en el servidor con debounce
-  useEffect(() => {
-    if (productSearch.trim() === '') {
-      setFilteredProducts([]);
-      return;
-    }
-
-    const debounce = setTimeout(async () => {
-      const results = await searchProducts(productSearch.trim());
-      setFilteredProducts(results.slice(0, 50));
-    }, 300);
-
-    return () => clearTimeout(debounce);
-  }, [productSearch]);
-
-  // Cerrar dropdown al hacer click fuera
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (showProductDropdown && !event.target.closest('.product-search-container')) {
-        setShowProductDropdown(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [showProductDropdown]);
 
   const handleFormChange = (e) => {
     const { name, value } = e.target;
@@ -277,11 +250,6 @@ const PurchaseFormPage = () => {
     setCurrentItem(prev => ({ ...prev, [name]: numValue }));
   };
 
-  const handleProductSearch = (e) => {
-    setProductSearch(e.target.value);
-    setShowProductDropdown(true);
-  };
-
   const selectProduct = (product) => {
     setCurrentItem(prev => ({ 
       ...prev, 
@@ -290,13 +258,11 @@ const PurchaseFormPage = () => {
       _product_sku: product.sku
     }));
     setProductSearch(`${product.sku} - ${product.name}`);
-    setShowProductDropdown(false);
   };
 
   const clearProductSelection = () => {
     setCurrentItem(prev => ({ ...prev, product_id: '', _product_name: '', _product_sku: '' }));
     setProductSearch('');
-    setShowProductDropdown(false);
   };
 
   const addItem = () => {
@@ -331,7 +297,6 @@ const PurchaseFormPage = () => {
       discount_percentage: 0
     });
     setProductSearch('');
-    setShowProductDropdown(false);
   };
 
   const removeItem = (index) => {
@@ -491,17 +456,14 @@ const PurchaseFormPage = () => {
                 displayValue={supplierLabel(selectedSupplier)}
                 onSelect={(s) => handleFormChange({ target: { name: 'supplier_id', value: s.id } })}
                 onClear={() => handleFormChange({ target: { name: 'supplier_id', value: '' } })}
-                filterFn={(s, q) => {
-                  const t = q.toLowerCase();
-                  return [s.name, s.business_name, s.tax_id, s.contact_name]
-                    .some(v => v?.toLowerCase().includes(t));
-                }}
-                renderItem={(s) => (
+                getSearchText={(s) => [s.name, s.business_name, s.tax_id, s.contact_name].filter(Boolean).join(' ')}
+                renderItem={(s, q) => (
                   <div>
-                    <p className="font-medium text-gray-800 dark:text-gray-100">{s.name}</p>
+                    <p className="font-medium text-gray-800 dark:text-gray-100"><HighlightMatch text={s.name} query={q} /></p>
                     {(s.tax_id || s.business_name) && (
                       <p className="text-xs text-gray-500">
-                        {s.tax_id ? `NIT ${s.tax_id}` : ''}{s.business_name && s.business_name !== s.name ? ` · ${s.business_name}` : ''}
+                        {s.tax_id && <>NIT <HighlightMatch text={s.tax_id} query={q} /></>}
+                        {s.business_name && s.business_name !== s.name && <> · <HighlightMatch text={s.business_name} query={q} /></>}
                       </p>
                     )}
                   </div>
@@ -633,61 +595,14 @@ const PurchaseFormPage = () => {
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Producto
               </label>
-              <div className="relative">
-                <input
-                  type="text"
-                  value={productSearch}
-                  onChange={handleProductSearch}
-                  onFocus={() => setShowProductDropdown(true)}
-                  placeholder="Buscar por SKU o nombre..."
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-                {currentItem.product_id && (
-                  <button
-                    type="button"
-                    onClick={clearProductSelection}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                )}
-              </div>
-              
-              {/* Dropdown de productos */}
-              {showProductDropdown && (
-                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                  {productSearch.trim() === '' ? (
-                    <div className="px-4 py-3 text-gray-400 text-sm">
-                      Escribe al menos 2 caracteres para buscar...
-                    </div>
-                  ) : filteredProducts.length === 0 ? (
-                    <div className="px-4 py-3 text-gray-500 text-sm">
-                      No se encontraron productos
-                    </div>
-                  ) : (
-                    <div>
-                      {filteredProducts.map((product) => (
-                        <button
-                          key={product.id}
-                          type="button"
-                          onClick={() => selectProduct(product)}
-                          className="w-full px-4 py-2 text-left hover:bg-blue-50 border-b border-gray-100 last:border-b-0"
-                        >
-                          <div className="font-medium text-gray-900">{product.name}</div>
-                          <div className="text-sm text-gray-500">SKU: {product.sku}</div>
-                        </button>
-                      ))}
-                      {filteredProducts.length === 50 && (
-                        <div className="px-4 py-2 text-xs text-gray-500 bg-gray-50 text-center">
-                          Mostrando 50 resultados. Refina tu búsqueda para ver más.
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
+              <ProductSearchInput
+                value={productSearch}
+                onChange={setProductSearch}
+                onSelect={selectProduct}
+                onClear={clearProductSelection}
+                hasSelection={!!currentItem.product_id}
+                show={{ stock: true, cost: true }}
+              />
             </div>
 
             <div>

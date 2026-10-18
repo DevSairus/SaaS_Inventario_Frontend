@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import Combobox from '../../components/common/Combobox';
+import Combobox, { HighlightMatch } from '../../components/common/Combobox';
 import Layout from '../../components/layout/Layout';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import useWorkshopStore from '../../store/workshopStore';
@@ -421,21 +421,16 @@ export default function WorkOrderFormPage() {
                     onSelect={selectVehicle}
                     onClear={clearVehicle}
                     onQueryChange={setVehicleQuery}
-                    filterFn={(v, q) => {
-                      const s = q.toLowerCase();
-                      return (v.plate||'').toLowerCase().includes(s)
-                        || (v.brand||'').toLowerCase().includes(s)
-                        || (v.model||'').toLowerCase().includes(s)
-                        || String(v.year||'').includes(s);
-                    }}
-                    renderItem={v => (
+                    remoteSearch={q => vehiclesApi.list({ search: q, limit: 30 }).then(r => r.data.data || [])}
+                    getSearchText={v => `${v.plate || ''} ${v.brand || ''} ${v.model || ''} ${v.year || ''} ${v.customer ? (v.customer.business_name || `${v.customer.first_name || ''} ${v.customer.last_name || ''}`) : ''}`}
+                    renderItem={(v, q) => (
                       <div>
                         <div className="flex items-center gap-2">
-                          <span className="font-mono font-bold text-gray-900 text-sm">{v.plate}</span>
-                          <span className="text-xs text-gray-500">{v.brand} {v.model} {v.year}</span>
+                          <span className="font-mono font-bold text-gray-900 dark:text-gray-100 text-sm"><HighlightMatch text={v.plate} query={q} /></span>
+                          <span className="text-xs text-gray-500"><HighlightMatch text={`${v.brand || ''} ${v.model || ''} ${v.year || ''}`} query={q} /></span>
                         </div>
                         {v.customer
-                          ? <p className="text-xs text-blue-500 mt-0.5">{v.customer.business_name || `${v.customer.first_name} ${v.customer.last_name}`}</p>
+                          ? <p className="text-xs text-blue-500 mt-0.5"><HighlightMatch text={v.customer.business_name || `${v.customer.first_name} ${v.customer.last_name}`} query={q} /></p>
                           : <p className="text-xs text-gray-300 mt-0.5">Sin propietario</p>
                         }
                       </div>
@@ -571,17 +566,19 @@ export default function WorkOrderFormPage() {
                           displayValue={custDisp}
                           onSelect={selectCustomer}
                           onClear={clearCustomer}
-                          filterFn={(c, q) => {
-                            const s = q.toLowerCase();
-                            const n = (c.business_name || c.full_name || `${c.first_name||''} ${c.last_name||''}`).toLowerCase();
-                            return n.includes(s) || (c.phone||'').includes(s) || (c.tax_id||'').includes(s);
-                          }}
-                          renderItem={c => (
+                          remoteSearch={q => axios.get('/customers', { params: { search: q, limit: 30 } }).then(r => r.data.data || [])}
+                          getSearchText={c => `${c.business_name || ''} ${c.full_name || `${c.first_name||''} ${c.last_name||''}`} ${c.phone || ''} ${c.tax_id || ''}`}
+                          renderItem={(c, q) => (
                             <div>
-                              <p className="text-sm font-medium text-gray-900">
-                                {c.business_name || c.full_name || `${c.first_name||''} ${c.last_name||''}`}
+                              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                                <HighlightMatch text={c.business_name || c.full_name || `${c.first_name||''} ${c.last_name||''}`} query={q} />
                               </p>
-                              {c.phone && <p className="text-xs text-gray-400">{c.phone}</p>}
+                              {(c.tax_id || c.phone) && (
+                                <p className="text-xs text-gray-400">
+                                  {c.tax_id && <><HighlightMatch text={c.tax_id} query={q} />{c.phone ? ' · ' : ''}</>}
+                                  {c.phone && <HighlightMatch text={c.phone} query={q} />}
+                                </p>
+                              )}
                             </div>
                           )}
                         />
@@ -629,8 +626,8 @@ export default function WorkOrderFormPage() {
                   displayValue={(() => { const t = technicians.find(t => t.id === form.technician_id); return t ? `${t.first_name} ${t.last_name}` : ''; })()}
                   onSelect={t => setForm(f => ({ ...f, technician_id: t.id }))}
                   onClear={() => setForm(f => ({ ...f, technician_id: '' }))}
-                  filterFn={(t, q) => `${t.first_name} ${t.last_name}`.toLowerCase().includes(q.toLowerCase())}
-                  renderItem={t => <span className="font-medium text-gray-800">{t.first_name} {t.last_name}</span>}
+                  getSearchText={t => `${t.first_name} ${t.last_name}`}
+                  renderItem={(t, q) => <span className="font-medium text-gray-800 dark:text-gray-200"><HighlightMatch text={`${t.first_name} ${t.last_name}`} query={q} /></span>}
                 />
               </Field>
               <Field label="Bodega de repuestos">
@@ -641,8 +638,8 @@ export default function WorkOrderFormPage() {
                   displayValue={(() => { const w = warehouses.find(w => w.id === form.warehouse_id); return w ? w.name : ''; })()}
                   onSelect={w => setForm(f => ({ ...f, warehouse_id: w.id }))}
                   onClear={() => setForm(f => ({ ...f, warehouse_id: '' }))}
-                  filterFn={(w, q) => w.name.toLowerCase().includes(q.toLowerCase())}
-                  renderItem={w => <span className="font-medium text-gray-800">{w.name}</span>}
+                  getSearchText={w => w.name}
+                  renderItem={(w, q) => <span className="font-medium text-gray-800 dark:text-gray-200"><HighlightMatch text={w.name} query={q} /></span>}
                 />
               </Field>
               <Field label="Fecha prometida de entrega *">

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAdjustmentsStore } from '../../store/adjustmentsStore';
 import useProductsStore from '../../store/productsStore';
+import ProductSearchInput from '../../components/common/ProductSearchInput';
 import Layout from '../../components/layout/Layout';
 import NumericInput from '../../components/inputs/NumericInput';
 import {
@@ -39,8 +40,6 @@ const AdjustmentFormPage = () => {
 
   // Estados para búsqueda de productos
   const [productSearch, setProductSearch] = useState('');
-  const [showProductDropdown, setShowProductDropdown] = useState(false);
-  const [filteredProducts, setFilteredProducts] = useState([]);
 
   useEffect(() => {
     // En modo edición, cargar los datos del ajuste directamente
@@ -88,32 +87,6 @@ const AdjustmentFormPage = () => {
     }
   };
 
-  // Buscar productos en el servidor con debounce
-  useEffect(() => {
-    if (productSearch.trim() === '') {
-      setFilteredProducts([]);
-      return;
-    }
-
-    const debounce = setTimeout(async () => {
-      const results = await searchProducts(productSearch.trim());
-      setFilteredProducts(results.slice(0, 50));
-    }, 300);
-
-    return () => clearTimeout(debounce);
-  }, [productSearch]);
-
-  // Cerrar dropdown al hacer click fuera
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (showProductDropdown && !event.target.closest('.product-search-container')) {
-        setShowProductDropdown(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [showProductDropdown]);
 
   const handleFormChange = (e) => {
     const { name, value } = e.target;
@@ -133,11 +106,6 @@ const AdjustmentFormPage = () => {
     setCurrentItem(prev => ({ ...prev, [name]: numValue }));
   };
 
-  const handleProductSearch = (e) => {
-    setProductSearch(e.target.value);
-    setShowProductDropdown(true);
-  };
-
   const selectProduct = (product) => {
     setCurrentItem(prev => ({ 
       ...prev, 
@@ -145,13 +113,11 @@ const AdjustmentFormPage = () => {
       unit_cost: toInteger(product.average_cost, 0)
     }));
     setProductSearch(`${product.sku} - ${product.name}`);
-    setShowProductDropdown(false);
   };
 
   const clearProductSelection = () => {
     setCurrentItem(prev => ({ ...prev, product_id: '', unit_cost: 0 }));
     setProductSearch('');
-    setShowProductDropdown(false);
   };
 
   const addItem = () => {
@@ -193,7 +159,6 @@ const AdjustmentFormPage = () => {
       notes: ''
     });
     setProductSearch('');
-    setShowProductDropdown(false);
   };
 
   const removeItem = (index) => {
@@ -360,57 +325,14 @@ const AdjustmentFormPage = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">
                   Producto
                 </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={productSearch}
-                    onChange={handleProductSearch}
-                    onFocus={() => setShowProductDropdown(true)}
-                    placeholder="Buscar por SKU o nombre..."
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100 dark:placeholder-gray-600"
-                  />
-                  {currentItem.product_id && (
-                    <button
-                      type="button"
-                      onClick={clearProductSelection}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
-                  )}
-                </div>
-
-                {showProductDropdown && (
-                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto dark:bg-graphite-2 dark:border-white/10">
-                    {productSearch.trim() === '' ? (
-                      <div className="px-4 py-3 text-gray-400 text-sm dark:text-gray-600">
-                        Escribe al menos 2 caracteres para buscar...
-                      </div>
-                    ) : filteredProducts.length === 0 ? (
-                      <div className="px-4 py-3 text-gray-500 text-sm dark:text-gray-500">
-                        No se encontraron productos
-                      </div>
-                    ) : (
-                      <div>
-                        {filteredProducts.map((product) => (
-                          <button
-                            key={product.id}
-                            type="button"
-                            onClick={() => selectProduct(product)}
-                            className="w-full px-4 py-2 text-left hover:bg-blue-50 border-b border-gray-100 last:border-b-0 dark:hover:bg-blue-900/30 dark:border-white/10"
-                          >
-                            <div className="font-medium text-gray-900 dark:text-gray-100">{product.name}</div>
-                            <div className="text-sm text-gray-500 dark:text-gray-500">
-                              SKU: {product.sku} | Stock: {product.current_stock}
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
+                <ProductSearchInput
+                  value={productSearch}
+                  onChange={setProductSearch}
+                  onSelect={selectProduct}
+                  onClear={clearProductSelection}
+                  hasSelection={!!currentItem.product_id}
+                  show={{ stock: true, cost: true }}
+                />
               </div>
 
               <div>

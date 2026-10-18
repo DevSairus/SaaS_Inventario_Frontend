@@ -4,7 +4,7 @@ import { Users, Loader2, RefreshCw, UserPlus, UserMinus, ShieldCheck, ShieldQues
 import Layout from '../../components/layout/Layout';
 import { ensambladoraTecnicosApi } from '../../api/ensambladora';
 import { usersAPI } from '../../api/users';
-import Combobox from '../../components/common/Combobox';
+import Combobox, { HighlightMatch } from '../../components/common/Combobox';
 
 const inputCls = 'w-full border border-gray-200 dark:border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-graphite-2 dark:text-gray-100';
 
@@ -170,11 +170,11 @@ export default function TecnicosPage() {
                 displayValue={form.usuario ? nombreCompleto(form.usuario) : ''}
                 onSelect={handleSeleccionarUsuario}
                 onClear={handleLimpiarUsuario}
-                filterFn={(u, q) => nombreCompleto(u).toLowerCase().includes(q.toLowerCase()) || u.email.toLowerCase().includes(q.toLowerCase())}
-                renderItem={(u) => (
+                getSearchText={(u) => `${nombreCompleto(u)} ${u.email || ''}`}
+                renderItem={(u, q) => (
                   <div>
-                    <p className="text-gray-700 dark:text-gray-200">{nombreCompleto(u)}</p>
-                    <p className="text-xs text-gray-400">{u.email}</p>
+                    <p className="text-gray-700 dark:text-gray-200"><HighlightMatch text={nombreCompleto(u)} query={q} /></p>
+                    <p className="text-xs text-gray-400"><HighlightMatch text={u.email} query={q} /></p>
                   </div>
                 )}
               />

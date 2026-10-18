@@ -6,6 +6,8 @@ import Layout from '../../components/layout/Layout';
 import toast from 'react-hot-toast';
 import { DocumentArrowDownIcon, TableCellsIcon, InformationCircleIcon } from '@heroicons/react/24/outline';
 import { formatCurrency } from '../../utils/formatters';
+import ThirdPartyPicker from '../../components/accounting/ThirdPartyPicker';
+import LibroAuxiliarModal from '../../components/accounting/LibroAuxiliarModal';
 
 const toLocalDateString = (date) => {
   const d = date instanceof Date ? date : new Date(date);
@@ -27,6 +29,7 @@ const TABS = [
 
 const FinancialReportsPage = () => {
   const [tab, setTab] = useState('trial-balance');
+  const [auxThirdParty, setAuxThirdParty] = useState(null);
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState(null);
   const { branches, fetchBranches } = useBranchStore();
@@ -118,10 +121,17 @@ const FinancialReportsPage = () => {
   return (
     <Layout>
       <div className="p-4 md:p-6 space-y-6">
-        <div>
-          <h1 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-gray-100">Reportes Financieros</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-500 mt-1">Basados solo en asientos contabilizados (posted)</p>
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h1 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-gray-100">Reportes Financieros</h1>
+            <p className="text-sm text-gray-500 dark:text-gray-500 mt-1">Basados solo en asientos contabilizados (posted)</p>
+          </div>
+          <div className="w-full sm:w-80">
+            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Libro auxiliar por tercero</label>
+            <ThirdPartyPicker value={null} onChange={(tp) => tp && setAuxThirdParty(tp)} placeholder="Buscar cliente, proveedor o empleado..." />
+          </div>
         </div>
+        {auxThirdParty && <LibroAuxiliarModal thirdParty={auxThirdParty} onClose={() => setAuxThirdParty(null)} />}
 
         <div className="border-b border-gray-200 dark:border-white/10 flex gap-4">
           {TABS.map((t) => (
@@ -575,6 +585,12 @@ const FinancialReportsPage = () => {
                   <span className="text-gray-500 dark:text-gray-500">{entry.entry_date}</span>
                   <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600">{SOURCE_TYPE_LABELS[entry.source_type] || entry.source_type}</span>
                   <span className="text-gray-600 dark:text-gray-400 dark:dark:text-gray-500 flex-1">{entry.description || '—'}</span>
+                  {entry.third_party && (
+                    <span className="text-xs text-gray-700 dark:text-gray-300">
+                      <span className="text-gray-400">Tercero:</span> <span className="font-medium">{entry.third_party.name}</span>
+                      {entry.third_party.tax_id && <span className="text-gray-400"> · {entry.third_party.tax_id}</span>}
+                    </span>
+                  )}
                 </div>
                 <table className="min-w-full divide-y divide-gray-100 dark:divide-white/10">
                   <tbody className="divide-y divide-gray-50">
@@ -582,6 +598,11 @@ const FinancialReportsPage = () => {
                       <tr key={l.id}>
                         <td className="px-4 py-1.5 text-xs font-mono text-gray-400 dark:text-gray-500 w-16">{l.account_code}</td>
                         <td className="px-2 py-1.5 text-sm text-gray-800 dark:text-gray-200">{l.account_name}</td>
+                        <td className="px-2 py-1.5 text-xs text-gray-600 dark:text-gray-400 w-56">
+                          {l.third_party_name
+                            ? <>{l.third_party_name}{l.third_party_tax_id && <span className="text-gray-400"> · {l.third_party_tax_id}</span>}</>
+                            : ''}
+                        </td>
                         <td className="px-2 py-1.5 text-xs text-gray-400 dark:text-gray-500">{l.description || ''}</td>
                         <td className="px-4 py-1.5 text-sm text-right w-32">{l.debit ? formatCurrency(l.debit) : ''}</td>
                         <td className="px-4 py-1.5 text-sm text-right w-32">{l.credit ? formatCurrency(l.credit) : ''}</td>
@@ -590,7 +611,7 @@ const FinancialReportsPage = () => {
                   </tbody>
                   <tfoot>
                     <tr className="bg-gray-50 dark:bg-graphite-2/60">
-                      <td colSpan={3} className="px-4 py-1.5 text-xs text-gray-400 dark:text-gray-500 text-right">Subtotal</td>
+                      <td colSpan={4} className="px-4 py-1.5 text-xs text-gray-400 dark:text-gray-500 text-right">Subtotal</td>
                       <td className="px-4 py-1.5 text-sm text-right font-medium">{formatCurrency(entry.total_debit)}</td>
                       <td className="px-4 py-1.5 text-sm text-right font-medium">{formatCurrency(entry.total_credit)}</td>
                     </tr>

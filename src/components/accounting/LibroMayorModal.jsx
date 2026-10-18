@@ -79,7 +79,7 @@ const LibroMayorModal = ({ account, onClose }) => {
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-graphite rounded-xl shadow-xl w-full max-w-3xl max-h-[85vh] flex flex-col">
+      <div className="bg-white dark:bg-graphite rounded-xl shadow-xl w-full max-w-5xl max-h-[85vh] flex flex-col">
         <div className="px-5 py-4 border-b border-gray-200 flex items-center justify-between dark:border-white/10">
           <div>
             <h3 className="font-semibold text-gray-900 dark:text-gray-100">Libro Mayor</h3>
@@ -136,19 +136,27 @@ const LibroMayorModal = ({ account, onClose }) => {
               <table className="min-w-full divide-y divide-gray-200 dark:divide-white/10">
                 <thead className="bg-gray-50 dark:bg-graphite-2">
                   <tr>
-                    {['Fecha', 'N° Asiento', 'Detalle', 'Débito', 'Crédito', 'Saldo'].map((h) => (
+                    {['Fecha', 'N° Asiento', 'Tercero', 'Detalle', 'Débito', 'Crédito', 'Saldo'].map((h) => (
                       <th key={h} className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase dark:text-gray-400">{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-white/10">
                   {data.movements.length === 0 && (
-                    <tr><td colSpan={6} className="px-3 py-8 text-center text-gray-400 dark:text-gray-500">Sin movimientos en el periodo seleccionado</td></tr>
+                    <tr><td colSpan={7} className="px-3 py-8 text-center text-gray-400 dark:text-gray-500">Sin movimientos en el periodo seleccionado</td></tr>
                   )}
                   {data.movements.map((m) => (
                     <tr key={m.line_id}>
                       <td className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400">{m.entry_date}</td>
                       <td className="px-3 py-2 text-sm font-mono text-gray-500 dark:text-gray-400">{m.entry_number}</td>
+                      <td className="px-3 py-2 text-sm text-gray-700 dark:text-gray-300 max-w-[14rem]">
+                        {m.third_party_name ? (
+                          <div className="min-w-0" title={m.third_party_inherited ? 'Tercero del asiento (la línea no tiene tercero propio)' : undefined}>
+                            <div className={`truncate ${m.third_party_inherited ? 'italic text-gray-500 dark:text-gray-400' : ''}`}>{m.third_party_name}</div>
+                            {m.third_party_tax_id && <div className="text-xs text-gray-400">{m.third_party_tax_id}</div>}
+                          </div>
+                        ) : <span className="text-gray-300">—</span>}
+                      </td>
                       <td className="px-3 py-2 text-sm text-gray-800 dark:text-gray-200">{m.description || '—'}</td>
                       <td className="px-3 py-2 text-sm text-right dark:text-gray-300">{m.debit ? formatCurrency(m.debit) : ''}</td>
                       <td className="px-3 py-2 text-sm text-right dark:text-gray-300">{m.credit ? formatCurrency(m.credit) : ''}</td>
@@ -159,7 +167,7 @@ const LibroMayorModal = ({ account, onClose }) => {
                 {data.movements.length > 0 && (
                   <tfoot>
                     <tr className="font-semibold border-t border-gray-200 bg-gray-50 dark:border-white/10 dark:bg-graphite-2">
-                      <td colSpan={3} className="px-3 py-2 text-sm dark:text-gray-200">Total periodo / Saldo final</td>
+                      <td colSpan={4} className="px-3 py-2 text-sm dark:text-gray-200">Total periodo / Saldo final</td>
                       <td className="px-3 py-2 text-sm text-right dark:text-gray-200">{formatCurrency(data.totals.debit)}</td>
                       <td className="px-3 py-2 text-sm text-right dark:text-gray-200">{formatCurrency(data.totals.credit)}</td>
                       <td className="px-3 py-2 text-sm text-right dark:text-gray-200">{formatCurrency(data.closing_balance)}</td>

@@ -15,6 +15,9 @@ import Input from '../../components/common/Input';
 import NumericInput from '../../components/inputs/NumericInput';
 import Card from '../../components/common/Card';
 import Modal from '../../components/common/Modal';
+import Combobox, { HighlightMatch } from '../../components/common/Combobox';
+import { useListNavigation } from '../../components/common/searchDropdown';
+import customersApi from '../../api/customers';
 import Layout from '../../components/layout/Layout';
 import DraftRecoveryBanner from '../../components/common/DraftRecoveryBanner';
 import useFormDraft from '../../hooks/useFormDraft';
@@ -201,24 +204,23 @@ function SaleFormPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
+  // Teclado en el modal de búsqueda de productos (↑↓ / Enter / Esc)
+  const productNav = useListNavigation({
+    count: searchTerm.trim().length >= 2 ? searchResults.length : 0,
+    open: showProductSearch,
+    resetKey: searchResults,
+    onPick: (i) => searchResults[i] && handleAddItem(searchResults[i]),
+    onClose: () => { setShowProductSearch(false); setSearchTerm(''); setSearchResults([]); },
+  });
   const [showScanner, setShowScanner] = useState(false);
   const [showComboPicker, setShowComboPicker] = useState(false);
   const [stockAlternatives, setStockAlternatives] = useState([]);
 
   // Estados para búsqueda de clientes
   const [customerSearchTerm, setCustomerSearchTerm] = useState('');
-  const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
 
-  // Clientes filtrados basados en el término de búsqueda (memoizado)
-  const filteredCustomers = useMemo(() => {
-    const term = customerSearchTerm.trim().toLowerCase();
-    if (!term) return customers;
-    return customers.filter(customer => {
-      const fullName = `${customer.first_name ?? ''} ${customer.last_name ?? ''}`.toLowerCase();
-      const taxId = String(customer.tax_id || '').toLowerCase();
-      return fullName.includes(term) || taxId.includes(term);
-    });
-  }, [customers, customerSearchTerm]);
+  const customerLabel = (c) =>
+    (c.customer_type === 'company' && c.business_name) || `${c.first_name ?? ''} ${c.last_name ?? ''}`.trim() || c.business_name || '';
 
   // Cargar bodegas usando el servicio de API configurado.
   // En creación, el combo solo muestra las bodegas (activas) de la sede
@@ -302,6 +304,14 @@ function SaleFormPage() {
     const match = customers.find(c => c.id === opportunityCustomerId);
     if (match) {
       setCustomerSearchTerm(match.business_name || `${match.first_name || ''} ${match.last_name || ''}`.trim());
+    } else {
+      // El listado inicial viene paginado: si el cliente no está, se consulta directo
+      customersApi.getById(opportunityCustomerId)
+        .then(r => {
+          const c = r.data?.data;
+          if (c) setCustomerSearchTerm(c.business_name || `${c.first_name || ''} ${c.last_name || ''}`.trim());
+        })
+        .catch(() => {});
     }
   }, [customers, isEditMode, opportunityId, opportunityCustomerId]);
 
@@ -325,6 +335,7 @@ function SaleFormPage() {
   }, [isEditMode, opportunityId, opportunityExpectedValue]);
 
   useEffect(() => {
+    let stale = false;
     const searchProductsDebounced = async () => {
       if (searchTerm.trim().length < 2) {
         setSearchResults([]);
@@ -361,29 +372,18 @@ function SaleFormPage() {
           } catch { /* silencioso */ }
         }
 
-        setSearchResults(results);
+        if (!stale) setSearchResults(results);
       } catch (error) {
-        setSearchResults([]);
+        if (!stale) setSearchResults([]);
       } finally {
-        setIsSearching(false);
+        if (!stale) setIsSearching(false);
       }
     };
 
     const timer = setTimeout(searchProductsDebounced, 300);
-    return () => clearTimeout(timer);
+    return () => { stale = true; clearTimeout(timer); };
   }, [searchTerm, searchProducts, formData.vehicle_brand, formData.vehicle_model, formData.vehicle_year]);
 
-  // Cerrar dropdown de clientes al hacer clic fuera
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (showCustomerDropdown && !event.target.closest('.customer-selector')) {
-        setShowCustomerDropdown(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [showCustomerDropdown]);
 
   useEffect(() => {
     if (isEditMode && id) {
@@ -1200,51 +1200,45 @@ function SaleFormPage() {
                       Cliente *
                     </label>
                     <div className="flex gap-2">
-                      <div className="flex-1 relative customer-selector">
-                        <input
-                          type="text"
-                          value={customerSearchTerm}
-                          onChange={(e) => {
-                            setCustomerSearchTerm(e.target.value);
-                            setShowCustomerDropdown(true);
+                      <div className="flex-1">
+                        <Combobox
+                          placeholder="Buscar cliente por nombre, NIT o teléfono..."
+                          items={customers}
+                          value={formData.customer_id || null}
+                          displayValue={customerSearchTerm}
+                          onSelect={(customer) => {
+                            setFormData(prev => ({ ...prev, customer_id: customer.id }));
+                            setCustomerSearchTerm(customerLabel(customer));
                           }}
-                          onFocus={() => setShowCustomerDropdown(true)}
-                          placeholder="Buscar cliente por nombre..."
+                          onClear={() => {
+                            setFormData(prev => ({ ...prev, customer_id: '' }));
+                            setCustomerSearchTerm('');
+                          }}
+                          getSearchText={c => `${customerLabel(c)} ${c.business_name || ''} ${c.tax_id || ''} ${c.phone || ''} ${c.email || ''}`}
+                          remoteSearch={q => customersApi.getAll({ search: q, limit: 30 }).then(r => r.data?.data || [])}
                           disabled={showQuickCustomer}
                           required={!showQuickCustomer && !formData.customer_id}
-                          className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 transition-all"
-                        />
-                        {showCustomerDropdown && !showQuickCustomer && (
-                          <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                            {filteredCustomers.length === 0 ? (
-                              <div className="px-4 py-3 text-sm text-gray-500">
-                                No se encontraron clientes
+                          panelMinWidth={320}
+                          renderItem={(customer, q) => (
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="min-w-0">
+                                <p className="font-medium text-gray-900 dark:text-gray-100 truncate">
+                                  <HighlightMatch text={customerLabel(customer)} query={q} />
+                                </p>
+                                {(customer.tax_id || customer.phone) && (
+                                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                                    {customer.tax_id && <HighlightMatch text={customer.tax_id} query={q} />}
+                                    {customer.tax_id && customer.phone ? ' · ' : ''}
+                                    {customer.phone && <HighlightMatch text={customer.phone} query={q} />}
+                                  </p>
+                                )}
                               </div>
-                            ) : (
-                              filteredCustomers.map(customer => (
-                                <button
-                                  key={customer.id}
-                                  type="button"
-                                  onClick={() => {
-                                    setFormData(prev => ({ ...prev, customer_id: customer.id }));
-                                    setCustomerSearchTerm(`${customer.first_name} ${customer.last_name}`);
-                                    setShowCustomerDropdown(false);
-                                  }}
-                                  className="w-full text-left px-4 py-2.5 hover:bg-blue-50 transition-colors border-b border-gray-100 last:border-b-0"
-                                >
-                                  <div className="font-medium text-gray-900">
-                                    {customer.first_name} {customer.last_name}
-                                  </div>
-                                  {customer.tax_id && (
-                                    <div className="text-xs text-gray-500">
-                                      {customer.tax_id}
-                                    </div>
-                                  )}
-                                </button>
-                              ))
-                            )}
-                          </div>
-                        )}
+                              {customer.customer_type === 'company' && (
+                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 flex-shrink-0">Empresa</span>
+                              )}
+                            </div>
+                          )}
+                        />
                       </div>
                       <Button
                         type="button"
@@ -1934,10 +1928,12 @@ function SaleFormPage() {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
               <input
                 type="text"
-                placeholder="Buscar por nombre o SKU..."
+                placeholder="Buscar por nombre, SKU o código..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                onKeyDown={productNav.onKeyDown}
+                autoComplete="off"
+                className="w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100"
                 autoFocus
               />
               {isSearching && (
@@ -1957,7 +1953,7 @@ function SaleFormPage() {
             )}
 
             {/* Mensaje: buscando... */}
-            {isSearching && searchTerm.length >= 2 && (
+            {isSearching && searchTerm.length >= 2 && searchResults.length === 0 && (
               <div className="flex items-center justify-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
                 <span className="ml-3 text-sm text-gray-600">Buscando productos...</span>
@@ -1974,13 +1970,22 @@ function SaleFormPage() {
             )}
 
             {/* Lista de productos encontrados */}
-            {!isSearching && searchResults.length > 0 && (
-              <div className="max-h-96 overflow-y-auto space-y-2">
-                {searchResults.map(product => (
-                  <button
+            {searchResults.length > 0 && searchTerm.trim().length >= 2 && (
+              <>
+              <div ref={productNav.listRef} role="listbox" className={`max-h-96 overflow-y-auto space-y-2 transition-opacity ${isSearching ? 'opacity-60' : ''}`}>
+                {searchResults.map((product, index) => (
+                  <div
                     key={product.id}
+                    data-index={index}
+                    role="option"
+                    aria-selected={index === productNav.activeIndex}
                     onClick={() => handleAddItem(product)}
-                    className="w-full text-left p-4 border border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-300 transition-all duration-200"
+                    onMouseEnter={() => productNav.setActiveIndex(index)}
+                    className={`w-full text-left p-4 border rounded-lg cursor-pointer transition-colors duration-150 ${
+                      index === productNav.activeIndex
+                        ? 'bg-blue-50 border-blue-300 dark:bg-blue-900/30 dark:border-blue-500/40'
+                        : 'border-gray-200 dark:border-white/10'
+                    }`}
                   >
                     <div className="flex justify-between items-start gap-3">
                       {/* Miniatura */}
@@ -1990,13 +1995,14 @@ function SaleFormPage() {
                             src={`${product.image_url.startsWith('http') ? '' : getServerOrigin()}${product.image_url}`}
                             alt={product.name}
                             className="w-full h-full object-cover"
+                            loading="lazy"
                             onError={(e) => { e.target.parentElement.style.display='none'; }}
                           />
                         </div>
                       )}
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-gray-900">{product.name}</p>
-                        <p className="text-sm text-gray-500 mt-1">SKU: {product.sku}</p>
+                        <p className="font-medium text-gray-900 dark:text-gray-100"><HighlightMatch text={product.name} query={searchTerm} /></p>
+                        <p className="text-sm text-gray-500 mt-1">SKU: <HighlightMatch text={product.sku} query={searchTerm} /></p>
                         <div className="flex items-center gap-3 mt-2 flex-wrap">
                           {product.product_type === 'service' ? (
                             <span className="inline-flex items-center gap-1 text-xs font-semibold text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full"><WrenchScrewdriverIcon className="w-3 h-3" /> Servicio</span>
@@ -2055,9 +2061,13 @@ function SaleFormPage() {
                         )}
                       </div>
                     </div>
-                  </button>
+                  </div>
                 ))}
               </div>
+              <p className="text-[11px] text-gray-400 text-center">
+                {searchResults.length} resultado(s) · ↑↓ para moverse · Enter para agregar · Esc para cerrar
+              </p>
+              </>
             )}
           </div>
         </Modal>
