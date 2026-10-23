@@ -347,7 +347,7 @@ export default function DianConfigPage() {
       const accepted = results.filter(d => d.accepted).length;
       const allOk = accepted === results.length;
       showToast(allOk
-        ? `✅ Set completo aprobado: ${accepted}/10 documentos aceptados por DIAN`
+        ? `✅ ${accepted}/${results.length} facturas aceptadas por la DIAN`
         : `${accepted}/${results.length} documentos aceptados. Revise los resultados.`,
         allOk ? 'success' : 'error');
       await loadAll();
@@ -871,8 +871,9 @@ export default function DianConfigPage() {
             </h3>
             <p className="text-sm text-blue-700">
               Para operar como software propio de facturación electrónica, debe completar los
-              siguientes pasos y enviar al menos <strong>2 documentos de prueba</strong> de cada tipo
-              al set de habilitación de la DIAN.
+              siguientes pasos y lograr que la DIAN acepte <strong>1 documento de prueba</strong>.
+              Con la factura de prueba aceptada quedan habilitadas también las notas crédito y débito;
+              el documento soporte tiene su propia habilitación.
             </p>
           </div>
 
@@ -1009,6 +1010,7 @@ export default function DianConfigPage() {
                 <p className="text-sm text-gray-500 mt-1">
                   Genera y envía documentos sintéticos válidos al set de pruebas DIAN sin necesidad de ventas reales.
                   Requiere: NIT, Software ID, PIN, Llave Técnica, TestSetId, certificado P12 y resolución de habilitación activa.
+                  Los documentos de prueba siempre van al ambiente de habilitación de la DIAN, aunque la empresa ya facture en Producción.
                 </p>
               </div>
 
@@ -1021,7 +1023,7 @@ export default function DianConfigPage() {
                       <RocketLaunchIcon className="w-4 h-4" /> Set Completo de Habilitación (recomendado)
                     </p>
                     <p className="text-xs text-indigo-700 mt-1">
-                      Envía las <strong>2 facturas de prueba</strong> requeridas por la DIAN para habilitar Software Propio
+                      Envía <strong>2 facturas de prueba</strong>. Basta con que la DIAN acepte una para quedar habilitado.
                     </p>
                   </div>
                   <button
@@ -1185,8 +1187,8 @@ export default function DianConfigPage() {
               <li>En <strong>Set de Pruebas</strong> obtenga el <strong>TestSetId</strong></li>
               <li>Configure los datos en esta página y cargue el certificado digital</li>
               <li>Registre la resolución de habilitación (la DIAN la otorga con prefijo SETP)</li>
-              <li>Use el botón <strong>"Enviar 2 documentos de prueba"</strong> arriba para completar la habilitación</li>
-              <li>Una vez aprobados, cambie el entorno a <strong>Producción</strong></li>
+              <li>Envíe un documento de prueba (<strong>"Prueba rápida — 1 documento"</strong> o <strong>"Enviar 2 facturas"</strong>): basta con que la DIAN acepte uno</li>
+              <li>Una vez aceptado, cambie el entorno a <strong>Producción</strong></li>
             </ol>
           </div>
         </div>

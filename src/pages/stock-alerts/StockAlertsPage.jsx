@@ -1,13 +1,16 @@
 import toast from 'react-hot-toast';
 import { useEffect, useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AlertTriangle, CheckCircle, XCircle, Eye, RefreshCw, Package, ShoppingCart, TrendingDown, Award } from 'lucide-react';
 import { InformationCircleIcon, ExclamationTriangleIcon, XCircleIcon as XCircleSolid, UserIcon, CurrencyDollarIcon, CalendarDaysIcon, PhoneIcon, EnvelopeIcon } from '@heroicons/react/24/outline';
 import useStockAlertsStore from '../../store/stockAlertsStore';
 import Layout from '../../components/layout/Layout';
+import CostAlertsPanel from '../../components/stock-alerts/CostAlertsPanel';
 
 const StockAlertsPage = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab = searchParams.get('tab') === 'cost' ? 'cost' : 'stock';
   const {
     alerts = [],
     stats = {},
@@ -241,6 +244,7 @@ const StockAlertsPage = () => {
             <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Alertas de Stock</h1>
             <p className="text-sm text-gray-500 mt-0.5">Gestión de alertas de inventario</p>
           </div>
+          {tab === 'stock' && (
           <button
             onClick={handleCheckAlerts}
             disabled={loading}
@@ -249,8 +253,28 @@ const StockAlertsPage = () => {
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             Verificar Stock
           </button>
+          )}
         </div>
 
+        {/* Pestañas: alertas de stock / alertas de costo */}
+        <div className="border-b border-gray-200 flex gap-1">
+          {[['stock', 'Stock'], ['cost', 'Costo y precio']].map(([id, label]) => (
+            <button
+              key={id}
+              onClick={() => setSearchParams(id === 'cost' ? { tab: 'cost' } : {})}
+              className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
+                tab === id ? 'border-orange-500 text-orange-600' : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {tab === 'cost' && <CostAlertsPanel />}
+
+        {tab === 'stock' && (
+        <>
         {/* Estadísticas */}
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
           <div className="bg-white rounded-xl shadow-md p-6 border-l-4 border-orange-500">
@@ -550,6 +574,8 @@ const StockAlertsPage = () => {
             </>
           )}
         </div>
+        </>
+        )}
 
         {/* Modal de Proveedores */}
         {showSuppliersModal && (

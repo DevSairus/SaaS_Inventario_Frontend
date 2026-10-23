@@ -1,6 +1,6 @@
 // frontend/src/pages/settings/TenantSettingsPage.jsx
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import axios from '../../api/axios';
 import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';
@@ -12,12 +12,15 @@ import useTenantStore from '../../store/tenantStore';
 import useAuthStore from '../../store/authStore';
 import TaxConfigSection from '../../components/settings/TaxConfigSection';
 import { invalidateRetentionCatalog } from '../../hooks/useRetentionCatalog';
-import { Building2, Receipt, ShoppingCart, Wrench, Landmark, MessageCircle, Printer } from 'lucide-react';
+import { Building2, Receipt, ShoppingCart, Wrench, Landmark, MessageCircle, Printer, Package } from 'lucide-react';
 
 const TenantSettingsPage = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
   const isAdmin = user?.role === 'admin';
+  // PUT /tenant/config y el logo exigen estos roles (tenant.routes.js); los
+  // demás ven la configuración en solo lectura.
+  const canEdit = ['admin', 'manager', 'super_admin'].includes(user?.role);
   // /dian/config exige estos roles (App.jsx y backend dian.routes.js).
   const canConfigureDian = ['admin', 'manager', 'accountant'].includes(user?.role);
   const { setFeatures, setTaxConfig } = useTenantStore();
@@ -38,7 +41,7 @@ const TenantSettingsPage = () => {
     pdf_config: { payment_notes: '', legal_note: '' },
     features: {},
     tax_config: {},
-    business_config: { default_labor_cost_percentage: 40 }
+    business_config: { default_labor_cost_percentage: 40, cost_variation_alert_pct: 10 }
   });
   const [logoPreview, setLogoPreview] = useState(null);
   const [logoFile, setLogoFile] = useState(null);
@@ -54,6 +57,7 @@ const TenantSettingsPage = () => {
     { id: 'facturacion', label: 'Facturación',  Icon: Receipt },
     { id: 'ventas',      label: 'Ventas',       Icon: ShoppingCart },
     { id: 'taller',      label: 'Taller',       Icon: Wrench },
+    { id: 'inventario',  label: 'Inventario',   Icon: Package },
   ];
 
   useEffect(() => {
@@ -82,6 +86,7 @@ const TenantSettingsPage = () => {
         };
         const normalizedBusinessConfig = {
           default_labor_cost_percentage: 40,
+          cost_variation_alert_pct: 10,
           ...(data.business_config || {}),
         };
         setConfig({ ...data, features: normalizedFeatures, business_config: normalizedBusinessConfig });
@@ -263,7 +268,14 @@ const TenantSettingsPage = () => {
           ))}
         </div>
 
+        {!canEdit && (
+          <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
+            Estás viendo la configuración en solo lectura. Solo un Administrador o un Gerente puede cambiarla.
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-6">
+          <fieldset disabled={!canEdit} className="space-y-6 min-w-0">
           {/* ============ GENERAL ============ */}
           {activeTab === 'general' && (
           <>
@@ -422,13 +434,12 @@ const TenantSettingsPage = () => {
                     </p>
                   </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => navigate('/settings/whatsapp')}
+                <Link
+                  to="/settings/whatsapp"
                   className="flex-shrink-0 ml-4 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition-colors"
                 >
                   Configurar →
-                </button>
+                </Link>
               </div>
             </Card>
           )}
@@ -617,13 +628,12 @@ const TenantSettingsPage = () => {
                   </p>
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={() => navigate('/settings/label-printing')}
-                className="flex-shrink-0 ml-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
-              >
-                Configurar →
-              </button>
+              <Link
+                  to="/settings/label-printing"
+                  className="flex-shrink-0 ml-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
+                >
+                  Configurar →
+                </Link>
             </div>
           </Card>
 
@@ -642,13 +652,12 @@ const TenantSettingsPage = () => {
                   </p>
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={() => navigate('/dian/config')}
-                className="flex-shrink-0 ml-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
-              >
-                Configurar →
-              </button>
+              <Link
+                  to="/dian/config"
+                  className="flex-shrink-0 ml-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
+                >
+                  Configurar →
+                </Link>
             </div>
           </Card>}
 
@@ -810,9 +819,52 @@ const TenantSettingsPage = () => {
           </>
           )}
 
+          {/* ============ INVENTARIO ============ */}
+          {activeTab === 'inventario' && (
+          <Card>
+            <div className="p-6">
+              <h2 className="text-xl font-semibold mb-1">Alertas de costo de compra</h2>
+              <p className="text-sm text-gray-500 mb-5">
+                Al recibir una compra o registrar una compra rápida, Pitbox compara el nuevo costo con el último
+                costo de compra del producto. Si cambia más de este porcentaje (hacia arriba o hacia abajo), crea
+                una alerta en Alertas de Stock → Costo y precio. Con 0 no se generan alertas por variación; las de
+                precio retenido (cuando el precio de venta por margen quedaría por debajo del actual) se generan siempre.
+              </p>
+              <div className="max-w-xs">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Variación de costo que genera alerta
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="1"
+                    value={config.business_config?.cost_variation_alert_pct ?? 10}
+                    onChange={(e) => {
+                      const raw = e.target.value;
+                      const value = raw === '' ? '' : Math.min(100, Math.max(0, parseFloat(raw)));
+                      setConfig(prev => ({
+                        ...prev,
+                        business_config: { ...prev.business_config, cost_variation_alert_pct: value }
+                      }));
+                    }}
+                    className="w-full px-3 py-2 pr-8 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">%</span>
+                </div>
+              </div>
+            </div>
+          </Card>
+          )}
+
+          </fieldset>
+
           {/* Botones de acción — siempre visibles, sin importar la pestaña
               activa: el submit manda config completo (todas las pestañas),
-              así que Guardar Cambios funciona igual desde cualquiera. */}
+              así que Guardar Cambios funciona igual desde cualquiera.
+              Ocultos en solo lectura. */}
+          {canEdit && (
           <div className="flex justify-end gap-3">
             <Button
               type="button"
@@ -830,6 +882,7 @@ const TenantSettingsPage = () => {
               Guardar Cambios
             </Button>
           </div>
+          )}
         </form>
       </div>
     </Layout>

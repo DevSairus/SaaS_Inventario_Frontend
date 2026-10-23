@@ -226,6 +226,13 @@ export default function ProductDetailPage() {
                 <DetailRow label="Precio base" value={COP(product.base_price)} />
                 <DetailRow label="Precio venta" value={COP(product.sale_price)} />
                 <DetailRow label="Costo promedio" value={COP(product.average_cost)} />
+                <DetailRow
+                  label="Último costo de compra"
+                  value={parseFloat(product.last_purchase_cost) > 0
+                    ? `${COP(product.last_purchase_cost)}${product.last_purchase_date ? ` (${product.last_purchase_date})` : ''}`
+                    : '—'}
+                  hint="Costo unitario de la compra recibida más reciente, con descuento global y flete prorrateados. Se usa como respaldo del costo de venta si el costo promedio está en 0."
+                />
                 <DetailRow label="Margen" value={`${product.profit_margin_percentage || 0}%`} />
                 <DetailRow label="Stock actual" value={product.current_stock} />
                 <DetailRow label="Stock reservado" value={product.reserved_stock} />

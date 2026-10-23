@@ -201,9 +201,13 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
     }
   }, [product, isOpen]);
 
+  // El precio sugerido se calcula sobre el último costo de compra (igual que al
+  // recibir compras); un producto que nunca se ha comprado usa el costo digitado.
+  const lastPurchaseCost = parseFloat(product?.last_purchase_cost) || 0;
+
   useEffect(() => {
-    if (formData.average_cost && formData.profit_margin_percentage) {
-      const cost = parseFloat(formData.average_cost);
+    if ((lastPurchaseCost > 0 || formData.average_cost) && formData.profit_margin_percentage) {
+      const cost = lastPurchaseCost > 0 ? lastPurchaseCost : parseFloat(formData.average_cost);
       const margin = parseFloat(formData.profit_margin_percentage);
       if (!isNaN(cost) && !isNaN(margin) && cost > 0 && margin >= 0) {
         setCalculatedPrice(fmtNum(cost * (1 + margin / 100)));
@@ -213,7 +217,7 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
     } else {
       setCalculatedPrice(null);
     }
-  }, [formData.average_cost, formData.profit_margin_percentage]);
+  }, [formData.average_cost, formData.profit_margin_percentage, lastPurchaseCost]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -506,6 +510,9 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
                 {calculatedPrice && (
                   <p className="mt-1 text-xs text-green-600 font-medium">
                     Precio sugerido: ${calculatedPrice}
+                    {lastPurchaseCost > 0 && (
+                      <span className="text-gray-500 dark:text-gray-500 font-normal"> (sobre el último costo de compra: ${formatNumber(lastPurchaseCost, 2)})</span>
+                    )}
                   </p>
                 )}
               </div>

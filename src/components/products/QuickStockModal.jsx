@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { AlertTriangle, Package, User, FileText, ArrowUpCircle, ArrowDownCircle, Loader } from 'lucide-react';
+import { AlertTriangle, Package, User, FileText, ArrowUpCircle, ArrowDownCircle, Loader, DollarSign } from 'lucide-react';
 import { adjustmentsAPI } from '../../api/adjustments';
+import { formatCurrency } from '../../utils/formatters';
 import toast from 'react-hot-toast';
 
 const REASONS_ENTRADA = [
@@ -20,8 +21,15 @@ const REASONS_SALIDA = [
 ];
 
 export default function QuickStockModal({ product, user, onClose, onSuccess }) {
+  const currentAvgCost = parseFloat(product.average_cost || product.last_purchase_cost || 0) || 0;
+  const lastPurchaseCost = parseFloat(product.last_purchase_cost || 0) || 0;
+  // Una compra rápida suele repetir el precio del proveedor: se sugiere el último
+  // costo de compra y, si el producto nunca se ha comprado, el promedio.
+  const suggestedCost = lastPurchaseCost || currentAvgCost;
+
   const [type,     setType]     = useState('entrada');
   const [quantity, setQuantity] = useState('');
+  const [unitCost, setUnitCost] = useState(suggestedCost > 0 ? String(suggestedCost) : '');
   const [invoice,  setInvoice]  = useState('');
   const [reason,   setReason]   = useState('compra');
   const [notes,    setNotes]    = useState('');
@@ -42,10 +50,32 @@ export default function QuickStockModal({ product, user, onClose, onSuccess }) {
     ? currentStock + (qty || 0)
     : currentStock - (qty || 0);
 
+  // Las entradas registran el costo digitado (alimenta el costo promedio ponderado
+  // en el backend); las salidas siempre salen al costo promedio vigente.
+  const cost = parseFloat(unitCost);
+  const costValid = type === 'salida' || (!isNaN(cost) && cost > 0);
+  // Misma fórmula que createMovement (movements.controller.js) para que la vista previa coincida.
+  const projectedAvgCost = type === 'entrada' && qty > 0 && costValid
+    ? (projectedStock > 0 ? ((currentStock * currentAvgCost) + (qty * cost)) / projectedStock : cost)
+    : null;
+
+  // Con motivo "compra" y margen configurado, el backend recalcula el precio de venta sobre este costo,
+  // pero nunca lo baja solo: si el sugerido es menor, conserva el actual y deja una alerta de costo.
+  const margin = parseFloat(product.profit_margin_percentage) || 0;
+  const currentPrice = parseFloat(product.base_price) || 0;
+  const projectedPrice = type === 'entrada' && reason === 'compra' && margin > 0 && costValid
+    ? Math.round(cost * (1 + margin / 100) * 100) / 100
+    : null;
+  const priceHeld = projectedPrice !== null && currentPrice > 0 && projectedPrice < currentPrice - 0.005;
+  const costVariation = type === 'entrada' && reason === 'compra' && lastPurchaseCost > 0 && costValid
+    ? ((cost - lastPurchaseCost) / lastPurchaseCost) * 100
+    : null;
+
   const canSubmit =
     accepted &&
     qty > 0 &&
     !isNaN(qty) &&
+    costValid &&
     reason &&
     !saving &&
     (type === 'entrada' || projectedStock >= 0 || product.allow_negative_stock);
@@ -70,7 +100,7 @@ export default function QuickStockModal({ product, user, onClose, onSuccess }) {
         items: [{
           product_id: product.id,
           quantity:   qty,
-          unit_cost:  parseFloat(product.average_cost ?? product.base_price ?? 0),
+          unit_cost:  type === 'entrada' ? cost : currentAvgCost,
         }],
       });
 
@@ -200,6 +230,57 @@ export default function QuickStockModal({ product, user, onClose, onSuccess }) {
               />
             </div>
           </div>
+
+          {/* Costo unitario (solo entradas) */}
+          {type === 'entrada' && (
+            <div>
+              <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                <span className="flex items-center gap-1"><DollarSign size={11} /> Costo unitario *</span>
+              </label>
+              <input
+                type="number"
+                min="0.01"
+                step="any"
+                value={unitCost}
+                onChange={e => setUnitCost(e.target.value)}
+                placeholder="0"
+                className="w-full border border-gray-200 dark:border-white/10 dark:bg-graphite-2 dark:text-gray-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-gray-500 dark:text-gray-500">
+                <span>Costo promedio actual: {formatCurrency(currentAvgCost, { decimals: 2 })}</span>
+                {lastPurchaseCost > 0 && (
+                  <span>Último costo de compra: {formatCurrency(lastPurchaseCost, { decimals: 2 })}</span>
+                )}
+                {projectedAvgCost !== null && (
+                  <>
+                    <span>Total entrada: <span className="font-medium text-gray-700 dark:text-gray-300">{formatCurrency(qty * cost, { decimals: 2 })}</span></span>
+                    <span>Nuevo promedio: <span className="font-medium text-gray-700 dark:text-gray-300">{formatCurrency(projectedAvgCost, { decimals: 2 })}</span></span>
+                  </>
+                )}
+              </div>
+              {unitCost !== '' && !costValid && (
+                <p className="text-xs text-red-500 dark:text-red-400 mt-1">El costo debe ser mayor a 0</p>
+              )}
+              {reason === 'compra' && (
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Con motivo "Compra a proveedor" este valor también queda como último costo de compra del producto.</p>
+              )}
+              {costVariation !== null && Math.abs(costVariation) >= 0.01 && (
+                <p className={`text-xs mt-1 ${costVariation > 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
+                  Variación frente al último costo: {costVariation > 0 ? '+' : ''}{costVariation.toFixed(2)}%
+                </p>
+              )}
+              {projectedPrice !== null && !priceHeld && (
+                <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                  Precio de venta: {formatCurrency(currentPrice, { decimals: 2 })} → <span className="font-medium">{formatCurrency(projectedPrice, { decimals: 2 })}</span> (margen {margin}%)
+                </p>
+              )}
+              {priceHeld && (
+                <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">
+                  El precio de venta se conserva en {formatCurrency(currentPrice, { decimals: 2 })}: con este costo el sugerido sería {formatCurrency(projectedPrice, { decimals: 2 })} y el precio nunca baja solo. Quedará en Alertas de Stock → Costo y precio para que lo revises.
+                </p>
+              )}
+            </div>
+          )}
 
           {/* Motivo */}
           <div>

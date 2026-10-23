@@ -654,7 +654,7 @@ const PurchaseDetailPage = () => {
                       <li>Stock actual de los productos</li>
                       <li>Costo promedio (average_cost)</li>
                       <li>Último costo de compra (last_purchase_cost)</li>
-                      <li>Precio de venta base (si tiene margen de ganancia configurado)</li>
+                      <li>Precio de venta base, calculado sobre el último costo de compra (si tiene margen de ganancia configurado)</li>
                     </ul>
                     <p className="text-sm text-yellow-700 mt-2">
                       Verifique las cantidades recibidas antes de confirmar. Si llega solo una parte, registre lo que llegó:
