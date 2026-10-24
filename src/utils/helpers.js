@@ -154,5 +154,6 @@ export const downloadFile = (blob, filename) => {
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
-  window.URL.revokeObjectURL(url);
+  // Revocar al instante cancela la descarga en Safari/Firefox (y en celular).
+  setTimeout(() => window.URL.revokeObjectURL(url), 10000);
 };

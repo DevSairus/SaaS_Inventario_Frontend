@@ -4,7 +4,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  MessageCircle, Phone, Printer, Link2, Pencil, Loader2, CalendarClock, Check, FileText, ExternalLink,
+  MessageCircle, Phone, Download, Link2, Pencil, Loader2, CalendarClock, Check, FileText, ExternalLink,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Modal from '../common/Modal';
@@ -13,6 +13,7 @@ import QuoteLinesEditor, { QuoteSummary, computeTotals, buildSaleItems, linesFro
 import crmApi from '../../api/crm';
 import salesApi from '../../api/sales';
 import { formatCurrency, toInteger } from '../../utils/formatters';
+import { downloadFile } from '../../utils/helpers';
 import { buildWaLink, bestPhone } from '../../utils/whatsapp';
 
 const QUOTE_STATUS = {
@@ -161,18 +162,15 @@ export default function DealModal({ opportunity, stage, startInCreate = false, o
     }
   };
 
-  const handlePrint = async () => {
-    const win = window.open('', '_blank');
-    setBusy('print');
+  // Descarga directa: abrir una pestaña en blanco y llevarla al blob (lo de
+  // antes) dejaba la pestaña vacía en celulares y nunca lanzaba la impresión.
+  const handleDownloadPdf = async () => {
+    setBusy('pdf');
     try {
       const res = await salesApi.generatePDF(quoteId);
-      const url = URL.createObjectURL(res.data);
-      if (win) {
-        win.location.href = url;
-        win.onload = () => win.print();
-      }
+      const blob = res.data instanceof Blob ? res.data : new Blob([res.data], { type: 'application/pdf' });
+      downloadFile(blob, `${sale?.quote_number || sale?.sale_number || 'cotizacion'}.pdf`);
     } catch {
-      win?.close();
       toast.error('Error al generar el PDF');
     } finally {
       setBusy(null);
@@ -289,8 +287,8 @@ export default function DealModal({ opportunity, stage, startInCreate = false, o
                     className="!basis-full lg:!basis-0 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-orange-500 via-rose-500 to-fuchsia-600 shadow-sm shadow-rose-500/30 hover:opacity-90 active:scale-95 transition disabled:opacity-60">
                     {busy === 'wa' ? <Loader2 size={16} className="animate-spin" /> : <MessageCircle size={16} />} Enviar por WhatsApp
                   </button>
-                  <button type="button" onClick={handlePrint} disabled={!!busy} className={ACTION_BTN}>
-                    {busy === 'print' ? <Loader2 size={16} className="animate-spin" /> : <Printer size={16} />} Imprimir
+                  <button type="button" onClick={handleDownloadPdf} disabled={!!busy} className={ACTION_BTN}>
+                    {busy === 'pdf' ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />} Descargar PDF
                   </button>
                   <button type="button" onClick={handleCopyLink} disabled={!!busy} className={ACTION_BTN}>
                     {busy === 'link' ? <Loader2 size={16} className="animate-spin" /> : <Link2 size={16} />} Copiar link
