@@ -1,6 +1,7 @@
 // Selector de combo para factura / cotización (SaleFormPage) y orden de
 // trabajo (WorkOrderDetailPage). Paso 1: elegir combo. Paso 2: ajustar
-// cantidad de combos, cómo se muestra, y cantidad/precio de cada línea.
+// cantidad de combos, cómo se muestra, y cantidad/precio de cada línea
+// (lockPrices: el precio queda fijo al definido en el combo).
 // onConfirm recibe { combo, quantity, show_breakdown, items: [{ product_id,
 // product, quantity (total = por combo × combos), unit_price }] }.
 import { useState, useEffect } from 'react';
@@ -13,7 +14,7 @@ import { estimateLineTotal, estimateComboTotal } from './comboUtils';
 
 const inputCls = 'w-full border border-gray-200 dark:border-white/10 rounded-lg px-2 py-1.5 text-sm text-right focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white dark:bg-white/5';
 
-export default function ComboPickerModal({ isOpen, onClose, onConfirm, hidePrices = false, submitting = false, showApprovalOption = false }) {
+export default function ComboPickerModal({ isOpen, onClose, onConfirm, hidePrices = false, lockPrices = false, submitting = false, showApprovalOption = false }) {
   const [combos, setCombos] = useState([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
@@ -136,56 +137,47 @@ export default function ComboPickerModal({ isOpen, onClose, onConfirm, hidePrice
             </div>
           </div>
 
-          <div className="border border-gray-100 dark:border-white/10 rounded-lg overflow-x-auto">
-            <table className="w-full text-sm min-w-[480px]">
-              <thead className="bg-gray-50 dark:bg-white/5 text-xs text-gray-500">
-                <tr>
-                  <th className="text-left px-3 py-2 font-medium">Producto / servicio</th>
-                  <th className="text-right px-2 py-2 font-medium w-24">Cant. x combo</th>
-                  {!hidePrices && <th className="text-right px-2 py-2 font-medium w-32">Precio unit.</th>}
-                  {!hidePrices && <th className="text-right px-3 py-2 font-medium w-28">Total</th>}
-                  <th className="w-10" />
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50 dark:divide-white/5">
-                {lines.map((l, index) => (
-                  <tr key={l.product_id}>
-                    <td className="px-3 py-2">
-                      <p className="text-gray-800 dark:text-gray-100">{l.product?.name}</p>
-                      <p className="text-xs text-gray-400">{l.product?.product_type === 'service' ? 'Servicio' : 'Producto'}</p>
-                    </td>
-                    <td className="px-2 py-2">
-                      <input type="number" min="0.001" step="any" value={l.perCombo} className={inputCls}
-                        onChange={e => updateLine(index, 'perCombo', e.target.value)} />
-                    </td>
-                    {!hidePrices && (
-                      <td className="px-2 py-2">
-                        <input type="number" min="0" step="any" value={l.unit_price} className={inputCls}
-                          onChange={e => updateLine(index, 'unit_price', e.target.value)} />
-                      </td>
+          <div className="border border-gray-100 dark:border-white/10 rounded-lg text-sm divide-y divide-gray-50 dark:divide-white/5">
+            {lines.map((l, index) => (
+              <div key={l.product_id} className="flex flex-wrap items-end gap-x-2 gap-y-2 px-3 py-2.5">
+                <div className="basis-full sm:basis-0 sm:flex-1 min-w-0">
+                  <p className="text-gray-800 dark:text-gray-100 break-words">{l.product?.name}</p>
+                  <p className="text-xs text-gray-400">{l.product?.product_type === 'service' ? 'Servicio' : 'Producto'}</p>
+                </div>
+                <label className="w-20 shrink-0">
+                  <span className="block text-[11px] text-gray-400 mb-0.5">Cant. x combo</span>
+                  <input type="number" min="0.001" step="any" value={l.perCombo} className={inputCls}
+                    onChange={e => updateLine(index, 'perCombo', e.target.value)} />
+                </label>
+                {!hidePrices && (
+                  <label className="w-28 shrink-0">
+                    <span className="block text-[11px] text-gray-400 mb-0.5">Precio unit.</span>
+                    {lockPrices ? (
+                      <span className="block py-1.5 text-right text-gray-700 dark:text-gray-200">{formatCurrency(l.unit_price)}</span>
+                    ) : (
+                      <input type="number" min="0" step="any" value={l.unit_price} className={inputCls}
+                        onChange={e => updateLine(index, 'unit_price', e.target.value)} />
                     )}
-                    {!hidePrices && (
-                      <td className="px-3 py-2 text-right">{formatCurrency(estimateLineTotal(resolvedLines[index]))}</td>
-                    )}
-                    <td className="px-2 py-2">
-                      <button type="button" title="Quitar del documento" onClick={() => setLines(ls => ls.filter((_, i) => i !== index))}
-                        className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg">
-                        <Trash2 size={14} />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-              {!hidePrices && (
-                <tfoot>
-                  <tr className="bg-gray-50 dark:bg-white/5">
-                    <td colSpan={3} className="px-3 py-2 text-right text-xs text-gray-500">Total estimado (con IVA)</td>
-                    <td className="px-3 py-2 text-right font-semibold">{formatCurrency(estimateComboTotal(resolvedLines))}</td>
-                    <td />
-                  </tr>
-                </tfoot>
-              )}
-            </table>
+                  </label>
+                )}
+                {!hidePrices && (
+                  <div className="flex-1 sm:flex-none sm:w-28 text-right">
+                    <span className="block text-[11px] text-gray-400 mb-0.5">Total</span>
+                    <span className="block py-1.5 font-medium">{formatCurrency(estimateLineTotal(resolvedLines[index]))}</span>
+                  </div>
+                )}
+                <button type="button" title="Quitar del documento" onClick={() => setLines(ls => ls.filter((_, i) => i !== index))}
+                  className="p-1.5 mb-0.5 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg shrink-0">
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            ))}
+            {!hidePrices && (
+              <div className="flex items-center justify-between gap-3 px-3 py-2 bg-gray-50 dark:bg-white/5 rounded-b-lg">
+                <span className="text-xs text-gray-500">Total estimado (con IVA)</span>
+                <span className="font-semibold">{formatCurrency(estimateComboTotal(resolvedLines))}</span>
+              </div>
+            )}
           </div>
 
           {showApprovalOption && (
@@ -196,9 +188,9 @@ export default function ComboPickerModal({ isOpen, onClose, onConfirm, hidePrice
           )}
 
           <div className="flex justify-end gap-2">
-            <button onClick={onClose} disabled={submitting}
+            <button type="button" onClick={onClose} disabled={submitting}
               className="px-4 py-2 border border-gray-200 dark:border-white/10 text-gray-600 dark:text-gray-300 rounded-lg text-sm hover:bg-gray-50 dark:hover:bg-white/5">Cancelar</button>
-            <button onClick={handleConfirm} disabled={submitting}
+            <button type="button" onClick={handleConfirm} disabled={submitting}
               className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 disabled:opacity-60">
               {submitting ? 'Agregando...' : 'Agregar combo'}
             </button>

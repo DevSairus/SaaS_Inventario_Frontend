@@ -1,29 +1,27 @@
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../../components/layout/Layout';
 import CrmSubNav from '../../components/crm/CrmSubNav';
 import crmApi from '../../api/crm';
-import customersApi from '../../api/customers';
 import { usersAPI } from '../../api/users';
 import useAuthStore from '../../store/authStore';
 import useTenantStore from '../../store/tenantStore';
 import { buildWaLink, bestPhone, trackWhatsAppInteraction } from '../../utils/whatsapp';
 import {
-  Target, Plus, DollarSign, LayoutGrid, List, Clock, MessageCircle, Phone,
+  Target, Plus, LayoutGrid, List, Clock, MessageCircle, Phone,
   Store, Users, Share2, Globe, RefreshCw, Megaphone, Inbox, Flame, FileText, Wrench,
-  TrendingDown, SlidersHorizontal, X as XIcon,
+  TrendingDown, SlidersHorizontal, X as XIcon, Maximize2, ArrowLeft, Search,
 } from 'lucide-react';
 import Modal from '../../components/common/Modal';
-import Input from '../../components/common/Input';
-import NumericInput from '../../components/inputs/NumericInput';
 import Button from '../../components/common/Button';
-import CustomerSearchInput from '../../components/common/CustomerSearchInput';
+import NewDealModal from '../../components/crm/NewDealModal';
+import DealModal from '../../components/crm/DealModal';
 import toast from 'react-hot-toast';
 import confetti from 'canvas-confetti';
 import { notifyGoalMilestones } from '../../store/goalMilestoneStore';
 import {
   DndContext, DragOverlay, useDraggable, useDroppable,
-  PointerSensor, TouchSensor, useSensor, useSensors, closestCenter,
+  MouseSensor, TouchSensor, useSensor, useSensors, closestCenter, MeasuringStrategy,
 } from '@dnd-kit/core';
 
 const COP = n => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(n || 0);
@@ -62,18 +60,27 @@ function celebrateWin() {
   });
 }
 
-// C.2 — "Oportunidad → cotización en un clic": arma la URL hacia el
-// formulario de cotización del CRM con lo que ya sabemos de la oportunidad,
-// para que el asesor no tenga que volver a escribir cliente ni valor
-// estimado. El backend (sales.controller.create) lee opportunity_id +
-// document_type para vincular quote_sale_id y mover la etapa a 'cotizado'
-// automáticamente. /crm/quotes/new monta el mismo SaleFormPage que usa
-// Ventas, pero fuera del flujo de Ventas (ver isCrmQuoteMode ahí) -- con
-// CRM activo, cotizar ya no es una opción dentro de Ventas.
-function buildQuoteUrl(opp) {
-  const params = new URLSearchParams({ opportunity_id: opp.id, customer_id: opp.customer_id });
-  if (opp.expected_value > 0) params.set('expected_value', opp.expected_value);
-  return `/crm/quotes/new?${params.toString()}`;
+const NEW_DEAL_MESSAGES = [
+  '¡Nuevo negocio en marcha! 🔥',
+  '¡Eso es! Otro negocio al tablero 🚀',
+  '¡Vas con toda! 💪',
+  '¡Un paso más cerca de tu meta! 🎯',
+];
+
+function celebrateNewDeal(buttonEl) {
+  const rect = buttonEl?.getBoundingClientRect();
+  const origin = rect
+    ? { x: (rect.left + rect.width / 2) / window.innerWidth, y: (rect.top + rect.height / 2) / window.innerHeight }
+    : { y: 0.3 };
+  confetti({
+    particleCount: 60,
+    spread: 55,
+    startVelocity: 30,
+    scalar: 0.9,
+    origin,
+    colors: ['#F97316', '#F43F5E', '#C026D3'],
+    disableForReducedMotion: true,
+  });
 }
 
 // C.3 — "Oportunidad → OT en un clic": mismo patrón que C.2, para tenants
@@ -95,6 +102,24 @@ function canConvertToOT(opp, stageTypeByKey) {
 function canQuote(opp, stageTypeByKey) {
   return !opp.quote_sale_id && stageTypeByKey[opp.stage] === 'open';
 }
+
+const MAX_VISIBLE_CARDS = 10;
+const CHIP_DROP_PREFIX = 'chip:';
+const stageKeyOf = (dropId) => String(dropId).replace(CHIP_DROP_PREFIX, '');
+const normalizeSearch = (s) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+function useMediaQuery(query) {
+  const [matches, setMatches] = useState(() => window.matchMedia(query).matches);
+  useEffect(() => {
+    const mql = window.matchMedia(query);
+    const onChange = () => setMatches(mql.matches);
+    mql.addEventListener('change', onChange);
+    return () => mql.removeEventListener('change', onChange);
+  }, [query]);
+  return matches;
+}
+const GRADIENT_BG = 'bg-gradient-to-r from-orange-500 via-rose-500 to-fuchsia-600';
+const GRADIENT_TEXT = `${GRADIENT_BG} bg-clip-text text-transparent`;
 
 function customerName(c) {
   if (!c) return 'Cliente';
@@ -153,7 +178,7 @@ function OpportunityCard({ opp, accentColor, onOpen, onQuote, onWorkOrder, hasWo
       {...dragProps}
       onClick={overlay ? undefined : onOpen}
       style={{ borderLeftColor: accentColor || DEFAULT_STAGE_COLOR }}
-      className={`group relative bg-white border border-gray-100 border-l-[3px] rounded-lg p-3 shadow-[0_1px_2px_rgba(15,15,15,0.04),0_1px_1px_rgba(15,15,15,0.03)] cursor-grab active:cursor-grabbing hover:shadow-[0_8px_16px_-4px_rgba(15,15,15,0.10),0_2px_4px_-2px_rgba(15,15,15,0.06)] hover:-translate-y-0.5 transition-all duration-200 touch-none ${
+      className={`group relative bg-white border border-gray-100 border-l-[3px] rounded-lg p-3 shadow-[0_1px_2px_rgba(15,15,15,0.04),0_1px_1px_rgba(15,15,15,0.03)] cursor-grab active:cursor-grabbing hover:shadow-[0_8px_16px_-4px_rgba(15,15,15,0.10),0_2px_4px_-2px_rgba(15,15,15,0.06)] hover:-translate-y-0.5 transition-all duration-200 touch-manipulation ${
         isDragging && !overlay ? 'opacity-40 scale-95' : ''
       } ${overlay ? 'shadow-xl rotate-2 w-72' : ''}`}
     >
@@ -163,8 +188,8 @@ function OpportunityCard({ opp, accentColor, onOpen, onQuote, onWorkOrder, hasWo
           <Flame size={11} className="text-white" />
         </div>
       )}
-      <div className="flex items-start gap-2">
-        <div className={`flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white shadow-sm ${avatarColor(name)}`}>
+      <div className={`flex items-center gap-2.5 ${waLink || phone ? 'pr-14 lg:pr-0 lg:group-hover:pr-14' : ''}`}>
+        <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-bold text-white shadow-sm ${avatarColor(name)}`}>
           {initialsOf(name)}
         </div>
         <div className="min-w-0 flex-1">
@@ -174,48 +199,65 @@ function OpportunityCard({ opp, accentColor, onOpen, onQuote, onWorkOrder, hasWo
             <span className="capitalize truncate">{opp.source.replace(/_/g, ' ')}</span>
           </div>
         </div>
-        {opp.expected_value > 0 && (
-          <span className="flex-shrink-0 text-xs font-semibold text-gray-700">{COP(opp.expected_value)}</span>
+      </div>
+
+      <div className="mt-2.5 flex items-center justify-between gap-2 min-w-0">
+        {opp.expected_value > 0
+          ? <span className={`text-base font-extrabold tabular-nums truncate ${GRADIENT_TEXT}`}>{COP(opp.expected_value)}</span>
+          : <span className="text-xs italic text-gray-400">Sin cotizar</span>}
+        {urgency && (
+          <span className={`flex-shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${urgency.cls}`}>
+            <Clock size={9} /> {urgency.label}
+          </span>
         )}
       </div>
 
-      {urgency && (
-        <span className={`inline-flex items-center gap-1 mt-2 px-1.5 py-0.5 rounded-full text-[10px] font-medium ${urgency.cls}`}>
-          <Clock size={9} /> {urgency.label}
+      <div className="flex items-center justify-between gap-2 mt-2 text-[11px] text-gray-400">
+        <span className="truncate">
+          {opp.owner ? `${opp.owner.first_name} ${opp.owner.last_name}` : '—'}
+          {opp.expected_close_date && ` · ${fmtDate(opp.expected_close_date)}`}
         </span>
-      )}
-
-      <div className="flex items-center justify-between mt-2 text-[11px] text-gray-400">
-        <span className="truncate">{opp.owner ? `${opp.owner.first_name} ${opp.owner.last_name}` : '—'}</span>
-        {opp.expected_close_date && <span>{fmtDate(opp.expected_close_date)}</span>}
+        {opp.quote_sale && (
+          <span title={`Cotización #${opp.quote_sale.sale_number}`} className="flex items-center gap-1 min-w-0 font-medium text-gray-500">
+            <FileText size={11} className="flex-shrink-0" />
+            <span className="truncate max-w-[110px]">{opp.quote_sale.sale_number}</span>
+          </span>
+        )}
       </div>
 
       {opp.lost_reason && <p className="text-[11px] text-red-500 mt-1">Motivo: {opp.lost_reason.replace(/_/g, ' ')}</p>}
-      {opp.quote_sale && <p className="text-[11px] text-accent font-medium mt-1">Cotización #{opp.quote_sale.sale_number}</p>}
       {opp.work_order && <p className="text-[11px] text-orange-500 font-medium mt-1">OT #{opp.work_order.order_number}</p>}
 
-      {showQuoteAction && (
-        <button
-          type="button"
-          draggable={false}
-          onClick={e => { e.stopPropagation(); onQuote(); }}
-          title="Generar cotización y vincularla a esta oportunidad"
-          className="mt-2 w-full flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md text-[11px] font-medium text-accent bg-accent/[0.06] border border-accent/15 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity hover:bg-accent/[0.12]"
-        >
-          <FileText size={11} /> Generar cotización
-        </button>
-      )}
-
-      {showWorkOrderAction && (
-        <button
-          type="button"
-          draggable={false}
-          onClick={e => { e.stopPropagation(); onWorkOrder(); }}
-          title="Crear orden de trabajo en Taller y vincularla a esta oportunidad"
-          className="mt-2 w-full flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md text-[11px] font-medium text-orange-600 bg-orange-50 border border-orange-200 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity hover:bg-orange-100"
-        >
-          <Wrench size={11} /> Convertir a OT
-        </button>
+      {(showQuoteAction || showWorkOrderAction) && (
+        // Sin hover (táctil) las acciones quedan siempre visibles; en escritorio se despliegan sin reservar espacio.
+        <div className="grid grid-rows-[1fr] lg:grid-rows-[0fr] lg:group-hover:grid-rows-[1fr] lg:group-focus-within:grid-rows-[1fr] transition-[grid-template-rows] duration-200 motion-reduce:transition-none">
+          <div className="overflow-hidden">
+            <div className="flex gap-1.5 mt-2.5 pt-2.5 border-t border-gray-100">
+              {showQuoteAction && (
+                <button
+                  type="button"
+                  draggable={false}
+                  onClick={e => { e.stopPropagation(); onQuote(); }}
+                  title="Generar cotización y vincularla a esta oportunidad"
+                  className={`flex-1 min-w-0 truncate !px-2 !py-1.5 rounded-md !text-[11px] font-semibold text-white ${GRADIENT_BG} hover:opacity-90 transition-opacity`}
+                >
+                  Cotizar
+                </button>
+              )}
+              {showWorkOrderAction && (
+                <button
+                  type="button"
+                  draggable={false}
+                  onClick={e => { e.stopPropagation(); onWorkOrder(); }}
+                  title="Crear orden de trabajo en Taller y vincularla a esta oportunidad"
+                  className="flex-1 min-w-0 truncate !px-2 !py-1.5 rounded-md !text-[11px] font-medium text-gray-600 border border-gray-200 hover:bg-gray-50 transition-colors"
+                >
+                  Convertir a OT
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
       )}
 
       {(waLink || phone) && (
@@ -277,36 +319,94 @@ function KanbanSkeleton() {
   );
 }
 
+// Chip de etapa: navega a la etapa y además es destino de drop, para mover
+// un negocio cuando solo se ve una etapa (celular o modo enfoque).
+function StageChip({ stage, count, active, isOver, onSelect }) {
+  const { setNodeRef } = useDroppable({ id: `${CHIP_DROP_PREFIX}${stage.key}` });
+  const color = stage.color || DEFAULT_STAGE_COLOR;
+  return (
+    <button ref={setNodeRef} type="button" onClick={() => onSelect(stage.key)} aria-pressed={active}
+      className={`flex-none flex items-center gap-1.5 !px-3 !py-1.5 rounded-full !text-xs whitespace-nowrap border transition ${
+        active
+          ? `${GRADIENT_BG} text-white font-semibold border-transparent shadow-sm shadow-rose-500/30`
+          : 'bg-white text-gray-600 font-medium border-gray-200 hover:border-gray-300'
+      } ${isOver ? 'ring-2 ring-offset-1 ring-accent scale-105' : ''}`}>
+      <span className="h-2 w-2 rounded-full" style={{ background: active ? '#fff' : color }} />
+      {stage.label}
+      <span className={`rounded-full px-1.5 text-[10px] font-semibold ${active ? 'bg-white/25' : 'bg-gray-100 text-gray-500'}`}>{count}</span>
+    </button>
+  );
+}
+
+function StageBar({ stages, byStage, activeKey, overStage, onSelect }) {
+  return (
+    <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      {stages.map(stage => (
+        <StageChip key={stage.key} stage={stage} count={(byStage[stage.key] || []).length}
+          active={stage.key === activeKey} isOver={overStage === stage.key} onSelect={onSelect} />
+      ))}
+    </div>
+  );
+}
+
 // A.2.1 — columna droppable de dnd-kit. Antes esta lógica vivía inline en
 // PipelinePage con onDragOver/onDragLeave/onDrop nativos; ahora usa
 // useDroppable, que sí participa del ciclo de eventos de dnd-kit (mouse y
 // touch por igual) y nos da `isOver` gratis para el resaltado visual.
-function KanbanColumn({ stage, items, isOver, navigate, hasWorkshop, hasCrm, stageTypeByKey, firstStageKey, waTemplates, onSendWa }) {
+function KanbanColumn({ stage, items, collapsed, limit, onFocus, isOver, navigate, onOpenDeal, hasWorkshop, hasCrm, stageTypeByKey, firstStageKey, waTemplates, onSendWa }) {
   const { setNodeRef } = useDroppable({ id: stage.key });
   const total = items.reduce((s, o) => s + parseFloat(o.expected_value || 0), 0);
+  const visibleItems = limit ? items.slice(0, limit) : items;
+  const hiddenCount = items.length - visibleItems.length;
+
+  if (collapsed) {
+    return (
+      <div ref={setNodeRef} title={`${stage.label}: sin negocios`}
+        style={{ borderTopColor: stage.color || DEFAULT_STAGE_COLOR }}
+        className="flex-none w-12 flex flex-col items-center gap-2 py-3 rounded-xl border border-gray-100 border-t-[3px] bg-gray-50/60">
+        <span className="h-2 w-2 rounded-full" style={{ background: stage.color || DEFAULT_STAGE_COLOR }} />
+        <span className="text-[11px] font-semibold text-gray-500 bg-gray-100 rounded-full px-1.5 py-0.5">0</span>
+        <span className="[writing-mode:vertical-rl] rotate-180 whitespace-nowrap text-xs font-semibold text-gray-500">{stage.label}</span>
+      </div>
+    );
+  }
 
   return (
     <div ref={setNodeRef}
-      className={`flex-shrink-0 w-72 rounded-xl border transition ${
+      /* sm:[max-width] en vez de sm:max-w-*: index.css le mete margen a todo [class*="max-w-"] en celular */
+      className={`w-full flex-none snap-start sm:w-auto sm:flex-1 sm:basis-0 sm:min-w-[240px] sm:[max-width:360px] flex flex-col rounded-xl border transition ${
         isOver ? 'border-accent/50 bg-accent/[0.04] ring-2 ring-accent/20' : 'border-gray-100 bg-gray-50/60'
       }`}>
-      <div style={{ background: stage.color || DEFAULT_STAGE_COLOR }} className="rounded-t-xl px-3 py-2.5 flex items-center justify-between">
-        <span className="text-sm font-semibold text-white">{stage.label}</span>
-        <span className="text-xs font-medium text-white/80">{items.length}</span>
-      </div>
-      {total > 0 && (
-        <div className="px-3 py-1.5 text-xs text-gray-500 border-b border-gray-100 flex items-center gap-1">
-          <DollarSign size={11} /> {COP(total)} estimado
+      <div style={{ borderTopColor: stage.color || DEFAULT_STAGE_COLOR }}
+        className="rounded-t-xl bg-white border-t-[3px] border-b border-b-gray-100 px-3 pt-2.5 pb-3">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="h-2 w-2 flex-shrink-0 rounded-full" style={{ background: stage.color || DEFAULT_STAGE_COLOR }} />
+            <span className="text-sm font-semibold text-gray-800 truncate">{stage.label}</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="text-[11px] font-semibold text-gray-500 bg-gray-100 rounded-full px-2 py-0.5">{items.length}</span>
+            {onFocus && (
+              <button type="button" onClick={onFocus} title={`Abrir ${stage.label} a todo el ancho`} aria-label={`Enfocar ${stage.label}`}
+                className="hidden sm:inline-flex !p-1 rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition">
+                <Maximize2 size={13} />
+              </button>
+            )}
+          </div>
         </div>
-      )}
-      <div className="p-2 space-y-2 min-h-[120px]">
-        {items.map(opp => (
+        <div className="mt-1.5 flex items-baseline gap-1.5 min-w-0">
+          <span className={`text-lg font-extrabold tabular-nums truncate ${total > 0 ? GRADIENT_TEXT : 'text-gray-300'}`}>{COP(total)}</span>
+          <span className="text-[11px] text-gray-400">estimado</span>
+        </div>
+      </div>
+      <div className="flex-1 min-h-[120px] p-2 space-y-2">
+        {visibleItems.map(opp => (
           <OpportunityCard
             key={opp.id}
             opp={opp}
             accentColor={stage.color}
-            onOpen={() => navigate(`/customers/${opp.customer_id}`)}
-            onQuote={() => navigate(buildQuoteUrl(opp))}
+            onOpen={() => onOpenDeal(opp)}
+            onQuote={() => onOpenDeal(opp, true)}
             onWorkOrder={() => navigate(buildWorkOrderUrl(opp))}
             hasWorkshop={hasWorkshop}
             hasCrm={hasCrm}
@@ -318,6 +418,12 @@ function KanbanColumn({ stage, items, isOver, navigate, hasWorkshop, hasCrm, sta
         ))}
         {items.length === 0 && (
           <p className="text-xs text-gray-300 text-center py-6">Sin oportunidades</p>
+        )}
+        {hiddenCount > 0 && onFocus && (
+          <button type="button" onClick={onFocus}
+            className="w-full rounded-lg border border-dashed border-gray-300 bg-white py-2 text-xs font-semibold text-gray-600 hover:border-rose-300 hover:text-rose-600 transition">
+            Ver todos (+{hiddenCount})
+          </button>
         )}
       </div>
     </div>
@@ -334,39 +440,45 @@ export default function PipelinePage() {
 
   const [opportunities, setOpportunities] = useState([]);
   const [loading, setLoading] = useState(true);
+  const newDealButtonRef = useRef(null);
+  const [justCreated, setJustCreated] = useState(false);
   const [ownerFilter, setOwnerFilter] = useState('');
   const [advisors, setAdvisors] = useState([]);
   // A.2.7 — selección para acciones masivas en la vista de lista.
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
-  // A.2.1 — sensores dnd-kit: PointerSensor cubre mouse/trackpad (requiere
+  // A.2.1 — sensores dnd-kit: MouseSensor cubre mouse/trackpad (requiere
   // moverse 8px para activar, así un clic normal no se confunde con drag);
   // TouchSensor usa un pequeño "delay" de mantener presionado antes de
   // activar, para no pelear con el gesto de scroll horizontal del tablero
-  // en tablet/celular (sin esto, cualquier swipe se interpretaría como drag).
+  // en tablet/celular. Se usa MouseSensor y no PointerSensor porque este
+  // último también escucha toques y arrancaba el drag en vez del swipe.
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } }),
   );
   const [activeDragOpp, setActiveDragOpp] = useState(null);
   const [overStage, setOverStage] = useState(null);
   const [viewMode, setViewMode] = useState('kanban'); // 'kanban' | 'list' | 'funnel'
+  const isMobile = useMediaQuery('(max-width: 639px)');
+  const [focusStage, setFocusStage] = useState(null); // escritorio: etapa abierta a todo el ancho
+  const [mobileStage, setMobileStage] = useState(null); // celular: etapa visible en el carrusel
+  const boardRef = useRef(null);
 
   // A.2.5 — filtros combinables (antes solo existía el filtro por asesor).
   // Todo client-side sobre lo que ya trae listOpportunities, sin tocar el
   // controller — si el volumen por tenant crece mucho conviene moverlos a
   // query params del backend.
+  const [search, setSearch] = useState('');
   const [sourceFilter, setSourceFilter] = useState('');
   const [priorityOnly, setPriorityOnly] = useState(false);
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
 
   const [createModal, setCreateModal] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({ customer_id: '', source: 'walk_in', expected_value: '', expected_close_date: '' });
-  const [customers, setCustomers] = useState([]);
-  const [newCustomerMode, setNewCustomerMode] = useState(false);
-  const [newCustomerForm, setNewCustomerForm] = useState({ full_name: '', customer_type: 'individual', phone: '', email: '' });
+  const [dealOpp, setDealOpp] = useState(null);
+  const [dealStartCreate, setDealStartCreate] = useState(false);
+  const openDeal = (opp, startCreate = false) => { setDealStartCreate(startCreate); setDealOpp(opp); };
 
   const [lostModal, setLostModal] = useState(null); // opportunity being moved a una etapa de tipo 'lost'
   const [lostReason, setLostReason] = useState('');
@@ -422,23 +534,35 @@ export default function PipelinePage() {
   // A.2.5 — lista filtrada por origen, prioridad y rango de fecha de
   // creación. Es la que alimenta las tres vistas (kanban/lista/embudo).
   const filteredOpportunities = useMemo(() => {
+    const term = normalizeSearch(search.trim());
+    const termDigits = term.replace(/\D/g, '');
     return opportunities.filter(o => {
+      if (term) {
+        const c = o.customer || {};
+        const text = normalizeSearch(`${customerName(c)} ${o.quote_sale?.sale_number || ''}`);
+        const phones = `${c.mobile || ''} ${c.phone || ''}`.replace(/\D/g, '');
+        if (!text.includes(term) && !(termDigits.length >= 3 && phones.includes(termDigits))) return false;
+      }
       if (sourceFilter && o.source !== sourceFilter) return false;
       if (priorityOnly && !(o.priority_score >= 70)) return false;
-      if (dateFrom && new Date(o.created_at) < new Date(dateFrom)) return false;
-      if (dateTo && new Date(o.created_at) > new Date(dateTo + 'T23:59:59')) return false;
+      if (dateFrom && new Date(o.createdAt) < new Date(dateFrom + 'T00:00:00')) return false;
+      if (dateTo && new Date(o.createdAt) > new Date(dateTo + 'T23:59:59')) return false;
       return true;
     });
-  }, [opportunities, sourceFilter, priorityOnly, dateFrom, dateTo]);
+  }, [opportunities, search, sourceFilter, priorityOnly, dateFrom, dateTo]);
 
-  const activeFilterCount = [sourceFilter, priorityOnly, dateFrom, dateTo].filter(Boolean).length;
-  const clearFilters = () => { setSourceFilter(''); setPriorityOnly(false); setDateFrom(''); setDateTo(''); };
+  const activeFilterCount = [search.trim(), sourceFilter, priorityOnly, dateFrom, dateTo].filter(Boolean).length;
+  const clearFilters = () => { setSearch(''); setSourceFilter(''); setPriorityOnly(false); setDateFrom(''); setDateTo(''); };
 
   const byStage = useMemo(() => {
     const grouped = Object.fromEntries(stages.map(s => [s.key, []]));
     filteredOpportunities.forEach(o => { if (grouped[o.stage]) grouped[o.stage].push(o); });
     return grouped;
   }, [filteredOpportunities, stages]);
+
+  const focusedStage = stages.find(s => s.key === focusStage) || null;
+  const focusedItems = focusedStage ? byStage[focusedStage.key] || [] : [];
+  const focusedTotal = focusedItems.reduce((s, o) => s + parseFloat(o.expected_value || 0), 0);
 
   // A.2.2 — datos del embudo: cuántas oportunidades pasaron por cada etapa
   // (abiertas + que ya avanzaron más allá), para mostrar el "ancho" real del
@@ -470,6 +594,19 @@ export default function PipelinePage() {
     [opportunities, stageTypeByKey, firstStageKey]
   );
 
+  const createdTodayCount = useMemo(() => {
+    const today = new Date().toDateString();
+    return opportunities.filter(o =>
+      o.owner_user_id === user?.id && new Date(o.createdAt).toDateString() === today
+    ).length;
+  }, [opportunities, user?.id]);
+
+  useEffect(() => {
+    if (!justCreated) return;
+    const t = setTimeout(() => setJustCreated(false), 1200);
+    return () => clearTimeout(t);
+  }, [justCreated]);
+
   const handleSendWaTemplate = async (opp, template) => {
     try {
       const res = await crmApi.renderMessageTemplate(template.id, { customer_id: opp.customer_id, opportunity_id: opp.id });
@@ -485,55 +622,21 @@ export default function PipelinePage() {
     }
   };
 
-  const openCreate = async () => {
-    setForm({ customer_id: '', source: 'walk_in', expected_value: '', expected_close_date: '' });
-    setNewCustomerMode(false);
-    setNewCustomerForm({ full_name: '', customer_type: 'individual', phone: '', email: '' });
-    setCreateModal(true);
-    if (customers.length === 0) {
-      try {
-        const res = await customersApi.getAll({ limit: 200, is_active: true });
-        setCustomers(res.data.data || []);
-      } catch { /* buscador queda vacío, no bloquea el modal */ }
+  const openCreate = () => setCreateModal(true);
+
+  const handleCreated = ({ quoteCreated }) => {
+    setCreateModal(false);
+    if (quoteCreated) {
+      const total = createdTodayCount + 1;
+      const message = NEW_DEAL_MESSAGES[Math.floor(Math.random() * NEW_DEAL_MESSAGES.length)];
+      toast.success(`${message} Llevas ${total} ${total === 1 ? 'negocio' : 'negocios'} hoy.`, { duration: 3500 });
+      celebrateNewDeal(newDealButtonRef.current);
+      setJustCreated(true);
     }
-  };
-
-  const handleCreate = async (e) => {
-    e.preventDefault();
-
-    let customerId = form.customer_id;
-    if (newCustomerMode) {
-      if (!newCustomerForm.full_name.trim()) {
-        toast.error('Escribe el nombre del cliente nuevo');
-        return;
-      }
-    } else if (!customerId) {
-      toast.error('Selecciona un cliente');
-      return;
-    }
-
-    setSaving(true);
-    try {
-      if (newCustomerMode) {
-        const res = await customersApi.create(newCustomerForm);
-        customerId = res.data.data.id;
-        setCustomers(c => [...c, res.data.data]);
-        // Gamificación §4 — customer_created puede mover new_customers.
-        notifyGoalMilestones(res.data.gamification);
-      }
-
-      await crmApi.createOpportunity({
-        customer_id: customerId,
-        source: form.source,
-        expected_value: form.expected_value || null,
-        expected_close_date: form.expected_close_date || null,
-      });
-      toast.success('Oportunidad creada');
-      setCreateModal(false);
-      load();
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Error al crear la oportunidad');
-    } finally { setSaving(false); }
+    load();
+    // El backend mueve la oportunidad a "Cotizado" en un setImmediate tras
+    // responder la cotización, así que la primera recarga puede llegar antes.
+    setTimeout(load, 1500);
   };
 
   const moveStage = async (opportunity, stage, lost_reason) => {
@@ -573,7 +676,7 @@ export default function PipelinePage() {
     setActiveDragOpp(opportunities.find(o => o.id === event.active.id) || null);
   };
   const handleDndDragOver = (event) => {
-    setOverStage(event.over?.id || null);
+    setOverStage(event.over ? stageKeyOf(event.over.id) : null);
   };
   const handleDndDragEnd = (event) => {
     const { active, over } = event;
@@ -581,7 +684,23 @@ export default function PipelinePage() {
     setOverStage(null);
     if (!over) return;
     const opp = opportunities.find(o => o.id === active.id);
-    handleDrop(over.id, opp);
+    handleDrop(stageKeyOf(over.id), opp);
+  };
+
+  // Celular: la etapa activa sale de la posición del carrusel (cada etapa
+  // ocupa el ancho completo + el gap de 12px).
+  const handleBoardScroll = () => {
+    const el = boardRef.current;
+    if (!el || !isMobile) return;
+    const idx = Math.round(el.scrollLeft / (el.clientWidth + 12));
+    setMobileStage(stages[idx]?.key || null);
+  };
+  const goToMobileStage = (key) => {
+    const el = boardRef.current;
+    const idx = stages.findIndex(s => s.key === key);
+    if (!el || idx < 0) return;
+    el.scrollTo({ left: idx * (el.clientWidth + 12), behavior: 'smooth' });
+    setMobileStage(key);
   };
 
   const confirmLost = () => {
@@ -653,7 +772,7 @@ export default function PipelinePage() {
               <Target className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-gray-900 tracking-tight">Pipeline comercial</h1>
+              <h1 className="text-xl font-bold text-gray-900 tracking-tight">Negocios en curso</h1>
               <p className="text-sm text-gray-500">
                 {viewMode === 'kanban' ? 'Arrastra las tarjetas entre etapas' : 'Vista de lista — clic en una fila para ver el cliente'}
               </p>
@@ -663,7 +782,7 @@ export default function PipelinePage() {
 
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <CrmSubNav badges={{ pipeline: unattendedCount }} />
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             {canFilterTeam && (
               <select value={ownerFilter} onChange={e => setOwnerFilter(e.target.value)}
                 className="border border-gray-300 rounded-lg px-3 py-2 text-sm">
@@ -673,29 +792,40 @@ export default function PipelinePage() {
                 ))}
               </select>
             )}
-            <div className="flex items-center p-0.5 bg-gray-100 rounded-lg">
-              <button onClick={() => setViewMode('kanban')} title="Vista Kanban"
-                className={`p-1.5 rounded-md transition ${viewMode === 'kanban' ? 'bg-white shadow-sm text-accent' : 'text-gray-400 hover:text-gray-600'}`}>
-                <LayoutGrid size={16} />
-              </button>
-              <button onClick={() => setViewMode('list')} title="Vista de lista"
-                className={`p-1.5 rounded-md transition ${viewMode === 'list' ? 'bg-white shadow-sm text-accent' : 'text-gray-400 hover:text-gray-600'}`}>
-                <List size={16} />
-              </button>
-              <button onClick={() => setViewMode('funnel')} title="Vista de embudo"
-                className={`p-1.5 rounded-md transition ${viewMode === 'funnel' ? 'bg-white shadow-sm text-accent' : 'text-gray-400 hover:text-gray-600'}`}>
-                <TrendingDown size={16} />
-              </button>
+            <div className="flex items-center gap-0.5 p-1 bg-gray-100 rounded-xl">
+              {[['kanban', 'Vista Kanban', LayoutGrid], ['list', 'Vista de lista', List], ['funnel', 'Vista de embudo', TrendingDown]].map(([mode, title, Icon]) => (
+                <button key={mode} onClick={() => setViewMode(mode)} title={title} aria-label={title}
+                  className={`!p-1.5 rounded-lg transition ${viewMode === mode ? `${GRADIENT_BG} text-white shadow-sm shadow-rose-500/30` : 'text-gray-400 hover:text-gray-600'}`}>
+                  <Icon size={16} />
+                </button>
+              ))}
             </div>
-            <button onClick={openCreate}
-              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-br from-accent to-accent-soft text-white rounded-xl text-sm font-medium shadow-sm shadow-accent/30 hover:shadow-md hover:shadow-accent/40 hover:-translate-y-px transition-all">
-              <Plus className="h-4 w-4" /> Nueva oportunidad
+            <span title="Negocios que has creado hoy"
+              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-full text-sm font-semibold whitespace-nowrap transition-all duration-300 ease-out motion-reduce:transition-none ${
+                createdTodayCount > 0 ? 'bg-orange-50 text-accent ring-1 ring-orange-200' : 'bg-gray-50 text-gray-400 ring-1 ring-gray-200'
+              } ${justCreated ? 'scale-125 ring-2 ring-accent/40' : 'scale-100'}`}>
+              <Flame size={14} className={createdTodayCount > 0 ? 'fill-orange-300' : ''} />
+              {createdTodayCount} hoy
+            </span>
+            <button ref={newDealButtonRef} onClick={openCreate}
+              className="group relative overflow-hidden flex items-center gap-2.5 pl-2.5 pr-5 py-2.5 bg-gradient-to-r from-orange-500 via-rose-500 to-fuchsia-600 text-white rounded-2xl text-base font-semibold shadow-lg shadow-rose-500/30 ring-1 ring-white/20 hover:shadow-xl hover:shadow-fuchsia-500/40 hover:-translate-y-0.5 active:translate-y-0 active:scale-95 transition-all duration-300 ease-out motion-reduce:transition-none">
+              <span aria-hidden className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 -skew-x-12 bg-gradient-to-r from-transparent via-white/40 to-transparent translate-x-0 group-hover:translate-x-[300%] transition-transform duration-700 ease-out motion-reduce:hidden" />
+              <span className="relative flex h-8 w-8 items-center justify-center rounded-xl bg-white/20 group-hover:bg-white/30 transition-colors">
+                <Plus className="h-5 w-5 group-hover:rotate-90 transition-transform duration-300 ease-out" strokeWidth={2.5} />
+              </span>
+              <span className="relative whitespace-nowrap">Nuevo negocio</span>
             </button>
           </div>
         </div>
 
         {/* A.2.5 — filtros combinables: origen, solo prioritarias, rango de fecha */}
         <div className="flex items-center gap-2 flex-wrap bg-white border border-gray-100 rounded-xl px-3 py-2">
+          <div className="relative flex-1 min-w-[200px] sm:flex-none sm:w-64">
+            <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+            <input type="search" value={search} onChange={e => setSearch(e.target.value)}
+              placeholder="Buscar cliente, teléfono o cotización…" aria-label="Buscar negocios"
+              className="w-full border border-gray-200 rounded-lg pl-8 pr-2 py-1 text-xs text-gray-700 placeholder:text-gray-400 focus:outline-none focus:border-accent/50 focus:ring-2 focus:ring-accent/15" />
+          </div>
           <SlidersHorizontal size={13} className="text-gray-400 flex-shrink-0" />
           <select value={sourceFilter} onChange={e => setSourceFilter(e.target.value)}
             className="border border-gray-200 rounded-lg px-2 py-1 text-xs text-gray-600">
@@ -704,11 +834,15 @@ export default function PipelinePage() {
               <option key={key} value={key}>{key.replace(/_/g, ' ')}</option>
             ))}
           </select>
-          <label className="flex items-center gap-1.5 text-xs text-gray-600 cursor-pointer px-2 py-1 rounded-lg hover:bg-gray-50">
-            <input type="checkbox" checked={priorityOnly} onChange={e => setPriorityOnly(e.target.checked)} />
-            <Flame size={12} className="text-accent" /> Solo prioritarias
-          </label>
-          <div className="flex items-center gap-1.5 text-xs text-gray-500">
+          <button type="button" onClick={() => setPriorityOnly(p => !p)} aria-pressed={priorityOnly}
+            className={`flex items-center gap-1.5 !px-3 !py-1 rounded-full text-xs transition ${
+              priorityOnly
+                ? `${GRADIENT_BG} text-white font-semibold shadow-sm shadow-rose-500/30`
+                : 'border border-gray-200 text-gray-600 font-medium hover:border-orange-300'
+            }`}>
+            <Flame size={12} className={priorityOnly ? 'text-white' : 'text-accent'} /> Solo prioritarias
+          </button>
+          <div className="flex items-center gap-1.5 flex-wrap text-xs text-gray-500">
             <span>Creadas</span>
             <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
               className="border border-gray-200 rounded-lg px-2 py-1 text-xs text-gray-600" />
@@ -738,7 +872,7 @@ export default function PipelinePage() {
             <div className="flex items-center justify-center gap-2">
               <button onClick={openCreate}
                 className="flex items-center gap-2 px-4 py-2 bg-gradient-to-br from-accent to-accent-soft text-white rounded-xl text-sm font-medium shadow-sm shadow-accent/30 hover:shadow-md transition-all">
-                <Plus className="h-4 w-4" /> Nueva oportunidad
+                <Plus className="h-4 w-4" /> Nuevo negocio
               </button>
               <button onClick={() => navigate('/crm/settings/meta')}
                 className="flex items-center gap-2 px-4 py-2 border border-gray-200 text-gray-600 rounded-xl text-sm font-medium hover:bg-gray-50 transition">
@@ -783,28 +917,84 @@ export default function PipelinePage() {
           <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}
+            /* Las columnas vacías se expanden al iniciar el arrastre; hay que volver a medirlas. */
+            measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
             onDragStart={handleDndDragStart}
             onDragOver={handleDndDragOver}
             onDragEnd={handleDndDragEnd}
             onDragCancel={() => { setActiveDragOpp(null); setOverStage(null); }}
           >
-            <div className="flex gap-3 overflow-x-auto pb-4">
-              {stages.map(stage => (
-                <KanbanColumn
-                  key={stage.key}
-                  stage={stage}
-                  items={byStage[stage.key] || []}
-                  isOver={overStage === stage.key}
-                  navigate={navigate}
-                  hasWorkshop={hasWorkshop}
-                  hasCrm={hasCrm}
-                  stageTypeByKey={stageTypeByKey}
-                  firstStageKey={firstStageKey}
-                  waTemplates={waTemplates}
-                  onSendWa={handleSendWaTemplate}
-                />
-              ))}
-            </div>
+            {(isMobile || focusedStage) && (
+              <div className="mb-3">
+                <StageBar stages={stages} byStage={byStage} overStage={overStage}
+                  activeKey={isMobile ? (mobileStage || stages[0]?.key) : focusedStage.key}
+                  onSelect={isMobile ? goToMobileStage : setFocusStage} />
+              </div>
+            )}
+            {focusedStage && !isMobile ? (
+              <div className="rounded-xl border border-gray-100 bg-gray-50/60">
+                <div style={{ borderTopColor: focusedStage.color || DEFAULT_STAGE_COLOR }}
+                  className="rounded-t-xl bg-white border-t-[3px] border-b border-b-gray-100 px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <button type="button" onClick={() => setFocusStage(null)}
+                      className="flex items-center gap-1.5 !px-2.5 !py-1.5 rounded-lg border border-gray-200 !text-xs font-medium text-gray-600 hover:bg-gray-50 transition">
+                      <ArrowLeft size={13} /> Ver tablero
+                    </button>
+                    <span className="h-2.5 w-2.5 flex-shrink-0 rounded-full" style={{ background: focusedStage.color || DEFAULT_STAGE_COLOR }} />
+                    <span className="text-base font-semibold text-gray-800 truncate">{focusedStage.label}</span>
+                    <span className="text-[11px] font-semibold text-gray-500 bg-gray-100 rounded-full px-2 py-0.5">{focusedItems.length}</span>
+                  </div>
+                  <div className="flex items-baseline gap-1.5">
+                    <span className={`text-xl font-extrabold tabular-nums ${focusedTotal > 0 ? GRADIENT_TEXT : 'text-gray-300'}`}>{COP(focusedTotal)}</span>
+                    <span className="text-[11px] text-gray-400">estimado</span>
+                  </div>
+                </div>
+                {focusedItems.length === 0 ? (
+                  <p className="text-sm text-gray-400 text-center py-12">Sin negocios en esta etapa</p>
+                ) : (
+                  <div className="p-3 grid grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3">
+                    {focusedItems.map(opp => (
+                      <OpportunityCard
+                        key={opp.id}
+                        opp={opp}
+                        accentColor={focusedStage.color}
+                        onOpen={() => openDeal(opp)}
+                        onQuote={() => openDeal(opp, true)}
+                        onWorkOrder={() => navigate(buildWorkOrderUrl(opp))}
+                        hasWorkshop={hasWorkshop}
+                        hasCrm={hasCrm}
+                        stageTypeByKey={stageTypeByKey}
+                        firstStageKey={firstStageKey}
+                        waTemplates={waTemplates}
+                        onSendWa={handleSendWaTemplate}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div ref={boardRef} onScroll={handleBoardScroll} className="flex gap-3 overflow-x-auto pb-4 snap-x snap-mandatory sm:snap-none">
+                {stages.map(stage => (
+                  <KanbanColumn
+                    key={stage.key}
+                    stage={stage}
+                    items={byStage[stage.key] || []}
+                    collapsed={!isMobile && !activeDragOpp && !(byStage[stage.key] || []).length}
+                    limit={isMobile ? null : MAX_VISIBLE_CARDS}
+                    onFocus={() => setFocusStage(stage.key)}
+                    isOver={overStage === stage.key}
+                    navigate={navigate}
+                    onOpenDeal={openDeal}
+                    hasWorkshop={hasWorkshop}
+                    hasCrm={hasCrm}
+                    stageTypeByKey={stageTypeByKey}
+                    firstStageKey={firstStageKey}
+                    waTemplates={waTemplates}
+                    onSendWa={handleSendWaTemplate}
+                  />
+                ))}
+              </div>
+            )}
             <DragOverlay>
               {activeDragOpp && (
                 <OpportunityCard
@@ -873,7 +1063,7 @@ export default function PipelinePage() {
                   const urgency = urgencyInfo(opp, stageTypeByKey, firstStageKey);
                   const phone = bestPhone(opp.customer);
                   return (
-                    <tr key={opp.id} onClick={() => navigate(`/customers/${opp.customer_id}`)}
+                    <tr key={opp.id} onClick={() => openDeal(opp)}
                       className={`hover:bg-gray-50 cursor-pointer transition ${selectedIds.has(opp.id) ? 'bg-accent/[0.03]' : ''}`}>
                       <td className="px-4 py-2.5" onClick={e => e.stopPropagation()}>
                         <input type="checkbox" checked={selectedIds.has(opp.id)} onChange={() => toggleSelect(opp.id)} />
@@ -906,7 +1096,7 @@ export default function PipelinePage() {
                         <div className="flex items-center gap-1">
                           {canQuote(opp, stageTypeByKey) && (
                             <button type="button"
-                              onClick={e => { e.stopPropagation(); navigate(buildQuoteUrl(opp)); }}
+                              onClick={e => { e.stopPropagation(); openDeal(opp, true); }}
                               title="Generar cotización y vincularla a esta oportunidad"
                               className="p-1.5 bg-accent/[0.08] text-accent rounded-full hover:bg-accent/[0.15] inline-flex">
                               <FileText size={12} />
@@ -941,74 +1131,10 @@ export default function PipelinePage() {
         )}
       </div>
 
-      <Modal isOpen={createModal} onClose={() => setCreateModal(false)} title="Nueva oportunidad" size="md">
-        <form onSubmit={handleCreate} className="space-y-4">
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <label className="block text-sm font-medium text-gray-700">Cliente *</label>
-              <button type="button" onClick={() => setNewCustomerMode(m => !m)}
-                className="text-xs font-medium text-accent hover:underline">
-                {newCustomerMode ? 'Buscar cliente existente' : '+ Cliente nuevo'}
-              </button>
-            </div>
-            {newCustomerMode ? (
-              <div className="space-y-3 border border-accent/15 bg-accent/[0.03] rounded-lg p-3">
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="col-span-2">
-                    <Input label="Nombre completo *" value={newCustomerForm.full_name}
-                      onChange={e => setNewCustomerForm(f => ({ ...f, full_name: e.target.value }))} required />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Tipo</label>
-                    <select value={newCustomerForm.customer_type}
-                      onChange={e => setNewCustomerForm(f => ({ ...f, customer_type: e.target.value }))}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2">
-                      <option value="individual">Persona Natural</option>
-                      <option value="company">Empresa</option>
-                    </select>
-                  </div>
-                  <Input label="Teléfono" value={newCustomerForm.phone}
-                    onChange={e => setNewCustomerForm(f => ({ ...f, phone: e.target.value }))} />
-                </div>
-                <Input label="Email" type="email" value={newCustomerForm.email}
-                  onChange={e => setNewCustomerForm(f => ({ ...f, email: e.target.value }))} />
-              </div>
-            ) : (
-              <CustomerSearchInput customers={customers} value={form.customer_id}
-                onChange={v => setForm(f => ({ ...f, customer_id: v }))} />
-            )}
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Origen</label>
-            <select value={form.source} onChange={e => setForm(f => ({ ...f, source: e.target.value }))}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2">
-              <option value="walk_in">Mostrador</option>
-              <option value="whatsapp">WhatsApp</option>
-              <option value="llamada">Llamada</option>
-              <option value="referido">Referido</option>
-              <option value="redes">Redes sociales</option>
-              <option value="web">Web</option>
-              <option value="recompra_recurrente">Recompra recurrente</option>
-            </select>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="w-full">
-              <label className="label">Valor estimado</label>
-              <NumericInput className="input" value={form.expected_value}
-                onChange={e => setForm(f => ({ ...f, expected_value: e.target.value }))} />
-            </div>
-            <Input label="Cierre esperado" type="date" value={form.expected_close_date}
-              onChange={e => setForm(f => ({ ...f, expected_close_date: e.target.value }))} />
-          </div>
-          <div className="flex justify-end gap-2 pt-4 border-t">
-            <Button type="button" variant="secondary" onClick={() => setCreateModal(false)}>Cancelar</Button>
-            <Button type="submit" variant="primary" disabled={saving}
-              className="!bg-gradient-to-br !from-accent !to-accent-soft hover:!opacity-90 !shadow-sm !shadow-accent/30">
-              {saving ? 'Guardando...' : 'Crear oportunidad'}
-            </Button>
-          </div>
-        </form>
-      </Modal>
+      <NewDealModal isOpen={createModal} onClose={() => setCreateModal(false)} onCreated={handleCreated} />
+
+      <DealModal opportunity={dealOpp} stage={stages.find(s => s.key === dealOpp?.stage)} startInCreate={dealStartCreate}
+        onClose={() => setDealOpp(null)} onChanged={() => { load(); setTimeout(load, 1500); }} />
 
       <Modal isOpen={!!lostModal} onClose={() => setLostModal(null)} title="Motivo de pérdida" size="sm">
         <div className="space-y-4">

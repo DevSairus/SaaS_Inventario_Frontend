@@ -181,7 +181,7 @@ export default function CrmDashboardPage() {
               <BarChart3 className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100 tracking-tight">Dashboard CRM</h1>
+              <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100 tracking-tight">Resultados del CRM</h1>
               <p className="text-sm text-gray-500 dark:text-gray-500">Conversión, motivos de pérdida y clientes a los que llamar hoy</p>
             </div>
           </div>

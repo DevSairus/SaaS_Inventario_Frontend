@@ -9,10 +9,10 @@ import { Target, ListTodo, BarChart3, Settings, MessageCircle, Gift } from 'luci
 import useAuthStore from '../../store/authStore';
 
 const ITEMS = [
+  { to: '/crm/pipeline', label: 'Negocios en curso', icon: Target, key: 'pipeline' },
   { to: '/crm/whatsapp', label: 'WhatsApp', icon: MessageCircle, key: 'whatsapp' },
-  { to: '/crm/pipeline', label: 'Pipeline', icon: Target, key: 'pipeline' },
   { to: '/crm/followups', label: 'Seguimientos', icon: ListTodo, key: 'followups' },
-  { to: '/crm/dashboard', label: 'Dashboard', icon: BarChart3, key: 'dashboard' },
+  { to: '/crm/dashboard', label: 'Resultados', icon: BarChart3, key: 'dashboard' },
   // Fase 5 (§10.5) — abierto a cualquier rol: el propio vendedor necesita
   // ver su bono; el endpoint ya scopea qué recompensas devuelve.
   { to: '/crm/rewards', label: 'Recompensas', icon: Gift, key: 'rewards' },

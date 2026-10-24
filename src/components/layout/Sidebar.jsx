@@ -87,10 +87,12 @@ const NAV = [
   {
     id: "crm", label: "CRM", icon: "target", module: "crm",
     children: [
+      { label: "Negocios en curso",  path: "/crm/pipeline" },
       { label: "WhatsApp",           path: "/crm/whatsapp" },
-      { label: "Pipeline",           path: "/crm/pipeline" },
       { label: "Seguimientos",       path: "/crm/followups" },
-      { label: "Dashboard CRM",      path: "/crm/dashboard" },
+      { label: "Resultados",         path: "/crm/dashboard" },
+      { label: "Recompensas",        path: "/crm/rewards" },
+      { label: "Configuración",      path: "/crm/settings", roles: ["admin", "manager", "super_admin"], excludePaths: ["/crm/settings/meta"] },
       { label: "Integración Meta",   path: "/crm/settings/meta", module: "crm_meta_leads" },
     ],
   },

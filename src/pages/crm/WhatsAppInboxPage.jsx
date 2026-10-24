@@ -2,14 +2,17 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Layout from '../../components/layout/Layout';
 import CrmSubNav from '../../components/crm/CrmSubNav';
+import DealModal from '../../components/crm/DealModal';
+import NewDealModal from '../../components/crm/NewDealModal';
 import crmApi from '../../api/crm';
 import { usersAPI } from '../../api/users';
 import useAuthStore from '../../store/authStore';
 import { useWhatsAppSocket } from '../../hooks/useWhatsAppSocket';
 import {
-  MessageCircle, Search, Send, UserPlus, CheckCheck, Check, Loader2, Phone,
+  MessageCircle, Search, Send, UserPlus, CheckCheck, Check, Loader2,
   Sparkles, Pin, PinOff, Clock, StickyNote, Settings2, SlidersHorizontal,
   AlertTriangle, CircleDot, ExternalLink, Paperclip, Mic, Square, FileText, X,
+  ArrowLeft, ArrowUpRight, Plus, User as UserIcon,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -54,6 +57,62 @@ function displayName(conv) {
   const c = conv?.customer;
   if (c) return c.business_name || `${c.first_name || ''} ${c.last_name || ''}`.trim() || 'Cliente';
   return conv?.wa_contact_phone || 'Contacto';
+}
+
+const GRADIENT_BG = 'bg-gradient-to-r from-orange-500 via-rose-500 to-fuchsia-600';
+const DEFAULT_STAGE_COLOR = '#64748b';
+const AVATAR_COLORS = ['bg-purple-500', 'bg-blue-500', 'bg-emerald-500', 'bg-amber-500', 'bg-pink-500', 'bg-indigo-500', 'bg-teal-500'];
+
+// Nombre "real" del contacto: si solo hay número, el chat no tiene nombre.
+function hasRealName(conv) {
+  return displayName(conv) !== (conv?.wa_contact_phone || 'Contacto');
+}
+
+function initialsOf(name) {
+  return (name || '').split(' ').filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase() || '?';
+}
+
+function avatarColor(name) {
+  const sum = [...(name || '')].reduce((s, c) => s + c.charCodeAt(0), 0);
+  return AVATAR_COLORS[sum % AVATAR_COLORS.length];
+}
+
+// Últimos 10 dígitos: iguala "573166876163" con "3166876163".
+const phoneKey = (p) => String(p || '').replace(/\D/g, '').slice(-10);
+
+const compactCOP = (v) => {
+  const n = parseFloat(v || 0);
+  if (!n) return null;
+  if (n >= 1_000_000) return `$${(n / 1_000_000).toLocaleString('es-CO', { maximumFractionDigits: 1 })}M`;
+  if (n >= 1_000) return `$${Math.round(n / 1_000)}k`;
+  return `$${n}`;
+};
+
+function useMediaQuery(query) {
+  const [matches, setMatches] = useState(() => typeof window !== 'undefined' && window.matchMedia(query).matches);
+  useEffect(() => {
+    const mql = window.matchMedia(query);
+    const onChange = () => setMatches(mql.matches);
+    onChange();
+    mql.addEventListener('change', onChange);
+    return () => mql.removeEventListener('change', onChange);
+  }, [query]);
+  return matches;
+}
+
+function Avatar({ name, size = 'h-10 w-10' }) {
+  if (!name) {
+    return (
+      <span className={`${size} flex-none rounded-full bg-gray-200 text-gray-500 flex items-center justify-center`}>
+        <UserIcon size={16} />
+      </span>
+    );
+  }
+  return (
+    <span className={`${size} flex-none rounded-full text-white text-xs font-bold flex items-center justify-center ${avatarColor(name)}`}>
+      {initialsOf(name)}
+    </span>
+  );
 }
 
 function assigneeName(user) {
@@ -196,7 +255,8 @@ export default function WhatsAppInboxPage() {
   const [prefs, setPrefs] = useState(DEFAULT_PREFS);
   const [markOptions, setMarkOptions] = useState([]);
   const [showPrefs, setShowPrefs] = useState(false);
-  const [showPlus, setShowPlus] = useState(true);
+  // En pantallas angostas el panel plus reemplaza al chat, así que arranca cerrado.
+  const [showPlus, setShowPlus] = useState(() => !window.matchMedia('(max-width: 1023px)').matches);
   const [noteDraft, setNoteDraft] = useState('');
   const [followDraft, setFollowDraft] = useState('');
   const [simBody, setSimBody] = useState('¿Me confirma el valor final?');
@@ -215,6 +275,65 @@ export default function WhatsAppInboxPage() {
 
   const demoMode = !!waStatus?.demo_mode;
   const operational = !!waStatus?.operational;
+
+  // Celular/tablet: lista y chat son dos pantallas, como en WhatsApp.
+  const isNarrow = useMediaQuery('(max-width: 1023px)');
+
+  // Negocio abierto de cada chat — se cruza por cliente y, si el chat aún no
+  // está ligado a un cliente, por teléfono.
+  const [stages, setStages] = useState([]);
+  const [openDeals, setOpenDeals] = useState([]);
+  const [dealOpp, setDealOpp] = useState(null);
+  const [newDealOpen, setNewDealOpen] = useState(false);
+
+  const loadDeals = useCallback(async () => {
+    try {
+      const [stagesRes, oppsRes] = await Promise.all([crmApi.listPipelineStages(), crmApi.listOpportunities()]);
+      const stageList = stagesRes.data.data || [];
+      const openKeys = new Set(stageList.filter(s => s.stage_type === 'open').map(s => s.key));
+      setStages(stageList);
+      setOpenDeals((oppsRes.data.data || []).filter(o => openKeys.has(o.stage)));
+    } catch { /* sin negocios el chat sigue funcionando; solo no muestra el chip */ }
+  }, []);
+
+  useEffect(() => { loadDeals(); }, [loadDeals]);
+
+  const stageByKey = useMemo(() => Object.fromEntries(stages.map(s => [s.key, s])), [stages]);
+  const dealIndex = useMemo(() => {
+    const byCustomer = new Map();
+    const byPhone = new Map();
+    // La lista viene ordenada por prioridad: el primero de cada cliente es el más relevante.
+    for (const o of openDeals) {
+      if (!byCustomer.has(o.customer_id)) byCustomer.set(o.customer_id, o);
+      for (const p of [o.customer?.mobile, o.customer?.phone]) {
+        const key = phoneKey(p);
+        if (key.length === 10 && !byPhone.has(key)) byPhone.set(key, o);
+      }
+    }
+    return { byCustomer, byPhone };
+  }, [openDeals]);
+  const dealOf = useCallback(
+    (conv) => (conv?.customer_id && dealIndex.byCustomer.get(conv.customer_id)) || dealIndex.byPhone.get(phoneKey(conv?.wa_contact_phone)) || null,
+    [dealIndex]
+  );
+  const selectedDeal = dealOf(selected);
+  // Nombre a mostrar: el del chat o, si solo tiene número, el del cliente del
+  // negocio encontrado por teléfono. null = contacto sin nombre.
+  const nameOf = useCallback((conv, deal) => {
+    if (hasRealName(conv)) return displayName(conv);
+    const c = deal?.customer;
+    return c ? (c.business_name || `${c.first_name || ''} ${c.last_name || ''}`.trim() || null) : null;
+  }, []);
+  const selectedName = selected ? nameOf(selected, selectedDeal) : null;
+
+  const openDeal = async (opportunityId) => {
+    try {
+      const res = await crmApi.getOpportunity(opportunityId);
+      setDealOpp(res.data.data);
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'No se pudo abrir el negocio');
+    }
+  };
 
   const loadConversations = useCallback(async () => {
     setLoadingList(true);
@@ -570,60 +689,49 @@ export default function WhatsAppInboxPage() {
 
   return (
     <Layout>
-      <div className="space-y-3">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-              <MessageCircle className="text-emerald-600" size={26} />
-              WhatsApp Pitbox
-            </h1>
-            <p className="text-sm text-gray-500 mt-0.5">
-              {canAssignOthers
-                ? 'Vista admin: seguimiento de todos los asesores'
-                : 'Tu bandeja — gestiona como WhatsApp, con plus de CRM'}
-              {demoMode && <span className="ml-2 text-amber-700 font-medium">· Modo demo (sin Meta)</span>}
-              {waStatus?.connected && <span className="ml-2 text-emerald-600">· Cloud API conectada</span>}
-            </p>
-          </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <button
-              type="button"
-              onClick={() => setShowPrefs((v) => !v)}
-              className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border border-gray-200 bg-white hover:bg-gray-50"
-            >
-              <SlidersHorizontal size={14} />
-              Mis funciones
-            </button>
-            <CrmSubNav />
-          </div>
-        </div>
-
-        {demoMode && (
-          <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-            <div className="flex items-start justify-between gap-3 flex-wrap">
-              <div>
-                <strong>Demo comercial.</strong> Los mensajes se guardan en Pitbox sin salir a Meta.
-                {waStatus?.connected
-                  ? ' Este tenant también tiene una conexión real, pero el demo tiene prioridad mientras esté activo — nada sale a Meta hasta que lo desactives.'
-                  : ' Cuando Meta esté listo, se desactiva el demo y se conecta Cloud API.'}
-                {canAssignOthers && (
-                  <span className="block mt-1 text-xs text-amber-800">
-                    Tip: entra también como vendedor para ver que solo ve sus chats + cola.
+      <div className="space-y-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="p-2 bg-gradient-to-br from-accent to-accent-soft rounded-xl shadow-sm shadow-accent/30">
+              <MessageCircle className="w-5 h-5 text-white" />
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="text-xl font-bold text-gray-900 tracking-tight">WhatsApp Pitbox</h1>
+                {demoMode && (
+                  <span
+                    title={`Demo comercial: los mensajes se guardan en Pitbox sin salir a Meta.${waStatus?.connected
+                      ? ' Este tenant también tiene una conexión real, pero el demo tiene prioridad mientras esté activo.'
+                      : ' Cuando Meta esté listo, se desactiva el demo y se conecta Cloud API.'}${canAssignOthers ? ' Tip: entra como vendedor para ver que solo ve sus chats + cola.' : ''}`}
+                    className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold whitespace-nowrap bg-amber-50 text-amber-700 ring-1 ring-amber-200 cursor-help">
+                    <span className="h-1.5 w-1.5 rounded-full bg-amber-500" /> Modo demo
+                  </span>
+                )}
+                {waStatus?.connected && !demoMode && (
+                  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold whitespace-nowrap bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Cloud API conectada
                   </span>
                 )}
               </div>
-              {isAdmin && (
-                <button
-                  type="button"
-                  onClick={disableDemo}
-                  className="shrink-0 px-3 py-1.5 rounded-lg bg-white border border-amber-300 text-amber-800 text-xs font-semibold hover:bg-amber-100"
-                >
-                  Desactivar demo
-                </button>
-              )}
+              <p className="hidden sm:block text-sm text-gray-500">
+                {canAssignOthers
+                  ? 'Vista admin: seguimiento de todos los asesores'
+                  : 'Tu bandeja — gestiona como WhatsApp, con plus de CRM'}
+              </p>
             </div>
           </div>
-        )}
+          <button
+            type="button"
+            onClick={() => setShowPrefs((v) => !v)}
+            aria-expanded={showPrefs}
+            className="flex-none inline-flex items-center gap-1.5 !text-xs font-medium !px-3 !py-1.5 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 whitespace-nowrap"
+          >
+            <SlidersHorizontal size={14} />
+            Mis funciones
+          </button>
+        </div>
+
+        <CrmSubNav />
 
         {!operational && isAdmin && (
           <div className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm flex flex-wrap items-center justify-between gap-3">
@@ -657,6 +765,15 @@ export default function WhatsAppInboxPage() {
             <p className="text-xs text-gray-500 mb-3">
               Activa o quita funciones visuales. El admin siempre ve asignación y seguimiento de asesores.
             </p>
+            {demoMode && isAdmin && (
+              <div className="flex items-center justify-between gap-3 flex-wrap rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 mb-3 text-xs text-amber-900">
+                <span><strong>Modo demo activo.</strong> Los mensajes no salen a Meta.</span>
+                <button type="button" onClick={disableDemo}
+                  className="shrink-0 !px-3 !py-1 rounded-lg bg-white border border-amber-300 text-amber-800 !text-xs font-semibold hover:bg-amber-100">
+                  Desactivar demo
+                </button>
+              </div>
+            )}
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
               {Object.keys(PREF_LABELS).map((key) => (
                 <label key={key} className="flex items-center gap-2 text-xs text-gray-700 bg-gray-50 rounded-lg px-3 py-2 cursor-pointer">
@@ -673,9 +790,9 @@ export default function WhatsAppInboxPage() {
           </div>
         )}
 
-        <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm flex flex-col lg:flex-row h-[calc(100vh-240px)] min-h-[520px]">
-          {/* Lista */}
-          <aside className="w-full lg:w-[320px] border-b lg:border-b-0 lg:border-r border-gray-100 flex flex-col bg-[#f0f2f5]">
+        <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm flex h-[calc(100vh-240px)] min-h-[520px]">
+          {/* Lista — <div> y no <aside>: index.css vuelve fijo todo `aside` bajo 1024px (menú lateral) */}
+          <div className={`${isNarrow && selected ? 'hidden' : 'flex'} w-full lg:w-[330px] flex-none lg:border-r border-gray-100 flex-col bg-white`}>
             <div className="p-3 space-y-2 border-b border-gray-100 bg-[#008069] text-white">
               <p className="text-sm font-semibold tracking-wide">Chats</p>
               <div className="relative">
@@ -683,7 +800,7 @@ export default function WhatsAppInboxPage() {
                 <input
                   value={q}
                   onChange={(e) => setQ(e.target.value)}
-                  placeholder="Buscar"
+                  placeholder="Buscar nombre o número"
                   className="w-full pl-9 pr-3 py-2 text-sm rounded-lg border-0 text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-white/40 outline-none"
                 />
               </div>
@@ -694,8 +811,8 @@ export default function WhatsAppInboxPage() {
                   key={f.key}
                   type="button"
                   onClick={() => setFilter(f.key)}
-                  className={`px-2.5 py-1 text-[11px] rounded-full font-medium whitespace-nowrap transition ${
-                    filter === f.key ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  className={`!px-2.5 !py-1 !text-[11px] rounded-full whitespace-nowrap transition ${
+                    filter === f.key ? 'bg-emerald-600 text-white font-semibold' : 'bg-gray-100 text-gray-600 font-medium hover:bg-gray-200'
                   }`}
                 >
                   {f.label}
@@ -721,59 +838,72 @@ export default function WhatsAppInboxPage() {
               )}
               {conversations.map((conv) => {
                 const active = conv.id === selectedId;
+                const deal = dealOf(conv);
+                const dealStage = deal ? stageByKey[deal.stage] : null;
+                const name = nameOf(conv, deal);
+                const unread = conv.unread_count > 0;
                 return (
                   <button
                     key={conv.id}
                     type="button"
                     onClick={() => setSelectedId(conv.id)}
-                    className={`w-full text-left px-3 py-3 border-b border-gray-50 transition ${
-                      active ? 'bg-[#f0f2f5]' : 'hover:bg-gray-50'
+                    className={`w-full text-left !px-3 !py-3 !text-sm border-b border-gray-50 border-l-[3px] transition ${
+                      active ? 'bg-[#f0f2f5] border-l-emerald-600' : 'border-l-transparent hover:bg-gray-50'
                     }`}
                   >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0 flex items-start gap-2">
-                        <PriorityDot priority={conv.priority} />
-                        <div className="min-w-0">
+                    <div className="flex items-start gap-3">
+                      <Avatar name={name} />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between gap-2">
                           <p className="font-semibold text-sm text-gray-900 truncate flex items-center gap-1">
+                            <PriorityDot priority={conv.priority} />
                             {conv.is_pinned && <Pin size={12} className="text-emerald-600 shrink-0" />}
-                            {displayName(conv)}
+                            {name || displayName(conv)}
                           </p>
-                          <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
-                            <Phone size={11} />
-                            {conv.wa_contact_phone}
-                          </p>
-                          <div className="flex flex-wrap gap-1 mt-1">
-                            {!conv.assigned_user_id && (
-                              <span className="text-[10px] font-medium uppercase text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded">Cola</span>
-                            )}
-                            {(conv.marks || []).slice(0, 2).map((m) => (
-                              <span key={m} className={`text-[10px] px-1.5 py-0.5 rounded ${MARK_META[m]?.className || 'bg-gray-100 text-gray-600'}`}>
-                                {MARK_META[m]?.label || m}
-                              </span>
-                            ))}
-                          </div>
-                          {canAssignOthers && conv.assignee && (
-                            <p className="text-[11px] text-gray-400 mt-0.5 truncate">Asesor: {assigneeName(conv.assignee)}</p>
+                          <span className={`text-[11px] shrink-0 ${unread ? 'text-emerald-700 font-semibold' : 'text-gray-400'}`}>
+                            {formatTime(conv.last_message_at)}
+                          </span>
+                        </div>
+                        {name && (
+                          <p className="text-xs text-gray-500 truncate">{conv.wa_contact_phone}</p>
+                        )}
+                        {canAssignOthers && conv.assignee && (
+                          <p className="text-[11px] text-gray-400 truncate">Asesor: {assigneeName(conv.assignee)}</p>
+                        )}
+                        <div className="flex flex-wrap items-center gap-1 mt-1.5">
+                          {!conv.assigned_user_id && (
+                            <span className="text-[10px] font-semibold text-amber-800 bg-amber-100 px-1.5 py-0.5 rounded-full">En cola</span>
+                          )}
+                          {deal ? (
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium border border-gray-200 bg-white text-gray-700">
+                              <span className="h-1.5 w-1.5 rounded-full" style={{ background: dealStage?.color || DEFAULT_STAGE_COLOR }} />
+                              {dealStage?.label || deal.stage}
+                              {compactCOP(deal.expected_value) && <span className="text-gray-400">· {compactCOP(deal.expected_value)}</span>}
+                            </span>
+                          ) : (
+                            <span className="px-1.5 py-0.5 rounded-full text-[10px] text-gray-400 border border-dashed border-gray-200">Sin negocio</span>
+                          )}
+                          {(conv.marks || []).slice(0, 2).map((m) => (
+                            <span key={m} className={`text-[10px] px-1.5 py-0.5 rounded-full ${MARK_META[m]?.className || 'bg-gray-100 text-gray-600'}`}>
+                              {MARK_META[m]?.label || m}
+                            </span>
+                          ))}
+                          {unread && (
+                            <span className="ml-auto min-w-[18px] h-[18px] px-1 flex items-center justify-center text-[10px] font-bold text-white bg-emerald-600 rounded-full">
+                              {conv.unread_count}
+                            </span>
                           )}
                         </div>
-                      </div>
-                      <div className="flex flex-col items-end gap-1 shrink-0">
-                        <span className="text-[11px] text-gray-400">{formatTime(conv.last_message_at)}</span>
-                        {conv.unread_count > 0 && (
-                          <span className="min-w-[18px] h-[18px] px-1 flex items-center justify-center text-[10px] font-bold text-white bg-emerald-600 rounded-full">
-                            {conv.unread_count}
-                          </span>
-                        )}
                       </div>
                     </div>
                   </button>
                 );
               })}
             </div>
-          </aside>
+          </div>
 
           {/* Chat */}
-          <section className="flex-1 flex flex-col min-w-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgdmlld0JveD0iMCAwIDYwIDYwIj48ZyBmaWxsPSIjZTVlNWUwIiBmaWxsLW9wYWNpdHk9IjAuMzUiPjxwYXRoIGQ9Ik0zNiAxOGMwIDAtNiA2LTEyIDZTMTIgMTggMTIgMThzNi02IDEyLTYgMTIgNiAxMiA2eiIvPjwvZz48L3N2Zz4=')] bg-[#e5ddd5]">
+          <section className={`${isNarrow && !selected ? 'hidden' : 'flex'} flex-1 flex-col min-w-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgdmlld0JveD0iMCAwIDYwIDYwIj48ZyBmaWxsPSIjZTVlNWUwIiBmaWxsLW9wYWNpdHk9IjAuMzUiPjxwYXRoIGQ9Ik0zNiAxOGMwIDAtNiA2LTEyIDZTMTIgMTggMTIgMThzNi02IDEyLTYgMTIgNiAxMiA2eiIvPjwvZz48L3N2Zz4=')] bg-[#e5ddd5]`}>
             {!selected && (
               <div className="flex-1 flex flex-col items-center justify-center text-gray-500 gap-2 px-6 bg-[#f0f2f5]">
                 <MessageCircle size={48} className="opacity-30" />
@@ -786,23 +916,46 @@ export default function WhatsAppInboxPage() {
 
             {selected && (
               <>
-                <header className="px-4 py-2.5 bg-[#f0f2f5] border-b border-gray-200 flex flex-wrap items-center justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="font-semibold text-gray-900 truncate">{displayName(selected)}</p>
-                    <p className="text-xs text-gray-500">{selected.wa_contact_phone}</p>
+                <header className="px-3 sm:px-4 py-2.5 bg-[#f0f2f5] border-b border-gray-200 flex flex-wrap items-center gap-2">
+                  {isNarrow && (
+                    <button type="button" onClick={() => setSelectedId(null)} aria-label="Volver a los chats"
+                      className="flex-none h-8 w-8 !p-0 flex items-center justify-center rounded-full text-gray-600 hover:bg-gray-200 transition">
+                      <ArrowLeft size={18} />
+                    </button>
+                  )}
+                  <Avatar name={selectedName} size="h-9 w-9" />
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold text-sm text-gray-900 truncate">{selectedName || displayName(selected)}</p>
+                    {selectedName && <p className="text-[11px] text-gray-500">{selected.wa_contact_phone}</p>}
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
                     {prefs.show_window_status && selected.window && (
-                      <span className={`text-[11px] font-medium px-2 py-1 rounded-full ${
+                      <span className={`text-[11px] font-medium px-2 py-1 rounded-full whitespace-nowrap ${
                         selected.window.open ? 'bg-emerald-100 text-emerald-800' : 'bg-orange-100 text-orange-800'
                       }`}>
                         {selected.window.open ? 'Ventana 24h abierta' : 'Ventana cerrada'}
                       </span>
                     )}
+                    {selectedDeal ? (
+                      <button type="button" onClick={() => openDeal(selectedDeal.id)} title="Abrir el negocio"
+                        className="inline-flex items-center gap-1.5 !px-2.5 !py-1 rounded-full !text-[11px] font-medium border border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:text-gray-900 transition whitespace-nowrap">
+                        <span className="h-1.5 w-1.5 rounded-full" style={{ background: stageByKey[selectedDeal.stage]?.color || DEFAULT_STAGE_COLOR }} />
+                        {stageByKey[selectedDeal.stage]?.label || selectedDeal.stage} · Ver negocio
+                        <ArrowUpRight size={11} className="text-gray-400" />
+                      </button>
+                    ) : (
+                      <button type="button" onClick={() => setNewDealOpen(true)}
+                        className="inline-flex items-center gap-1 !px-2.5 !py-1 rounded-full !text-[11px] font-semibold border border-dashed border-orange-300 bg-white text-accent hover:bg-orange-50 transition whitespace-nowrap">
+                        <Plus size={12} /> Crear negocio
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={() => setShowPlus((v) => !v)}
-                      className="text-xs font-medium px-2.5 py-1.5 rounded-lg border border-gray-200 bg-white hover:bg-gray-50"
+                      aria-pressed={showPlus}
+                      className={`!text-xs font-semibold !px-3 !py-1.5 rounded-lg transition whitespace-nowrap ${
+                        showPlus ? 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50' : `${GRADIENT_BG} text-white shadow-sm shadow-rose-500/30`
+                      }`}
                     >
                       {showPlus ? 'Ocultar plus' : 'Plus CRM'}
                     </button>
@@ -810,7 +963,7 @@ export default function WhatsAppInboxPage() {
                 </header>
 
                 <div className="flex-1 flex min-h-0">
-                  <div className="flex-1 flex flex-col min-w-0">
+                  <div className={`${isNarrow && showPlus ? 'hidden' : 'flex'} flex-1 flex-col min-w-0`}>
                     <div className="flex-1 overflow-y-auto px-3 py-4 space-y-2">
                       {loadingMsgs && (
                         <div className="flex justify-center py-8 text-gray-400"><Loader2 className="animate-spin" size={22} /></div>
@@ -900,14 +1053,14 @@ export default function WhatsAppInboxPage() {
                             type="button"
                             disabled={!operational || sending}
                             onClick={() => fileInputRef.current?.click()}
-                            className="h-10 w-10 rounded-full bg-white border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-50 disabled:opacity-40"
+                            className="shrink-0 !p-0 h-10 w-10 rounded-full bg-white border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-50 disabled:opacity-40"
                             title="Adjuntar archivo"
                           >
                             <Paperclip size={16} />
                           </button>
                           {(prefs.show_ai_suggest) && (
                             <button type="button" onClick={handleSuggest} disabled={aiBusy || !operational}
-                              className="h-10 w-10 rounded-full bg-white border border-gray-200 flex items-center justify-center text-emerald-700 hover:bg-emerald-50 disabled:opacity-40" title="Sugerir">
+                              className="shrink-0 !p-0 h-10 w-10 rounded-full bg-white border border-gray-200 flex items-center justify-center text-emerald-700 hover:bg-emerald-50 disabled:opacity-40" title="Sugerir">
                               <Sparkles size={15} />
                             </button>
                           )}
@@ -918,10 +1071,10 @@ export default function WhatsAppInboxPage() {
                             placeholder={
                               pendingFile
                                 ? 'Caption opcional…'
-                                : operational ? 'Escribe un mensaje' : 'Conecta el número en Configuración → WhatsApp Business o activa el demo'
+                                : operational ? 'Mensaje' : 'Conecta el número en Configuración → WhatsApp Business o activa el demo'
                             }
                             disabled={!operational}
-                            className="flex-1 resize-none text-sm rounded-xl border-0 px-3 py-2.5 focus:ring-2 focus:ring-emerald-500/40 outline-none disabled:bg-gray-100"
+                            className="flex-1 min-w-0 resize-none text-sm rounded-xl border-0 px-3 py-2.5 focus:ring-2 focus:ring-emerald-500/40 outline-none disabled:bg-gray-100"
                             onKeyDown={(e) => {
                               if (e.key === 'Enter' && !e.shiftKey) {
                                 e.preventDefault();
@@ -933,7 +1086,7 @@ export default function WhatsAppInboxPage() {
                             <button
                               type="submit"
                               disabled={sending || !operational}
-                              className="shrink-0 h-10 w-10 rounded-full bg-[#008069] text-white flex items-center justify-center hover:bg-[#006e5a] disabled:opacity-40"
+                              className="shrink-0 !p-0 h-10 w-10 rounded-full bg-[#008069] text-white flex items-center justify-center hover:bg-[#006e5a] disabled:opacity-40"
                             >
                               {sending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
                             </button>
@@ -942,7 +1095,7 @@ export default function WhatsAppInboxPage() {
                               type="button"
                               disabled={!operational || sending}
                               onClick={startRecording}
-                              className="shrink-0 h-10 w-10 rounded-full bg-[#008069] text-white flex items-center justify-center hover:bg-[#006e5a] disabled:opacity-40"
+                              className="shrink-0 !p-0 h-10 w-10 rounded-full bg-[#008069] text-white flex items-center justify-center hover:bg-[#006e5a] disabled:opacity-40"
                               title="Grabar audio"
                             >
                               <Mic size={16} />
@@ -955,7 +1108,7 @@ export default function WhatsAppInboxPage() {
 
                   {/* Plus CRM panel */}
                   {showPlus && (
-                    <aside className="w-full lg:w-[280px] border-t lg:border-t-0 lg:border-l border-gray-200 bg-white overflow-y-auto p-3 space-y-4">
+                    <div className="w-full lg:w-[280px] flex-none lg:border-l border-gray-200 bg-white overflow-y-auto p-3 space-y-4">
                       <div>
                         <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400 mb-2">Gestión plus</p>
                         {!selected.assigned_user_id && (
@@ -1114,7 +1267,7 @@ export default function WhatsAppInboxPage() {
                           </div>
                         )}
                       </div>
-                    </aside>
+                    </div>
                   )}
                 </div>
               </>
@@ -1122,6 +1275,18 @@ export default function WhatsAppInboxPage() {
           </section>
         </div>
       </div>
+
+      <DealModal opportunity={dealOpp} stage={stageByKey[dealOpp?.stage]}
+        onClose={() => setDealOpp(null)} onChanged={loadDeals} />
+
+      <NewDealModal
+        isOpen={newDealOpen}
+        onClose={() => setNewDealOpen(false)}
+        onCreated={() => { setNewDealOpen(false); toast.success('Negocio creado'); loadDeals(); }}
+        initialCustomer={selected?.customer || null}
+        initialPhone={selected?.customer ? '' : selected?.wa_contact_phone || ''}
+        initialSource="whatsapp"
+      />
     </Layout>
   );
 }
