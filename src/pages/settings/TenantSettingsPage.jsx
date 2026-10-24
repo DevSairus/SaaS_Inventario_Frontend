@@ -1,6 +1,6 @@
 // frontend/src/pages/settings/TenantSettingsPage.jsx
 import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import axios from '../../api/axios';
 import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';
@@ -12,7 +12,12 @@ import useTenantStore from '../../store/tenantStore';
 import useAuthStore from '../../store/authStore';
 import TaxConfigSection from '../../components/settings/TaxConfigSection';
 import { invalidateRetentionCatalog } from '../../hooks/useRetentionCatalog';
-import { Building2, Receipt, ShoppingCart, Wrench, Landmark, MessageCircle, Printer, Package } from 'lucide-react';
+import { Building2, Receipt, ShoppingCart, Wrench, Landmark, MessageCircle, Printer, Package, FileText } from 'lucide-react';
+
+// Mismo texto que usa el PDF de cotización cuando el tenant no configuró el
+// suyo (backend/src/services/sales/quotePdfService.js#DEFAULT_TERMS).
+const DEFAULT_QUOTE_TERMS = 'Precios sujetos a disponibilidad de inventario al momento de la aprobación. Esta cotización no constituye una factura de venta.';
+const DEFAULT_QUOTE_VALIDITY_DAYS = 15;
 
 const TenantSettingsPage = () => {
   const navigate = useNavigate();
@@ -38,14 +43,16 @@ const TenantSettingsPage = () => {
     logo_url: '',
     primary_color: '#2563eb',
     secondary_color: '#475569',
-    pdf_config: { payment_notes: '', legal_note: '' },
+    pdf_config: { payment_notes: '', legal_note: '', quote_terms: '', quote_validity_days: '' },
     features: {},
     tax_config: {},
     business_config: { default_labor_cost_percentage: 40, cost_variation_alert_pct: 10 }
   });
   const [logoPreview, setLogoPreview] = useState(null);
   const [logoFile, setLogoFile] = useState(null);
-  const [activeTab, setActiveTab] = useState('general');
+  // ?tab=cotizaciones abre directo una pestaña (ej. desde el listado de Cotizaciones).
+  const [searchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'general');
   // Ocultar remisiones: el admin solo puede ACTIVARLO; una vez guardado la
   // sección deja de mostrarse y solo el superadmin lo desactiva desde su panel
   // (ver tenant.controller.js#updateConfig). Se toma del valor CARGADO, no
@@ -56,6 +63,7 @@ const TenantSettingsPage = () => {
     { id: 'general',     label: 'General',     Icon: Building2 },
     { id: 'facturacion', label: 'Facturación',  Icon: Receipt },
     { id: 'ventas',      label: 'Ventas',       Icon: ShoppingCart },
+    { id: 'cotizaciones', label: 'Cotizaciones', Icon: FileText },
     { id: 'taller',      label: 'Taller',       Icon: Wrench },
     { id: 'inventario',  label: 'Inventario',   Icon: Package },
   ];
@@ -412,6 +420,32 @@ const TenantSettingsPage = () => {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
+
+                {/* Color de marca: lo usan los PDF de factura, remisión y
+                    cotización y las páginas que ve el cliente. */}
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Color de la marca</label>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="color"
+                      value={/^#[0-9a-f]{6}$/i.test(config.primary_color || '') ? config.primary_color : '#2563eb'}
+                      onChange={(e) => setConfig(prev => ({ ...prev, primary_color: e.target.value }))}
+                      className="h-10 w-14 cursor-pointer rounded border border-gray-300 bg-white p-1"
+                      aria-label="Color de la marca"
+                    />
+                    <input
+                      type="text"
+                      value={config.primary_color || ''}
+                      onChange={(e) => setConfig(prev => ({ ...prev, primary_color: e.target.value.trim() }))}
+                      placeholder="#2563eb"
+                      maxLength={7}
+                      className="w-28 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm font-mono"
+                    />
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1">
+                    Se usa en el PDF de facturas, remisiones y cotizaciones y en las páginas que recibe el cliente. Si es muy claro, el PDF lo oscurece para que se lea.
+                  </p>
+                </div>
               </div>
             </div>
           </Card>
@@ -483,6 +517,21 @@ const TenantSettingsPage = () => {
                     placeholder="Ej: Este documento se asimila a una Letra de Cambio según el Art. 774 del Código de Comercio."
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm resize-y"
                   />
+                  <p className="text-xs text-gray-400 mt-1">Se imprime como "Efectos legales" en las facturas (no en remisiones).</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Garantía
+                    <span className="ml-2 text-xs text-gray-400 font-normal">(opcional)</span>
+                  </label>
+                  <textarea
+                    value={config.pdf_config?.warranty_note || ''}
+                    onChange={(e) => setConfig(prev => ({ ...prev, pdf_config: { ...prev.pdf_config, warranty_note: e.target.value } }))}
+                    rows={2}
+                    placeholder="Ej: 3 meses o 5.000 km en mano de obra. Repuestos con la garantía del fabricante."
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm resize-y"
+                  />
+                  <p className="text-xs text-gray-400 mt-1">Aparece en facturas y remisiones, junto al monto en letras.</p>
                 </div>
               </div>
             </div>
@@ -738,6 +787,75 @@ const TenantSettingsPage = () => {
           </Card>
           </>
           )}
+
+          {/* ============ COTIZACIONES ============ */}
+          {activeTab === 'cotizaciones' && (() => {
+            const pdf = config.pdf_config || {};
+            const setPdf = (key, value) => setConfig(prev => ({ ...prev, pdf_config: { ...prev.pdf_config, [key]: value } }));
+            const days = parseInt(pdf.quote_validity_days, 10) || DEFAULT_QUOTE_VALIDITY_DAYS;
+            const sampleUntil = new Date();
+            sampleUntil.setDate(sampleUntil.getDate() + days);
+            const previewTerms = [
+              `Oferta válida hasta el ${sampleUntil.toLocaleDateString('es-CO')}.`,
+              pdf.quote_terms?.trim() || DEFAULT_QUOTE_TERMS,
+              pdf.payment_notes?.trim(),
+            ].filter(Boolean).join('\n\n');
+            return (
+          <>
+          <Card>
+            <div className="p-6">
+              <h2 className="text-xl font-semibold mb-1">Vigencia</h2>
+              <p className="text-sm text-gray-500 mb-5">
+                Días que una cotización nueva queda vigente. Se puede cambiar en cada cotización; vencida, el
+                cliente ya no puede aprobarla desde el enlace.
+              </p>
+              <div className="flex items-center gap-3">
+                <input
+                  type="number"
+                  min={1}
+                  max={365}
+                  value={pdf.quote_validity_days ?? ''}
+                  onChange={(e) => setPdf('quote_validity_days', e.target.value)}
+                  placeholder={String(DEFAULT_QUOTE_VALIDITY_DAYS)}
+                  className="w-28 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                />
+                <span className="text-sm text-gray-600">días desde la fecha de emisión</span>
+              </div>
+              <p className="text-xs text-gray-400 mt-1">Vacío = {DEFAULT_QUOTE_VALIDITY_DAYS} días. Entre 1 y 365.</p>
+            </div>
+          </Card>
+
+          <Card>
+            <div className="p-6">
+              <h2 className="text-xl font-semibold mb-1">Condiciones comerciales</h2>
+              <p className="text-sm text-gray-500 mb-5">
+                Aparecen en el PDF de la cotización y en el enlace que recibe el cliente: forma de pago, tiempos de
+                entrega, garantía, anticipo, etc.
+              </p>
+              <textarea
+                value={pdf.quote_terms || ''}
+                onChange={(e) => setPdf('quote_terms', e.target.value)}
+                rows={6}
+                placeholder={"Ej: Forma de pago: 50% de anticipo y saldo contra entrega.\nTiempo de entrega: 3 días hábiles después de la aprobación.\nGarantía: 3 meses en mano de obra.\nPrecios incluyen IVA."}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm resize-y"
+              />
+              <p className="text-xs text-gray-400 mt-1">
+                Puedes usar varias líneas. Si lo dejas vacío, el PDF usa un texto genérico. Las observaciones de
+                pago (pestaña Facturación) también se agregan en la cotización.
+              </p>
+
+              <div className="mt-5">
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">Así se verá en el PDF</p>
+                <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+                  <p className="text-[11px] font-bold uppercase tracking-wider mb-2" style={{ color: config.primary_color || '#1e3a8a' }}>Condiciones comerciales</p>
+                  <p className="text-sm text-gray-700 whitespace-pre-line">{previewTerms}</p>
+                </div>
+              </div>
+            </div>
+          </Card>
+          </>
+            );
+          })()}
 
           {/* ============ TALLER ============ */}
           {activeTab === 'taller' && (

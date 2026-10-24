@@ -39,6 +39,12 @@ export const icaAPI = {
   voidSettlement: async (id, reason) => (await api.patch(`/accounting/ica/settlements/${id}/void`, { reason })).data,
 };
 
+// Prorrateo del IVA descontable por período (art. 490 E.T.)
+export const ivaProrrateoAPI = {
+  report: async (params) => (await api.get('/accounting/iva-prorrateo', { params })).data,
+  createEntry: async (payload) => (await api.post('/accounting/iva-prorrateo', payload)).data,
+};
+
 // Migración de movimientos entre cuentas (solo contabilidad)
 export const accountMigrationsAPI = {
   list: async () => (await api.get('/accounting/account-migrations')).data,
@@ -263,6 +269,7 @@ export const SOURCE_TYPE_LABELS = {
   reclassification: 'Reclasificación',
   ica_settlement: 'Liquidación ICA',
   ica_autoretention: 'Autorretención ICA',
+  iva_prorrateo: 'Prorrateo de IVA',
   opening_balance: 'Saldo inicial',
   year_end_close: 'Cierre de año',
   internal_consumption: 'Consumo interno',

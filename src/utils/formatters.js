@@ -112,9 +112,11 @@ export const calculateItemTotals = (item) => {
   const discountAmount = calculateDiscount(subtotal, discountPercentage);
   const subtotalAfterDiscount = subtotal - discountAmount;
   const taxAmount = calculateTax(subtotalAfterDiscount, taxRate);
-  const total = subtotalAfterDiscount + taxAmount;
+  // INC (impoconsumo) de la factura del proveedor: suma al total, aparte del IVA.
+  const incAmount = calculateTax(subtotalAfterDiscount, toNumber(item.inc_rate, 0));
+  const total = subtotalAfterDiscount + taxAmount + incAmount;
 
-  return { subtotal: subtotalAfterDiscount, discountAmount, taxAmount, total };
+  return { subtotal: subtotalAfterDiscount, discountAmount, taxAmount, incAmount, total };
 };
 
 export const isValidNumber = (value) => toNumber(value) >= 0;

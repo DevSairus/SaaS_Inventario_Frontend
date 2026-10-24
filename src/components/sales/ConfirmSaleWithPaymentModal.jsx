@@ -26,15 +26,9 @@ const DOC_TYPES = [
     activeColor: 'border-emerald-500 bg-emerald-50',
     badge: 'text-emerald-700 bg-emerald-100',
   },
-  {
-    value: 'cotizacion',
-    icon: '💼',
-    label: 'Cotización',
-    desc: 'Propuesta de precio. No mueve inventario.',
-    color: 'border-amber-200 hover:border-amber-400',
-    activeColor: 'border-amber-500 bg-amber-50',
-    badge: 'text-amber-700 bg-amber-100',
-  },
+  // Sin "Cotización": confirmar = volverlo venta (inventario, caja,
+  // contabilidad). La cotización tiene su propio formulario (/quotes/new) y
+  // llega aquí solo para convertirse, ya aprobada, en remisión o factura.
 ];
 
 const PAYMENT_METHODS_LIST = [
@@ -80,12 +74,6 @@ const ConfirmSaleWithPaymentModal = ({
   onConfirm,
   saleTotal,
   currentDocType,
-  // Con el módulo CRM activo, cotizar deja de ser una opción al confirmar
-  // una venta desde acá -- la cotización nace en su propio formulario
-  // dentro de CRM (ver PipelinePage.jsx / SaleFormPage en modo CRM). Se
-  // deja pasar igual si la venta YA es una cotización (currentDocType),
-  // para no dejar sin opción visible una venta que ya nació así.
-  hideQuoteOption = false,
   loading = false,
   // ID del cliente de la venta -- si viene, se consultan sus anticipos
   // disponibles (Cartera) para poder aplicarlos como parte del pago.
@@ -99,7 +87,7 @@ const ConfirmSaleWithPaymentModal = ({
   canCreateAdvance = false,
 }) => {
   const isPaymentMode = mode === 'payment';
-  const docTypes = DOC_TYPES.filter(t => t.value !== 'cotizacion' || !hideQuoteOption || currentDocType === 'cotizacion');
+  const docTypes = DOC_TYPES;
   const [docType, setDocType]           = useState(currentDocType || 'remision');
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [paidAmount, setPaidAmount]       = useState(saleTotal);

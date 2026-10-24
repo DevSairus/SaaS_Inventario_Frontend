@@ -58,6 +58,8 @@ const salesApi = {
   sendWhatsApp: (id) => api.post(`/sales/${id}/send-whatsapp`),
   // Generar/reutilizar enlace público para copiar directamente (sin WhatsApp)
   generateShareLink: (id) => api.post(`/sales/${id}/share-link`),
+  // Aprobación/rechazo de una cotización registrada por el asesor.
+  setQuoteStatus: (id, data) => api.post(`/sales/${id}/quote-status`, data),
 
   generatePaymentReceipt: (id, paymentIndex) => api.get(`/sales/${id}/payment-receipt`, { params: { payment_index: paymentIndex }, responseType: 'blob' }),
 

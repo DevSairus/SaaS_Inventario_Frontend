@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import Layout from '../../components/layout/Layout';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import useWorkshopStore from '../../store/workshopStore';
 import useProductsStore from '../../store/productsStore';
 import useTenantStore from '../../store/tenantStore';
@@ -56,6 +56,8 @@ const inputCls =
 export default function WorkOrderDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  // Si se llegó desde otra lista (ej. Cotizaciones con su búsqueda), volver ahí.
+  const location = useLocation();
   const {
     currentOrder: order, orderLoading,
     fetchOrder, patchCurrentOrder, changeStatus, revertStatus, addItem, updateItem, removeItem, generateSale, uploadPhotos, deletePhoto,
@@ -934,7 +936,7 @@ export default function WorkOrderDetailPage() {
         {/* Header */}
         <div className="flex items-start justify-between gap-3 mb-6 flex-wrap">
           <div className="flex items-center gap-3">
-            <button onClick={() => navigate('/workshop/work-orders')}
+            <button onClick={() => navigate(location.state?.from || '/workshop/work-orders')}
               className="p-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition">
               <ArrowLeft size={18} />
             </button>

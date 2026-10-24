@@ -116,8 +116,12 @@ function SaleFormPage() {
   // cambio. Reusamos el mismo componente en vez de duplicarlo: en este modo
   // la venta nace directo como 'cotizacion', con o sin oportunidad de origen.
   const isCrmQuoteRoute = location.pathname.startsWith('/crm/quotes');
-  const isCrmQuoteMode = isCrmQuoteRoute || Boolean(opportunityId);
+  // /quotes/new y /quotes/:id/edit: formulario de cotización fuera del CRM
+  // (Cotizaciones es su propia sección, accesible con Ventas, Taller o CRM).
+  const isQuotesRoute = location.pathname.startsWith('/quotes');
   const { createSale, updateSale, fetchSaleById, currentSale, loading } = useSalesStore();
+  const isCrmQuoteMode = isCrmQuoteRoute || isQuotesRoute || Boolean(opportunityId)
+    || (Boolean(id) && currentSale?.id === id && currentSale?.document_type === 'cotizacion');
   const { features, enabledModules, fetchFeatures, taxConfig } = useTenantStore();
   // Porcentajes AIU por defecto del tenant (Configuración → Impuestos)
   const aiuDefaults = { admin_pct: 10, unforeseen_pct: 5, profit_pct: 5, iva_rate: 19, ...(taxConfig?.aiu || {}) };
@@ -180,6 +184,7 @@ function SaleFormPage() {
     aiu_unforeseen_pct: '',
     aiu_profit_pct: '',
     aiu_object: '',
+    quote_valid_until: '',
   });
 
   const [showBrandDropdown, setShowBrandDropdown] = useState(false);
@@ -416,6 +421,7 @@ function SaleFormPage() {
         aiu_unforeseen_pct: currentSale.aiu_unforeseen_pct ?? '',
         aiu_profit_pct: currentSale.aiu_profit_pct ?? '',
         aiu_object: currentSale.aiu_object || '',
+        quote_valid_until: currentSale.quote_valid_until ? String(currentSale.quote_valid_until).slice(0, 10) : '',
       });
 
       // Establecer el nombre del cliente en el campo de búsqueda
@@ -433,6 +439,8 @@ function SaleFormPage() {
           unit_price: toInteger(item.unit_price, 0),
           discount_percentage: toInteger(item.discount_percentage, 0),
           tax_percentage: toInteger(item.tax_percentage, 19),
+          inc_rate: toNumber(item.inc_rate),
+          inc_amount: toInteger(item.inc_amount, 0),
           discount_amount: toInteger(item.discount_amount, 0),
           tax_amount: toInteger(item.tax_amount, 0),
           subtotal: toInteger(item.subtotal, 0),
@@ -643,6 +651,7 @@ function SaleFormPage() {
         unit_price: toInteger(product.base_price, 0),
         discount_percentage: 0,
         tax_percentage: taxPct,
+        inc_rate: incRateOf(product),
         price_includes_tax: product.price_includes_tax || false,
         has_tax: product.has_tax !== false,
         technician_id: '',
@@ -673,6 +682,13 @@ function SaleFormPage() {
     }
   };
 
+  // Impoconsumo (INC) del producto -- mismo criterio que taxService.calculateItemTaxes
+  // en el backend: tarifa de product.tax_config.inc, sobre la base sin IVA.
+  const incRateOf = (product) => {
+    const inc = product?.tax_config?.inc;
+    return inc?.enabled && Number(inc.rate) > 0 ? Number(inc.rate) : 0;
+  };
+
   const calculateItemTotals = (item) => {
     const quantity = toInteger(item.quantity, 0);
     const unitPrice = toInteger(item.unit_price, 0);
@@ -686,7 +702,9 @@ function SaleFormPage() {
     const taxBase = subtotal - discount;
     
     let tax = 0;
+    let inc = 0;
     let total = 0;
+    const incRate = toNumber(item.inc_rate);
 
     if (formData.aiu_enabled) {
       // Factura AIU: la línea es costo directo sin IVA (el IVA va solo sobre
@@ -696,17 +714,21 @@ function SaleFormPage() {
         ? taxBase - Math.round((taxBase * taxPercentage) / (100 + taxPercentage))
         : taxBase;
     } else if (!hasTax) {
-      // Producto exento de IVA
+      // Producto exento de IVA (el INC, si lo tiene, se sigue cobrando)
       tax = 0;
-      total = taxBase;
+      inc = Math.round((taxBase * incRate) / 100);
+      total = taxBase + inc;
     } else if (priceIncludesTax) {
-      // El precio YA INCLUYE el IVA - extraerlo
-      tax = Math.round((taxBase * taxPercentage) / (100 + taxPercentage));
+      // El precio YA INCLUYE los impuestos: se extraen IVA e INC juntos
+      const netBase = taxBase / (1 + (taxPercentage + incRate) / 100);
+      tax = Math.round((netBase * taxPercentage) / 100);
+      inc = Math.round((netBase * incRate) / 100);
       total = taxBase;
     } else {
-      // El precio NO incluye IVA - sumarlo
+      // El precio NO incluye impuestos - se suman IVA e INC sobre la base
       tax = Math.round((taxBase * taxPercentage) / 100);
-      total = taxBase + tax;
+      inc = Math.round((taxBase * incRate) / 100);
+      total = taxBase + tax + inc;
     }
 
     return {
@@ -718,6 +740,7 @@ function SaleFormPage() {
       subtotal,
       discount_amount: discount,
       tax_amount: tax,
+      inc_amount: inc,
       total
     };
   };
@@ -746,6 +769,7 @@ function SaleFormPage() {
       unit_price: toInteger(unit_price, 0),
       discount_percentage: 0,
       tax_percentage: product.has_tax === false ? 0 : (product.tax_percentage || 19),
+      inc_rate: incRateOf(product),
       price_includes_tax: product.price_includes_tax || false,
       has_tax: product.has_tax !== false,
       technician_id: '',
@@ -779,6 +803,7 @@ function SaleFormPage() {
     const subtotal = items.reduce((sum, item) => sum + toInteger(item.subtotal, 0), 0);
     const discount = items.reduce((sum, item) => sum + toInteger(item.discount_amount, 0), 0);
     const tax = items.reduce((sum, item) => sum + toInteger(item.tax_amount, 0), 0);
+    const inc = items.reduce((sum, item) => sum + toInteger(item.inc_amount, 0), 0);
     const total = items.reduce((sum, item) => sum + toInteger(item.total, 0), 0);
     // Descuento global -- preview del lado del cliente; el backend recalcula
     // y persiste el valor real al guardar (ver resolveGlobalDiscount).
@@ -801,7 +826,7 @@ function SaleFormPage() {
       };
     }
     const grandTotal = total - globalDiscount;
-    return { subtotal, discount, tax, total, globalDiscount, grandTotal };
+    return { subtotal, discount, tax, inc, total, globalDiscount, grandTotal };
   };
 
   const handleSubmit = async (e) => {
@@ -865,8 +890,8 @@ function SaleFormPage() {
       if (isEditMode) {
         await updateSale(id, saleData);
         draft.clear();
-        toast.success('Venta actualizada exitosamente');
-        navigate(`/sales/${id}`);
+        toast.success(isCrmQuoteMode ? 'Cotización actualizada' : 'Venta actualizada exitosamente');
+        navigate(isCrmQuoteMode ? `/quotes/${id}` : `/sales/${id}`, { state: location.state });
       } else {
         const result = await createSale(saleData);
         draft.clear();
@@ -879,7 +904,7 @@ function SaleFormPage() {
           // tipo de documento (se elige al confirmarla).
           toast.success('Borrador de venta guardado');
         }
-        navigate(`/sales/${result.id}`);
+        navigate(isCrmQuoteMode ? `/quotes/${result.id}` : `/sales/${result.id}`);
       }
     } catch (error) {
       toast.error(error.message || 'Error al guardar la venta');
@@ -1064,7 +1089,7 @@ function SaleFormPage() {
             <div className="min-w-0">
               <h1 className="text-xl sm:text-2xl font-bold text-gray-900 truncate">
                 {isEditMode
-                  ? 'Editar Venta'
+                  ? (isCrmQuoteMode ? 'Editar Cotización' : 'Editar Venta')
                   : opportunityId
                     ? 'Cotización desde el Pipeline'
                     : isCrmQuoteMode
@@ -1073,17 +1098,23 @@ function SaleFormPage() {
               </h1>
               <p className="text-xs sm:text-sm text-gray-500 mt-0.5">
                 {isEditMode
-                  ? 'Modifica los datos de la venta'
+                  ? (isCrmQuoteMode
+                    ? 'Si la cotización ya se envió, cambiar los ítems la deja otra vez pendiente de aprobación'
+                    : 'Modifica los datos de la venta')
                   : opportunityId
                     ? 'Se vinculará automáticamente a la oportunidad al guardar'
                     : isCrmQuoteMode
-                      ? 'Se guardará como cotización -- queda visible en Ventas para facturarla o convertirla luego'
-                      : 'Crea una nueva venta, factura o cotización'}
+                      ? 'Se guarda en Cotizaciones; pasa a Ventas solo cuando el cliente la aprueba y la conviertes'
+                      : 'Crea una nueva venta: remisión o factura'}
               </p>
             </div>
           </div>
           <div className="flex gap-2 flex-shrink-0">
-            <Button type="button" variant="outline" onClick={() => { draft.clear(); navigate(isCrmQuoteRoute ? '/crm/pipeline' : '/sales'); }}>
+            <Button type="button" variant="outline" onClick={() => {
+              draft.clear();
+              if (isEditMode) navigate(isCrmQuoteMode ? `/quotes/${id}` : `/sales/${id}`, { state: location.state });
+              else navigate(isCrmQuoteRoute ? '/crm/pipeline' : isCrmQuoteMode ? '/quotes' : '/sales');
+            }}>
               Cancelar
             </Button>
             <Button
@@ -1151,8 +1182,9 @@ function SaleFormPage() {
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {/* Tipo de Documento — solo visible en modo edición */}
-                  {isEditMode && (
+                  {/* Tipo de Documento — solo visible al editar un borrador de
+                      venta; una cotización sigue siéndolo hasta convertirla. */}
+                  {isEditMode && !isCrmQuoteMode && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Tipo de Documento
@@ -1166,13 +1198,6 @@ function SaleFormPage() {
                     >
                       <option value="remision">Remisión</option>
                       <option value="factura">Factura</option>
-                      {/* Con CRM activo, cotizar es un formulario propio del CRM
-                          (ver isCrmQuoteMode más arriba) -- se deja la opción
-                          solo si esta venta YA es una cotización, para no
-                          dejar una edición sin poder guardar su tipo actual. */}
-                      {(!enabledModules?.includes('crm') || currentSale?.document_type === 'cotizacion') && (
-                        <option value="cotizacion">Cotización</option>
-                      )}
                     </select>
                   </div>
                   )}
@@ -1192,6 +1217,27 @@ function SaleFormPage() {
                       className="w-full"
                     />
                   </div>
+
+                  {/* Vigencia -- vacía al crear, el backend usa la del tenant (15 días por defecto). */}
+                  {isCrmQuoteMode && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <Calendar className="w-4 h-4 inline mr-1" />
+                        Válida hasta
+                      </label>
+                      <Input
+                        type="date"
+                        name="quote_valid_until"
+                        value={formData.quote_valid_until}
+                        min={formData.sale_date}
+                        onChange={handleInputChange}
+                        className="w-full"
+                      />
+                      {!isEditMode && !formData.quote_valid_until && (
+                        <p className="text-xs text-gray-500 mt-1">Si la dejas vacía se usa la vigencia por defecto.</p>
+                      )}
+                    </div>
+                  )}
 
                   {/* Cliente */}
                   <div className="md:col-span-2">
@@ -1877,6 +1923,13 @@ function SaleFormPage() {
                               {formatCurrency(totals.tax)}
                             </span>
                           </div>
+
+                          {!totals.aiu && totals.inc > 0 && (
+                            <div className="flex justify-between text-sm text-gray-600">
+                              <span>INC (impoconsumo):</span>
+                              <span className="font-medium text-gray-900">{formatCurrency(totals.inc)}</span>
+                            </div>
+                          )}
 
                           {totals.globalDiscount > 0 && (
                             <div className="flex justify-between text-sm text-red-600">

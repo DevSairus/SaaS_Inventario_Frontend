@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import salesApi from '../../api/sales';
 import { workOrdersApi } from '../../api/workshop';
 import useBranchStore from '../../store/branchStore';
 import useTenantStore from '../../store/tenantStore';
+import useAuthStore from '../../store/authStore';
 import Layout from '../../components/layout/Layout';
 import { formatCurrency, formatDate } from '../../utils/formatters';
-import { PlusIcon, MagnifyingGlassIcon, FunnelIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, MagnifyingGlassIcon, FunnelIcon, Cog6ToothIcon } from '@heroicons/react/24/outline';
 
 // Estado propio de las cotizaciones -- independiente del status genérico de
 // venta (draft/pending/completed/cancelled). Se actualiza a 'enviada' al
@@ -21,6 +22,7 @@ const QUOTE_STATUS_LABELS = {
   parcial:  { label: 'Parcial',  cls: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300' },
   rechazada:{ label: 'Rechazada', cls: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' },
   vencida:  { label: 'Vencida',  cls: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300' },
+  convertida: { label: 'Convertida en venta', cls: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300' },
 };
 
 const ORIGIN_LABELS = {
@@ -29,19 +31,26 @@ const ORIGIN_LABELS = {
 };
 
 const EMPTY_FILTERS = { quote_status: '', from_date: '', to_date: '', branch_id: '', vehicle_plate: '' };
+const FILTER_KEYS = Object.keys(EMPTY_FILTERS);
 
-// Normaliza una Sale (document_type='cotizacion') al shape unificado de la tabla.
+// Normaliza una Sale (document_type='cotizacion') al shape unificado de la
+// tabla. Una cotización ya convertida en remisión/factura conserva su número
+// COT- en quote_number y abre la venta resultante.
 function fromSale(sale) {
+  const converted = sale.document_type !== 'cotizacion' && !!sale.quote_number;
   return {
     id: sale.id,
     source: 'sale',
-    number: sale.sale_number,
+    converted,
+    number: converted ? sale.quote_number : sale.sale_number,
+    sale_number: converted ? sale.sale_number : null,
     customer_name: sale.customer_name,
     vehicle_plate: sale.vehicle_plate,
     branch_name: sale.branch?.name,
     date: sale.sale_date,
+    valid_until: sale.quote_valid_until,
     total_amount: sale.total_amount,
-    quote_status: sale.quote_status,
+    quote_status: converted ? 'convertida' : sale.quote_status,
   };
 }
 
@@ -69,15 +78,31 @@ function fromWorkshopQuote(q) {
 // (Taller) cuando el tenant tiene ese módulo habilitado.
 export default function QuotesPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { branches, fetchBranches } = useBranchStore();
   const { enabledModules, fetchFeatures } = useTenantStore();
   const hasWorkshop = enabledModules?.includes('workshop');
+  // Mismos roles que pueden editar Configuración (TenantSettingsPage#canEdit).
+  const canConfigure = ['admin', 'manager', 'super_admin'].includes(useAuthStore(s => s.user)?.role);
 
+  // Búsqueda y filtros viven en la URL (?q=...&quote_status=...): al volver
+  // del detalle (botón "Volver" o atrás del navegador) la lista se restaura
+  // con los mismos resultados en vez de arrancar vacía.
+  const [searchParams, setSearchParams] = useSearchParams();
   const [quotes, setQuotes] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [filters, setFilters] = useState(EMPTY_FILTERS);
-  const [searchInput, setSearchInput] = useState('');
-  const [showFilters, setShowFilters] = useState(false);
+  const [filters, setFilters] = useState(() =>
+    Object.fromEntries(FILTER_KEYS.map(k => [k, searchParams.get(k) || '']))
+  );
+  const [searchInput, setSearchInput] = useState(() => searchParams.get('q') || '');
+  const [showFilters, setShowFilters] = useState(() => FILTER_KEYS.some(k => searchParams.get(k)));
+
+  useEffect(() => {
+    const next = new URLSearchParams();
+    if (searchInput) next.set('q', searchInput);
+    FILTER_KEYS.forEach(k => { if (filters[k]) next.set(k, filters[k]); });
+    if (next.toString() !== searchParams.toString()) setSearchParams(next, { replace: true });
+  }, [searchInput, filters]);
 
   const fetchQuotes = async (customFilters = filters) => {
     setLoading(true);
@@ -87,7 +112,8 @@ export default function QuotesPage() {
       const requests = [
         salesApi.getAll({ ...commonFilters, quote_view: true }).then(res => res.data.data.map(fromSale)),
       ];
-      if (hasWorkshop) {
+      // 'convertida' solo existe en cotizaciones de venta.
+      if (hasWorkshop && customFilters.quote_status !== 'convertida') {
         requests.push(
           workOrdersApi.getWorkshopQuotes(commonFilters).then(res => res.data.data.map(fromWorkshopQuote))
         );
@@ -107,7 +133,7 @@ export default function QuotesPage() {
   }, []);
 
   useEffect(() => {
-    fetchQuotes(EMPTY_FILTERS);
+    fetchQuotes(filters);
   }, [hasWorkshop]);
 
   useEffect(() => {
@@ -129,9 +155,12 @@ export default function QuotesPage() {
     fetchQuotes(EMPTY_FILTERS);
   };
 
+  // `from` le dice al detalle a dónde volver (esta lista, con su búsqueda).
   const goToQuote = (quote) => {
-    if (quote.source === 'workshop') navigate(`/workshop/work-orders/${quote.work_order_id}`);
-    else navigate(`/sales/${quote.id}`);
+    const state = { from: `${location.pathname}${location.search}` };
+    if (quote.source === 'workshop') navigate(`/workshop/work-orders/${quote.work_order_id}`, { state });
+    else if (quote.converted) navigate(`/sales/${quote.id}`, { state });
+    else navigate(`/quotes/${quote.id}`, { state });
   };
 
   const hasActiveFilters = filters.quote_status || filters.from_date || filters.to_date || filters.branch_id || filters.vehicle_plate;
@@ -147,13 +176,25 @@ export default function QuotesPage() {
               {loading ? 'Cargando...' : `${quotes.length} resultado${quotes.length !== 1 ? 's' : ''}`}
             </p>
           </div>
-          <button
-            onClick={() => navigate('/crm/quotes/new')}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            <PlusIcon className="w-4 h-4" />
-            Nueva cotización
-          </button>
+          <div className="flex items-center gap-2">
+            {canConfigure && (
+              <button
+                onClick={() => navigate('/settings?tab=cotizaciones')}
+                title="Vigencia y condiciones comerciales"
+                className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-white/10 rounded-lg hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
+              >
+                <Cog6ToothIcon className="w-4 h-4" />
+                <span className="hidden sm:inline">Condiciones</span>
+              </button>
+            )}
+            <button
+              onClick={() => navigate('/quotes/new')}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              <PlusIcon className="w-4 h-4" />
+              Nueva cotización
+            </button>
+          </div>
         </div>
 
         <div className="bg-white dark:bg-graphite rounded-lg border border-gray-200 dark:border-white/10 p-3 space-y-3">
@@ -202,6 +243,7 @@ export default function QuotesPage() {
                 <option value="parcial">Parcial</option>
                 <option value="rechazada">Rechazada</option>
                 <option value="vencida">Vencida</option>
+                <option value="convertida">Convertida en venta</option>
               </select>
               <input
                 type="date"
@@ -274,7 +316,10 @@ export default function QuotesPage() {
                         onClick={() => goToQuote(quote)}
                         className="hover:bg-gray-50 dark:hover:bg-white/5 cursor-pointer transition-colors"
                       >
-                        <td className="px-4 py-3 text-sm font-mono text-gray-700 dark:text-gray-300 whitespace-nowrap">{quote.number}</td>
+                        <td className="px-4 py-3 text-sm font-mono text-gray-700 dark:text-gray-300 whitespace-nowrap">
+                          {quote.number}
+                          {quote.sale_number && <p className="text-xs text-gray-400 dark:text-gray-500">→ {quote.sale_number}</p>}
+                        </td>
                         <td className="px-4 py-3">
                           <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{quote.customer_name || '—'}</p>
                           {quote.vehicle_plate && <p className="text-xs text-gray-500 dark:text-gray-500">{quote.vehicle_plate}</p>}

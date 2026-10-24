@@ -46,6 +46,7 @@ const JournalEntriesPage = lazy(() => import('./pages/accounting/JournalEntriesP
 const AccountMappingsPage = lazy(() => import('./pages/accounting/AccountMappingsPage'));
 const AccountMigrationsPage = lazy(() => import('./pages/accounting/AccountMigrationsPage'));
 const IcaPage = lazy(() => import('./pages/accounting/IcaPage'));
+const IvaProrrateoPage = lazy(() => import('./pages/accounting/IvaProrrateoPage'));
 const FinancialReportsPage = lazy(() => import('./pages/accounting/FinancialReportsPage'));
 const FiscalPeriodsPage = lazy(() => import('./pages/accounting/FiscalPeriodsPage'));
 const AccountingHealthPage = lazy(() => import('./pages/accounting/AccountingHealthPage'));
@@ -311,6 +312,11 @@ function App() {
         <Route path="/login"          element={<LoginPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/ot/:token"      element={<WorkOrderPublicPage />} />
+        {/* Link que recibe el cliente: la cotización (con aprobación) y el
+            resto de documentos de venta tienen URL propia. /public/quote
+            se conserva para los enlaces ya enviados. */}
+        <Route path="/cotizacion/:token"   element={<QuotePublicPage />} />
+        <Route path="/documento/:token"    element={<QuotePublicPage />} />
         <Route path="/public/quote/:token" element={<QuotePublicPage />} />
         <Route path="/agendar/:slug"       element={<PublicAppointmentPage />} />
         <Route path="/portal/vehiculo/:token" element={<VehiclePortalPage />} />
@@ -399,6 +405,12 @@ function App() {
 
         {/* ── Cotizaciones — sección independiente de Ventas ─────────── */}
         <Route path="quotes" element={<TenantRoute module={["sales", "workshop", "crm"]}><Suspense fallback={<Loading fullScreen />}><QuotesPage /></Suspense></TenantRoute>} />
+        {/* Formulario y detalle reusan los de Ventas (SaleFormPage /
+            SaleDetailPage en modo cotización), pero con rutas propias: una
+            cotización no es una venta hasta que se aprueba y se convierte. */}
+        <Route path="quotes/new"      element={<TenantRoute module={["sales", "workshop", "crm"]}><Suspense fallback={<Loading fullScreen />}><SaleFormPage /></Suspense></TenantRoute>} />
+        <Route path="quotes/:id/edit" element={<TenantRoute module={["sales", "workshop", "crm"]}><Suspense fallback={<Loading fullScreen />}><SaleFormPage /></Suspense></TenantRoute>} />
+        <Route path="quotes/:id"      element={<TenantRoute module={["sales", "workshop", "crm"]}><Suspense fallback={<Loading fullScreen />}><SaleDetailPage /></Suspense></TenantRoute>} />
 
         {/* ── Tesorería ──────────────────────────────── */}
         <Route path="accounts-payable" element={<TenantRoute module="treasury" roles={MGMT_ROLES}><Suspense fallback={<Loading fullScreen />}><AccountsPayablePage /></Suspense></TenantRoute>} />
@@ -420,6 +432,7 @@ function App() {
         <Route path="accounting/bank-accounts"                     element={<TenantRoute module="accounting" roles={['admin', 'manager', 'accountant']}><Suspense fallback={<Loading fullScreen />}><BankAccountsPage /></Suspense></TenantRoute>} />
         <Route path="accounting/bank-accounts/:id/reconciliation"  element={<TenantRoute module="accounting" roles={['admin', 'manager', 'accountant']}><Suspense fallback={<Loading fullScreen />}><BankReconciliationPage /></Suspense></TenantRoute>} />
         <Route path="accounting/ica"                element={<TenantRoute module="accounting" roles={['admin', 'manager', 'accountant']}><Suspense fallback={<Loading fullScreen />}><IcaPage /></Suspense></TenantRoute>} />
+        <Route path="accounting/iva-prorrateo"      element={<TenantRoute module="accounting" roles={['admin', 'manager', 'accountant']}><Suspense fallback={<Loading fullScreen />}><IvaProrrateoPage /></Suspense></TenantRoute>} />
         <Route path="accounting/account-migrations" element={<TenantRoute module="accounting" roles={['admin', 'accountant']}><Suspense fallback={<Loading fullScreen />}><AccountMigrationsPage /></Suspense></TenantRoute>} />
         <Route path="accounting/tax-classification" element={<TenantRoute module="accounting" roles={['admin', 'manager', 'accountant']}><Suspense fallback={<Loading fullScreen />}><TaxClassificationPage /></Suspense></TenantRoute>} />
         <Route path="accounting/exogena"                          element={<TenantRoute module="accounting" roles={['admin', 'manager', 'accountant']}><Suspense fallback={<Loading fullScreen />}><ExogenaPage /></Suspense></TenantRoute>} />

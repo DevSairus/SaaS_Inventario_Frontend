@@ -99,7 +99,7 @@ const NAV = [
   {
     id: "quotes", label: "Cotizaciones", icon: "file", module: ["sales", "workshop", "crm"],
     children: [
-      { label: "Nueva cotización", path: "/crm/quotes/new" },
+      { label: "Nueva cotización", path: "/quotes/new" },
       { label: "Listado",          path: "/quotes" },
     ],
   },
@@ -153,6 +153,7 @@ const NAV = [
       { label: "Cuentas Bancarias",    path: "/accounting/bank-accounts" },
       { label: "Clasificación tributaria", path: "/accounting/tax-classification" },
       { label: "ICA",                  path: "/accounting/ica" },
+      { label: "Prorrateo de IVA",     path: "/accounting/iva-prorrateo" },
       { label: "Exógena DIAN",         path: "/accounting/exogena" },
     ],
   },

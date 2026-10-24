@@ -10,7 +10,7 @@ const TAX_TYPES = [
 const RETENTION_TYPES = [
   { code: '05', name: 'ReteIVA', description: 'Retención de IVA', unit: '%', defaultRate: 15, base: 'IVA facturado' },
   { code: '06', name: 'ReteICA', description: 'Retención de ICA', unit: '‰', defaultRate: 40, base: 'Base gravable' },
-  { code: '07', name: 'ReteFuente', description: 'Retención en la Fuente', unit: '%', defaultRate: 2.5, base: 'Base gravable' },
+  { code: '07', name: 'ReteFuente', description: 'Retención en la Fuente', unit: '%', defaultRate: 2.5, defaultServiceRate: 4, base: 'Base gravable' },
 ];
 
 export default function TaxConfigSection({ taxConfig, onChange }) {
@@ -18,6 +18,13 @@ export default function TaxConfigSection({ taxConfig, onChange }) {
   const taxes = config.taxes || TAX_TYPES.map(t => ({ ...t, rate: t.defaultRate, enabled: false }));
   const retentions = config.retentions || RETENTION_TYPES.map(r => ({ ...r, rate: r.defaultRate, enabled: false }));
   const isAutoretenedor = config.is_autoretenedor || false;
+  // Base mínima de ReteFuente/ReteIVA en ventas: mismos conceptos y UVT que compras.
+  const uvtValue = Number(config.fiscal_profile?.uvt_value) > 0 ? Number(config.fiscal_profile.uvt_value) : 52374;
+  const fmtUvt = (id) => {
+    const fallback = { compras: 10, servicios: 4 }[id];
+    const uvts = Number((config.retention_concepts || []).find(c => c.id === id)?.min_base_uvt ?? fallback);
+    return `${uvts} UVT ($${Math.round(uvts * uvtValue).toLocaleString('es-CO')})`;
+  };
 
   const updateTax = (code, field, value) => {
     const updated = taxes.map(t => t.code === code ? { ...t, [field]: value } : t);
@@ -157,7 +164,11 @@ export default function TaxConfigSection({ taxConfig, onChange }) {
           <div>
             <h3 className="text-sm font-semibold text-gray-700">Retenciones que te practican tus clientes (ventas)</h3>
             <p className="text-xs text-gray-500 mt-0.5">
-              Se restan del total a cobrar. Se aplican automáticamente según el cliente.
+              Son una estimación (Neto a pagar). Solo aplican a clientes agentes de retención — por defecto los que
+              tienen NIT; se cambia en la ficha del cliente, que también puede tener tarifas propias — y, ReteFuente
+              y ReteIVA, cuando la venta supera la base mínima: {fmtUvt('compras')} en bienes y {fmtUvt('servicios')} en
+              servicios (bases y valor UVT en «Retenciones en compras», arriba). Lo que el cliente retiene de verdad se
+              registra en cada venta y es lo que va a contabilidad y a la exógena.
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -198,6 +209,11 @@ export default function TaxConfigSection({ taxConfig, onChange }) {
                   <p className="text-xs text-gray-500 mt-0.5">{retType.description} — Base: {retType.base}</p>
                 </div>
                 <div className="flex items-center gap-2">
+                  {retType.code === '07' && (
+                    <>
+                      <span className="text-xs text-gray-500">Bienes</span>
+                    </>
+                  )}
                   <input
                     type="number"
                     value={ret.rate || 0}
@@ -208,6 +224,22 @@ export default function TaxConfigSection({ taxConfig, onChange }) {
                     className="w-20 px-2 py-1.5 text-sm text-right border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:text-gray-400"
                   />
                   <span className="text-xs text-gray-500 w-4">{retType.unit}</span>
+                  {retType.code === '07' && (
+                    <>
+                      <span className="text-xs text-gray-500">Servicios</span>
+                      <input
+                        type="number"
+                        value={ret.service_rate ?? retType.defaultServiceRate}
+                        onChange={(e) => updateRetention(retType.code, 'service_rate', parseFloat(e.target.value) || 0)}
+                        disabled={!ret.enabled}
+                        min="0"
+                        step="0.01"
+                        title="Tarifa de ReteFuente sobre servicios"
+                        className="w-20 px-2 py-1.5 text-sm text-right border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:text-gray-400"
+                      />
+                      <span className="text-xs text-gray-500 w-4">%</span>
+                    </>
+                  )}
                   <button
                     type="button"
                     onClick={() => updateRetention(retType.code, 'enabled', !ret.enabled)}

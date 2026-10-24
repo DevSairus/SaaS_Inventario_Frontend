@@ -324,7 +324,7 @@ export default function ProductDetailPage() {
               <div className="mt-6 pt-4 border-t border-gray-100 space-y-4">
                 <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Impuestos</h3>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  <DetailRow label="IVA" value={product.tax_config?.iva?.enabled ? `${product.tax_config.iva.rate}%` : (product.has_tax ? `${product.tax_percentage}%` : 'Exento')} />
+                  <DetailRow label="IVA" value={product.tax_config?.iva_status === 'excluido' ? 'Excluido (no causa IVA)' : (product.tax_config?.iva?.enabled ? `${product.tax_config.iva.rate}%` : (product.has_tax && Number(product.tax_percentage) > 0 ? `${product.tax_percentage}%` : 'Exento (0 %)'))} />
                   <DetailRow label="INC" value={product.tax_config?.inc?.enabled ? `${product.tax_config.inc.rate}%` : 'No aplica'} />
                 </div>
               </div>

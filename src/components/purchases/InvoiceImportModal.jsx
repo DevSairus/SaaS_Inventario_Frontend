@@ -283,19 +283,21 @@ const InvoiceImportModal = ({ isOpen, onClose, onSuccess, dianDocumentId = null 
   const getItemTaxPct = (idx) =>
     itemTaxOverrides[idx] !== undefined
       ? parseFloat(itemTaxOverrides[idx])
-      : parseFloat(preview?.items?.[idx]?.tax_percentage ?? 19);
+      : parseFloat(preview?.items?.[idx]?.tax_percentage ?? 0);
 
   const calcTotals = () => {
     const subtotal = activeItems.reduce((s, it) => s + parseFloat(it.subtotal || 0), 0);
-    // Recalcular IVA con los porcentajes editados
+    // IVA del XML; solo se recalcula en las líneas con el porcentaje editado.
     const tax = (preview?.items || []).reduce((s, it, idx) => {
       if (removedItems.includes(idx)) return s;
-      const pct = getItemTaxPct(idx);
-      return s + parseFloat(it.subtotal || 0) * (pct / 100);
+      if (itemTaxOverrides[idx] === undefined) return s + parseFloat(it.tax_amount || 0);
+      return s + parseFloat(it.subtotal || 0) * (getItemTaxPct(idx) / 100);
     }, 0);
+    // INC y otros tributos no descontables del XML: suman al total (van al costo).
+    const inc = (preview?.items || []).reduce((s, it, idx) => (removedItems.includes(idx) ? s : s + parseFloat(it.inc_amount || 0)), 0);
     const freight  = parseFloat(shippingCost) || 0;
     const discount = parseFloat(discountAmount) || 0;
-    return { subtotal, tax, freight, discount, total: subtotal + tax + freight - discount };
+    return { subtotal, tax, inc, freight, discount, total: subtotal + tax + inc + freight - discount };
   };
 
   const handleImport = async () => {
@@ -490,7 +492,9 @@ const InvoiceImportModal = ({ isOpen, onClose, onSuccess, dianDocumentId = null 
                       {preview.items.map((item, idx) => {
                         const removed = removedItems.includes(idx);
                         const taxPct  = getItemTaxPct(idx);
-                        const taxAmt  = parseFloat(item.subtotal || 0) * (taxPct / 100);
+                        const taxAmt  = itemTaxOverrides[idx] === undefined
+                          ? parseFloat(item.tax_amount || 0) // el IVA que trae el XML
+                          : parseFloat(item.subtotal || 0) * (taxPct / 100);
                         const isOverridden = itemTaxOverrides[idx] !== undefined;
                         return (
                           <tr key={idx} className={removed ? 'bg-red-50 dark:bg-red-900/20' : 'hover:bg-gray-50 dark:hover:bg-white/5'}>
@@ -579,6 +583,12 @@ const InvoiceImportModal = ({ isOpen, onClose, onSuccess, dianDocumentId = null 
                                   {taxPct > 0 && (
                                     <div className="text-xs text-gray-400 dark:text-gray-500">+${fmt(taxAmt)} IVA</div>
                                   )}
+                                  {taxPct === 0 && itemTaxOverrides[idx] === undefined && (
+                                    <div className="text-xs text-gray-400 dark:text-gray-500">{item.iva_status === 'excluido' ? 'Excluido de IVA' : 'Exento de IVA'}</div>
+                                  )}
+                                  {parseFloat(item.inc_amount) > 0 && (
+                                    <div className="text-xs text-gray-400 dark:text-gray-500">+${fmt(item.inc_amount)} INC</div>
+                                  )}
                                 </div>
                               )}
                             </td>
@@ -651,6 +661,12 @@ const InvoiceImportModal = ({ isOpen, onClose, onSuccess, dianDocumentId = null 
                     <span className="text-gray-600 dark:text-gray-400">IVA:</span>
                     <span className="font-medium dark:text-gray-100">${fmt(totals.tax)}</span>
                   </div>
+                  {totals.inc > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-600 dark:text-gray-400" title="No es descontable: va al costo">INC / otros impuestos:</span>
+                      <span className="font-medium dark:text-gray-100">${fmt(totals.inc)}</span>
+                    </div>
+                  )}
                   {totals.discount > 0 && (
                     <div className="flex justify-between text-red-600 dark:text-red-400">
                       <span>Descuento:</span>

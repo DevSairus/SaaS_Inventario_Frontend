@@ -60,9 +60,30 @@ const customerToForm = (customer) => ({
  *  - onSaved(savedCustomer): se llama tras guardar con éxito (el modal ya
  *    llamó onClose antes)
  */
+const RETENTION_RATE_FIELDS = [
+  { key: 'retefuente_rate', label: 'ReteFuente bienes', unit: '%' },
+  { key: 'retefuente_service_rate', label: 'ReteFuente servicios', unit: '%' },
+  { key: 'reteiva_rate', label: 'ReteIVA', unit: '%' },
+  { key: 'reteica_rate', label: 'ReteICA', unit: '‰' },
+];
+
 export default function CustomerFormModal({ isOpen, onClose, customer = null, onSaved }) {
   const { loading, createCustomer, updateCustomer } = useCustomersStore();
   const [formData, setFormData] = useState(FORM_EMPTY);
+
+  // Modo de retención: sin withholding_agent en la ficha = automático.
+  const rc = formData.retention_config || {};
+  const retentionMode = rc.is_exento || rc.withholding_agent === false ? 'no' : rc.withholding_agent === true ? 'yes' : 'auto';
+  const retentionAgent = retentionMode === 'yes' || (retentionMode === 'auto' && formData.document_type === '31');
+  const setRetentionMode = (mode) => setFormData(prev => {
+    const { withholding_agent, is_exento, ...rest } = prev.retention_config || {};
+    if (mode === 'yes') return { ...prev, retention_config: { ...rest, withholding_agent: true, is_exento: false } };
+    if (mode === 'no') return { ...prev, retention_config: { ...rest, withholding_agent: false, is_exento: true } };
+    return { ...prev, retention_config: { ...rest, is_exento: false } };
+  });
+  const setRetentionRate = (key, value) => setFormData(prev => ({
+    ...prev, retention_config: { ...(prev.retention_config || {}), [key]: value === '' ? null : value },
+  }));
   const dianLookupAvailable = useDianLookupAvailability();
   const editingCustomer = customer;
 
@@ -226,18 +247,44 @@ export default function CustomerFormModal({ isOpen, onClose, customer = null, on
           </div>
         )}
 
-        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200 dark:bg-graphite-2 dark:border-white/10">
+        {/* Retenciones que este cliente le practica al negocio al pagar
+            (taxService.calculateSaleRetentions). Automático = según el
+            documento: NIT sí es agente de retención, cédula no. */}
+        <div className="p-3 bg-gray-50 rounded-lg border border-gray-200 dark:bg-graphite-2 dark:border-white/10 space-y-3">
           <div>
-            <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Exento de retención</p>
+            <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Retenciones que te practica</p>
             <p className="text-xs text-gray-500 mt-0.5 dark:text-gray-500">
-              Si está activo, este cliente no te aplicará ReteFuente, ReteIVA ni ReteICA al pagarte.
+              Se estiman en cada venta (Neto a pagar). Lo que el cliente realmente retiene lo registras con «Retenciones» en la venta.
             </p>
           </div>
-          <button type="button"
-            onClick={() => setFormData(prev => ({ ...prev, retention_config: { ...prev.retention_config, is_exento: !prev.retention_config?.is_exento } }))}
-            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0 ${formData.retention_config?.is_exento ? 'bg-purple-600' : 'bg-gray-300 dark:bg-white/10'}`}>
-            <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${formData.retention_config?.is_exento ? 'translate-x-6' : 'translate-x-1'}`} />
-          </button>
+          <select
+            value={retentionMode}
+            onChange={(e) => setRetentionMode(e.target.value)}
+            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-graphite dark:border-white/10 dark:text-gray-100"
+          >
+            <option value="auto">Automático: {formData.document_type === '31' ? 'sí (tiene NIT)' : 'no (no tiene NIT)'}</option>
+            <option value="yes">Sí, es agente de retención</option>
+            <option value="no">No me practica retenciones (exento / consumidor final)</option>
+          </select>
+          {retentionAgent && (
+            <div className="grid grid-cols-2 gap-2">
+              {RETENTION_RATE_FIELDS.map(f => (
+                <label key={f.key} className="block">
+                  <span className="text-xs text-gray-600 dark:text-gray-400">{f.label} ({f.unit})</span>
+                  <input
+                    type="number" min="0" step="0.01"
+                    value={formData.retention_config?.[f.key] ?? ''}
+                    placeholder="Ajustes"
+                    onChange={(e) => setRetentionRate(f.key, e.target.value)}
+                    className="mt-1 w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-graphite dark:border-white/10 dark:text-gray-100"
+                  />
+                </label>
+              ))}
+              <p className="col-span-2 text-xs text-gray-500 dark:text-gray-500">
+                Vacío = la tarifa por defecto de Ajustes → Impuestos. Solo aplican si la venta supera la base mínima en UVT.
+              </p>
+            </div>
+          )}
         </div>
 
         <div className="flex justify-end space-x-2 pt-4 border-t dark:border-white/10">

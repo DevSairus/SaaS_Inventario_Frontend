@@ -1,6 +1,6 @@
 // frontend/src/pages/sales/SaleDetailPage.jsx
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import useSalesStore from '../../store/salesStore';
 import { 
   ArrowLeftIcon,
@@ -43,9 +43,23 @@ import { SALE_STATUS_LABELS, PAYMENT_STATUS_LABELS } from '../../constants/sales
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
+// Ciclo de la cotización (Sale.quote_status) -- mismas etiquetas que QuotesPage.
+const QUOTE_STATUS_BADGES = {
+  borrador:  { label: 'Borrador',  variant: 'secondary' },
+  enviada:   { label: 'Enviada al cliente', variant: 'info' },
+  aprobada:  { label: 'Aprobada',  variant: 'success' },
+  parcial:   { label: 'Aprobada parcialmente', variant: 'info' },
+  rechazada: { label: 'Rechazada', variant: 'danger' },
+  vencida:   { label: 'Vencida',   variant: 'warning' },
+};
+
+// quote_valid_until es solo fecha: al mediodía para que no cambie de día por zona horaria.
+const dayOnly = (d) => `${String(d).slice(0, 10)}T12:00:00`;
+
 export default function SaleDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { currentSale, loading, fetchSaleById, confirmSale, cancelSale, deleteSale } = useSalesStore();
   const { features, enabledModules, fetchFeatures } = useTenantStore();
   const hideRemisionTax = features?.hide_remision_tax === true;
@@ -68,6 +82,7 @@ export default function SaleDetailPage() {
   // Se abre si confirmSale responde DIAN_CUSTOMER_INCOMPLETE -- ver
   // customerDianReadiness.js en el backend.
   const [dianIncompleteModal, setDianIncompleteModal] = useState(null); // { customerId, missingFields, paymentData } | null
+  const [quoteStatusBusy, setQuoteStatusBusy] = useState(false);
 
   const openPaymentReceipt = async (paymentIndex) => {
     try {
@@ -271,8 +286,9 @@ export default function SaleDetailPage() {
     try {
       await deleteSale(id);
       setConfirmDialog({ show: false, action: null });
-      toast.success('Borrador eliminado');
-      navigate('/sales');
+      const wasQuote = currentSale?.document_type === 'cotizacion';
+      toast.success(wasQuote ? 'Cotización eliminada' : 'Borrador eliminado');
+      navigate(location.state?.from || (wasQuote ? '/quotes' : '/sales'));
     } catch (error) {
       setConfirmDialog({ show: false, action: null });
       toast.error('Error eliminando el borrador: ' + (error.response?.data?.message || error.message));
@@ -377,6 +393,32 @@ export default function SaleDetailPage() {
     }
   };
 
+  // Cotización y venta tienen rutas propias (/quotes/:id vs /sales/:id): si
+  // se llega por la "equivocada" (enlaces viejos, cliente, pipeline...), se
+  // corrige la URL sin perder a dónde hay que volver.
+  const loadedIsQuote = currentSale?.id === id && currentSale.document_type === 'cotizacion';
+  useEffect(() => {
+    if (!currentSale || currentSale.id !== id) return;
+    const onQuotesRoute = location.pathname.startsWith('/quotes/');
+    if (loadedIsQuote && !onQuotesRoute) navigate(`/quotes/${id}`, { replace: true, state: location.state });
+    else if (!loadedIsQuote && onQuotesRoute) navigate(`/sales/${id}`, { replace: true, state: location.state });
+  }, [loadedIsQuote, currentSale?.id, id, location.pathname]);
+
+  // Cliente aprobó/rechazó por fuera del link público (teléfono, en persona).
+  const handleSetQuoteStatus = async (status) => {
+    setConfirmDialog({ show: false, action: null });
+    setQuoteStatusBusy(true);
+    try {
+      const res = await salesApi.setQuoteStatus(id, { status });
+      toast.success(res.data?.message || 'Cotización actualizada');
+      await fetchSaleById(id);
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Error actualizando la cotización');
+    } finally {
+      setQuoteStatusBusy(false);
+    }
+  };
+
   if (loading || !currentSale) return <Loading />;
 
   const sale = currentSale;
@@ -386,7 +428,29 @@ export default function SaleDetailPage() {
   // null como "Cotización" por defecto. Se reusa el mismo criterio para el
   // mapa de intervención y la conversión a OT, para que funcionen desde el
   // borrador y no solo después de confirmar.
-  const isQuote = !sale.document_type || sale.document_type === 'cotizacion';
+  const isQuote = sale.document_type === 'cotizacion';
+  // Mapa de intervención: también en borradores de venta (document_type
+  // null), mismo criterio que findEditableQuote en el backend.
+  const canHaveDiagram = !sale.document_type || isQuote;
+  const quoteApproved = isQuote && ['aprobada', 'parcial'].includes(sale.quote_status);
+  // Totales a la vista calculados desde las líneas que cuentan (lo rechazado
+  // por el cliente no suma). sale.tax_amount es IVA + INC: mostrarlo como
+  // "IVA" y además la fila INC contaba el impoconsumo dos veces. El subtotal
+  // guardado ya es neto de descuentos de línea; se muestra el bruto para que
+  // Subtotal − Descuento + impuestos = Total.
+  const countedItems = (sale.items || []).filter(i => i.approval_status !== 'rechazado');
+  const sumOf = (field) => countedItems.reduce((s, i) => s + (parseFloat(i[field]) || 0), 0);
+  const ivaTotal = sale.aiu_enabled ? parseFloat(sale.tax_amount) || 0 : sumOf('tax_amount');
+  const incTotal = sumOf('inc_amount');
+  const lineDiscounts = sale.aiu_enabled ? parseFloat(sale.discount_amount) || 0 : sumOf('discount_amount');
+  const grossSubtotal = sale.aiu_enabled
+    ? parseFloat(sale.subtotal) || 0
+    : sumOf('total') - sumOf('tax_amount') - incTotal + lineDiscounts;
+  const quoteOpen = isQuote && sale.status === 'draft';
+  // Volver: a donde se vino (lista con su búsqueda, cliente, OT...) o, si se
+  // abrió directo, al listado que corresponde.
+  const backTo = location.state?.from || (isQuote ? '/quotes' : '/sales');
+  const backLabel = location.state?.from ? 'Volver' : isQuote ? 'Volver a Cotizaciones' : 'Volver a Ventas';
 
   // ── Devoluciones aprobadas ─────────────────────────────────────────────────
   const approvedReturns = (sale.returns || []).filter(r => r.status === 'approved');
@@ -461,7 +525,12 @@ export default function SaleDetailPage() {
       label: 'Nota débito', icon: FileText, onClick: () => setShowNoteModal('debit'),
       className: 'text-orange-700 dark:text-orange-400',
     },
-    isQuote && sale.status === 'draft' && !sale.converted_to_work_order_id && enabledModules?.includes('workshop') && {
+    quoteOpen && sale.quote_status !== 'rechazada' && {
+      label: 'Registrar rechazo del cliente', icon: XMarkIcon,
+      onClick: () => setConfirmDialog({ show: true, action: 'rejectQuote' }),
+      className: 'text-red-700 dark:text-red-400',
+    },
+    quoteOpen && !sale.converted_to_work_order_id && enabledModules?.includes('workshop') && {
       label: 'Convertir a Orden de Trabajo', icon: Wrench, onClick: () => setShowConvertModal(true),
       className: 'text-blue-700 dark:text-blue-400',
     },
@@ -475,20 +544,35 @@ export default function SaleDetailPage() {
       <div className="space-y-6">
         <div className="no-print">
           <button
-            onClick={() => navigate('/sales')}
+            onClick={() => navigate(backTo)}
             className="inline-flex items-center text-sm text-gray-600 hover:text-gray-900 mb-4"
           >
             <ArrowLeftIcon className="h-5 w-5 mr-2" />
-            Volver a Ventas
+            {backLabel}
           </button>
 
           <div className="flex justify-between items-start">
             <div>
+              {isQuote && <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Cotización</p>}
               <h1 className="text-3xl font-bold text-gray-900">{sale.sale_number}</h1>
               <div className="flex items-center flex-wrap gap-2 mt-2">
-                {getStatusBadge(sale.status)}
-                {getPaymentStatusBadge(sale.payment_status)}
-                {sale.document_type && (
+                {isQuote ? (
+                  <>
+                    <Badge variant={QUOTE_STATUS_BADGES[sale.quote_status]?.variant || 'secondary'}>
+                      {QUOTE_STATUS_BADGES[sale.quote_status]?.label || 'Borrador'}
+                    </Badge>
+                    {sale.status === 'cancelled' && getStatusBadge(sale.status)}
+                    {sale.quote_valid_until && (
+                      <span className="text-sm text-gray-600">Válida hasta {formatDate(dayOnly(sale.quote_valid_until))}</span>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    {getStatusBadge(sale.status)}
+                    {getPaymentStatusBadge(sale.payment_status)}
+                  </>
+                )}
+                {sale.document_type && !isQuote && (
                   <span className="text-sm text-gray-600">
                     {sale.document_type === 'remision' ? 'Remisión' :
                      sale.document_type === 'factura'  ? 'Factura'  : 'Cotización'}
@@ -513,18 +597,33 @@ export default function SaleDetailPage() {
             <div className="flex flex-wrap gap-2 justify-end">
               {sale.status === 'draft' && (
                 <>
-                  <Button variant="secondary" icon={PencilIcon} onClick={() => navigate(`/sales/${id}/edit`)}>
+                  <Button variant="secondary" icon={PencilIcon} onClick={() => navigate(isQuote ? `/quotes/${id}/edit` : `/sales/${id}/edit`, { state: location.state })}>
                     Editar
                   </Button>
-                  <Button variant="primary" icon={CheckIcon} onClick={() => setShowConfirmWithPayment(true)}>
-                    Confirmar
-                  </Button>
+                  {/* Una cotización solo pasa a venta ya aprobada por el
+                      cliente (link público o registrada aquí). */}
+                  {isQuote && !quoteApproved && (
+                    <Button
+                      variant="secondary"
+                      icon={CheckIcon}
+                      disabled={quoteStatusBusy || sale.quote_status === 'vencida'}
+                      title={sale.quote_status === 'vencida' ? 'La cotización está vencida: actualiza su vigencia editándola' : 'El cliente aprobó por teléfono, en persona, etc.'}
+                      onClick={() => setConfirmDialog({ show: true, action: 'approveQuote' })}
+                    >
+                      Registrar aprobación
+                    </Button>
+                  )}
+                  {(!isQuote || quoteApproved) && (
+                    <Button variant="primary" icon={CheckIcon} onClick={() => setShowConfirmWithPayment(true)}>
+                      {isQuote ? 'Convertir en venta' : 'Confirmar'}
+                    </Button>
+                  )}
                   <Button
                     variant="danger"
                     icon={XMarkIcon}
                     onClick={() => setConfirmDialog({ show: true, action: 'cancel' })}
                   >
-                    Cancelar
+                    {isQuote ? 'Anular' : 'Cancelar'}
                   </Button>
                   <Button
                     variant="danger"
@@ -536,7 +635,7 @@ export default function SaleDetailPage() {
                 </>
               )}
 
-              {['pending', 'completed'].includes(sale.status) && sale.payment_status !== 'paid' && (
+              {!isQuote && ['pending', 'completed'].includes(sale.status) && sale.payment_status !== 'paid' && (
                 <Button variant="primary" icon={CheckIcon} onClick={() => setShowConfirmWithPayment(true)}>
                   Registrar Pago
                 </Button>
@@ -551,7 +650,7 @@ export default function SaleDetailPage() {
                   {invoicingBusy ? 'Facturando...' : 'Facturar electrónicamente'}
                 </Button>
               )}
-              {['pending', 'completed'].includes(sale.status) && sale.payment_status !== 'paid' && sale.customer_id && (
+              {!isQuote && ['pending', 'completed'].includes(sale.status) && sale.payment_status !== 'paid' && sale.customer_id && (
                 <Button variant="secondary" onClick={() => setShowRetentions(true)}>
                   Retenciones
                 </Button>
@@ -628,6 +727,27 @@ export default function SaleDetailPage() {
                 </div>
               )}
             </div>
+          </div>
+        )}
+
+        {/* ── Cotización: respuesta del cliente / venta generada desde una ── */}
+        {isQuote && ['aprobada', 'parcial', 'rechazada'].includes(sale.quote_status) && sale.quote_responded_at && (
+          <div className={`no-print rounded-xl border px-5 py-3 text-sm ${sale.quote_status === 'rechazada' ? 'border-red-200 bg-red-50 text-red-800' : 'border-green-200 bg-green-50 text-green-800'}`}>
+            {sale.quote_status === 'rechazada' ? 'Rechazada' : sale.quote_status === 'parcial' ? 'Aprobada parcialmente' : 'Aprobada'} por{' '}
+            <span className="font-semibold">{sale.quote_approved_by_name}</span>
+            {sale.quote_approved_by_document ? ` (${sale.quote_approved_by_document})` : ''} el {formatDateTime(sale.quote_responded_at)}.
+            {quoteApproved && sale.status === 'draft' && ' Ya puedes convertirla en remisión o factura.'}
+          </div>
+        )}
+        {isQuote && sale.status === 'draft' && sale.quote_status === 'enviada' && (
+          <div className="no-print rounded-xl border border-blue-200 bg-blue-50 px-5 py-3 text-sm text-blue-900">
+            Esperando la respuesta del cliente. Cuando la apruebe desde el enlace (o registres su aprobación), podrás convertirla en venta.
+          </div>
+        )}
+        {!isQuote && sale.quote_number && (
+          <div className="no-print rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-3 text-sm text-emerald-900">
+            Venta generada desde la cotización <span className="font-mono font-semibold">{sale.quote_number}</span>
+            {sale.quote_approved_by_name ? `, aprobada por ${sale.quote_approved_by_name}` : ''}.
           </div>
         )}
 
@@ -717,16 +837,23 @@ export default function SaleDetailPage() {
             <div className="lg:col-span-2 space-y-6">
 
               <div className="bg-white rounded-lg shadow p-6">
-                <h2 className="text-lg font-semibold mb-4">Información de la Venta</h2>
+                <h2 className="text-lg font-semibold mb-4">{isQuote ? 'Información de la Cotización' : 'Información de la Venta'}</h2>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm text-gray-600">Fecha de Venta</p>
+                    <p className="text-sm text-gray-600">{isQuote ? 'Fecha de emisión' : 'Fecha de Venta'}</p>
                     <p className="font-medium">{formatDate(sale.sale_date)}</p>
                   </div>
-                  <div>
-                    <p className="text-sm text-gray-600">Método de Pago</p>
-                    <p className="font-medium">{getPaymentMethodLabel(sale.payment_method)}</p>
-                  </div>
+                  {isQuote ? (
+                    <div>
+                      <p className="text-sm text-gray-600">Válida hasta</p>
+                      <p className="font-medium">{sale.quote_valid_until ? formatDate(dayOnly(sale.quote_valid_until)) : 'Sin vigencia definida'}</p>
+                    </div>
+                  ) : (
+                    <div>
+                      <p className="text-sm text-gray-600">Método de Pago</p>
+                      <p className="font-medium">{getPaymentMethodLabel(sale.payment_method)}</p>
+                    </div>
+                  )}
                   {sale.payment_form && (
                     <div>
                       <p className="text-sm text-gray-600">Forma de Pago</p>
@@ -758,7 +885,7 @@ export default function SaleDetailPage() {
 
               {/* Mapa de intervención — mismo componente que en OT, solo para
                   cotizaciones con tipo de vehículo definido y módulo Taller activo */}
-              {isQuote && sale.vehicle_type && enabledModules?.includes('workshop') && (
+              {canHaveDiagram && sale.vehicle_type && enabledModules?.includes('workshop') && (
                 <DiagramMapEditor
                   entityType="sale"
                   entityId={sale.id}
@@ -769,7 +896,7 @@ export default function SaleDetailPage() {
 
               {/* Productos */}
               <div className="bg-white rounded-lg shadow p-6">
-                <h2 className="text-lg font-semibold mb-4">Productos</h2>
+                <h2 className="text-lg font-semibold mb-4">{isQuote ? 'Ítems cotizados' : 'Productos'}</h2>
                 <div className="overflow-x-auto">
                   <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
@@ -828,7 +955,14 @@ export default function SaleDetailPage() {
                             {item.discount_amount > 0 ? `-${formatCurrency(item.discount_amount)}` : '-'}
                           </td>
                           {!(hideRemisionTax && sale.document_type === 'remision') && (
-                            <td className="px-4 py-3 text-right text-sm">{formatCurrency(item.tax_amount)}</td>
+                            <td className="px-4 py-3 text-right text-sm">
+                              {parseFloat(item.tax_amount) > 0
+                                ? formatCurrency(item.tax_amount)
+                                : <span className="text-xs text-gray-500">{item.iva_status === 'excluido' ? 'Excluido' : 'Exento'}</span>}
+                              {parseFloat(item.inc_amount) > 0 && (
+                                <div className="text-xs text-gray-500">+ INC {Number(item.inc_rate)}%: {formatCurrency(item.inc_amount)}</div>
+                              )}
+                            </td>
                           )}
                           <td className="px-4 py-3 text-right text-sm font-semibold">{formatCurrency(item.total)}</td>
                         </tr>
@@ -877,26 +1011,26 @@ export default function SaleDetailPage() {
                       {!(hideRemisionTax && sale.document_type === 'remision') && (
                         <div className="flex justify-between text-sm">
                           <span className="text-gray-600">Subtotal:</span>
-                          <span className="font-medium">{formatCurrency(sale.subtotal)}</span>
+                          <span className="font-medium">{formatCurrency(grossSubtotal)}</span>
                         </div>
                       )}
-                      {sale.discount_amount > 0 && (
+                      {lineDiscounts > 0 && (
                         <div className="flex justify-between text-sm text-red-600">
                           <span>Descuento:</span>
-                          <span>-{formatCurrency(sale.discount_amount)}</span>
+                          <span>-{formatCurrency(lineDiscounts)}</span>
                         </div>
                       )}
                       {!(hideRemisionTax && sale.document_type === 'remision') && (
                         <div className="flex justify-between text-sm">
                           <span className="text-gray-600">{sale.aiu_enabled ? 'IVA sobre la Utilidad:' : 'IVA:'}</span>
-                          <span className="font-medium">{formatCurrency(sale.tax_amount)}</span>
+                          <span className="font-medium">{formatCurrency(ivaTotal)}</span>
                         </div>
                       )}
                       {/* Impuestos adicionales */}
-                      {sale.items?.some(i => i.inc_amount > 0) && (
+                      {incTotal > 0 && !(hideRemisionTax && sale.document_type === 'remision') && (
                         <div className="flex justify-between text-sm">
-                          <span className="text-gray-600">INC:</span>
-                          <span className="font-medium">{formatCurrency(sale.items.reduce((s, i) => s + parseFloat(i.inc_amount || 0), 0))}</span>
+                          <span className="text-gray-600">INC (impoconsumo):</span>
+                          <span className="font-medium">{formatCurrency(incTotal)}</span>
                         </div>
                       )}
                       {sale.items?.some(i => i.ica_amount > 0) && (
@@ -912,7 +1046,7 @@ export default function SaleDetailPage() {
                         </div>
                       )}
                       <div className="flex justify-between text-xl font-bold border-t pt-2">
-                        <span>TOTAL:</span>
+                        <span>{isQuote ? 'TOTAL COTIZADO:' : 'TOTAL:'}</span>
                         <span className="text-blue-600">{formatCurrency(sale.total_amount)}</span>
                       </div>
                       {/* Estimado con ítems pendientes de aprobación del cliente --
@@ -972,6 +1106,7 @@ export default function SaleDetailPage() {
                         </div>
                       )}
 
+                      {!isQuote && (
                       <div className="border-t pt-2 space-y-1.5 mt-1">
                         {sale.paid_amount > 0 && (
                           <div className="flex justify-between text-sm text-green-600">
@@ -1008,6 +1143,7 @@ export default function SaleDetailPage() {
                           </button>
                         )}
                       </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1126,10 +1262,19 @@ export default function SaleDetailPage() {
                   <div className="flex">
                     <div className="flex-shrink-0 w-2 h-2 mt-2 bg-blue-500 rounded-full" />
                     <div className="ml-4">
-                      <p className="text-sm font-medium">Venta creada</p>
+                      <p className="text-sm font-medium">{isQuote ? 'Cotización creada' : 'Venta creada'}</p>
                       <p className="text-xs text-gray-600">{formatDateTime(sale.created_at)}</p>
                     </div>
                   </div>
+                  {(isQuote || sale.quote_number) && sale.quote_responded_at && (
+                    <div className="flex">
+                      <div className={`flex-shrink-0 w-2 h-2 mt-2 rounded-full ${sale.quote_status === 'rechazada' ? 'bg-red-500' : 'bg-green-500'}`} />
+                      <div className="ml-4">
+                        <p className="text-sm font-medium">{sale.quote_status === 'rechazada' ? 'Cotización rechazada' : 'Cotización aprobada'}</p>
+                        <p className="text-xs text-gray-600">{formatDateTime(sale.quote_responded_at)}</p>
+                      </div>
+                    </div>
+                  )}
                   {sale.status === 'pending' && (
                     <div className="flex">
                       <div className="flex-shrink-0 w-2 h-2 mt-2 bg-green-500 rounded-full" />
@@ -1225,8 +1370,7 @@ export default function SaleDetailPage() {
             onConfirm={handleConfirmWithPayment}
             mode={sale.status === 'draft' ? 'confirm' : 'payment'}
             saleTotal={Math.max(0, (sale?.total_amount || 0) - (sale?.paid_amount || 0) - (parseFloat(sale?.returned_amount) || 0))}
-            currentDocType={sale?.document_type}
-            hideQuoteOption={enabledModules?.includes('crm')}
+            currentDocType={isQuote ? null : sale?.document_type}
             loading={confirmingPayment}
             customerId={enabledModules?.includes('receivables') ? sale?.customer_id : null}
             canCreateAdvance={!!sale?.customer_id && !!enabledModules?.includes('receivables')}
@@ -1236,9 +1380,9 @@ export default function SaleDetailPage() {
             open={confirmDialog.show && confirmDialog.action === 'cancel'}
             onCancel={() => setConfirmDialog({ show: false, action: null })}
             onConfirm={handleCancel}
-            title="Cancelar borrador"
-            message="¿Cancelar este borrador? Quedará en el historial como venta cancelada."
-            confirmText="Cancelar borrador"
+            title={isQuote ? 'Anular cotización' : 'Cancelar borrador'}
+            message={isQuote ? '¿Anular esta cotización? Quedará en el listado como cancelada y no se podrá convertir en venta.' : '¿Cancelar este borrador? Quedará en el historial como venta cancelada.'}
+            confirmText={isQuote ? 'Anular cotización' : 'Cancelar borrador'}
             confirmVariant="danger"
           />
 
@@ -1246,9 +1390,28 @@ export default function SaleDetailPage() {
             open={confirmDialog.show && confirmDialog.action === 'delete'}
             onCancel={() => setConfirmDialog({ show: false, action: null })}
             onConfirm={handleDelete}
-            title="Eliminar borrador"
-            message={`¿Eliminar el borrador ${sale.sale_number}? Se borrará definitivamente y no se puede recuperar.`}
+            title={isQuote ? 'Eliminar cotización' : 'Eliminar borrador'}
+            message={`¿Eliminar ${isQuote ? 'la cotización' : 'el borrador'} ${sale.sale_number}? Se borrará definitivamente y no se puede recuperar.`}
             confirmText="Eliminar"
+            confirmVariant="danger"
+          />
+
+          <ConfirmDialog
+            open={confirmDialog.show && confirmDialog.action === 'approveQuote'}
+            onCancel={() => setConfirmDialog({ show: false, action: null })}
+            onConfirm={() => handleSetQuoteStatus('aprobada')}
+            title="Registrar aprobación"
+            message={`¿El cliente aprobó la cotización ${sale.sale_number}? Se aprueban todos los ítems que no haya rechazado y quedará lista para convertirla en venta.`}
+            confirmText="Sí, la aprobó"
+          />
+
+          <ConfirmDialog
+            open={confirmDialog.show && confirmDialog.action === 'rejectQuote'}
+            onCancel={() => setConfirmDialog({ show: false, action: null })}
+            onConfirm={() => handleSetQuoteStatus('rechazada')}
+            title="Registrar rechazo"
+            message={`¿El cliente rechazó la cotización ${sale.sale_number}? Ya no se podrá convertir en venta.`}
+            confirmText="Sí, la rechazó"
             confirmVariant="danger"
           />
 

@@ -20,7 +20,15 @@ import BankAccountSelect from '../../components/accounting/BankAccountSelect';
 import useAuthStore from '../../store/authStore';
 import Pagination from '../../components/common/Pagination';
 
-const IVA_RATE_OPTIONS = [0, 5, 19];
+// Tratamiento de IVA del gasto: tarifa, exento (0 %, sí es IVA) o excluido
+// (no causa IVA). El valor 'excluido' viaja en tax_rate solo en el formulario.
+const IVA_RATE_OPTIONS = [
+  { value: '19', label: '19 %' },
+  { value: '5', label: '5 %' },
+  { value: '0', label: 'Exento (0 %)' },
+  { value: 'excluido', label: 'Excluido (sin IVA)' },
+];
+const ivaStatusOf = (taxRate) => (taxRate === 'excluido' ? 'excluido' : (parseFloat(taxRate) || 0) > 0 ? 'gravado' : 'exento');
 // Mismo criterio que backend/src/routes/expenses.routes.js (DELETE /:id).
 const DELETE_ROLES = ['admin', 'manager'];
 const PAGE_SIZE = 50;
@@ -41,7 +49,9 @@ const emptyForm = {
   // registra exactamente igual que antes (compatibilidad, ver LEEME Fase 2).
   supplier_id: '',
   subtotal: '',
-  tax_rate: 19,
+  tax_rate: '19',
+  // INC (impoconsumo, p.ej. restaurante o telefonía móvil): no es descontable.
+  inc_rate: 0,
   requires_support_document: false,
   retefuente_rate: 0,
   reteiva_rate: 0,
@@ -134,6 +144,7 @@ const ExpensesPage = () => {
         const subtotal = parseFloat(form.subtotal || form.total_amount) || 0;
         const taxRate = parseFloat(form.tax_rate) || 0;
         const taxAmount = round2(subtotal * taxRate / 100);
+        const incRate = parseFloat(form.inc_rate) || 0;
         const retefuenteAmount = round2(subtotal * (parseFloat(form.retefuente_rate) || 0) / 100);
         const reteivaAmount = round2(taxAmount * (parseFloat(form.reteiva_rate) || 0) / 100);
         const reteicaAmount = round2(subtotal * (parseFloat(form.reteica_rate) || 0) / 100);
@@ -142,6 +153,9 @@ const ExpensesPage = () => {
           subtotal,
           tax_rate: taxRate,
           tax_amount: taxAmount,
+          iva_status: ivaStatusOf(form.tax_rate),
+          inc_rate: incRate,
+          inc_amount: round2(subtotal * incRate / 100),
           requires_support_document: !!form.requires_support_document,
           retefuente_rate: parseFloat(form.retefuente_rate) || 0,
           retefuente_amount: retefuenteAmount,
@@ -156,6 +170,7 @@ const ExpensesPage = () => {
         delete payload.supplier_id;
         delete payload.subtotal;
         delete payload.tax_rate;
+        delete payload.inc_rate;
         delete payload.requires_support_document;
         delete payload.retefuente_rate;
         delete payload.reteiva_rate;
@@ -542,7 +557,7 @@ const ExpensesPage = () => {
                     </select>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Base gravable (subtotal)</label>
                       <NumericInput
@@ -553,20 +568,37 @@ const ExpensesPage = () => {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">% IVA</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">IVA</label>
                       <select
                         value={form.tax_rate}
                         onChange={e => setForm(f => ({ ...f, tax_rate: e.target.value }))}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                       >
-                        {IVA_RATE_OPTIONS.map(r => <option key={r} value={r}>{r}%</option>)}
+                        {IVA_RATE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                       </select>
                     </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1" title="Impoconsumo (restaurante, telefonía móvil...): no es descontable, queda en el gasto">INC %</label>
+                      <NumericInput
+                        value={form.inc_rate}
+                        onChange={e => setForm(f => ({ ...f, inc_rate: e.target.value }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                        placeholder="0"
+                      />
+                    </div>
                   </div>
-                  <p className="text-xs text-gray-500">
-                    IVA calculado: {formatCurrency(round2((parseFloat(form.subtotal || form.total_amount) || 0) * (parseFloat(form.tax_rate) || 0) / 100))}
-                    {' · '}Total: {formatCurrency((parseFloat(form.subtotal || form.total_amount) || 0) + round2((parseFloat(form.subtotal || form.total_amount) || 0) * (parseFloat(form.tax_rate) || 0) / 100))}
-                  </p>
+                  {(() => {
+                    const base = parseFloat(form.subtotal || form.total_amount) || 0;
+                    const iva = round2(base * (parseFloat(form.tax_rate) || 0) / 100);
+                    const inc = round2(base * (parseFloat(form.inc_rate) || 0) / 100);
+                    return (
+                      <p className="text-xs text-gray-500">
+                        IVA calculado: {formatCurrency(iva)}
+                        {inc > 0 && <>{' · '}INC: {formatCurrency(inc)}</>}
+                        {' · '}Total: {formatCurrency(base + iva + inc)}
+                      </p>
+                    );
+                  })()}
 
                   <label className="flex items-start bg-amber-50 border border-amber-200 rounded-lg p-2">
                     <input

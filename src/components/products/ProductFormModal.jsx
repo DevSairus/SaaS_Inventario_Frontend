@@ -219,6 +219,11 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
     }
   }, [formData.average_cost, formData.profit_margin_percentage, lastPurchaseCost]);
 
+  // Tratamiento de IVA a la vista: excluido/exento explícito o gravado con su tarifa.
+  const ivaTreatment = formData.tax_config?.iva_status === 'excluido'
+    ? 'excluido'
+    : parseFloat(formData.tax_percentage) > 0 ? `g${parseFloat(formData.tax_percentage)}` : 'exento';
+
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setSaveError('');
@@ -227,6 +232,17 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
         ...prev,
         has_tax: checked,
         tax_percentage: checked ? (prev.tax_percentage || 19) : 0
+      }));
+    } else if (name === 'iva_treatment') {
+      // Gravado (gNN), exento (0 %, sí es IVA) o excluido (no causa IVA).
+      // tax_config.iva_status viaja a cada línea de venta y al XML DIAN.
+      const status = value === 'excluido' ? 'excluido' : value === 'exento' ? 'exento' : 'gravado';
+      const rate = status === 'gravado' ? parseFloat(value.slice(1)) || 19 : 0;
+      setFormData(prev => ({
+        ...prev,
+        tax_percentage: rate,
+        has_tax: rate > 0,
+        tax_config: { ...(prev.tax_config || {}), iva_status: status, iva: { enabled: rate > 0, rate } },
       }));
     } else if (name === 'tax_percentage') {
       const taxValue = parseFloat(value);
@@ -555,24 +571,47 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
               </div>
 
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Tipo de IVA</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Tratamiento de IVA</label>
                 <select
-                  name="tax_percentage"
-                  value={formData.tax_percentage}
+                  name="iva_treatment"
+                  value={ivaTreatment}
                   onChange={handleChange}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100"
                 >
-                  <option value="0">Exento (0%)</option>
-                  <option value="5">Reducido (5%)</option>
-                  <option value="10">Intermedio (10%)</option>
-                  <option value="19">General (19%)</option>
-                  <option value="21">Otro (21%)</option>
+                  <option value="g19">Gravado — tarifa general (19 %)</option>
+                  <option value="g5">Gravado — tarifa reducida (5 %)</option>
+                  {!['g19', 'g5', 'exento', 'excluido'].includes(ivaTreatment) && (
+                    <option value={ivaTreatment}>Gravado — {formData.tax_percentage} % (tarifa anterior)</option>
+                  )}
+                  <option value="exento">Exento (0 %)</option>
+                  <option value="excluido">Excluido (no causa IVA)</option>
                 </select>
                 <p className="mt-1 text-xs text-gray-500 dark:text-gray-500">
-                  {formData.tax_percentage === 0 || formData.tax_percentage === '0'
-                    ? 'Producto exento de IVA'
-                    : `IVA del ${formData.tax_percentage}% aplicable según normativa`}
+                  {ivaTreatment === 'exento'
+                    ? 'Exento: es IVA con tarifa 0 % (arts. 477 y 481 E.T.). En la factura electrónica va como IVA 0 %.'
+                    : ivaTreatment === 'excluido'
+                      ? 'Excluido: no causa IVA (art. 424 E.T.). En la factura electrónica no lleva IVA.'
+                      : `IVA del ${formData.tax_percentage} % sobre el precio.`}
                 </p>
+                {ivaTreatment !== 'excluido' && (
+                  <label className="mt-2 flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={!!formData.tax_config?.iva_common}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        setFormData(prev => ({ ...prev, tax_config: { ...(prev.tax_config || {}), iva_common: checked } }));
+                      }}
+                      className="mt-0.5 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    />
+                    <span>
+                      Insumo de uso común
+                      <span className="block text-xs text-gray-500">
+                        Se consume en ventas gravadas y excluidas (p. ej. lubricantes o consumibles de taller). El IVA de sus compras entra al Prorrateo de IVA.
+                      </span>
+                    </span>
+                  </label>
+                )}
               </div>
 
               {formData.has_tax && parseFloat(formData.tax_percentage) > 0 && (

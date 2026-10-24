@@ -50,6 +50,7 @@ const PurchaseFormPage = () => {
     quantity: 1,
     unit_cost: 0,
     tax_rate: 19,
+    inc_rate: 0,
     discount_percentage: 0
   });
 
@@ -75,7 +76,7 @@ const PurchaseFormPage = () => {
 
   // Vista previa de retenciones (con debounce) cada vez que cambian el
   // proveedor o los ítems.
-  const itemsKey = JSON.stringify(items.map(i => [i.product_id, i.quantity, i.unit_cost, i.discount_percentage, i.tax_rate]));
+  const itemsKey = JSON.stringify([items.map(i => [i.product_id, i.quantity, i.unit_cost, i.discount_percentage, i.tax_rate]), formData.discount_amount]);
   useEffect(() => {
     if (!formData.supplier_id || items.length === 0) { setRetentionPreview({ lines: [], notes: [] }); return; }
     let cancelled = false;
@@ -83,6 +84,8 @@ const PurchaseFormPage = () => {
       retentionsAPI.preview({
         supplier_id: formData.supplier_id,
         items: items.map(i => ({ product_id: i.product_id, quantity: i.quantity, unit_cost: i.unit_cost, discount_percentage: i.discount_percentage, tax_rate: i.tax_rate })),
+        // El descuento general baja la base de las retenciones (igual que al guardar).
+        discount_amount: toInteger(formData.discount_amount, 0),
       })
         .then((res) => { if (!cancelled) setRetentionPreview({ lines: res.data?.lines || [], notes: res.data?.notes || [] }); })
         .catch(() => { if (!cancelled) setRetentionPreview({ lines: [], notes: ['No se pudo calcular la vista previa de retenciones.'] }); });
@@ -190,7 +193,8 @@ const PurchaseFormPage = () => {
           const totals = calculateItemTotals({
             quantity: item.quantity,
             unit_cost: item.unit_cost,
-            tax_rate: item.tax_rate || 19,
+            tax_rate: item.tax_rate ?? 19,
+            inc_rate: item.inc_rate ?? 0,
             discount_percentage: item.discount_percentage || 0
           });
 
@@ -198,7 +202,8 @@ const PurchaseFormPage = () => {
             product_id: item.product_id,
             quantity: toInteger(item.quantity, 1),
             unit_cost: toNumber(item.unit_cost, 0),
-            tax_rate: toNumber(item.tax_rate, 19),
+            tax_rate: toNumber(item.tax_rate ?? 19, 19),
+            inc_rate: toNumber(item.inc_rate, 0),
             discount_percentage: toNumber(item.discount_percentage, 0),
             product_name: item.product?.name || 'Producto desconocido',
             product_sku: item.product?.sku || '',
@@ -243,7 +248,7 @@ const PurchaseFormPage = () => {
     let numValue = value;
     if (name === 'quantity') {
       numValue = toInteger(value, 1);
-    } else if (name === 'unit_cost' || name === 'tax_rate' || name === 'discount_percentage') {
+    } else if (name === 'unit_cost' || name === 'tax_rate' || name === 'inc_rate' || name === 'discount_percentage') {
       numValue = toInteger(value, 0);
     }
     
@@ -255,7 +260,11 @@ const PurchaseFormPage = () => {
       ...prev, 
       product_id: product.id,
       _product_name: product.name,
-      _product_sku: product.sku
+      _product_sku: product.sku,
+      // IVA por defecto: el del producto (0 si es exento o excluido); el de
+      // la factura del proveedor manda y se puede cambiar.
+      tax_rate: product.tax_config?.iva_status === 'excluido' || product.has_tax === false
+        ? 0 : (Number(product.tax_percentage) || 0),
     }));
     setProductSearch(`${product.sku} - ${product.name}`);
   };
@@ -294,6 +303,7 @@ const PurchaseFormPage = () => {
       quantity: 1,
       unit_cost: 0,
       tax_rate: 19,
+      inc_rate: 0,
       discount_percentage: 0
     });
     setProductSearch('');
@@ -322,13 +332,15 @@ const PurchaseFormPage = () => {
   const calculateTotals = () => {
     const subtotal = items.reduce((sum, item) => sum + toNumber(item.subtotal, 0), 0);
     const taxAmount = items.reduce((sum, item) => sum + toNumber(item.taxAmount, 0), 0);
+    const incAmount = items.reduce((sum, item) => sum + toNumber(item.incAmount, 0), 0);
     const discountAmount = toInteger(formData.discount_amount, 0);
     const shippingCost = toInteger(formData.shipping_cost, 0);
-    const total = subtotal + taxAmount - discountAmount + shippingCost;
+    const total = subtotal + taxAmount + incAmount - discountAmount + shippingCost;
 
     return {
       subtotal,
       taxAmount,
+      incAmount,
       total
     };
   };
@@ -381,6 +393,7 @@ const PurchaseFormPage = () => {
         quantity: toInteger(item.quantity),
         unit_cost: toInteger(item.unit_cost),
         tax_rate: toInteger(item.tax_rate),
+        inc_rate: toNumber(item.inc_rate, 0),
         discount_percentage: toInteger(item.discount_percentage)
       }))
     };
@@ -646,6 +659,20 @@ const PurchaseFormPage = () => {
             </div>
 
             <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1" title="Impoconsumo de la factura del proveedor: no es descontable, va al costo">
+                INC (%)
+              </label>
+              <input
+                type="number"
+                name="inc_rate"
+                value={currentItem.inc_rate}
+                onChange={handleItemChange}
+                {...INPUT_CONFIG.percentage}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Desc. (%)
               </label>
@@ -704,7 +731,10 @@ const PurchaseFormPage = () => {
                       </td>
                       <td className="px-4 py-3 text-right text-sm text-gray-900">{item.quantity}</td>
                       <td className="px-4 py-3 text-right text-sm text-gray-900">{formatCurrency(item.unit_cost)}</td>
-                      <td className="px-4 py-3 text-right text-sm text-gray-900">{item.tax_rate}%</td>
+                      <td className="px-4 py-3 text-right text-sm text-gray-900">
+                        {item.tax_rate}%
+                        {toNumber(item.inc_rate, 0) > 0 && <div className="text-xs text-gray-500">INC {item.inc_rate}%</div>}
+                      </td>
                       <td className="px-4 py-3 text-right text-sm text-gray-900">{item.discount_percentage}%</td>
                       <td className="px-4 py-3 text-right text-sm font-medium text-gray-900">
                         {formatCurrency(item.subtotal)}
@@ -774,6 +804,12 @@ const PurchaseFormPage = () => {
                     <span className="text-gray-600">IVA:</span>
                     <span className="font-medium">{formatCurrency(totals.taxAmount)}</span>
                   </div>
+                  {totals.incAmount > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600" title="No es descontable: va al costo">INC (impoconsumo):</span>
+                      <span className="font-medium">{formatCurrency(totals.incAmount)}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Descuento:</span>
                     <span className="font-medium text-red-600">-{formatCurrency(formData.discount_amount)}</span>

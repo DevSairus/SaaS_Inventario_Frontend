@@ -11,18 +11,25 @@ import { formatCurrency, toInteger } from '../../utils/formatters';
 import { getServerOrigin } from '../../utils/env';
 
 const taxPctOf = (product) => (product.has_tax === false ? 0 : Number(product.tax_percentage ?? 19) || 0);
+// Impoconsumo (INC) del producto, sobre la base sin IVA (taxService.calculateItemTaxes).
+const incPctOf = (product) => {
+  const inc = product?.tax_config?.inc;
+  return inc?.enabled && Number(inc.rate) > 0 ? Number(inc.rate) : 0;
+};
 
 // Mismo cálculo que calculateItemTotals de SaleFormPage (sin AIU ni descuento por línea).
 function lineAmounts(product, quantity, unitPrice) {
   const gross = quantity * unitPrice;
   const pct = taxPctOf(product);
-  if (!pct) return { tax: 0, total: gross };
-  if (product.price_includes_tax) {
-    const tax = Math.round((gross * pct) / (100 + pct));
-    return { tax, total: gross };
+  const incPct = incPctOf(product);
+  if (!pct && !incPct) return { tax: 0, inc: 0, total: gross };
+  if (product.price_includes_tax && product.has_tax !== false) {
+    const base = gross / (1 + (pct + incPct) / 100);
+    return { tax: Math.round((base * pct) / 100), inc: Math.round((base * incPct) / 100), total: gross };
   }
   const tax = Math.round((gross * pct) / 100);
-  return { tax, total: gross + tax };
+  const inc = Math.round((gross * incPct) / 100);
+  return { tax, inc, total: gross + tax + inc };
 }
 
 const lineParts = (l) => (l.type === 'product'
@@ -33,13 +40,14 @@ const lineTotal = (l) => lineParts(l).reduce((s, p) => s + p.total, 0);
 
 export function computeTotals(lines, discount) {
   let tax = 0;
+  let inc = 0;
   let total = 0;
-  lines.forEach(l => lineParts(l).forEach(p => { tax += p.tax; total += p.total; }));
+  lines.forEach(l => lineParts(l).forEach(p => { tax += p.tax; inc += p.inc; total += p.total; }));
   const value = toInteger(discount.value, 0);
   const discountAmount = value <= 0 ? 0
     : discount.type === 'percentage' ? Math.round(total * Math.min(value, 100) / 100)
       : Math.min(value, total);
-  return { subtotal: total - tax, tax, discountAmount, grandTotal: total - discountAmount };
+  return { subtotal: total - tax - inc, tax, inc, discountAmount, grandTotal: total - discountAmount };
 }
 
 function toSaleItem(product, quantity, unitPrice, comboFields) {
@@ -72,6 +80,7 @@ export function linesFromSaleItems(items = []) {
   items.forEach(item => {
     const product = item.product || {
       id: item.product_id, name: item.product_name, tax_percentage: item.tax_percentage, has_tax: Number(item.tax_percentage) > 0,
+      tax_config: Number(item.inc_rate) > 0 ? { inc: { enabled: true, rate: Number(item.inc_rate) } } : undefined,
     };
     const quantity = Number(item.quantity) || 0;
     const unitPrice = Number(item.unit_price) || 0;
@@ -238,6 +247,9 @@ export function QuoteSummary({ totals, discount, onDiscountChange, readOnly = fa
       <dl className="space-y-1.5 text-sm">
         <div className={`${sticky ? 'hidden sm:flex' : 'flex'} justify-between gap-3 text-gray-500`}><dt>Subtotal</dt><dd className="tabular-nums">{formatCurrency(totals.subtotal)}</dd></div>
         <div className={`${sticky ? 'hidden sm:flex' : 'flex'} justify-between gap-3 text-gray-500`}><dt>IVA</dt><dd className="tabular-nums">{formatCurrency(totals.tax)}</dd></div>
+        {totals.inc > 0 && (
+          <div className={`${sticky ? 'hidden sm:flex' : 'flex'} justify-between gap-3 text-gray-500`}><dt>INC (impoconsumo)</dt><dd className="tabular-nums">{formatCurrency(totals.inc)}</dd></div>
+        )}
         {readOnly ? (
           totals.discountAmount > 0 && (
             <div className="flex justify-between gap-3 text-emerald-600"><dt>Descuento</dt><dd className="tabular-nums">− {formatCurrency(totals.discountAmount)}</dd></div>

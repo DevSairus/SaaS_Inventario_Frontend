@@ -84,6 +84,29 @@ export default function PurchaseRetentionSettings({ config, onChange }) {
           </div>
           <div className="p-3 bg-gray-50 rounded-lg border border-gray-200 flex items-center justify-between gap-3">
             <div>
+              <div className="text-sm font-medium text-gray-900">Responsable de IVA</div>
+              <div className="text-xs text-gray-500">
+                Si lo eres, el IVA de compras y gastos es descontable. Si no, va al costo del inventario o al gasto.
+                {fp.is_iva_responsible === undefined && ' Sin marcar se toma de tu configuración DIAN (No responsable = no).'}
+              </div>
+            </div>
+            <Toggle checked={fp.is_iva_responsible !== false} onChange={(v) => setFp('is_iva_responsible', v)} />
+          </div>
+          <div className="p-3 bg-gray-50 rounded-lg border border-gray-200 flex items-center justify-between gap-3">
+            <div>
+              <div className="text-sm font-medium text-gray-900">Período de IVA</div>
+              <div className="text-xs text-gray-500">
+                Bimestral si los ingresos del año anterior fueron de 92.000 UVT o más; si no, cuatrimestral (art. 600 E.T.). Se usa en el prorrateo de IVA.
+              </div>
+            </div>
+            <select value={fp.iva_period || 'bimestral'} onChange={(e) => setFp('iva_period', e.target.value)}
+              className="px-2 py-1 text-sm border border-gray-300 rounded">
+              <option value="bimestral">Bimestral</option>
+              <option value="cuatrimestral">Cuatrimestral</option>
+            </select>
+          </div>
+          <div className="p-3 bg-gray-50 rounded-lg border border-gray-200 flex items-center justify-between gap-3">
+            <div>
               <div className="text-sm font-medium text-gray-900">Gran contribuyente</div>
               <div className="text-xs text-gray-500">Designado por la DIAN.</div>
             </div>
