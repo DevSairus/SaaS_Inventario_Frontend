@@ -17,7 +17,13 @@ const useSalesStore = create((set, get) => ({
     customer_name: '',
     vehicle_plate: '',
     branch_id: '',
+    payment_view: '', // 'pending' = solo documentos con saldo por cobrar
+    aging: '',        // dentro de 'pending': overdue | upcoming | draft
   },
+  // Paginación del listado (limit/offset en el backend, máx. 200)
+  page: 1,
+  pageSize: 50,
+  total: 0,
   stats: {
     total_sales: 0,
     total_amount: 0,
@@ -29,9 +35,16 @@ const useSalesStore = create((set, get) => ({
   fetchSales: async (customFilters = {}) => {
     set({ loading: true, error: null });
     try {
-      const filters = { ...get().filters, ...customFilters };
+      const { page: currentPage, pageSize } = get();
+      const { page = currentPage, ...rest } = customFilters;
+      const filters = { ...get().filters, ...rest, limit: pageSize, offset: (page - 1) * pageSize };
       const response = await salesApi.getAll(filters);
-      set({ sales: response.data.data, loading: false });
+      set({
+        sales: response.data.data,
+        page,
+        total: response.data.pagination?.total ?? response.data.data.length,
+        loading: false,
+      });
     } catch (error) {
       set({ 
         error: error.response?.data?.message || 'Error cargando ventas', 

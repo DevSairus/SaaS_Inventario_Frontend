@@ -16,6 +16,10 @@ const salesApi = {
     if (filters.vehicle_plate) params.append('vehicle_plate', filters.vehicle_plate);
     if (filters.branch_id) params.append('branch_id', filters.branch_id);
     if (filters.quote_view) params.append('quote_view', 'true');
+    if (filters.payment_view) params.append('payment_view', filters.payment_view);
+    if (filters.aging) params.append('aging', filters.aging);
+    if (filters.limit) params.append('limit', filters.limit);
+    if (filters.offset) params.append('offset', filters.offset);
     
     return api.get(`/sales?${params.toString()}`);
   },
@@ -36,6 +40,9 @@ const salesApi = {
   cancel: (id) => api.post(`/sales/${id}/cancel`),
 
   // Registrar pago
+  // Recordatorio de pago por WhatsApp → interacción del cliente
+  registerPaymentReminder: (id, data) => api.post(`/sales/${id}/payment-reminders`, data),
+
   registerPayment: (id, paymentData) => 
     api.post(`/sales/${id}/payments`, paymentData),
 

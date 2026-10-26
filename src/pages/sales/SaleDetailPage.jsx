@@ -404,6 +404,14 @@ export default function SaleDetailPage() {
     else if (!loadedIsQuote && onQuotesRoute) navigate(`/sales/${id}`, { replace: true, state: location.state });
   }, [loadedIsQuote, currentSale?.id, id, location.pathname]);
 
+  // "Confirmar y cobrar" desde Ventas → Por cobrar: abre directo la
+  // confirmación con pago. Se limpia el flag para que no reabra al recargar.
+  useEffect(() => {
+    if (!location.state?.openConfirm || currentSale?.id !== id) return;
+    if (currentSale.status === 'draft' && currentSale.document_type !== 'cotizacion') setShowConfirmWithPayment(true);
+    navigate(location.pathname, { replace: true, state: { ...location.state, openConfirm: false } });
+  }, [currentSale?.id, id]);
+
   // Cliente aprobó/rechazó por fuera del link público (teléfono, en persona).
   const handleSetQuoteStatus = async (status) => {
     setConfirmDialog({ show: false, action: null });
