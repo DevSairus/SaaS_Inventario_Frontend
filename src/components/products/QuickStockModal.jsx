@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { AlertTriangle, Package, User, FileText, ArrowUpCircle, ArrowDownCircle, Loader, DollarSign } from 'lucide-react';
 import { adjustmentsAPI } from '../../api/adjustments';
 import { formatCurrency } from '../../utils/formatters';
+import { suggestedSalePrice } from '../../utils/salePricing';
 import toast from 'react-hot-toast';
 
 const REASONS_ENTRADA = [
@@ -59,12 +60,13 @@ export default function QuickStockModal({ product, user, onClose, onSuccess }) {
     ? (projectedStock > 0 ? ((currentStock * currentAvgCost) + (qty * cost)) / projectedStock : cost)
     : null;
 
-  // Con motivo "compra" y margen configurado, el backend recalcula el precio de venta sobre este costo,
-  // pero nunca lo baja solo: si el sugerido es menor, conserva el actual y deja una alerta de costo.
+  // Con motivo "compra" y margen configurado, el backend recalcula el precio de venta sobre este costo
+  // (margen sobre la venta, con IVA si el precio lo incluye), pero nunca lo baja solo: si el sugerido
+  // es menor, conserva el actual y deja una alerta de costo.
   const margin = parseFloat(product.profit_margin_percentage) || 0;
   const currentPrice = parseFloat(product.base_price) || 0;
   const projectedPrice = type === 'entrada' && reason === 'compra' && margin > 0 && costValid
-    ? Math.round(cost * (1 + margin / 100) * 100) / 100
+    ? suggestedSalePrice(cost, margin, product)
     : null;
   const priceHeld = projectedPrice !== null && currentPrice > 0 && projectedPrice < currentPrice - 0.005;
   const costVariation = type === 'entrada' && reason === 'compra' && lastPurchaseCost > 0 && costValid

@@ -528,8 +528,8 @@ const ReportsPage = () => {
               total_cost: acc.total_cost + (p.total_cost || 0),
               total_profit: acc.total_profit + (p.profit || 0),
             }), { total_revenue: 0, total_cost: 0, total_profit: 0 });
-            filteredTotals.margin_percentage = filteredTotals.total_cost > 0
-              ? (filteredTotals.total_profit / filteredTotals.total_cost) * 100 : 0;
+            filteredTotals.margin_percentage = filteredTotals.total_revenue > 0
+              ? (filteredTotals.total_profit / filteredTotals.total_revenue) * 100 : 0;
             return (
             <div className="space-y-6">
               <DateFilterBar {...dateFilterProps}

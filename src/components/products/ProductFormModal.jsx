@@ -6,6 +6,7 @@ import useTenantStore from '../../store/tenantStore';
 import BarcodeScanner from '../common/BarcodeScanner';
 import { warehousesService } from '../../api/warehouses';
 import { formatNumber } from '../../utils/formatters';
+import { suggestedSalePrice, MAX_MARGIN } from '../../utils/salePricing';
 import NumericInput from '../inputs/NumericInput';
 import ProductImageUpload from './ProductImageUpload';
 import { productsAPI } from '../../api/products';
@@ -205,19 +206,17 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
   // recibir compras); un producto que nunca se ha comprado usa el costo digitado.
   const lastPurchaseCost = parseFloat(product?.last_purchase_cost) || 0;
 
+  // Margen sobre la venta; si el precio se maneja con IVA incluido, el sugerido
+  // ya lo trae (utils/salePricing.js, mismo cálculo que el backend).
   useEffect(() => {
-    if ((lastPurchaseCost > 0 || formData.average_cost) && formData.profit_margin_percentage) {
+    if ((lastPurchaseCost > 0 || formData.average_cost) && formData.profit_margin_percentage !== '') {
       const cost = lastPurchaseCost > 0 ? lastPurchaseCost : parseFloat(formData.average_cost);
-      const margin = parseFloat(formData.profit_margin_percentage);
-      if (!isNaN(cost) && !isNaN(margin) && cost > 0 && margin >= 0) {
-        setCalculatedPrice(fmtNum(cost * (1 + margin / 100)));
-      } else {
-        setCalculatedPrice(null);
-      }
+      const price = suggestedSalePrice(cost, formData.profit_margin_percentage, formData);
+      setCalculatedPrice(price !== null ? fmtNum(price) : null);
     } else {
       setCalculatedPrice(null);
     }
-  }, [formData.average_cost, formData.profit_margin_percentage, lastPurchaseCost]);
+  }, [formData.average_cost, formData.profit_margin_percentage, formData.price_includes_tax, formData.has_tax, formData.tax_percentage, formData.tax_config, lastPurchaseCost]);
 
   // Tratamiento de IVA a la vista: excluido/exento explícito o gravado con su tarifa.
   const ivaTreatment = formData.tax_config?.iva_status === 'excluido'
@@ -510,7 +509,7 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Margen de Ganancia (%)
+                  Margen de Ganancia sobre la venta (%)
                 </label>
                 <input
                   type="number"
@@ -520,9 +519,13 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
                   onChange={handleChange}
                   step="0.01"
                   min="0"
+                  max={MAX_MARGIN}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100"
                   placeholder="0.00"
                 />
+                {parseFloat(formData.profit_margin_percentage) > MAX_MARGIN && (
+                  <p className="mt-1 text-xs text-red-600">El margen es sobre el precio de venta: debe ser menor a 100 %.</p>
+                )}
                 {calculatedPrice && (
                   <p className="mt-1 text-xs text-green-600 font-medium">
                     Precio sugerido: ${calculatedPrice}

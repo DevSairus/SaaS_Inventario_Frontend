@@ -690,12 +690,12 @@ const InvoiceImportModal = ({ isOpen, onClose, onSuccess, dianDocumentId = null 
               <div className="bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800/40 rounded-lg p-4">
                 <div className="flex items-center justify-between gap-4">
                   <div>
-                    <p className="font-semibold text-amber-900 dark:text-amber-300 text-sm">% Utilidad para productos nuevos</p>
+                    <p className="font-semibold text-amber-900 dark:text-amber-300 text-sm">% Margen sobre la venta para productos nuevos</p>
                     <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">Solo aplica a productos que no existen en el catálogo</p>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
-                    <input type="number" min="0" max="500" value={profitMargin}
-                      onChange={e => setProfitMargin(Math.max(0, parseFloat(e.target.value) || 0))}
+                    <input type="number" min="0" max="99" value={profitMargin}
+                      onChange={e => setProfitMargin(Math.min(99, Math.max(0, parseFloat(e.target.value) || 0)))}
                       className="w-20 px-3 py-2 text-center font-bold text-lg border-2 border-amber-300 dark:border-amber-800/40 rounded-lg focus:ring-2 focus:ring-amber-400 bg-white dark:bg-graphite-2 dark:text-gray-100" />
                     <span className="text-amber-700 dark:text-amber-300 font-bold text-lg">%</span>
                   </div>
