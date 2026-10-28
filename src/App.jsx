@@ -6,6 +6,7 @@ import ResetPasswordPage from './pages/auth/ResetPasswordPage';
 import WorkOrderPublicPage from './pages/workshop/WorkOrderPublicPage';
 import SeguimientoPublicoPage from './pages/ensambladora/SeguimientoPublicoPage';
 import QuotePublicPage from './pages/sales/QuotePublicPage';
+import ConsentPublicPage from './pages/legal/ConsentPublicPage';
 import Loading from './components/common/Loading';
 const DashboardPage = lazy(() => import('./pages/dashboard/DashboardPage'));
 const ProductsPage = lazy(() => import('./pages/products/ProductsPage'));
@@ -319,6 +320,8 @@ function App() {
         <Route path="/documento/:token"    element={<QuotePublicPage />} />
         <Route path="/public/quote/:token" element={<QuotePublicPage />} />
         <Route path="/agendar/:slug"       element={<PublicAppointmentPage />} />
+        {/* Habeas data / acta de ingreso: el cliente acepta con un código OTP */}
+        <Route path="/autorizacion/:token" element={<ConsentPublicPage />} />
         <Route path="/portal/vehiculo/:token" element={<VehiclePortalPage />} />
         <Route path="/blog"           element={<Suspense fallback={<Loading fullScreen />}><BlogListPage /></Suspense>} />
         <Route path="/blog/:slug"     element={<Suspense fallback={<Loading fullScreen />}><BlogPostPage /></Suspense>} />

@@ -459,7 +459,9 @@ function Timeline({ status }) {
 // Mismos ítems y niveles de combustible que captura el asesor al recibir el
 // vehículo (ver el modal equivalente en WorkOrderDetailPage.jsx) -- acá es
 // de solo lectura, para que el cliente pueda verificar qué quedó registrado.
-const INTAKE_ITEMS = [
+// Los ítems vienen del backend (intake_checklist_items, configurables por
+// taller); esta lista es solo el respaldo para respuestas viejas en caché.
+const DEFAULT_INTAKE_ITEMS = [
   { key: 'estado_general', label: 'Estado general' },
   { key: 'testigos',       label: 'Testigos' },
   { key: 'tanque',         label: 'Tanque combustible' },
@@ -472,8 +474,8 @@ const INTAKE_ITEMS = [
 ];
 const FUEL_LEVEL_LABELS = ['Vacío', '1/4', '1/2', '3/4', 'Lleno'];
 
-function IntakeChecklistModal({ checklist, onClose }) {
-  const registeredItems = INTAKE_ITEMS.filter(({ key }) => checklist[key] !== undefined);
+function IntakeChecklistModal({ checklist, items, onClose }) {
+  const registeredItems = (items?.length ? items : DEFAULT_INTAKE_ITEMS).filter(({ key }) => checklist[key] !== undefined);
   return (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div
@@ -517,6 +519,13 @@ function IntakeChecklistModal({ checklist, onClose }) {
             <div>
               <p className="text-xs text-gray-500 dark:text-gray-500 mb-1">Observaciones al ingreso</p>
               <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{checklist.observations}</p>
+            </div>
+          )}
+
+          {checklist.belongings && (
+            <div>
+              <p className="text-xs text-gray-500 dark:text-gray-500 mb-1">Objetos dejados en el vehículo</p>
+              <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{checklist.belongings}</p>
             </div>
           )}
         </div>
@@ -771,7 +780,7 @@ export default function WorkOrderPublicPage() {
         )}
 
         {showIntake && (
-          <IntakeChecklistModal checklist={order.checklist_in} onClose={() => setShowIntake(false)} />
+          <IntakeChecklistModal checklist={order.checklist_in} items={order.intake_checklist_items} onClose={() => setShowIntake(false)} />
         )}
 
         {/* ── Fechas ────────────────────────────────────────────────── */}

@@ -87,7 +87,9 @@ const useWorkshopStore = create((set, get) => ({
       } else {
         toast.success(`OT ${res.data.data.order_number} creada exitosamente`);
       }
-      return res.data.data;
+      // Aviso de recepción al cliente (backend consent.service.js#notifyVehicleReception):
+      // viaja aparte de la OT para que el formulario ofrezca el wa.me si no salió solo.
+      return { ...res.data.data, reception_notice: res.data.reception_notice || null };
     } catch (err) {
       const msg = err?.response?.data?.message || 'No se pudo crear la orden de trabajo.';
       toast.error(msg);

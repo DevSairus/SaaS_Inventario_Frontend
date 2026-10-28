@@ -25,9 +25,25 @@ import NumericInput from '../../components/inputs/NumericInput';
 import CompleteCustomerDianModal from '../../components/dian/CompleteCustomerDianModal';
 import ComboPickerModal from '../../components/combos/ComboPickerModal';
 import WorkOrderPaymentsPanel from '../../components/workshop/WorkOrderPaymentsPanel';
+import IntakeAuthorizationCard from '../../components/consents/IntakeAuthorizationCard';
+import { consentsAPI } from '../../api/consents';
 import { groupDocumentItems } from '../../components/combos/comboUtils';
 
 const STATUS_FLOW = ['recibido', 'en_proceso', 'en_espera', 'listo', 'entregado'];
+
+// Ítems del inventario de ingreso si el tenant no configuró los suyos
+// (mismos que backend consent.service.js#DEFAULT_INTAKE_CHECKLIST).
+const DEFAULT_INTAKE_ITEMS = [
+  { key: 'estado_general', label: 'Estado general' },
+  { key: 'testigos',       label: 'Testigos' },
+  { key: 'tanque',         label: 'Tanque combustible' },
+  { key: 'espejos',        label: 'Espejos' },
+  { key: 'sillin',         label: 'Sillín' },
+  { key: 'luces',          label: 'Luces' },
+  { key: 'carenaje',       label: 'Carenaje / plásticos' },
+  { key: 'llantas',        label: 'Llantas' },
+  { key: 'rele_encendido', label: 'Rele de encendido' },
+];
 
 // Transiciones permitidas: solo avance, sin retroceder a 'recibido'
 const STATUS_TRANSITIONS = {
@@ -320,6 +336,14 @@ export default function WorkOrderDetailPage() {
   const [uploadMenuOpen, setUploadMenuOpen] = useState(null); // 'in' | 'out' | null
 
   useEffect(() => { fetchOrder(id); fetchFeatures(); }, [id]);
+
+  // Acta de ingreso (habeas data / autorización del cliente) + ítems del
+  // inventario configurados por el tenant -- ver consent.service.js.
+  const [intakeInfo, setIntakeInfo] = useState(null);
+  const loadIntakeInfo = () => consentsAPI.forWorkOrder(id).then(setIntakeInfo).catch(() => setIntakeInfo(null));
+  useEffect(() => { loadIntakeInfo(); }, [id]);
+  const INTAKE_ITEMS = intakeInfo?.checklist_items || DEFAULT_INTAKE_ITEMS;
+  const intakeAccepted = !!intakeInfo?.consents?.some(c => c.status === 'accepted');
 
   // Búsqueda debounced (con filtro vehicular si la OT tiene vehículo)
   useEffect(() => {
@@ -631,6 +655,7 @@ export default function WorkOrderDetailPage() {
       // Actualizar store directamente — Sequelize no devuelve checklist_in en el refetch
       patchCurrentOrder({ checklist_in: { ...checklist } });
       setShowChecklist(false);
+      loadIntakeInfo();
       toast.success(res.data.data._pendingSync ? 'Inventario guardado sin conexión — se sincronizará automáticamente' : 'Inventario guardado');
     } catch (e) {
       toast.error(e?.response?.data?.message || 'No se pudo guardar el inventario de ingreso. Intenta de nuevo.');
@@ -2103,12 +2128,7 @@ export default function WorkOrderDetailPage() {
                       </span>
                     </div>
                   )}
-                  {[
-                    { key: 'estado_general', label: 'Estado general' },
-                    { key: 'testigos',       label: 'Testigos' },
-                    { key: 'espejos',        label: 'Espejos' },
-                    { key: 'luces',          label: 'Luces' },
-                  ].map(({ key, label }) => {
+                  {INTAKE_ITEMS.filter(({ key }) => typeof order.checklist_in[key] === 'boolean').slice(0, 6).map(({ key, label }) => {
                     const v = order.checklist_in[key];
                     if (v === undefined || v === null) return null;
                     return (
@@ -2158,6 +2178,8 @@ export default function WorkOrderDetailPage() {
                 </button>
               </div>
             </div>
+
+            <IntakeAuthorizationCard workOrderId={id} info={intakeInfo} onChanged={loadIntakeInfo} />
           </div>
         </div>
       </div>
@@ -2173,19 +2195,10 @@ export default function WorkOrderDetailPage() {
 
       {/* ── MODAL CHECKLIST INGRESO ─────────────────────────────── */}
       {showChecklist && (() => {
-        // Solo editable en estado "recibido"
-        const checklistReadonly = order.status !== 'recibido';
-        const ITEMS = [
-          { key: 'estado_general', label: 'Estado general' },
-          { key: 'testigos',       label: 'Testigos' },
-          { key: 'tanque',         label: 'Tanque combustible' },
-          { key: 'espejos',        label: 'Espejos' },
-          { key: 'sillin',         label: 'Sillín' },
-          { key: 'luces',          label: 'Luces' },
-          { key: 'carenaje',       label: 'Carenaje / plásticos' },
-          { key: 'llantas',        label: 'Llantas' },
-          { key: 'rele_encendido', label: 'Rele de encendido' },
-        ];
+        // Solo editable en estado "recibido" y mientras el cliente no haya
+        // aceptado el acta de ingreso (el backend también lo bloquea).
+        const checklistReadonly = order.status !== 'recibido' || intakeAccepted;
+        const ITEMS = INTAKE_ITEMS;
         return (
           <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
             <div className="bg-gray-50 rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl">
@@ -2226,7 +2239,9 @@ export default function WorkOrderDetailPage() {
               {checklistReadonly && (
                 <div className="mx-5 mt-4 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-700 flex items-center gap-2">
                   <AlertTriangle size={13} />
-                  El inventario solo puede editarse cuando la OT está en estado <strong className="ml-1">Recibido</strong>.
+                  {intakeAccepted
+                    ? 'El cliente ya aceptó el acta de ingreso con este inventario. Para modificarlo, anula primero la autorización.'
+                    : <>El inventario solo puede editarse cuando la OT está en estado <strong className="ml-1">Recibido</strong>.</>}
                 </div>
               )}
 
@@ -2333,6 +2348,21 @@ export default function WorkOrderDetailPage() {
                     readOnly={checklistReadonly}
                     rows={3}
                     placeholder={checklistReadonly ? '' : 'Ej: Rayón en guardabarro derecho, espejo izquierdo roto...'}
+                    className={`w-full border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none focus:outline-none ${
+                      checklistReadonly ? 'bg-gray-50 text-gray-500 cursor-default' : 'focus:ring-2 focus:ring-purple-400'
+                    }`}
+                  />
+                </div>
+
+                {/* Objetos dejados -- van en el acta de ingreso que acepta el cliente */}
+                <div className="bg-white rounded-xl p-3 border border-gray-200">
+                  <p className="text-sm font-semibold text-gray-700 mb-1">Objetos dejados en el vehículo</p>
+                  <textarea
+                    value={checklist.belongings || ''}
+                    onChange={e => !checklistReadonly && setCL('belongings', e.target.value)}
+                    readOnly={checklistReadonly}
+                    rows={2}
+                    placeholder={checklistReadonly ? '' : 'Ej: Casco, documentos en la guantera, herramienta...'}
                     className={`w-full border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none focus:outline-none ${
                       checklistReadonly ? 'bg-gray-50 text-gray-500 cursor-default' : 'focus:ring-2 focus:ring-purple-400'
                     }`}

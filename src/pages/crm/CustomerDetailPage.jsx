@@ -26,6 +26,7 @@ import Button from '../../components/common/Button';
 import toast from 'react-hot-toast';
 import { customerAdvancesAPI } from '../../api/customerAdvances';
 import RegisterAdvanceModal from '../../components/finance/RegisterAdvanceModal';
+import HabeasDataPanel from '../../components/consents/HabeasDataPanel';
 import { SALE_STATUS_LABELS } from '../../constants/salesStatus';
 
 const COP = n => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(n || 0);
@@ -378,6 +379,7 @@ export default function CustomerDetailPage() {
                 <p className="text-sm text-gray-600">{customer.notes}</p>
               </div>
             )}
+            <HabeasDataPanel customerId={customer.id} />
           </div>
 
           {/* Timeline unificado (CRM) o ventas recientes (sin CRM) */}

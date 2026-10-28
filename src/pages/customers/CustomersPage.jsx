@@ -8,6 +8,7 @@ import Loading from '../../components/common/Loading';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
 import Layout from '../../components/layout/Layout';
 import CustomerFormModal from '../../components/customers/CustomerFormModal';
+import { HabeasStatusBadge } from '../../components/consents/HabeasDataPanel';
 import LibroAuxiliarModal from '../../components/accounting/LibroAuxiliarModal';
 import useCanReadAccounting from '../../hooks/useCanReadAccounting';
 import toast from 'react-hot-toast';
@@ -99,6 +100,7 @@ export default function CustomersPage() {
                       <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{customer.full_name}</div>
                       {customer.business_name && <div className="text-xs text-gray-500 dark:text-gray-500">{customer.business_name}</div>}
                       <div className="text-xs text-gray-500 dark:text-gray-500">{customer.tax_id}</div>
+                      {customer.habeas_data_status && <HabeasStatusBadge status={customer.habeas_data_status} className="inline-block mt-1" />}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <Badge variant={customer.customer_type === 'company' ? 'info' : 'secondary'}>

@@ -11,8 +11,9 @@ import toast from 'react-hot-toast';
 import useTenantStore from '../../store/tenantStore';
 import useAuthStore from '../../store/authStore';
 import TaxConfigSection from '../../components/settings/TaxConfigSection';
+import ConsentSettingsTab from '../../components/settings/ConsentSettingsTab';
 import { invalidateRetentionCatalog } from '../../hooks/useRetentionCatalog';
-import { Building2, Receipt, ShoppingCart, Wrench, Landmark, MessageCircle, Printer, Package, FileText } from 'lucide-react';
+import { Building2, Receipt, ShoppingCart, Wrench, Landmark, MessageCircle, Printer, Package, FileText, ShieldCheck } from 'lucide-react';
 
 // Mismo texto que usa el PDF de cotización cuando el tenant no configuró el
 // suyo (backend/src/services/sales/quotePdfService.js#DEFAULT_TERMS).
@@ -66,6 +67,7 @@ const TenantSettingsPage = () => {
     { id: 'cotizaciones', label: 'Cotizaciones', Icon: FileText },
     { id: 'taller',      label: 'Taller',       Icon: Wrench },
     { id: 'inventario',  label: 'Inventario',   Icon: Package },
+    { id: 'datos',       label: 'Datos personales', Icon: ShieldCheck },
   ];
 
   useEffect(() => {
@@ -974,6 +976,17 @@ const TenantSettingsPage = () => {
               </div>
             </div>
           </Card>
+          )}
+
+          {/* ============ DATOS PERSONALES (habeas data / ingreso) ============ */}
+          {activeTab === 'datos' && (
+            <ConsentSettingsTab
+              businessConfig={config.business_config}
+              onChange={(key, value) => setConfig(prev => ({
+                ...prev,
+                business_config: { ...prev.business_config, [key]: value },
+              }))}
+            />
           )}
 
           </fieldset>

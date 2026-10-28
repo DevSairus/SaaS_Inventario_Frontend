@@ -334,6 +334,30 @@ export default function WorkOrderFormPage() {
     }
   };
 
+  // Resultado del aviso automático de recepción (Configuración → Datos
+  // personales → "Avisar al cliente al recibir el vehículo"). Si WhatsApp no
+  // salió por Cloud API, se ofrece el wa.me para enviarlo desde el celular.
+  const notifyReceptionResult = (notice) => {
+    if (!notice) return;
+    const sentBy = [notice.whatsapp?.sent && 'WhatsApp', notice.email?.sent && 'correo'].filter(Boolean);
+    if (sentBy.length) toast.success(`Aviso de recepción enviado al cliente por ${sentBy.join(' y ')}`);
+    const waUrl = notice.whatsapp?.whatsapp_url;
+    if (waUrl) {
+      toast((t) => (
+        <span className="flex items-center gap-3 text-sm">
+          Aviso de recepción listo para WhatsApp
+          <button
+            type="button"
+            className="px-2 py-1 rounded bg-green-600 text-white text-xs font-medium"
+            onClick={() => { window.open(waUrl, '_blank'); toast.dismiss(t.id); }}
+          >
+            Enviar
+          </button>
+        </span>
+      ), { duration: 20000 });
+    }
+  };
+
   const handleSubmit = async () => {
     if (!form.vehicle_id)        return toast.error('Debes seleccionar un vehículo');
     // El panel de "nuevo cliente" solo escribe en el form al confirmar
@@ -364,6 +388,7 @@ export default function WorkOrderFormPage() {
     try {
       const order = await createOrder(form);
       draft.clear();
+      notifyReceptionResult(order.reception_notice);
       navigate(`/workshop/work-orders/${order.id}`);
     } catch (e) {
       const msg = e.response?.data?.message || 'Error al crear la OT';
