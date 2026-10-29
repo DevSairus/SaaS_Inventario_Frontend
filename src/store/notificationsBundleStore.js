@@ -13,10 +13,17 @@ import { getNotificationsBundle } from '../api/notificationsBundle';
 // llamando a su endpoint dedicado (no a este bundle) — es una acción del
 // usuario, no un timer, así que no aporta al problema de tráfico constante
 // que motivó este cambio.
+//
+// Con la pestaña oculta no se consulta: una pestaña olvidada abierta toda la
+// noche despertaba la base de datos (Neon) cada 30 min, cada una a su hora.
+// Al volver a la pestaña se pone al día si lo que tiene ya está vencido.
 const POLL_INTERVAL_MS = 30 * 60 * 1000;
 
 let pollHandle = null;
 let starting = false;
+let onVisibilityChange = null;
+
+const isHidden = () => typeof document !== 'undefined' && document.visibilityState === 'hidden';
 
 const useNotificationsBundleStore = create((set, get) => ({
   data: {
@@ -52,13 +59,28 @@ const useNotificationsBundleStore = create((set, get) => ({
     if (pollHandle || starting) return;
     starting = true;
     get().fetchBundle().finally(() => { starting = false; });
-    pollHandle = setInterval(() => get().fetchBundle(), POLL_INTERVAL_MS);
+    pollHandle = setInterval(() => {
+      if (!isHidden()) get().fetchBundle();
+    }, POLL_INTERVAL_MS);
+    onVisibilityChange = () => {
+      const { lastFetchedAt, loading } = get();
+      if (!isHidden() && !loading && (!lastFetchedAt || Date.now() - lastFetchedAt >= POLL_INTERVAL_MS)) {
+        get().fetchBundle();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
   },
 
+  // Al cerrar sesión (authStore.logout): sin esto el timer seguía pidiendo
+  // el bundle sin token.
   stopPolling: () => {
     if (pollHandle) {
       clearInterval(pollHandle);
       pollHandle = null;
+    }
+    if (onVisibilityChange) {
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      onVisibilityChange = null;
     }
   },
 }));

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { authAPI } from '../api/auth';
+import useNotificationsBundleStore from './notificationsBundleStore';
 import {
   getStoredToken,
   getStoredUser,
@@ -69,6 +70,7 @@ const useAuthStore = create((set) => ({
   },
 
   logout: () => {
+    useNotificationsBundleStore.getState().stopPolling();
     clearAuthStorage();
     set({
       user: null,

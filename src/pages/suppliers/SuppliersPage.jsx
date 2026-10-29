@@ -1,5 +1,5 @@
 // frontend/src/pages/suppliers/SuppliersPage.jsx
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useSuppliersStore } from '../../store/suppliersStore';
 import SupplierModal from '../../components/suppliers/SupplierModal';
 import LibroAuxiliarModal from '../../components/accounting/LibroAuxiliarModal';
@@ -21,9 +21,6 @@ import {
   BookOpenIcon,
 } from '@heroicons/react/24/outline';
 
-/* ─── helpers ─────────────────────────────────────────────── */
-const normalizeQ = (s) => (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-
 /* ─── componente ──────────────────────────────────────────── */
 const SuppliersPage = () => {
   const canReadAccounting = useCanReadAccounting();
@@ -40,25 +37,33 @@ const SuppliersPage = () => {
   const [filterActive, setFilterActive]   = useState('');
   const [ledgerSupplier, setLedgerSupplier] = useState(null);
 
+  // La búsqueda va al servidor (antes filtraba solo los 10 proveedores de la
+  // página cargada: uno de otra página nunca aparecía), con una pausa corta
+  // para no consultar en cada tecla.
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   useEffect(() => {
-    fetchSuppliers();
+    const timer = setTimeout(() => setDebouncedSearch(search.trim()), 350);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  useEffect(() => {
     fetchStats();
   }, []);
 
+  // Cambió la búsqueda o el estado: volver a la página 1 (en otra página el
+  // resultado podía quedar vacío). Al montar no consulta: lo hace el efecto
+  // de página de abajo.
+  const firstFilterRun = useRef(true);
   useEffect(() => {
-    setFilters({ is_active: filterActive });
-    fetchSuppliers();
-  }, [filterActive, pagination.page]);
+    setFilters({ search: debouncedSearch, is_active: filterActive });
+    if (firstFilterRun.current) { firstFilterRun.current = false; return; }
+    if (pagination.page !== 1) setPage(1); // el efecto de página trae los datos
+    else fetchSuppliers();
+  }, [debouncedSearch, filterActive]);
 
-  /* filtrado local */
-  const filtered = useMemo(() => {
-    const q = normalizeQ(search);
-    if (!q) return suppliers;
-    return suppliers.filter((s) => {
-      const hay = [s.name, s.business_name, s.tax_id, s.email, s.contact_name, s.phone].map(normalizeQ).join(' ');
-      return hay.includes(q);
-    });
-  }, [suppliers, search]);
+  useEffect(() => {
+    fetchSuppliers();
+  }, [pagination.page]);
 
   const activeCount = [filterActive].filter(Boolean).length;
 
@@ -195,7 +200,7 @@ const SuppliersPage = () => {
               <ArrowPathIcon className="h-6 w-6 animate-spin" />
               <span className="text-sm">Cargando proveedores...</span>
             </div>
-          ) : filtered.length === 0 ? (
+          ) : suppliers.length === 0 ? (
             <div className="py-20 text-center text-gray-400">
               <UserGroupIcon className="h-10 w-10 mx-auto mb-3 opacity-30" />
               <p className="text-sm">No se encontraron proveedores</p>
@@ -217,7 +222,7 @@ const SuppliersPage = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {filtered.map((s) => (
+                  {suppliers.map((s) => (
                     <tr key={s.id} className="hover:bg-slate-50 transition-colors group">
 
                       {/* Proveedor */}
@@ -303,7 +308,7 @@ const SuppliersPage = () => {
                 <tfoot>
                   <tr className="bg-gray-50 border-t-2 border-gray-200 text-sm">
                     <td colSpan={6} className="px-4 py-3 text-gray-500">
-                      {filtered.length} proveedor{filtered.length !== 1 ? 'es' : ''}
+                      {pagination.total} proveedor{pagination.total !== 1 ? 'es' : ''}
                       {stats && <span className="ml-3 text-emerald-600 font-medium">· {stats.active} activos</span>}
                     </td>
                   </tr>
