@@ -10,6 +10,8 @@ export const vehiclesApi = {
   remove: (id) => axios.delete(`/workshop/vehicles/${id}`),
   // Portal del vehículo / mantenimientos (plan-portal-mantenimiento-vehiculo.md)
   getMaintenance: (id) => axios.get(`/workshop/vehicles/${id}/maintenance`),
+  // Recordatorios de vencimiento SOAT / técnico-mecánica enviados
+  getReminders: (id) => axios.get(`/workshop/vehicles/${id}/reminders`),
   getPortalLink: (id) => axios.post(`/workshop/vehicles/${id}/portal-token`),
   sendPortalWhatsApp: (id) => axios.post(`/workshop/vehicles/${id}/portal-whatsapp`),
   getLabel: (id) => axios.get(`/workshop/vehicles/${id}/label`), // datos + QR del sticker

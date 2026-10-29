@@ -12,6 +12,7 @@ import useTenantStore from '../../store/tenantStore';
 import useAuthStore from '../../store/authStore';
 import TaxConfigSection from '../../components/settings/TaxConfigSection';
 import ConsentSettingsTab from '../../components/settings/ConsentSettingsTab';
+import VehicleReminderSettings from '../../components/settings/VehicleReminderSettings';
 import { invalidateRetentionCatalog } from '../../hooks/useRetentionCatalog';
 import { Building2, Receipt, ShoppingCart, Wrench, Landmark, MessageCircle, Printer, Package, FileText, ShieldCheck } from 'lucide-react';
 
@@ -922,6 +923,15 @@ const TenantSettingsPage = () => {
               </div>
             </div>
           </Card>
+
+          {/* Taller — Recordatorios de SOAT y técnico-mecánica */}
+          <VehicleReminderSettings
+            businessConfig={config.business_config}
+            onChange={(value) => setConfig(prev => ({
+              ...prev,
+              business_config: { ...prev.business_config, vehicle_reminders: value },
+            }))}
+          />
 
           {/* Taller — Costo estimado de mano de obra */}
           <Card>

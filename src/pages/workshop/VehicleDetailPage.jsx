@@ -7,7 +7,7 @@ import {
   ArrowLeft, Car, Wrench, User, Save, X, PencilLine,
   ChevronRight, AlertTriangle, CheckCircle, Clock,
   FileText, Hash, Fuel, Gauge, Palette,
-  QrCode, Link2, MessageCircle, CalendarClock,
+  QrCode, Link2, MessageCircle, CalendarClock, Bell, Mail,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import NumericInput from '../../components/inputs/NumericInput';
@@ -63,6 +63,7 @@ export default function VehicleDetailPage() {
   const [maintenance, setMaintenance] = useState(null); // { upcoming, records, portal_url }
   const [portalBusy, setPortalBusy] = useState(null);   // 'copy' | 'wa'
   const [showLabelModal, setShowLabelModal] = useState(false);
+  const [reminders, setReminders] = useState([]); // recordatorios de vencimiento enviados
 
   useEffect(() => { load(); }, [id]);
   useEffect(() => {
@@ -76,6 +77,7 @@ export default function VehicleDetailPage() {
       setVehicle(res.data.data.vehicle);
       setHistory(res.data.data.history || []);
       loadMaintenance();
+      vehiclesApi.getReminders(id).then(r => setReminders(r.data.data || [])).catch(() => setReminders([]));
     } catch {
       toast.error('Error cargando vehículo');
       navigate('/workshop/vehicles');
@@ -379,6 +381,9 @@ export default function VehicleDetailPage() {
                 </div>
               )}
             </div>
+
+            {/* Recordatorios de vencimiento enviados (vehicleReminderService) */}
+            <RemindersSection reminders={reminders} />
 
             {/* OTs recientes */}
             <div className="bg-white border border-gray-100 rounded-xl p-4">
@@ -697,6 +702,51 @@ function MaintenanceSection({ vehicle, maintenance, busy, onCopy, onWhatsApp, on
               })}
             </tbody>
           </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+const REMINDER_DOC = { soat: 'SOAT', tecnomecanica: 'Técnico-mecánica' };
+const REMINDER_STATUS = {
+  sent:    { label: 'Enviado',  cls: 'bg-green-50 text-green-700' },
+  failed:  { label: 'Falló',    cls: 'bg-red-50 text-red-700' },
+  skipped: { label: 'No se envió', cls: 'bg-gray-100 text-gray-600' },
+};
+
+function RemindersSection({ reminders }) {
+  return (
+    <div className="bg-white border border-gray-100 rounded-xl p-4">
+      <h2 className="text-sm font-semibold text-gray-700 flex items-center gap-2 mb-3">
+        <Bell size={14} className="text-blue-500"/> Recordatorios enviados
+      </h2>
+      {reminders.length === 0 ? (
+        <p className="text-xs text-gray-400 italic">
+          Aún no se han enviado recordatorios de vencimiento. Se configuran en Ajustes → Configuración → Taller.
+        </p>
+      ) : (
+        <div className="divide-y divide-gray-50 -mx-1 max-h-72 overflow-y-auto">
+          {reminders.map(r => {
+            const st = REMINDER_STATUS[r.status] || REMINDER_STATUS.skipped;
+            const ChannelIcon = r.channel === 'whatsapp' ? MessageCircle : Mail;
+            return (
+              <div key={r.id} className="px-1 py-2 text-xs">
+                <div className="flex items-center gap-2">
+                  <ChannelIcon size={12} className={r.channel === 'whatsapp' ? 'text-green-600' : 'text-blue-500'}/>
+                  <span className="font-medium text-gray-800">{REMINDER_DOC[r.document_type] || r.document_type}</span>
+                  <span className="text-gray-400">· {r.days_before} día{r.days_before === 1 ? '' : 's'} antes</span>
+                  <span className={`ml-auto px-1.5 py-0.5 rounded font-medium ${st.cls}`}>{st.label}</span>
+                </div>
+                <p className="text-gray-400 mt-0.5">
+                  {new Date(r.created_at).toLocaleString('es-CO', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                  {' · vence '}{fmtDateOnly(r.expiry_date)}
+                  {r.destination && <> · {r.destination}</>}
+                </p>
+                {r.detail && <p className="text-gray-500 mt-0.5">{r.detail}</p>}
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
