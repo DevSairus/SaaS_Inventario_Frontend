@@ -5,7 +5,9 @@ import { receiptsAPI } from '../../api/receipts';
 import { formatCurrency } from '../../utils/formatters';
 import Layout from '../../components/layout/Layout';
 import Pagination from '../../components/common/Pagination';
-import { DocumentTextIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
+import { DocumentTextIcon, MagnifyingGlassIcon, PrinterIcon } from '@heroicons/react/24/outline';
+import useAuthStore from '../../store/authStore';
+import { getPosSettings, printPosDocument } from '../../utils/posPrinting';
 
 const SOURCE_LABELS = { sale: 'Venta', work_order: 'Taller' };
 // receipts.controller.js pagina por limit/offset (máx. 200) y devuelve total.
@@ -58,6 +60,16 @@ const ReceiptsPage = () => {
 
   useEffect(() => { setPage(1); }, [filters]);
   useEffect(() => { loadData(); }, [loadData]);
+
+  const tenantId = useAuthStore((s) => s.user?.tenant_id);
+  const posEnabled = getPosSettings(tenantId).enabled;
+  const printTicket = async (receipt) => {
+    try {
+      await printPosDocument('receipt', receipt.id, { tenantId });
+    } catch {
+      toast.error('No se pudo imprimir la tirilla del recibo');
+    }
+  };
 
   const openPdf = async (receipt) => {
     try {
@@ -158,7 +170,15 @@ const ReceiptsPage = () => {
                           {r.status === 'voided' ? 'Anulado' : 'Activo'}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-right">
+                      <td className="px-4 py-3 text-right whitespace-nowrap">
+                        {posEnabled && (
+                          <button
+                            onClick={() => printTicket(r)}
+                            className="inline-flex items-center gap-1 mr-3 text-xs font-medium text-blue-600 hover:text-blue-800"
+                          >
+                            <PrinterIcon className="w-4 h-4" /> Tirilla
+                          </button>
+                        )}
                         <button
                           onClick={() => openPdf(r)}
                           disabled={openingPdfId === r.id}

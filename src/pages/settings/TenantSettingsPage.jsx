@@ -688,6 +688,30 @@ const TenantSettingsPage = () => {
             </div>
           </Card>
 
+          {/* Impresión POS (tirilla) */}
+          <Card>
+            <div className="p-6 flex items-center justify-between">
+              <div className="flex items-start gap-4">
+                <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600">
+                  <Printer size={20} strokeWidth={2} />
+                </div>
+                <div>
+                  <p className="font-semibold text-gray-900">Impresión POS (tirilla)</p>
+                  <p className="text-sm text-gray-500 mt-0.5">
+                    Facturas, remisiones, recibos de pago y cierres de caja en impresora de tirilla de 58 u 80 mm, con impresión
+                    automática. Se configura en cada equipo.
+                  </p>
+                </div>
+              </div>
+              <Link
+                  to="/settings/pos-printing"
+                  className="flex-shrink-0 ml-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
+                >
+                  Configurar →
+                </Link>
+            </div>
+          </Card>
+
           {/* Facturación Electrónica DIAN */}
           {canConfigureDian && <Card>
             <div className="p-6 flex items-center justify-between">

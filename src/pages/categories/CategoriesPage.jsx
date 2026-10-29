@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import useCategoriesStore from '../../store/categoriesStore';
 import useAuthStore from '../../store/authStore';
 import CategoryFormModal from '../../components/categories/CategoryFormModal';
+import ProfitMarginsModal from '../../components/categories/ProfitMarginsModal';
+import { productsAPI } from '../../api/products';
 import Layout from '../../components/layout/Layout';
 import { exportCategoriesToExcel } from '../../utils/excelExport';
 
@@ -22,10 +24,22 @@ function CategoriesPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState(null);
   const [showInactive, setShowInactive] = useState(false);
+  // Márgenes de ganancia: solo gerencia los cambia (ver products.routes.js).
+  const canEditMargins = ['admin', 'manager', 'super_admin'].includes(user?.role);
+  const [marginsTarget, setMarginsTarget] = useState(undefined); // undefined = cerrado
+  const [marginByCategory, setMarginByCategory] = useState(new Map());
+
+  const loadMargins = () => {
+    productsAPI.getMargins()
+      .then((res) => setMarginByCategory(new Map((res.data?.categories || []).map((c) => [c.id, c]))))
+      .catch(() => {});
+  };
 
   useEffect(() => {
     fetchCategories(showInactive);
   }, [showInactive]);
+
+  useEffect(() => { loadMargins(); }, [categories]);
 
   const handleCreate = () => {
     setEditingCategory(null);
@@ -81,6 +95,15 @@ function CategoriesPage() {
             <p className="text-sm text-gray-500 mt-0.5 dark:text-gray-500">Organiza tus productos en categorías y subcategorías</p>
           </div>
           <div className="flex gap-2 flex-wrap">
+            {canEditMargins && (
+              <button
+                onClick={() => setMarginsTarget(null)}
+                className="inline-flex items-center gap-2 px-4 py-2.5 border border-purple-300 rounded-lg text-sm font-medium text-purple-700 bg-white hover:bg-purple-50 shadow-sm dark:border-purple-800/40 dark:text-purple-300 dark:bg-graphite dark:hover:bg-white/5"
+              >
+                <span className="font-bold">%</span>
+                Márgenes de ganancia
+              </button>
+            )}
             <button
               onClick={handleExport}
               className="inline-flex items-center gap-2 px-4 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 shadow-sm dark:border-white/10 dark:text-gray-300 dark:bg-graphite dark:hover:bg-white/5"
@@ -192,6 +215,9 @@ function CategoriesPage() {
                     Categoría Padre
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
+                    Margen
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
                     Estado
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider">
@@ -202,7 +228,7 @@ function CategoriesPage() {
               <tbody className="bg-white divide-y divide-gray-200 dark:bg-graphite dark:divide-white/10">
                 {isLoading ? (
                   <tr>
-                    <td colSpan="5" className="px-6 py-12 text-center">
+                    <td colSpan="6" className="px-6 py-12 text-center">
                       <div className="flex justify-center items-center">
                         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
                       </div>
@@ -210,7 +236,7 @@ function CategoriesPage() {
                   </tr>
                 ) : displayCategories.length === 0 ? (
                   <tr>
-                    <td colSpan="5" className="px-6 py-12 text-center text-gray-500 dark:text-gray-500">
+                    <td colSpan="6" className="px-6 py-12 text-center text-gray-500 dark:text-gray-500">
                       {showInactive ? 'No hay categorías' : 'No hay categorías activas'}
                     </td>
                   </tr>
@@ -233,6 +259,25 @@ function CategoriesPage() {
                         ) : (
                           <span className="text-sm text-gray-400 dark:text-gray-600">Principal</span>
                         )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        {(() => {
+                          const m = marginByCategory.get(category.id);
+                          if (!m || m.effective_margin === null) return <span className="text-gray-400 dark:text-gray-600">—</span>;
+                          const value = `${Number(m.effective_margin).toLocaleString('es-CO', { maximumFractionDigits: 2 })} %`;
+                          const label = m.source === 'own' ? null : m.source === 'parent' ? `de ${m.source_name}` : 'global';
+                          const content = (
+                            <>
+                              <span className={m.source === 'own' ? 'font-semibold text-gray-900 dark:text-gray-100' : 'text-gray-600 dark:text-gray-400'}>{value}</span>
+                              {label && <span className="ml-1 text-xs text-gray-400">({label})</span>}
+                            </>
+                          );
+                          return canEditMargins ? (
+                            <button type="button" onClick={() => setMarginsTarget({ scope: 'category', category_id: category.id })} className="hover:underline" title="Cambiar margen">
+                              {content}
+                            </button>
+                          ) : content;
+                        })()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
@@ -296,6 +341,13 @@ function CategoriesPage() {
         onSave={handleSaveCategory}
         category={editingCategory}
         categories={categories}
+      />
+
+      <ProfitMarginsModal
+        isOpen={marginsTarget !== undefined}
+        onClose={() => setMarginsTarget(undefined)}
+        initialTarget={marginsTarget}
+        onApplied={loadMargins}
       />
     </Layout>
   );

@@ -39,6 +39,8 @@ import ConvertQuoteToWorkOrderModal from '../../components/sales/ConvertQuoteToW
 import { groupDocumentItems } from '../../components/combos/comboUtils';
 import { saleBalance } from '../../utils/saleAmounts';
 import useIsManagement from '../../hooks/useIsManagement';
+import useAuthStore from '../../store/authStore';
+import { getPosSettings, printPosDocument } from '../../utils/posPrinting';
 import { SALE_STATUS_LABELS, PAYMENT_STATUS_LABELS } from '../../constants/salesStatus';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
@@ -84,7 +86,31 @@ export default function SaleDetailPage() {
   const [dianIncompleteModal, setDianIncompleteModal] = useState(null); // { customerId, missingFields, paymentData } | null
   const [quoteStatusBusy, setQuoteStatusBusy] = useState(false);
 
+  // Tirilla POS (Ajustes → Impresión POS): este equipo decide si tiene
+  // impresora de tirilla y qué imprime solo.
+  const tenantId = useAuthStore((s) => s.user?.tenant_id);
+  const posEnabled = getPosSettings(tenantId).enabled;
+  const posPrint = async (kind, docId, opts = {}) => {
+    try {
+      await printPosDocument(kind, docId, { tenantId, ...opts });
+    } catch {
+      toast.error('No se pudo imprimir la tirilla');
+    }
+  };
+  const paymentIdsOf = (s) => new Set((s?.payment_history || []).map((p) => p.payment_id).filter(Boolean));
+  // Recibo de cada pago que no estaba antes (puede ser más de uno en pago mixto).
+  const printNewPayments = async (previousIds) => {
+    const updated = useSalesStore.getState().currentSale;
+    const fresh = (updated?.payment_history || []).filter((p) => p.payment_id && !previousIds.has(p.payment_id));
+    for (const p of fresh) await posPrint('payment', p.payment_id, { auto: true });
+  };
+
   const openPaymentReceipt = async (paymentIndex) => {
+    if (posEnabled) {
+      const history = currentSale?.payment_history || [];
+      const payment = history[paymentIndex === -1 ? history.length - 1 : paymentIndex];
+      if (payment?.payment_id) return posPrint('payment', payment.payment_id);
+    }
     try {
       const res = await salesApi.generatePaymentReceipt(id, paymentIndex);
       const url = URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
@@ -152,6 +178,8 @@ export default function SaleDetailPage() {
   const handleConfirmWithPayment = async (paymentData) => {
     try {
       setConfirmingPayment(true);
+      const wasConfirmed = ['pending', 'completed'].includes(currentSale?.status);
+      const previousPaymentIds = paymentIdsOf(currentSale);
       const { advance_applications, excess_advance_amount, ...saleConfirmData } = paymentData;
       const cashPortion = saleConfirmData.paid_amount ?? currentSale?.total_amount;
       const excessAdvance = parseFloat(excess_advance_amount || 0);
@@ -212,7 +240,9 @@ export default function SaleDetailPage() {
 
       if (createdAdvanceMsg) toast.success(createdAdvanceMsg, { duration: 6000 });
       setShowConfirmWithPayment(false);
-      fetchSaleById(id);
+      await fetchSaleById(id);
+      if (wasConfirmed) printNewPayments(previousPaymentIds);
+      else posPrint('sale', id, { auto: true, waitForDian: currentSale?.document_type === 'factura' });
     } catch (error) {
       const data = error.response?.data || {};
       if (data.code === 'DIAN_CUSTOMER_INCOMPLETE') {
@@ -347,6 +377,7 @@ export default function SaleDetailPage() {
   const handleRegisterPayment = async () => {
     try {
       setSavingPayment(true);
+      const previousPaymentIds = paymentIdsOf(currentSale);
       const result = await salesApi.registerPayment(id, {
         amount: parseFloat(paymentData.amount),
         payment_method: paymentData.payment_method,
@@ -357,6 +388,7 @@ export default function SaleDetailPage() {
       const newHistory = result?.data?.data?.payment_history || [];
       setLastPaymentIndex(newHistory.length - 1);
       await fetchSaleById(id);
+      printNewPayments(previousPaymentIds);
     } catch (error) {
       toast.error('Error registrando pago: ' + (error.response?.data?.message || error.message));
     } finally {
@@ -509,6 +541,9 @@ export default function SaleDetailPage() {
   // Acciones de menos uso agrupadas en el menú "Más acciones" para no saturar
   // la barra superior con botones.
   const moreActionsItems = [
+    posEnabled && ['factura', 'remision'].includes(sale.document_type) && sale.status !== 'draft' && {
+      label: 'Imprimir tirilla', icon: PrinterIcon, onClick: () => posPrint('sale', id),
+    },
     { label: 'Imprimir', icon: PrinterIcon, onClick: handlePrint },
     { label: 'Descargar PDF', icon: DocumentArrowDownIcon, onClick: handleDownloadPDF },
     canVoid && {

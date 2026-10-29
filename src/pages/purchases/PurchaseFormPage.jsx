@@ -8,6 +8,7 @@ import Layout from '../../components/layout/Layout';
 import NumericInput from '../../components/inputs/NumericInput';
 import Combobox, { HighlightMatch } from '../../components/common/Combobox';
 import { retentionsAPI } from '../../api/retentions';
+import { linkOrderListPurchase } from '../../api/orderLists';
 import {
   formatCurrency,
   toInteger,
@@ -65,6 +66,9 @@ const PurchaseFormPage = () => {
   // Estados para búsqueda de productos
   const [productSearch, setProductSearch] = useState('');
 
+  // Lista de pedido de la que sale esta compra (se enlaza al crearla)
+  const [orderListLink, setOrderListLink] = useState(null);
+
   useEffect(() => {
     suppliersAPI.getAll({ is_active: true, limit: 10000, sort_by: 'name', sort_order: 'ASC' })
       .then(res => setSuppliers(res.data || []))
@@ -105,6 +109,32 @@ const PurchaseFormPage = () => {
           ...prev,
           supplier_id: prefilledData.supplier_id
         }));
+      }
+
+      // Desde una lista de pedido: varias líneas (ya con IVA del producto) y
+      // la lista a enlazar al guardar.
+      if (Array.isArray(prefilledData.items) && prefilledData.items.length) {
+        setItems(prefilledData.items.map((it) => {
+          const quantity = toInteger(it.quantity, 1);
+          const unit_cost = toNumber(it.last_price, 0);
+          const tax_rate = toNumber(it.tax_rate, 0);
+          return {
+            product_id: it.product_id,
+            quantity,
+            unit_cost,
+            tax_rate,
+            discount_percentage: 0,
+            product_name: it.name,
+            product_sku: it.sku,
+            ...calculateItemTotals({ quantity, unit_cost, tax_rate, discount_percentage: 0 })
+          };
+        }));
+        if (prefilledData.order_list_id) {
+          setOrderListLink({ id: prefilledData.order_list_id, number: prefilledData.list_number });
+        }
+        if (prefilledData.notes) {
+          setFormData(prev => ({ ...prev, internal_notes: `Pedido ${prefilledData.list_number}: ${prefilledData.notes}` }));
+        }
       }
 
       // Prellenar producto como primer item (ya viene con name/sku en prefilledData)
@@ -382,6 +412,15 @@ const PurchaseFormPage = () => {
       return;
     }
 
+    // Las líneas precargadas desde un pedido pueden llegar en 0 (producto sin
+    // compras previas): pedir el costo, igual que al agregar un producto. Solo
+    // en ese caso, para no bloquear compras existentes con ítems bonificados.
+    const sinCosto = orderListLink ? items.filter(item => !(toNumber(item.unit_cost, 0) > 0)) : [];
+    if (sinCosto.length) {
+      toast(`Falta el costo unitario de: ${sinCosto.map(i => i.product_name).join(', ')}`);
+      return;
+    }
+
     const purchaseData = {
       ...formData,
       discount_amount: toInteger(formData.discount_amount, 0),
@@ -419,6 +458,13 @@ const PurchaseFormPage = () => {
         navigate(`/purchases/${id}`);
       } else {
         const result = await createPurchase(purchaseData);
+        if (orderListLink?.id && result?.id) {
+          try {
+            await linkOrderListPurchase(orderListLink.id, result.id);
+          } catch (e) {
+            toast.error(e.response?.data?.message || `No se pudo enlazar el pedido ${orderListLink.number || ''}`);
+          }
+        }
         toast.success('Compra creada exitosamente');
         navigate(`/purchases/${result.id}`);
       }
@@ -441,6 +487,11 @@ const PurchaseFormPage = () => {
           <p className="text-sm text-gray-500 mt-0.5">
             {isEditMode ? 'Modifica los datos de la orden de compra' : 'Crea una nueva orden de compra a proveedor'}
           </p>
+          {orderListLink && (
+            <p className="text-xs text-indigo-700 bg-indigo-50 border border-indigo-200 rounded px-2 py-1 mt-2 inline-block">
+              Desde el pedido {orderListLink.number}: cantidades precargadas, revisa costos e IVA. Al guardar, el pedido queda enlazado a esta compra.
+            </p>
+          )}
         </div>
         <button
           onClick={() => navigate('/purchases')}
@@ -729,8 +780,23 @@ const PurchaseFormPage = () => {
                         <div className="text-sm font-medium text-gray-900">{item.product_name}</div>
                         <div className="text-sm text-gray-500">{item.product_sku}</div>
                       </td>
-                      <td className="px-4 py-3 text-right text-sm text-gray-900">{item.quantity}</td>
-                      <td className="px-4 py-3 text-right text-sm text-gray-900">{formatCurrency(item.unit_cost)}</td>
+                      {/* Editables en la tabla: una compra precargada desde un pedido llega sin costos. */}
+                      <td className="px-4 py-3 text-right text-sm text-gray-900">
+                        <NumericInput
+                          name="quantity"
+                          value={item.quantity}
+                          onChange={(e) => updateItem(index, 'quantity', toInteger(e.target.value, 1))}
+                          className="w-20 px-2 py-1 border border-gray-300 rounded text-right focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        />
+                      </td>
+                      <td className="px-4 py-3 text-right text-sm text-gray-900">
+                        <NumericInput
+                          name="unit_cost"
+                          value={item.unit_cost}
+                          onChange={(e) => updateItem(index, 'unit_cost', toInteger(e.target.value, 0))}
+                          className={`w-28 px-2 py-1 border rounded text-right focus:ring-2 focus:ring-blue-500 focus:border-transparent ${toNumber(item.unit_cost, 0) > 0 ? 'border-gray-300' : 'border-amber-400 bg-amber-50'}`}
+                        />
+                      </td>
                       <td className="px-4 py-3 text-right text-sm text-gray-900">
                         {item.tax_rate}%
                         {toNumber(item.inc_rate, 0) > 0 && <div className="text-xs text-gray-500">INC {item.inc_rate}%</div>}

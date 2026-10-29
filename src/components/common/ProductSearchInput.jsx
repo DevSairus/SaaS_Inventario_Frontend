@@ -3,6 +3,7 @@ import { Search, X, Loader2 } from 'lucide-react';
 import useProductsStore from '../../store/productsStore';
 import { formatCurrency } from '../../utils/formatters';
 import { FloatingPanel, HighlightMatch, useClickOutside, useListNavigation, optionCls } from './searchDropdown';
+import { productSalePrice } from '../../utils/salePricing';
 
 const MIN_CHARS = 2;
 const MAX_RESULTS = 50;
@@ -161,8 +162,8 @@ export default function ProductSearchInput({
                 {show.cost && p.average_cost != null && (
                   <span className="text-gray-500 dark:text-gray-400">Costo {formatCurrency(p.average_cost)}</span>
                 )}
-                {show.price && p.sale_price != null && (
-                  <span className="text-gray-500 dark:text-gray-400">Precio {formatCurrency(p.sale_price)}</span>
+                {show.price && (p.base_price != null || p.sale_price != null) && (
+                  <span className="text-gray-500 dark:text-gray-400">Precio {formatCurrency(productSalePrice(p))}</span>
                 )}
               </div>
             </div>

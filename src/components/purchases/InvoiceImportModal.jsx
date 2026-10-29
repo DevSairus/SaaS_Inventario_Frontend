@@ -191,7 +191,8 @@ const InvoiceImportModal = ({ isOpen, onClose, onSuccess, dianDocumentId = null 
   const [preview, setPreview]           = useState(null);
   const [error, setError]               = useState(null);
   const [result, setResult]             = useState(null);
-  const [profitMargin, setProfitMargin] = useState(30);
+  // '' = los productos nuevos heredan el margen de su categoría (o el global).
+  const [profitMargin, setProfitMargin] = useState('');
   const [supplierName, setSupplierName] = useState('');
   const [removedItems, setRemovedItems] = useState([]);
   const [shippingCost, setShippingCost]   = useState('');
@@ -307,7 +308,7 @@ const InvoiceImportModal = ({ isOpen, onClose, onSuccess, dianDocumentId = null 
       const fd = new FormData();
       if (dianDocumentId) fd.append('dian_document_id', dianDocumentId);
       else fd.append('file', file);
-      fd.append('profit_margin', profitMargin);
+      if (profitMargin !== '') fd.append('profit_margin', profitMargin);
       fd.append('supplier_name', supplierName);
       fd.append('removed_items', JSON.stringify(removedItems));
       fd.append('shipping_cost', shippingCost || 0);
@@ -327,7 +328,7 @@ const InvoiceImportModal = ({ isOpen, onClose, onSuccess, dianDocumentId = null 
 
   const handleClose = () => {
     setFile(null); setPreview(null); setError(null); setResult(null);
-    setIsDragging(false); setProfitMargin(30); setSupplierName('');
+    setIsDragging(false); setProfitMargin(''); setSupplierName('');
     setRemovedItems([]); setShippingCost(''); setDiscountAmount(''); setItemTaxOverrides({}); setManualLinks({}); setNewProductData({});
     setFileInputKey(k => k + 1);
     onClose();
@@ -691,11 +692,11 @@ const InvoiceImportModal = ({ isOpen, onClose, onSuccess, dianDocumentId = null 
                 <div className="flex items-center justify-between gap-4">
                   <div>
                     <p className="font-semibold text-amber-900 dark:text-amber-300 text-sm">% Margen sobre la venta para productos nuevos</p>
-                    <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">Solo aplica a productos que no existen en el catálogo</p>
+                    <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">Solo aplica a productos que no existen en el catálogo. Vacío = el margen de su categoría (o el global)</p>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
-                    <input type="number" min="0" max="99" value={profitMargin}
-                      onChange={e => setProfitMargin(Math.min(99, Math.max(0, parseFloat(e.target.value) || 0)))}
+                    <input type="number" min="0" max="99" value={profitMargin} placeholder="Cat."
+                      onChange={e => setProfitMargin(e.target.value === '' ? '' : Math.min(99, Math.max(0, parseFloat(e.target.value) || 0)))}
                       className="w-20 px-3 py-2 text-center font-bold text-lg border-2 border-amber-300 dark:border-amber-800/40 rounded-lg focus:ring-2 focus:ring-amber-400 bg-white dark:bg-graphite-2 dark:text-gray-100" />
                     <span className="text-amber-700 dark:text-amber-300 font-bold text-lg">%</span>
                   </div>

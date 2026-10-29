@@ -1,11 +1,13 @@
 import toast from 'react-hot-toast';
 import { useEffect, useState, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { AlertTriangle, CheckCircle, XCircle, Eye, RefreshCw, Package, ShoppingCart, TrendingDown, Award } from 'lucide-react';
+import { AlertTriangle, CheckCircle, XCircle, Eye, RefreshCw, Package, ShoppingCart, TrendingDown, Award, ClipboardList } from 'lucide-react';
 import { InformationCircleIcon, ExclamationTriangleIcon, XCircleIcon as XCircleSolid, UserIcon, CurrencyDollarIcon, CalendarDaysIcon, PhoneIcon, EnvelopeIcon } from '@heroicons/react/24/outline';
 import useStockAlertsStore from '../../store/stockAlertsStore';
 import Layout from '../../components/layout/Layout';
 import CostAlertsPanel from '../../components/stock-alerts/CostAlertsPanel';
+import AddToOrderListModal from '../../components/order-lists/AddToOrderListModal';
+import { getPendingProducts } from '../../api/orderLists';
 
 const StockAlertsPage = () => {
   const navigate = useNavigate();
@@ -32,6 +34,26 @@ const StockAlertsPage = () => {
   const [selectedAlert, setSelectedAlert] = useState(null);
   const [showResolveModal, setShowResolveModal] = useState(false);
   const [resolutionNotes, setResolutionNotes] = useState('');
+  // Lista de pedido: producto a anotar y productos ya anotados en listas abiertas
+  const [orderProduct, setOrderProduct] = useState(null);
+  const [pendingByProduct, setPendingByProduct] = useState({});
+
+  const alertProductIds = (Array.isArray(alerts) ? alerts : []).map(a => a.product?.id).filter(Boolean);
+  const alertProductKey = alertProductIds.join(',');
+  const loadPending = () => {
+    if (!alertProductIds.length) { setPendingByProduct({}); return; }
+    getPendingProducts(alertProductIds)
+      .then((res) => {
+        const map = {};
+        for (const p of res.data || []) (map[p.product_id] = map[p.product_id] || []).push(p);
+        setPendingByProduct(map);
+      })
+      .catch(() => {});
+  };
+  useEffect(() => {
+    loadPending();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [alertProductKey]);
 
 
   // Cargar alertas y stats al montar el componente
@@ -244,6 +266,14 @@ const StockAlertsPage = () => {
             <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Alertas de Stock</h1>
             <p className="text-sm text-gray-500 mt-0.5">Gestión de alertas de inventario</p>
           </div>
+          <div className="flex gap-2">
+          <button
+            onClick={() => navigate('/order-lists')}
+            className="inline-flex items-center gap-2 px-4 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+          >
+            <ClipboardList className="w-4 h-4" />
+            Pedidos a proveedores
+          </button>
           {tab === 'stock' && (
           <button
             onClick={handleCheckAlerts}
@@ -254,6 +284,7 @@ const StockAlertsPage = () => {
             Verificar Stock
           </button>
           )}
+          </div>
         </div>
 
         {/* Pestañas: alertas de stock / alertas de costo */}
@@ -456,6 +487,16 @@ const StockAlertsPage = () => {
                             <div className="text-xs text-gray-500 truncate">
                               SKU: {alert.product?.sku}
                             </div>
+                            {pendingByProduct[alert.product?.id]?.map((p) => (
+                              <button
+                                key={p.list_id}
+                                onClick={() => navigate(`/order-lists/${p.list_id}`)}
+                                className="mt-1 mr-1 inline-flex items-center gap-1 px-1.5 py-0.5 text-[11px] rounded bg-indigo-50 text-indigo-700 hover:bg-indigo-100"
+                                title={`Pedido ${p.list_number} · ${p.supplier_name}`}
+                              >
+                                <ClipboardList className="w-3 h-3" /> En pedido: {p.quantity} · {p.supplier_name}
+                              </button>
+                            ))}
                           </div>
                         </td>
                         
@@ -517,6 +558,15 @@ const StockAlertsPage = () => {
                                   <XCircle className="w-4 h-4" />
                                 </button>
                               </>
+                            )}
+                            {alert.product?.id && (
+                              <button
+                                onClick={() => setOrderProduct(alert.product)}
+                                className="p-1.5 text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
+                                title="Agregar a pedido"
+                              >
+                                <ClipboardList className="w-4 h-4" />
+                              </button>
                             )}
                             <button
                               onClick={() => {
@@ -737,6 +787,14 @@ const StockAlertsPage = () => {
             </div>
           </div>
         )}
+
+        <AddToOrderListModal
+          isOpen={!!orderProduct}
+          onClose={() => setOrderProduct(null)}
+          product={orderProduct}
+          source="stock_alert"
+          onAdded={loadPending}
+        />
 
         {/* Modal de Resolución */}
         {showResolveModal && (

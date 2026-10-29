@@ -15,6 +15,7 @@ import LabelPreview from '../labels/LabelPreview';
 import {
   DEFAULT_PROFILE, pickProfile, setDeviceProfileId, printProductLabels, labelsPerPage, normalizeProfile,
 } from '../../utils/labelPrinting';
+import { productSalePrice } from '../../utils/salePricing';
 
 const MANAGE_ROLES = ['admin', 'manager'];
 
@@ -82,7 +83,7 @@ export default function BarcodePrintModal({ isOpen, onClose, product, onBarcodeG
     name: product?.name,
     sku: product?.sku,
     barcode: currentBarcode,
-    price: product?.sale_price ?? product?.price ?? null,
+    price: product ? (productSalePrice(product) || product.price || null) : null,
   }), [product, currentBarcode]);
 
   const handleGenerateAndSave = useCallback(async () => {

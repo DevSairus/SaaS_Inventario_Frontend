@@ -89,5 +89,24 @@ export const productsAPI = {
   getSuppliersDetail: async (id) => {
     const response = await api.get(`/products/${id}/suppliers`, { params: { detail: 1 } });
     return response.data;
+  },
+
+  // Márgenes de ganancia por categoría / global: margen global, propio y
+  // efectivo de cada categoría y cuántos productos heredan.
+  getMargins: async () => {
+    const response = await api.get('/products/margins');
+    return response.data;
+  },
+
+  // { scope: 'global'|'category', category_id, margin (null = hereda),
+  //   force, recalc_prices, allow_decrease }
+  previewMargin: async (params) => {
+    const response = await api.post('/products/margins/preview', params, { timeout: 120000 });
+    return response.data;
+  },
+
+  applyMargin: async (params) => {
+    const response = await api.post('/products/margins/apply', params, { timeout: 300000 });
+    return response.data;
   }
 };

@@ -10,10 +10,12 @@ import EquivalencesSection from '../../components/products/EquivalencesSection';
 import VehicleApplicationsSection from '../../components/products/VehicleApplicationsSection';
 import MovementsSection from '../../components/products/MovementsSection';
 import SuppliersSection from '../../components/products/SuppliersSection';
-import { ArrowLeft, Package, Users, Truck, Car, Activity, Edit3, ZoomIn } from 'lucide-react';
+import { ArrowLeft, Package, Users, Truck, Car, Activity, Edit3, ZoomIn, ClipboardList } from 'lucide-react';
+import AddToOrderListModal from '../../components/order-lists/AddToOrderListModal';
 import toast from 'react-hot-toast';
 import { productsAPI } from '../../api/products';
 import useAuthStore from '../../store/authStore';
+import { productSalePrice } from '../../utils/salePricing';
 
 const COP = (n) =>
   new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(n || 0);
@@ -37,6 +39,7 @@ export default function ProductDetailPage() {
   const role = useAuthStore((s) => s.user?.role);
   const canEditProducts = ['admin', 'manager', 'warehouse_keeper', 'super_admin'].includes(role);
   const [showImageViewer, setShowImageViewer] = useState(false);
+  const [showAddToOrder, setShowAddToOrder] = useState(false);
   const [showInProcess, setShowInProcess] = useState(false);
   const [inProcessDocs, setInProcessDocs] = useState(null);
   const [inProcessLoading, setInProcessLoading] = useState(false);
@@ -142,14 +145,30 @@ export default function ProductDetailPage() {
               </div>
             </div>
           </div>
-          {canEditProducts && <button
-            onClick={() => setShowEditModal(true)}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
-          >
-            <Edit3 className="w-4 h-4" />
-            Editar
-          </button>}
+          <div className="flex flex-wrap justify-end gap-2">
+            {product.is_active && <button
+              onClick={() => setShowAddToOrder(true)}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+            >
+              <ClipboardList className="w-4 h-4" />
+              Agregar a pedido
+            </button>}
+            {canEditProducts && <button
+              onClick={() => setShowEditModal(true)}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
+            >
+              <Edit3 className="w-4 h-4" />
+              Editar
+            </button>}
+          </div>
         </div>
+
+        <AddToOrderListModal
+          isOpen={showAddToOrder}
+          onClose={() => setShowAddToOrder(false)}
+          product={product}
+          source="product"
+        />
 
         {/* Stats rápidas */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -161,7 +180,7 @@ export default function ProductDetailPage() {
           </div>
           <div className="bg-white rounded-xl border border-gray-200 p-4">
             <p className="text-xs text-gray-500 uppercase tracking-wide">Precio Venta</p>
-            <p className="text-2xl font-bold mt-1 text-gray-900">{COP(product.sale_price)}</p>
+            <p className="text-2xl font-bold mt-1 text-gray-900">{COP(productSalePrice(product))}</p>
           </div>
           <div className="bg-white rounded-xl border border-gray-200 p-4">
             <p className="text-xs text-gray-500 uppercase tracking-wide">Costo Promedio</p>
@@ -233,7 +252,7 @@ export default function ProductDetailPage() {
                     : '—'}
                   hint="Costo unitario de la compra recibida más reciente, con descuento global y flete prorrateados. Se usa como respaldo del costo de venta si el costo promedio está en 0."
                 />
-                <DetailRow label="Margen" value={`${product.profit_margin_percentage || 0}%`} />
+                <DetailRow label="Margen" value={`${product.profit_margin_percentage || 0}%${product.margin_inherited ? ' (de la categoría)' : ''}`} />
                 <DetailRow label="Stock actual" value={product.current_stock} />
                 <DetailRow label="Stock reservado" value={product.reserved_stock} />
                 <DetailRow

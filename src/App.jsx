@@ -26,6 +26,8 @@ const PhysicalCountPage = lazy(() => import('./pages/inventory/PhysicalCountPage
 const PhysicalCountDetailPage = lazy(() => import('./pages/inventory/PhysicalCountDetailPage'));
 const MovementsPage = lazy(() => import('./pages/movements/MovementsPage'));
 const StockAlertsPage = lazy(() => import('./pages/stock-alerts/StockAlertsPage'));
+const OrderListsPage = lazy(() => import('./pages/order-lists/OrderListsPage'));
+const OrderListDetailPage = lazy(() => import('./pages/order-lists/OrderListDetailPage'));
 const PayableAlertsPage = lazy(() => import('./pages/payable-alerts/PayableAlertsPage'));
 const UsersPage = lazy(() => import('./pages/users/UsersPage'));
 const UserForm = lazy(() => import('./pages/users/UserForm'));
@@ -120,6 +122,7 @@ import NoBranchAssignedPage from './pages/branches/NoBranchAssignedPage';
 const TenantSettingsPage = lazy(() => import('./pages/settings/TenantSettingsPage'));
 const WhatsAppSettingsPage = lazy(() => import('./pages/settings/WhatsAppSettingsPage'));
 const LabelPrintingSettingsPage = lazy(() => import('./pages/settings/LabelPrintingSettingsPage'));
+const PosPrintingSettingsPage = lazy(() => import('./pages/settings/PosPrintingSettingsPage'));
 const ReportsPage = lazy(() => import('./pages/reports/ReportsPage'));
 const ProfilePage = lazy(() => import('./pages/profile/ProfilePage'));
 const NexaApprovalsPage = lazy(() => import('./pages/nexa/NexaApprovalsPage'));
@@ -397,6 +400,8 @@ function App() {
 
         <Route path="movements"   element={<TenantRoute module="inventory"><Suspense fallback={<Loading fullScreen />}><MovementsPage /></Suspense></TenantRoute>} />
         <Route path="stock-alerts" element={<TenantRoute module="inventory"><Suspense fallback={<Loading fullScreen />}><StockAlertsPage /></Suspense></TenantRoute>} />
+        <Route path="order-lists"     element={<TenantRoute module="inventory"><Suspense fallback={<Loading fullScreen />}><OrderListsPage /></Suspense></TenantRoute>} />
+        <Route path="order-lists/:id" element={<TenantRoute module="inventory"><Suspense fallback={<Loading fullScreen />}><OrderListDetailPage /></Suspense></TenantRoute>} />
 
         {/* ── Ventas ─────────────────────────────────── */}
         <Route path="sales"          element={<TenantRoute module="sales"><Suspense fallback={<Loading fullScreen />}><SalesPage /></Suspense></TenantRoute>} />
@@ -536,6 +541,7 @@ function App() {
         <Route path="settings" element={<TenantRoute><Suspense fallback={<Loading fullScreen />}><TenantSettingsPage /></Suspense></TenantRoute>} />
         {/* Perfiles de impresión de etiquetas: editar solo admin/gerente (lo controla la página y el backend). */}
         <Route path="settings/label-printing" element={<TenantRoute><Suspense fallback={<Loading fullScreen />}><LabelPrintingSettingsPage /></Suspense></TenantRoute>} />
+        <Route path="settings/pos-printing" element={<TenantRoute><Suspense fallback={<Loading fullScreen />}><PosPrintingSettingsPage /></Suspense></TenantRoute>} />
         <Route path="settings/whatsapp" element={<TenantRoute roles={['admin']}><Suspense fallback={<Loading fullScreen />}><WhatsAppSettingsPage /></Suspense></TenantRoute>} />
 
         <Route path="reports"  element={<TenantRoute><Suspense fallback={<Loading fullScreen />}><ReportsPage /></Suspense></TenantRoute>} />

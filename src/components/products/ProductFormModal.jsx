@@ -62,6 +62,7 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
     min_stock: '',
     max_stock: '',
     profit_margin_percentage: '',
+    margin_inherited: false,
     base_price: '',
     current_stock: '',
     warehouse_id: '',
@@ -85,6 +86,8 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
   const [saveError, setSaveError] = useState('');
   const [pendingImageFile, setPendingImageFile] = useState(null);
   const [currentImageUrl, setCurrentImageUrl] = useState(null);
+  // Márgenes por categoría / global (productMargin.service.js en el backend).
+  const [marginOverview, setMarginOverview] = useState(null);
 
   const fmtNum = (v) => {
     if (v === '' || v === null || v === undefined) return '';
@@ -100,6 +103,20 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
   useEffect(() => {
     fetchFeatures(); // no-op si ya está cargado
   }, [fetchFeatures]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    productsAPI.getMargins()
+      .then((res) => {
+        const data = res.data;
+        setMarginOverview(data);
+        // Un producto nuevo hereda por defecto si el negocio ya maneja
+        // márgenes por categoría o global.
+        const usesMargins = data && (data.global_margin !== null || data.categories.some((c) => c.own_margin !== null));
+        if (!product && usesMargins) setFormData((prev) => ({ ...prev, margin_inherited: true }));
+      })
+      .catch(() => setMarginOverview(null));
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -137,6 +154,7 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
         min_stock: fmtNum(product.min_stock),
         max_stock: fmtNum(product.max_stock),
         profit_margin_percentage: fmtNum(product.profit_margin_percentage),
+        margin_inherited: product.margin_inherited === true,
         base_price: fmtNum(product.base_price),
         current_stock: fmtNum(product.current_stock),
         warehouse_id: product.warehouse_id || '',
@@ -183,6 +201,7 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
         min_stock: '',
         max_stock: '',
         profit_margin_percentage: '',
+        margin_inherited: false, // la carga de márgenes lo pasa a true si aplica
         base_price: '',
         current_stock: '',
         warehouse_id: prev.warehouse_id, // conservar bodega preseleccionada
@@ -201,6 +220,19 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
       setCurrentImageUrl(null);
     }
   }, [product, isOpen]);
+
+  // Margen que heredaría el producto con la categoría elegida.
+  const inheritedCategory = marginOverview?.categories.find((c) => c.id === formData.category_id);
+  const inheritedMargin = inheritedCategory ? inheritedCategory.effective_margin : (marginOverview?.global_margin ?? null);
+  const inheritedFrom = inheritedCategory
+    ? (inheritedCategory.source === 'global' ? 'margen global' : `categoría ${inheritedCategory.source === 'own' ? inheritedCategory.name : inheritedCategory.source_name}`)
+    : 'margen global';
+
+  useEffect(() => {
+    if (!formData.margin_inherited || !marginOverview) return;
+    const value = fmtNum(inheritedMargin);
+    setFormData((prev) => (prev.profit_margin_percentage === value ? prev : { ...prev, profit_margin_percentage: value }));
+  }, [formData.margin_inherited, inheritedMargin, marginOverview]);
 
   // El precio sugerido se calcula sobre el último costo de compra (igual que al
   // recibir compras); un producto que nunca se ha comprado usa el costo digitado.
@@ -520,9 +552,27 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
                   step="0.01"
                   min="0"
                   max={MAX_MARGIN}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100"
-                  placeholder="0.00"
+                  disabled={formData.margin_inherited}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:text-gray-500 dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100 dark:disabled:bg-white/5"
+                  placeholder={formData.margin_inherited ? 'Sin margen definido' : '0.00'}
                 />
+                <label className="mt-2 flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                  <input
+                    type="checkbox"
+                    name="margin_inherited"
+                    checked={formData.margin_inherited}
+                    onChange={handleChange}
+                    className="w-4 h-4 rounded border-gray-300 dark:border-white/10"
+                  />
+                  Usar el margen de la categoría
+                </label>
+                {formData.margin_inherited && (
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-500">
+                    {inheritedMargin === null
+                      ? 'La categoría no tiene margen ni hay margen global: el precio no se recalcula con las compras.'
+                      : `Toma el ${fmtNum(inheritedMargin)} % del ${inheritedFrom} y cambia cuando se cambie ese margen.`}
+                  </p>
+                )}
                 {parseFloat(formData.profit_margin_percentage) > MAX_MARGIN && (
                   <p className="mt-1 text-xs text-red-600">El margen es sobre el precio de venta: debe ser menor a 100 %.</p>
                 )}

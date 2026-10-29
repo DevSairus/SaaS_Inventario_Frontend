@@ -10,7 +10,10 @@ import {
   LockOpenIcon,
   LockClosedIcon,
   ExclamationTriangleIcon,
+  PrinterIcon,
 } from '@heroicons/react/24/outline';
+import useAuthStore from '../../store/authStore';
+import { getPosSettings, printPosDocument } from '../../utils/posPrinting';
 
 const METHODS = [
   { key: 'efectivo', label: 'Efectivo' },
@@ -181,13 +184,26 @@ const CashSessionsPage = () => {
     }
   };
 
+  // Tirilla POS: arqueo (caja abierta) o cierre (caja cerrada).
+  const tenantId = useAuthStore((s) => s.user?.tenant_id);
+  const posEnabled = getPosSettings(tenantId).enabled;
+  const printSessionTicket = async (sessionId, opts = {}) => {
+    try {
+      await printPosDocument('cash_session', sessionId, { tenantId, ...opts });
+    } catch {
+      toast.error('No se pudo imprimir la tirilla de la caja');
+    }
+  };
+
   const handleClose = async () => {
     try {
       setSavingClose(true);
-      await cashSessionsAPI.close(currentSession.id, { counted_amounts: counted, notes: closingNotes || null });
+      const sessionId = currentSession.id;
+      await cashSessionsAPI.close(sessionId, { counted_amounts: counted, notes: closingNotes || null });
       toast.success('Caja cerrada');
       setShowCloseModal(false);
       loadData();
+      printSessionTicket(sessionId, { auto: true });
     } catch (error) {
       toast.error(error.response?.data?.message || 'Error cerrando la caja');
     } finally {
@@ -254,12 +270,23 @@ const CashSessionsPage = () => {
                         )}
                       </div>
                     </div>
-                    <button
-                      onClick={openCloseModal}
-                      className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-red-800 rounded-lg hover:bg-red-900"
-                    >
-                      <LockClosedIcon className="w-4 h-4" /> Cerrar caja
-                    </button>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {posEnabled && (
+                        <button
+                          onClick={() => printSessionTicket(currentSession.id)}
+                          className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+                          title="Imprime en tirilla lo que debería haber en caja en este momento"
+                        >
+                          <PrinterIcon className="w-4 h-4" /> Imprimir arqueo
+                        </button>
+                      )}
+                      <button
+                        onClick={openCloseModal}
+                        className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-red-800 rounded-lg hover:bg-red-900"
+                      >
+                        <LockClosedIcon className="w-4 h-4" /> Cerrar caja
+                      </button>
+                    </div>
                   </div>
                 ) : (
                   <div className="flex items-center justify-between flex-wrap gap-4">
@@ -324,7 +351,15 @@ const CashSessionsPage = () => {
                             }`}>
                               {diffTotal === null ? '—' : `${diffTotal > 0 ? '+' : ''}${formatCurrency(diffTotal)}`}
                             </td>
-                            <td className="px-4 py-3 text-right">
+                            <td className="px-4 py-3 text-right whitespace-nowrap">
+                              {posEnabled && (
+                                <button
+                                  onClick={() => printSessionTicket(s.id)}
+                                  className="inline-flex items-center gap-1 mr-3 text-xs font-medium text-blue-600 hover:text-blue-800"
+                                >
+                                  <PrinterIcon className="w-4 h-4" /> Tirilla
+                                </button>
+                              )}
                               <button
                                 onClick={() => openDetailModal(s.id)}
                                 className="text-xs font-medium text-blue-600 hover:text-blue-800"

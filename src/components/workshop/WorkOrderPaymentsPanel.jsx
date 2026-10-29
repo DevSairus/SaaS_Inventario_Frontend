@@ -8,6 +8,8 @@ import toast from 'react-hot-toast';
 import { workOrdersApi } from '../../api/workshop';
 import NumericInput from '../inputs/NumericInput';
 import BankAccountSelect from '../accounting/BankAccountSelect';
+import useAuthStore from '../../store/authStore';
+import { getPosSettings, printPosDocument } from '../../utils/posPrinting';
 
 const METHODS = ['Efectivo', 'Transferencia', 'Tarjeta de Crédito', 'Tarjeta de Débito', 'Cheque'];
 const METHOD_LABELS = { cash: 'Efectivo', transfer: 'Transferencia', credit_card: 'T. Crédito', debit_card: 'T. Débito', check: 'Cheque' };
@@ -24,6 +26,7 @@ export default function WorkOrderPaymentsPanel({ order, onChanged }) {
   const [bankAccountId, setBankAccountId] = useState(null);
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
+  const tenantId = useAuthStore((s) => s.user?.tenant_id);
 
   const total = parseFloat(order.total_amount || 0);
   const paid = parseFloat(order.paid_amount || 0);
@@ -47,6 +50,15 @@ export default function WorkOrderPaymentsPanel({ order, onChanged }) {
   };
 
   const printReceipt = async (p) => {
+    // Con impresora POS en este equipo, el recibo sale en tirilla.
+    if (p.payment_id && getPosSettings(tenantId).enabled) {
+      try {
+        await printPosDocument('payment', p.payment_id, { tenantId });
+      } catch {
+        toast.error('No se pudo imprimir la tirilla');
+      }
+      return;
+    }
     try {
       const res = await workOrdersApi.getPDF(order.id, 'receipt', {
         amount: p.amount, method: p.method, notes: p.notes || '', date: p.date, receipt_number: p.receipt_number,
@@ -68,12 +80,15 @@ export default function WorkOrderPaymentsPanel({ order, onChanged }) {
         bank_account_id: isCash(method) ? null : bankAccountId,
         notes: notes || undefined,
       });
-      const { receipt_number, amount_applied } = res.data?.data || {};
+      const { payment_id, receipt_number, amount_applied } = res.data?.data || {};
       toast.success(`Abono registrado${receipt_number ? ` — recibo ${receipt_number}` : ''}`);
       setShowForm(false);
       onChanged?.();
-      if (receipt_number && window.confirm('¿Imprimir el recibo del abono?')) {
-        printReceipt({ amount: amount_applied ?? value, method, notes, date: new Date().toISOString(), receipt_number });
+      const autoPrinted = payment_id
+        ? await printPosDocument('payment', payment_id, { tenantId, auto: true }).catch(() => false)
+        : false;
+      if (!autoPrinted && receipt_number && window.confirm('¿Imprimir el recibo del abono?')) {
+        printReceipt({ payment_id, amount: amount_applied ?? value, method, notes, date: new Date().toISOString(), receipt_number });
       }
     } catch (error) {
       toast.error(error.response?.data?.message || 'Error registrando el abono');

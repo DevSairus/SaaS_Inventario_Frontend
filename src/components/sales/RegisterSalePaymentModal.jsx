@@ -11,6 +11,8 @@ import { openingBalancesAPI } from '../../api/accounting';
 import { formatCurrency } from '../../utils/formatters';
 import NumericInput from '../inputs/NumericInput';
 import BankAccountSelect from '../accounting/BankAccountSelect';
+import useAuthStore from '../../store/authStore';
+import { printPosDocument } from '../../utils/posPrinting';
 
 export default function RegisterSalePaymentModal({ invoice, onClose, onSuccess }) {
   const [paymentAmount, setPaymentAmount] = useState(invoice?.balance ? String(invoice.balance) : '');
@@ -19,6 +21,7 @@ export default function RegisterSalePaymentModal({ invoice, onClose, onSuccess }
   const [paymentNotes, setPaymentNotes] = useState('');
   const [excessToAdvance, setExcessToAdvance] = useState(false);
   const [saving, setSaving] = useState(false);
+  const tenantId = useAuthStore((s) => s.user?.tenant_id);
 
   if (!invoice) return null;
 
@@ -57,6 +60,13 @@ export default function RegisterSalePaymentModal({ invoice, onClose, onSuccess }
           excess_to_advance: paymentExcess > 0 && excessToAdvance ? true : undefined,
         });
         if (res?.data?.advance) toast.success(res.data.message, { duration: 6000 });
+        // Recibo en tirilla si este equipo tiene impresora POS con impresión automática.
+        const history = res?.data?.data?.payment_history || [];
+        const newPayment = history[history.length - 1];
+        if (newPayment?.payment_id) {
+          printPosDocument('payment', newPayment.payment_id, { tenantId, auto: true })
+            .catch(() => toast.error('No se pudo imprimir la tirilla del recibo'));
+        }
       }
       toast.success('Pago registrado');
       onSuccess?.();

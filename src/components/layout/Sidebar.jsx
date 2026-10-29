@@ -177,6 +177,7 @@ const NAV = [
     children: [
       { label: "Productos",         path: "/products" },
       { label: "Compras",           path: "/purchases" },
+      { label: "Pedidos a proveedores", path: "/order-lists" },
       { label: "Movimientos",       path: "/movements" },
       { label: "Ajustes",           path: "/adjustments" },
       { label: "Inventario físico", path: "/inventory/physical-counts" },

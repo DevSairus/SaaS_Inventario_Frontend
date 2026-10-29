@@ -25,3 +25,11 @@ export function suggestedSalePrice(cost, margin, product = {}) {
   const net = c / (1 - m / 100);
   return round2(net * (1 + includedTaxRate(product) / 100));
 }
+
+// Precio de venta real del producto (gemela de backend/src/utils/salePricing.js):
+// el que se cobra y se edita en el formulario es base_price; sale_price es un
+// campo heredado que casi nunca se llena (queda en 0).
+export function productSalePrice(product = {}) {
+  const base = parseFloat(product?.base_price) || 0;
+  return base > 0 ? base : parseFloat(product?.sale_price) || 0;
+}
