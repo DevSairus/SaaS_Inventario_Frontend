@@ -901,6 +901,9 @@ function TallerSpotlight({ onCta }) {
     { icon: icons.globe, title: 'Seguimiento público sin login', desc: 'Tu cliente ve el estado de su vehículo con un enlace, sin crear cuenta ni contraseña.' },
     { icon: icons.car, title: 'Consulta RUNT integrada', desc: 'Verifica los datos del vehículo directamente desde la orden de trabajo, sin salir de Pitbox.' },
     { icon: icons.smartphone, title: 'App instalable en el taller', desc: 'Tu equipo instala Taller como app desde el celular, sin tienda de aplicaciones, y sigue trabajando aunque se caiga el internet.' },
+    { icon: icons.bell, title: 'Recordatorios de SOAT y técnico-mecánica', isNew: true, desc: 'Pitbox le avisa a tu cliente por correo o WhatsApp días antes de que se le venza el SOAT o la revisión, y lo trae de vuelta a tu taller.' },
+    { icon: icons.clipboard, title: 'Acta de ingreso con aceptación del cliente', isNew: true, desc: 'Inventario del vehículo, fotos y condiciones del servicio que el cliente acepta con un código que le llega al celular o al correo.' },
+    { icon: icons.scan, title: 'Hoja de vida del vehículo con QR', desc: 'Historial de servicios y próximos mantenimientos por kilometraje o fecha, en un sticker QR que el cliente escanea.' },
   ];
 
   return (
@@ -982,8 +985,9 @@ function TallerSpotlight({ onCta }) {
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(240px,1fr))', gap: 20 }}>
-          {items.map(({ icon, title, desc }, i) => (
+          {items.map(({ icon, title, desc, isNew }, i) => (
             <div key={i} style={{
+              position: 'relative',
               background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)',
               borderRadius: 16, padding: '22px 20px',
               opacity: visible ? 1 : 0, transform: visible ? 'translateY(0)' : 'translateY(16px)',
@@ -995,6 +999,9 @@ function TallerSpotlight({ onCta }) {
               }}>
                 <Ico d={icon} size={18} color={C.accentL} strokeWidth={1.7} />
               </div>
+              {isNew && (
+                <span style={{ position: 'absolute', top: 16, right: 16, fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: C.accentL, background: 'rgba(207,58,11,0.14)', border: '1px solid rgba(207,58,11,0.3)', borderRadius: 100, padding: '3px 8px' }}>Nuevo</span>
+              )}
               <h4 style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 15, fontWeight: 700, color: C.white, marginBottom: 8 }}>{title}</h4>
               <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.55)', lineHeight: 1.6 }}>{desc}</p>
             </div>
@@ -1093,7 +1100,7 @@ function ProductSection() {
       icon: icons.invoice, accent: C.signal,
       title: 'Ventas y facturación electrónica sin fricción',
       desc: 'Cada venta se factura con validación DIAN integrada en el mismo flujo. El CUFE, la aceptación y la importación de facturas XML de proveedores quedan registrados sin doble digitación.',
-      bullets: ['Validación DIAN en el mismo flujo de venta', 'Importación de facturas XML de proveedores', 'Envío automático al correo del cliente', 'Cuentas por cobrar y por pagar'],
+      bullets: ['Validación DIAN en el mismo flujo de venta', 'Cotizaciones que el cliente aprueba desde un enlace', 'Varias remisiones en una sola factura electrónica', 'Impresión en tirilla POS', 'Importación de facturas XML de proveedores', 'Cartera por cobrar con recordatorios por WhatsApp'],
       side: 'right',
     },
     {
@@ -1106,8 +1113,8 @@ function ProductSection() {
     {
       icon: icons.warehouse, accent: C.caution,
       title: 'Inventario que se sincroniza solo',
-      desc: 'Cada bodega o sede controla su propio stock, con transferencias trazables entre ellas y alertas automáticas antes de que un producto se agote.',
-      bullets: ['Multi-bodega y multi-sede', 'Transferencias con trazabilidad', 'Alertas de stock configurables', 'Escaneo de código de barras'],
+      desc: 'Cada bodega o sede controla su propio stock, con transferencias trazables, alertas antes de que un producto se agote y precios que se ajustan solos con tu margen de ganancia.',
+      bullets: ['Multi-bodega y multi-sede', 'Pedidos a proveedores en PDF por correo o WhatsApp', 'Margen de ganancia por categoría y recálculo de precios en bloque', 'Alertas cuando sube el costo de compra', 'Conteo físico con Excel', 'Escaneo de código de barras'],
       side: 'right',
     },
   ];
@@ -1340,13 +1347,13 @@ function ModulesSection() {
       name: 'Taller',
       icon: icons.wrench, accent: C.accentL,
       desc: 'Órdenes de trabajo con vehículos, técnicos y estado en tiempo real, desde el ingreso hasta la entrega al cliente.',
-      bullets: ['Vehículos y ficha del cliente', 'Consulta RUNT integrada', 'Comisiones por técnico', 'Seguimiento público de OT sin login'],
+      bullets: ['Vehículos y ficha del cliente', 'Consulta RUNT integrada', 'Comisiones por técnico', 'Seguimiento público de OT sin login', 'Recordatorios de SOAT y técnico-mecánica', 'Acta de ingreso aceptada con código', 'Agenda de citas en línea'],
     },
     {
       name: 'Ventas y facturación',
       icon: icons.invoice, accent: C.signal,
       desc: 'Ventas con facturación electrónica y validación DIAN integradas en el mismo flujo, sin doble digitación.',
-      bullets: ['CUFE y eventos DIAN en la venta', 'Importación de facturas XML de proveedores', 'Cuentas por cobrar', 'Envío automático al correo'],
+      bullets: ['CUFE y eventos DIAN en la venta', 'Cotizaciones con aprobación en línea', 'Remisiones agrupadas en una factura', 'Retenciones, IVA e impoconsumo', 'Impresión en tirilla POS', 'Cuentas por cobrar'],
     },
     {
       name: 'Contabilidad',
@@ -1364,7 +1371,7 @@ function ModulesSection() {
       name: 'Nómina electrónica', isNew: true,
       icon: icons.users, accent: C.signal,
       desc: 'Liquidación automática de tu equipo y comprobantes electrónicos de nómina ante la DIAN, sin hojas de cálculo ni doble digitación.',
-      bullets: ['Liquidación automática por periodo', 'Comprobantes electrónicos DIAN', 'Alertas de vencimiento de contrato', 'Certificados laborales y de ingresos'],
+      bullets: ['Liquidación automática por periodo', 'Comprobantes electrónicos DIAN', 'Planilla PILA', 'Alertas de vencimiento de contrato', 'Certificados laborales y de ingresos'],
     },
     {
       name: 'CRM', isNew: true,
@@ -1379,10 +1386,10 @@ function ModulesSection() {
       bullets: ['Propone gastos y pagos automáticamente', 'Genera asientos contables por ti', 'Tú apruebas o rechazas cada acción', 'Nada se contabiliza sin tu visto bueno'],
     },
     {
-      name: 'Inventario',
+      name: 'Inventario', isNew: true,
       icon: icons.package, accent: C.caution,
-      desc: 'Productos, categorías y existencias sincronizadas en tiempo real, con escaneo de código de barras desde cámara o lector externo.',
-      bullets: ['Escaneo de código de barras', 'Categorías y proveedores', 'Ajustes de inventario con soporte', 'Devoluciones a proveedor y de cliente'],
+      desc: 'Productos, categorías y existencias sincronizadas en tiempo real, con pedidos a proveedores y precios que siguen tu margen de ganancia.',
+      bullets: ['Pedidos a proveedores en PDF', 'Margen de ganancia por categoría', 'Alertas de costo de compra', 'Productos equivalentes', 'Escaneo de código de barras', 'Devoluciones a proveedor y de cliente'],
     },
     {
       name: 'Alertas y reportes',
@@ -1393,8 +1400,8 @@ function ModulesSection() {
     {
       name: 'WhatsApp',
       icon: icons.whatsapp, accent: C.signal,
-      desc: 'Notificaciones automáticas a tus clientes sobre el estado de su orden de trabajo o su compra.',
-      bullets: ['Aviso automático de OT lista', 'Confirmación de compra', 'Configuración por sede', 'Sin plantillas manuales'],
+      desc: 'Envía órdenes de trabajo, cotizaciones, facturas y recordatorios a tus clientes por WhatsApp, desde tu número o conectando el WhatsApp de la empresa.',
+      bullets: ['OT, cotizaciones y facturas por WhatsApp', 'Aviso de recepción del vehículo', 'Recordatorios de citas, SOAT y cobros', 'Bandeja de conversaciones con WhatsApp conectado'],
     },
   ];
 
@@ -1490,6 +1497,52 @@ function ModulesSection() {
 /* ─────────────────────────────────────────
    SECCIÓN: SECTORES
 ───────────────────────────────────────── */
+/* ─────────────────────────────────────────
+   SECCIÓN: CUMPLIMIENTO (normativa colombiana)
+───────────────────────────────────────── */
+function ComplianceStrip() {
+  const [ref, visible] = useInView();
+  const items = [
+    { icon: icons.invoice, title: 'Facturación electrónica DIAN', desc: 'Factura, notas, documento soporte y eventos RADIAN.' },
+    { icon: icons.users, title: 'Nómina electrónica y PILA', desc: 'Comprobantes de nómina ante la DIAN y planilla de seguridad social.' },
+    { icon: icons.book, title: 'Contabilidad bajo PUC', desc: 'Retenciones, IVA e impoconsumo contabilizados en cada operación.' },
+    { icon: icons.check, title: 'Habeas data (Ley 1581)', desc: 'Autorización de tratamiento de datos que el cliente acepta con un código de verificación.' },
+  ];
+  return (
+    <section style={{ background: C.white, padding: 'clamp(3rem,6vw,5rem) clamp(1.5rem,5vw,4rem)', borderTop: `1px solid ${C.gray200}` }}>
+      <div ref={ref} style={{ maxWidth: 1240, margin: '0 auto' }}>
+        <h2 style={{
+          fontFamily: "'Space Grotesk', sans-serif", fontSize: 'clamp(1.5rem,3vw,2rem)', fontWeight: 700,
+          color: C.gray900, letterSpacing: '-0.02em', textAlign: 'center', marginBottom: 8,
+        }}>
+          Al día con la normativa colombiana
+        </h2>
+        <p style={{ fontSize: 15, color: C.gray500, textAlign: 'center', maxWidth: 560, margin: '0 auto 36px' }}>
+          Lo que te exige la DIAN y la ley queda resuelto dentro de tu operación diaria.
+        </p>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 16 }}>
+          {items.map(({ icon, title, desc }, i) => (
+            <div key={title} style={{
+              display: 'flex', gap: 14, alignItems: 'flex-start',
+              border: `1px solid ${C.gray200}`, borderRadius: 14, padding: '18px 16px',
+              opacity: visible ? 1 : 0, transform: visible ? 'translateY(0)' : 'translateY(12px)',
+              transition: `opacity 0.5s ${0.05 + i * 0.08}s, transform 0.5s ${0.05 + i * 0.08}s`,
+            }}>
+              <div style={{ flexShrink: 0, width: 38, height: 38, borderRadius: 10, background: 'rgba(207,58,11,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Ico d={icon} size={18} color={C.accent} strokeWidth={1.7} />
+              </div>
+              <div>
+                <h4 style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 15, fontWeight: 700, color: C.gray900, marginBottom: 4 }}>{title}</h4>
+                <p style={{ fontSize: 13, color: C.gray500, lineHeight: 1.55 }}>{desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function Sectors() {
   const [ref, visible] = useInView();
   const segs = [
@@ -1690,6 +1743,17 @@ function Footer({ onCta }) {
               onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.45)'}>
               <Ico d={icons.mail} size={14} color="currentColor" /> {CONTACT_EMAIL}
             </button>
+            {/* Sello de ComparaSoftware: el enlace y el texto van tal cual los
+                entrega el directorio (sin nofollow) para que valide el perfil. */}
+            <div style={{ marginTop: 20 }}>
+              <a href="https://www.comparasoftware.co/pitbox" target="_blank" rel="noopener" style={{ display: 'inline-block' }}>
+                <img src="https://www.comparasoftware.co/badges/pitbox.svg?v=compacta" alt="Pitbox — opiniones en ComparaSoftware" width="200" height="60" loading="lazy" style={{ display: 'block' }} />
+              </a>
+              <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', marginTop: 8 }}>
+                Lee opiniones de Pitbox en{' '}
+                <a href="https://www.comparasoftware.co/pitbox" target="_blank" rel="noopener" style={{ color: 'rgba(255,255,255,0.7)', textDecoration: 'underline' }}>ComparaSoftware</a>.
+              </p>
+            </div>
           </div>
           {[
             { title: 'Producto', links: [
@@ -1725,14 +1789,6 @@ function Footer({ onCta }) {
         <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px 16px' }}>
             <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)' }}>© {new Date().getFullYear()} ESC DataCore. Todos los derechos reservados.</span>
-            <a href="https://www.comparasoftware.co/pitbox" target="_blank" rel="noopener noreferrer" title="Ver verificación en ComparaSoftware" style={{
-              display: 'inline-flex', alignItems: 'center', gap: 5,
-              fontSize: 12, color: 'rgba(255,255,255,0.3)', textDecoration: 'none', transition: 'color 0.2s',
-            }}
-              onMouseEnter={e => e.currentTarget.style.color = C.accentL}
-              onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.3)'}>
-              <Ico d={icons.check} size={12} color="currentColor" /> Verificado en ComparaSoftware
-            </a>
           </div>
           <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.2)' }}>Hecho en Colombia 🇨🇴</span>
         </div>
@@ -2015,6 +2071,7 @@ export default function LandingPage() {
       <NexaBanner onCta={() => setShowModal(true)} />
       <AppShowcase />
       <ModulesSection />
+      <ComplianceStrip />
       <Sectors />
       <FinalCta onCta={() => setShowModal(true)} />
       <Footer onCta={() => setShowModal(true)} />
