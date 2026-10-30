@@ -3,12 +3,15 @@ import toast from 'react-hot-toast';
 import Modal from '../common/Modal';
 import { productsAPI } from '../../api/products';
 import { formatCurrency } from '../../utils/formatters';
-import { MAX_MARGIN } from '../../utils/salePricing';
+import { maxMarginFor, MARGIN_METHOD_LABELS } from '../../utils/salePricing';
+import useTenantStore from '../../store/tenantStore';
 
 // Márgenes de ganancia por categoría y global (backend:
 // services/inventory/productMargin.service.js). Cambiar un margen solo afecta
 // a los productos que lo heredan; "forzar" hace que los de margen propio
 // también pasen a heredarlo. Siempre con vista previa antes de aplicar.
+// Arriba se elige cómo se interpreta el porcentaje (margen sobre la venta o
+// recargo sobre el costo, business_config.margin_method).
 
 const pct = (v) => (v === null || v === undefined ? '—' : `${Number(v).toLocaleString('es-CO', { maximumFractionDigits: 2 })} %`);
 
@@ -52,12 +55,17 @@ function ProfitMarginsModal({ isOpen, onClose, initialTarget = null, onApplied }
   const [form, setForm] = useState({ margin: '', force: false, recalc_prices: true, allow_decrease: false });
   const [preview, setPreview] = useState(null);
   const [busy, setBusy] = useState(false);
+  const setStoreMarginMethod = useTenantStore((s) => s.setMarginMethod);
+  const marginMethod = overview?.margin_method === 'markup' ? 'markup' : 'on_sale';
+  const isMarkup = marginMethod === 'markup';
+  const maxMargin = maxMarginFor(marginMethod);
 
   const load = async () => {
     setLoading(true);
     try {
       const res = await productsAPI.getMargins();
       setOverview(res.data);
+      setStoreMarginMethod(res.data?.margin_method);
       return res.data;
     } catch (err) {
       toast.error(err.response?.data?.message || 'Error al cargar los márgenes');
@@ -98,7 +106,7 @@ function ProfitMarginsModal({ isOpen, onClose, initialTarget = null, onApplied }
     allow_decrease: form.recalc_prices && form.allow_decrease,
   });
 
-  const marginInvalid = form.margin !== '' && !(parseFloat(form.margin) >= 0 && parseFloat(form.margin) <= MAX_MARGIN);
+  const marginInvalid = form.margin !== '' && !(parseFloat(form.margin) >= 0 && parseFloat(form.margin) <= maxMargin);
 
   const changeForm = (patch) => { setForm((f) => ({ ...f, ...patch })); setPreview(null); };
 
@@ -140,6 +148,32 @@ function ProfitMarginsModal({ isOpen, onClose, initialTarget = null, onApplied }
     }
   };
 
+  const handleMethodChange = async (method) => {
+    if (method === marginMethod) return;
+    const example = method === 'markup'
+      ? 'Con costo $100 y 30 % el precio será $130 (costo × 1,30).'
+      : 'Con costo $100 y 30 % el precio será $142,86 (costo ÷ 0,70); la ganancia es el 30 % del precio.';
+    if (!window.confirm(
+      `¿Cambiar el cálculo a "${MARGIN_METHOD_LABELS[method]}"?
+
+${example}
+
+`
+      + 'Los precios actuales no cambian: el nuevo cálculo se usa en las próximas compras, importaciones, '
+      + 'el formulario del producto y al cambiar márgenes desde aquí.'
+    )) return;
+    setBusy(true);
+    try {
+      await productsAPI.setMarginMethod(method);
+      toast.success('Método de cálculo actualizado');
+      await load();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Error al cambiar el método de cálculo');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const inheritsFromText = (c) => {
     if (c.source === 'own') return null;
     if (c.source === 'parent') return `de ${c.source_name}`;
@@ -158,8 +192,29 @@ function ProfitMarginsModal({ isOpen, onClose, initialTarget = null, onApplied }
         </div>
       ) : !target ? (
         <div className="space-y-4">
+          <div className="rounded-lg border border-gray-200 p-4 dark:border-white/10">
+            <p className="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">Cómo se calcula el precio de venta</p>
+            <div className="flex flex-col gap-2 text-sm sm:flex-row sm:gap-6">
+              {['on_sale', 'markup'].map((m) => (
+                <label key={m} className="flex items-start gap-2">
+                  <input
+                    type="radio" name="margin_method" className="mt-0.5"
+                    checked={marginMethod === m} disabled={busy}
+                    onChange={() => handleMethodChange(m)}
+                  />
+                  <span>
+                    {MARGIN_METHOD_LABELS[m]}
+                    <span className="block text-xs text-gray-500">
+                      {m === 'markup' ? 'Precio = costo × (1 + %). Costo $100 con 30 % → $130' : 'Precio = costo ÷ (1 − %). Costo $100 con 30 % → $142,86'}
+                    </span>
+                  </span>
+                </label>
+              ))}
+            </div>
+          </div>
+
           <p className="text-sm text-gray-600 dark:text-gray-400">
-            El margen es sobre el precio de venta. Cada producto usa su margen propio o hereda el de su categoría;
+            {isMarkup ? 'El margen es un recargo sobre el costo.' : 'El margen es sobre el precio de venta.'} Cada producto usa su margen propio o hereda el de su categoría;
             una categoría sin margen hereda el de su categoría padre y, al final, el margen global.
             Cambiar un margen solo afecta a los productos que lo heredan.
           </p>
@@ -233,10 +288,10 @@ function ProfitMarginsModal({ isOpen, onClose, initialTarget = null, onApplied }
 
           <div className="flex flex-wrap items-end gap-6">
             <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Nuevo margen sobre la venta</label>
+              <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">{isMarkup ? 'Nuevo recargo sobre el costo' : 'Nuevo margen sobre la venta'}</label>
               <div className="flex items-center gap-2">
                 <input
-                  type="number" min="0" max={MAX_MARGIN} step="0.01" onWheel={(e) => e.target.blur()}
+                  type="number" min="0" max={maxMargin} step="0.01" onWheel={(e) => e.target.blur()}
                   value={form.margin}
                   onChange={(e) => changeForm({ margin: e.target.value })}
                   placeholder={target.scope === 'global' ? 'Sin margen' : 'Hereda'}
@@ -244,7 +299,7 @@ function ProfitMarginsModal({ isOpen, onClose, initialTarget = null, onApplied }
                 />
                 <span className="text-gray-500">%</span>
               </div>
-              {marginInvalid && <p className="mt-1 text-xs text-red-600">Debe estar entre 0 y 99,99 %.</p>}
+              {marginInvalid && <p className="mt-1 text-xs text-red-600">Debe estar entre 0 y {isMarkup ? '999,99' : '99,99'} %.</p>}
               <p className="mt-1 text-xs text-gray-400">
                 {target.scope === 'global' ? 'Vacío = sin margen global.' : 'Vacío = la categoría vuelve a heredar de su padre o del global.'}
               </p>

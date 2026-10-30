@@ -3,6 +3,7 @@ import { AlertTriangle, Package, User, FileText, ArrowUpCircle, ArrowDownCircle,
 import { adjustmentsAPI } from '../../api/adjustments';
 import { formatCurrency } from '../../utils/formatters';
 import { suggestedSalePrice } from '../../utils/salePricing';
+import useTenantStore from '../../store/tenantStore';
 import toast from 'react-hot-toast';
 
 const REASONS_ENTRADA = [
@@ -22,6 +23,7 @@ const REASONS_SALIDA = [
 ];
 
 export default function QuickStockModal({ product, user, onClose, onSuccess }) {
+  const marginMethod = useTenantStore((s) => s.marginMethod);
   const currentAvgCost = parseFloat(product.average_cost || product.last_purchase_cost || 0) || 0;
   const lastPurchaseCost = parseFloat(product.last_purchase_cost || 0) || 0;
   // Una compra rápida suele repetir el precio del proveedor: se sugiere el último
@@ -61,12 +63,12 @@ export default function QuickStockModal({ product, user, onClose, onSuccess }) {
     : null;
 
   // Con motivo "compra" y margen configurado, el backend recalcula el precio de venta sobre este costo
-  // (margen sobre la venta, con IVA si el precio lo incluye), pero nunca lo baja solo: si el sugerido
+  // (margen sobre la venta o recargo según el tenant, con IVA si el precio lo incluye), pero nunca lo baja solo: si el sugerido
   // es menor, conserva el actual y deja una alerta de costo.
   const margin = parseFloat(product.profit_margin_percentage) || 0;
   const currentPrice = parseFloat(product.base_price) || 0;
   const projectedPrice = type === 'entrada' && reason === 'compra' && margin > 0 && costValid
-    ? suggestedSalePrice(cost, margin, product)
+    ? suggestedSalePrice(cost, margin, product, marginMethod)
     : null;
   const priceHeld = projectedPrice !== null && currentPrice > 0 && projectedPrice < currentPrice - 0.005;
   const costVariation = type === 'entrada' && reason === 'compra' && lastPurchaseCost > 0 && costValid

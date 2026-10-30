@@ -108,5 +108,11 @@ export const productsAPI = {
   applyMargin: async (params) => {
     const response = await api.post('/products/margins/apply', params, { timeout: 300000 });
     return response.data;
+  },
+
+  // 'on_sale' (margen sobre la venta) | 'markup' (recargo sobre el costo)
+  setMarginMethod: async (margin_method) => {
+    const response = await api.put('/products/margins/method', { margin_method });
+    return response.data;
   }
 };

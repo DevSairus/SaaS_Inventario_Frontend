@@ -7,6 +7,9 @@ const useTenantStore = create((set, get) => ({
   enabledModules: null, // null = todavía no cargado; array de module keys una vez cargado
   tenantSlug: null, // usado para armar links públicos, ej. /agendar/:slug
   taxConfig: null, // null = todavía no cargado; incluye aiu (defaults de factura AIU)
+  // Cómo se calcula el precio desde el margen: 'on_sale' (sobre la venta) o
+  // 'markup' (recargo sobre el costo). business_config.margin_method.
+  marginMethod: 'on_sale',
   loading: false,
 
   fetchFeatures: async () => {
@@ -34,6 +37,7 @@ const useTenantStore = create((set, get) => ({
           enabledModules: res.data.data.effective_modules || [],
           tenantSlug: res.data.data.slug || null,
           taxConfig: res.data.data.tax_config || {},
+          marginMethod: res.data.data.business_config?.margin_method === 'markup' ? 'markup' : 'on_sale',
           loading: false,
         });
       }
@@ -65,9 +69,12 @@ const useTenantStore = create((set, get) => ({
   // ProductFormModal vea de inmediato tarifas ICA actualizadas (Fase D)
   setTaxConfig: (taxConfig) => set({ taxConfig: taxConfig || {} }),
 
+  // Llamar desde ProfitMarginsModal después de cambiar el método de cálculo.
+  setMarginMethod: (method) => set({ marginMethod: method === 'markup' ? 'markup' : 'on_sale' }),
+
   // Llamar al cerrar sesión para no arrastrar los módulos del tenant anterior
   // a la siguiente sesión (por ejemplo si otro usuario inicia sesión en el mismo navegador).
-  reset: () => set({ features: null, enabledModules: null, tenantSlug: null, taxConfig: null, loading: false }),
+  reset: () => set({ features: null, enabledModules: null, tenantSlug: null, taxConfig: null, marginMethod: 'on_sale', loading: false }),
 }));
 
 export default useTenantStore;

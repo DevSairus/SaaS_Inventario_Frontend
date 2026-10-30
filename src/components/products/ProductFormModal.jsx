@@ -6,7 +6,7 @@ import useTenantStore from '../../store/tenantStore';
 import BarcodeScanner from '../common/BarcodeScanner';
 import { warehousesService } from '../../api/warehouses';
 import { formatNumber } from '../../utils/formatters';
-import { suggestedSalePrice, MAX_MARGIN } from '../../utils/salePricing';
+import { suggestedSalePrice, maxMarginFor } from '../../utils/salePricing';
 import NumericInput from '../inputs/NumericInput';
 import ProductImageUpload from './ProductImageUpload';
 import { productsAPI } from '../../api/products';
@@ -15,7 +15,9 @@ import RuntConsultaModal from '../workshop/RuntConsultaModal';
 const ProductFormModal = ({ isOpen, onClose, product = null }) => {
   const { createProduct, updateProduct, loading } = useProductsStore();
   const { categories, fetchCategories } = useCategoriesStore();
-  const { fetchFeatures } = useTenantStore();
+  const { fetchFeatures, marginMethod } = useTenantStore();
+  const isMarkup = marginMethod === 'markup';
+  const maxMargin = maxMarginFor(marginMethod);
 
   const [warehouses, setWarehouses] = useState([]);
   const [loadingWarehouses, setLoadingWarehouses] = useState(false);
@@ -238,17 +240,18 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
   // recibir compras); un producto que nunca se ha comprado usa el costo digitado.
   const lastPurchaseCost = parseFloat(product?.last_purchase_cost) || 0;
 
-  // Margen sobre la venta; si el precio se maneja con IVA incluido, el sugerido
-  // ya lo trae (utils/salePricing.js, mismo cálculo que el backend).
+  // Margen sobre la venta o recargo sobre el costo según el tenant; si el precio
+  // se maneja con IVA incluido, el sugerido ya lo trae (utils/salePricing.js,
+  // mismo cálculo que el backend).
   useEffect(() => {
     if ((lastPurchaseCost > 0 || formData.average_cost) && formData.profit_margin_percentage !== '') {
       const cost = lastPurchaseCost > 0 ? lastPurchaseCost : parseFloat(formData.average_cost);
-      const price = suggestedSalePrice(cost, formData.profit_margin_percentage, formData);
+      const price = suggestedSalePrice(cost, formData.profit_margin_percentage, formData, marginMethod);
       setCalculatedPrice(price !== null ? fmtNum(price) : null);
     } else {
       setCalculatedPrice(null);
     }
-  }, [formData.average_cost, formData.profit_margin_percentage, formData.price_includes_tax, formData.has_tax, formData.tax_percentage, formData.tax_config, lastPurchaseCost]);
+  }, [formData.average_cost, formData.profit_margin_percentage, formData.price_includes_tax, formData.has_tax, formData.tax_percentage, formData.tax_config, lastPurchaseCost, marginMethod]);
 
   // Tratamiento de IVA a la vista: excluido/exento explícito o gravado con su tarifa.
   const ivaTreatment = formData.tax_config?.iva_status === 'excluido'
@@ -541,7 +544,7 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Margen de Ganancia sobre la venta (%)
+                  {isMarkup ? 'Margen de Ganancia sobre el costo (%)' : 'Margen de Ganancia sobre la venta (%)'}
                 </label>
                 <input
                   type="number"
@@ -551,7 +554,7 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
                   onChange={handleChange}
                   step="0.01"
                   min="0"
-                  max={MAX_MARGIN}
+                  max={maxMargin}
                   disabled={formData.margin_inherited}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:text-gray-500 dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100 dark:disabled:bg-white/5"
                   placeholder={formData.margin_inherited ? 'Sin margen definido' : '0.00'}
@@ -573,8 +576,10 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
                       : `Toma el ${fmtNum(inheritedMargin)} % del ${inheritedFrom} y cambia cuando se cambie ese margen.`}
                   </p>
                 )}
-                {parseFloat(formData.profit_margin_percentage) > MAX_MARGIN && (
-                  <p className="mt-1 text-xs text-red-600">El margen es sobre el precio de venta: debe ser menor a 100 %.</p>
+                {parseFloat(formData.profit_margin_percentage) > maxMargin && (
+                  <p className="mt-1 text-xs text-red-600">
+                    {isMarkup ? 'El recargo sobre el costo debe ser menor a 1.000 %.' : 'El margen es sobre el precio de venta: debe ser menor a 100 %.'}
+                  </p>
                 )}
                 {calculatedPrice && (
                   <p className="mt-1 text-xs text-green-600 font-medium">
