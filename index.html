@@ -45,12 +45,13 @@
       - 'self' para scripts/estilos
       - 'unsafe-inline' para estilos (Tailwind/Heroicons) y estilos inline usados por componentes
       - data:/blob: para imágenes de previews locales
+      - frame-src blob: para la vista previa del PDF en /pedido/:token
       - connect-src: permite HTTP(S) y WS(S) al backend y al HMR de Vite
       En desarrollo Vite inyecta scripts con nonces/hashes; si se vuelve más estricto, mover a meta tag por entorno.
     -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; base-uri 'self'; object-src 'none'; form-action 'self'; img-src 'self' data: blob: https:; media-src 'self' blob: data:; font-src 'self' data: https:; style-src 'self' 'unsafe-inline' https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; worker-src 'self' blob:; connect-src 'self' http: https: ws: wss:;"
+      content="default-src 'self'; base-uri 'self'; object-src 'none'; form-action 'self'; img-src 'self' data: blob: https:; media-src 'self' blob: data:; font-src 'self' data: https:; style-src 'self' 'unsafe-inline' https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; worker-src 'self' blob:; frame-src 'self' blob:; connect-src 'self' http: https: ws: wss:;"
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
