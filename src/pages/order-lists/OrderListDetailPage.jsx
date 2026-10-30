@@ -7,10 +7,11 @@ import Modal from '../../components/common/Modal';
 import ProductSearchInput from '../../components/common/ProductSearchInput';
 import OrderLineForm from '../../components/order-lists/OrderLineForm';
 import useAuthStore from '../../store/authStore';
-import { bestPhone, buildWaLink } from '../../utils/whatsapp';
+import { bestPhone, buildWaLink, formatColombianPhone } from '../../utils/whatsapp';
 import {
   getOrderList, updateOrderListItem, deleteOrderListItem, updateOrderList, closeOrderList,
   cancelOrderList, getOrderListPdf, sendOrderListEmail, logOrderListSend, getPurchaseDraft,
+  getOrderListShareLink, sendOrderListWhatsApp,
 } from '../../api/orderLists';
 
 // Mismos roles que routes/inventory/orderLists.routes.js (revisar, enviar, cerrar)
@@ -22,6 +23,7 @@ const STATUS = {
   cancelled: { label: 'Descartado', cls: 'bg-gray-100 text-gray-700' },
 };
 const CHANNEL = { email: 'Correo', whatsapp: 'WhatsApp' };
+const VIA = { cloud_api: 'PDF adjunto', wa_me: 'enlace al PDF', file: 'archivo PDF compartido' };
 
 const fmtQty = (n) => {
   const v = Number(n) || 0;
@@ -31,21 +33,23 @@ const fmtDateTime = (d) => (d ? new Date(d).toLocaleString('es-CO', { day: '2-di
 const userName = (u) => [u?.first_name, u?.last_name].filter(Boolean).join(' ') || u?.email || '';
 const errMsg = (e, fallback) => e.response?.data?.message || fallback;
 
-// Texto del pedido para WhatsApp (sin precios)
-const whatsappText = (list) => {
-  const lines = list.items.map((i, idx) => {
-    const code = i.supplier_code || i.product?.sku;
-    const name = i.product?.name || i.description;
-    return `${idx + 1}. ${code ? `[${code}] ` : ''}${name} — ${fmtQty(i.quantity)}${i.notes ? ` (${i.notes})` : ''}`;
-  });
-  return [
-    `Hola${list.supplier?.contact_name ? ` ${list.supplier.contact_name}` : ''}, les compartimos nuestro pedido ${list.list_number}:`,
-    '',
-    ...lines,
-    ...(list.notes ? ['', list.notes] : []),
-    '',
-    'Por favor confírmennos disponibilidad, precios y tiempo de entrega. ¡Gracias!',
-  ].join('\n');
+// Mensaje de WhatsApp: el pedido va en el PDF (enlace o archivo), no la
+// lista de ítems en el texto -- con 20 o más líneas el mensaje era ilegible.
+const whatsappText = (list, pdfUrl, sender) => [
+  `Hola${list.supplier?.contact_name ? ` ${list.supplier.contact_name}` : ''}, les compartimos nuestro pedido *${list.list_number}* (${list.items.length} ítem(s)).`,
+  ...(pdfUrl ? ['', `📄 Pedido en PDF: ${pdfUrl}`] : []),
+  '',
+  'Por favor confírmennos disponibilidad, precios y tiempo de entrega. ¡Gracias!',
+  ...(sender ? ['', sender] : []),
+].join('\n');
+
+const canShareFiles = () => {
+  try {
+    return typeof navigator !== 'undefined' && !!navigator.canShare
+      && navigator.canShare({ files: [new File([''], 'x.pdf', { type: 'application/pdf' })] });
+  } catch {
+    return false;
+  }
 };
 
 function ItemRow({ item, editable, onChanged }) {
@@ -177,6 +181,8 @@ export default function OrderListDetailPage() {
   const [busy, setBusy] = useState(false);
   const [showEmail, setShowEmail] = useState(false);
   const [email, setEmail] = useState({ to: '', cc: '', message: '' });
+  // WhatsApp: { to, pdfUrl, file, loading, windowClosed }
+  const [wa, setWa] = useState(null);
 
   const load = useCallback(async () => {
     try {
@@ -249,12 +255,58 @@ export default function OrderListDetailPage() {
     if (res) setShowEmail(false);
   };
 
-  const sendWhatsapp = () => {
-    const link = buildWaLink(waPhone, whatsappText(list));
-    if (!link) { toast.error('El proveedor no tiene celular registrado'); return; }
+  const sender = userName(user);
+
+  // Al abrir la ventana se prepara todo (enlace y archivo) para que los
+  // botones no esperen: el navegador bloquea window.open y navigator.share
+  // si llegan después de una espera larga.
+  const openWhatsapp = async () => {
+    setWa({ to: formatColombianPhone(waPhone), pdfUrl: null, file: null, loading: true, windowClosed: false });
+    try {
+      const [link, blob] = await Promise.all([
+        getOrderListShareLink(list.id),
+        canShareFiles() ? getOrderListPdf(list.id) : Promise.resolve(null),
+      ]);
+      const file = blob ? new File([blob], `Pedido-${list.list_number}.pdf`, { type: 'application/pdf' }) : null;
+      setWa((w) => w && { ...w, pdfUrl: link.data.pdf_url, file, loading: false });
+    } catch (e) {
+      toast.error(errMsg(e, 'No se pudo preparar el envío'));
+      setWa(null);
+    }
+  };
+
+  const sendWaCloud = async () => {
+    setBusy(true);
+    try {
+      const res = await sendOrderListWhatsApp(list.id, wa.to);
+      toast.success(res.message || 'PDF enviado por WhatsApp');
+      setWa(null);
+      await load();
+    } catch (e) {
+      if (e.response?.data?.code === 'WA_WINDOW_CLOSED') setWa((w) => ({ ...w, windowClosed: true }));
+      toast.error(errMsg(e, 'No se pudo enviar por WhatsApp'), { duration: 7000 });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const sendWaLink = () => {
+    const link = buildWaLink(wa.to, whatsappText(list, wa.pdfUrl, sender));
+    if (!link) { toast.error('Escribe el celular del proveedor'); return; }
     window.open(link, '_blank');
     // Best-effort: solo se sabe que se abrió el enlace.
-    logOrderListSend(list.id, { channel: 'whatsapp', to: waPhone }).then(load).catch(() => {});
+    logOrderListSend(list.id, { channel: 'whatsapp', via: 'wa_me', to: wa.to }).then(load).catch(() => {});
+    setWa(null);
+  };
+
+  const shareWaFile = async () => {
+    try {
+      await navigator.share({ files: [wa.file], title: `Pedido ${list.list_number}`, text: whatsappText(list, null, sender) });
+      logOrderListSend(list.id, { channel: 'whatsapp', via: 'file', to: wa.to }).then(load).catch(() => {});
+      setWa(null);
+    } catch (e) {
+      if (e?.name !== 'AbortError') toast.error('No se pudo compartir el archivo');
+    }
   };
 
   const markOrdered = () => {
@@ -293,7 +345,8 @@ export default function OrderListDetailPage() {
             <div className="flex flex-wrap items-center gap-2 mt-1 text-sm text-gray-500">
               <span className="font-medium text-gray-700">{list.list_number}</span>
               <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${STATUS[list.status]?.cls}`}>{STATUS[list.status]?.label}</span>
-              {list.ordered_at && <span>· {fmtDateTime(list.ordered_at)}{list.orderer && ` por ${userName(list.orderer)}`}</span>}
+              {list.ordered_at && <span>· {fmtDateTime(list.ordered_at)}{list.orderer && <> por <strong className="text-gray-700">{userName(list.orderer)}</strong></>}</span>}
+              {list.cancelled_at && <span>· Descartado {fmtDateTime(list.cancelled_at)}{list.canceller && <> por <strong className="text-gray-700">{userName(list.canceller)}</strong></>}</span>}
               {list.purchase && (
                 <span>· Compra <Link to={`/purchases/${list.purchase.id}`} className="text-orange-600 hover:underline">{list.purchase.purchase_number}</Link></span>
               )}
@@ -301,6 +354,11 @@ export default function OrderListDetailPage() {
             <p className="text-xs text-gray-500 mt-1">
               {[supplier.contact_name, supplier.mobile || supplier.phone, supplier.email].filter(Boolean).join(' · ')}
             </p>
+            {list.creator && (
+              <p className="text-xs text-gray-500 mt-1">
+                Abierto por <strong className="text-gray-700">{userName(list.creator)}</strong> el {fmtDateTime(list.created_at)}
+              </p>
+            )}
           </div>
 
           {canManage && list.status !== 'cancelled' && (
@@ -311,7 +369,7 @@ export default function OrderListDetailPage() {
               <button onClick={openEmail} disabled={busy || !hasItems} className={`${btn} border border-gray-300 bg-white text-gray-700 hover:bg-gray-50`}>
                 <Mail className="w-4 h-4" /> Correo
               </button>
-              <button onClick={sendWhatsapp} disabled={busy || !hasItems} className={`${btn} border border-gray-300 bg-white text-gray-700 hover:bg-gray-50`}>
+              <button onClick={openWhatsapp} disabled={busy || !hasItems} className={`${btn} border border-gray-300 bg-white text-gray-700 hover:bg-gray-50`}>
                 <MessageCircle className="w-4 h-4" /> WhatsApp
               </button>
               {!list.purchase_id && (
@@ -400,7 +458,9 @@ export default function OrderListDetailPage() {
                 {[...list.sent_log].reverse().map((s, i) => (
                   <li key={i}>
                     {fmtDateTime(s.date)} · {CHANNEL[s.channel] || s.channel}
+                    {s.via && VIA[s.via] && <span className="text-gray-400"> ({VIA[s.via]})</span>}
                     {s.to && <span className="text-gray-400"> → {Array.isArray(s.to) ? s.to.join(', ') : s.to}</span>}
+                    {s.user_name && <span> · por <strong className="text-gray-700">{s.user_name}</strong></span>}
                   </li>
                 ))}
               </ul>
@@ -408,6 +468,47 @@ export default function OrderListDetailPage() {
           </div>
         </div>
       </div>
+
+      <Modal isOpen={!!wa} onClose={() => setWa(null)} title={`Enviar pedido ${list.list_number} por WhatsApp`} size="sm">
+        {wa && (
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Celular del proveedor</label>
+              <input type="text" value={wa.to} onChange={(e) => setWa({ ...wa, to: e.target.value.replace(/[^\d]/g, '') })} placeholder="573001234567" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+              <p className="text-xs text-gray-400 mt-1">Con indicativo del país, sin espacios.</p>
+            </div>
+            {wa.loading ? (
+              <p className="text-sm text-gray-500">Preparando el PDF…</p>
+            ) : (
+              <div className="space-y-2">
+                {list.whatsapp_cloud && !wa.windowClosed && (
+                  <button onClick={sendWaCloud} disabled={busy || !wa.to} className="w-full px-4 py-2.5 rounded-lg text-sm font-semibold text-white bg-green-600 hover:bg-green-700 disabled:opacity-50">
+                    Enviar el PDF por WhatsApp
+                  </button>
+                )}
+                {wa.windowClosed && (
+                  <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2">
+                    Meta solo deja enviar el PDF directo si el proveedor te escribió en las últimas 24 horas. Envíale el enlace al PDF o comparte el archivo.
+                  </p>
+                )}
+                <button onClick={sendWaLink} disabled={busy || !wa.to} className={`w-full px-4 py-2.5 rounded-lg text-sm font-semibold disabled:opacity-50 ${list.whatsapp_cloud && !wa.windowClosed ? 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50' : 'text-white bg-green-600 hover:bg-green-700'}`}>
+                  Abrir WhatsApp con el enlace al PDF
+                </button>
+                {wa.file && (
+                  <button onClick={shareWaFile} disabled={busy} className="w-full px-4 py-2.5 rounded-lg text-sm font-semibold border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50">
+                    Compartir el archivo PDF
+                  </button>
+                )}
+                <p className="text-xs text-gray-500">
+                  {list.whatsapp_cloud ? 'El PDF directo sale desde el WhatsApp de la empresa. ' : ''}
+                  El enlace abre tu WhatsApp con un mensaje corto y el enlace al PDF del pedido (sin precios).
+                  {wa.file ? ' Compartir el archivo adjunta el PDF: eliges WhatsApp y el contacto en tu dispositivo.' : ''}
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+      </Modal>
 
       <Modal isOpen={showEmail} onClose={() => setShowEmail(false)} title={`Enviar pedido ${list.list_number}`} size="sm">
         <div className="space-y-3">

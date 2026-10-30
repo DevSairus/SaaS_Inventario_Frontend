@@ -145,6 +145,7 @@ export default function OrderListsPage() {
                   </p>
                 )}
                 <p className="text-xs text-gray-400 mt-2">Última anotación: {fmtDate(l.last_item_at || l.updated_at)}</p>
+                {l.creator && <p className="text-xs text-gray-500 mt-0.5">Abierto por <span className="font-medium text-gray-700">{userName(l.creator)}</span></p>}
               </button>
             ))}
           </div>
@@ -158,7 +159,7 @@ export default function OrderListsPage() {
                     <th className="px-4 py-3">Proveedor</th>
                     <th className="px-4 py-3">Estado</th>
                     <th className="px-4 py-3 text-right">Ítems</th>
-                    <th className="px-4 py-3 hidden md:table-cell">Fecha</th>
+                    <th className="px-4 py-3 hidden md:table-cell">Fecha y responsable</th>
                     <th className="px-4 py-3 hidden md:table-cell">Compra</th>
                   </tr>
                 </thead>
@@ -173,7 +174,7 @@ export default function OrderListsPage() {
                       <td className="px-4 py-3 text-right">{Number(l.items_count) || 0}</td>
                       <td className="px-4 py-3 hidden md:table-cell text-gray-500">
                         {fmtDate(l.ordered_at || l.cancelled_at)}
-                        {l.orderer && <span className="block text-xs">{userName(l.orderer)}</span>}
+                        {(l.orderer || l.canceller) && <span className="block text-xs font-medium text-gray-700">{userName(l.orderer || l.canceller)}</span>}
                       </td>
                       <td className="px-4 py-3 hidden md:table-cell">
                         {l.purchase ? (

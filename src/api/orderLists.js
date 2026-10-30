@@ -79,6 +79,20 @@ export const sendOrderListEmail = async (id, data = {}) => {
   return response.data;
 };
 
+// Enlace público al PDF (para WhatsApp sin Cloud API: wa.me no adjunta archivos)
+export const getOrderListShareLink = async (id) => {
+  const response = await axios.post(`/inventory/order-lists/${id}/share-link`);
+  return response.data;
+};
+
+// PDF como documento por la WhatsApp Cloud API. 409 WA_WINDOW_CLOSED si el
+// proveedor no escribió en las últimas 24 h.
+export const sendOrderListWhatsApp = async (id, to) => {
+  const response = await axios.post(`/inventory/order-lists/${id}/send-whatsapp`, { to });
+  return response.data;
+};
+
+// { channel: 'whatsapp', via: 'wa_me' | 'file', to? }
 export const logOrderListSend = async (id, data) => {
   const response = await axios.post(`/inventory/order-lists/${id}/log-send`, data);
   return response.data;
