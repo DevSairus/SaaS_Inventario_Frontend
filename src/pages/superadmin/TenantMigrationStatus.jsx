@@ -27,6 +27,12 @@ const formatDate = (value) => {
   });
 };
 
+// Cutover/rollback/limpieza corren todas las migraciones y copian datos contra
+// Neon: tardan minutos. Con el timeout global de 30s la página daba error y
+// rehabilitaba el botón mientras el backend seguía trabajando, y un reintento
+// lanzaba un segundo corte en paralelo sobre el mismo schema.
+const LONG_ACTION_TIMEOUT = 15 * 60 * 1000;
+
 const TenantMigrationStatus = () => {
   const [loading, setLoading] = useState(true);
   const [tenants, setTenants] = useState([]);
@@ -51,7 +57,7 @@ const TenantMigrationStatus = () => {
   const handleCutover = async (slug) => {
     setActionSlug(slug);
     try {
-      await api.post(`/superadmin/tenants/${slug}/cutover`);
+      await api.post(`/superadmin/tenants/${slug}/cutover`, null, { timeout: LONG_ACTION_TIMEOUT });
       toast.success(`"${slug}" migrado a schema dedicado`);
       await fetchStatus();
     } catch (error) {
@@ -69,7 +75,7 @@ const TenantMigrationStatus = () => {
 
     setActionSlug(slug);
     try {
-      await api.post(`/superadmin/tenants/${slug}/rollback`);
+      await api.post(`/superadmin/tenants/${slug}/rollback`, null, { timeout: LONG_ACTION_TIMEOUT });
       toast.success(`"${slug}" revertido a modo legado`);
       await fetchStatus();
     } catch (error) {
@@ -86,7 +92,7 @@ const TenantMigrationStatus = () => {
 
     setActionSlug(slug);
     try {
-      const { data } = await api.post(`/superadmin/tenants/${slug}/cleanup`, { execute });
+      const { data } = await api.post(`/superadmin/tenants/${slug}/cleanup`, { execute }, { timeout: LONG_ACTION_TIMEOUT });
       setCleanupReport({ slug, execute, report: data.report });
       toast.success(execute ? `Limpieza de "${slug}" ejecutada` : `Dry-run de "${slug}" listo, revisa el detalle abajo`);
     } catch (error) {
