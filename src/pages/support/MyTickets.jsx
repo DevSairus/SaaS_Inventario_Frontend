@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useSupportStore from '../../store/supportStore';
 import Layout from '../../components/layout/Layout';
+import Pagination from '../../components/common/Pagination';
 
 const STATUS_LABELS = {
   open: { text: 'Abierto', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' },
@@ -119,27 +120,18 @@ const MyTickets = () => {
       )}
 
       {/* Pagination */}
-      {ticketsPagination.pages > 1 && (
-        <div className="mt-4 flex justify-center gap-2">
-          {Array.from({ length: ticketsPagination.pages }, (_, i) => i + 1).map((p) => (
-            <button
-              key={p}
-              onClick={() => {
-                const params = { page: p, limit: 20 };
-                if (statusFilter) params.status = statusFilter;
-                fetchTickets(params);
-              }}
-              className={`px-3 py-1 text-sm rounded ${
-                ticketsPagination.page === p
-                  ? 'bg-indigo-600 text-white'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-white/5 dark:text-gray-400 dark:hover:bg-white/10'
-              }`}
-            >
-              {p}
-            </button>
-          ))}
-        </div>
-      )}
+      <Pagination
+        className="mt-4"
+        currentPage={ticketsPagination.page || 1}
+        totalPages={ticketsPagination.pages || 1}
+        onPageChange={(p) => {
+            const params = { page: p, limit: 20 };
+            if (statusFilter) params.status = statusFilter;
+            fetchTickets(params);
+          }}
+        totalItems={ticketsPagination.total}
+        pageSize={ticketsPagination.limit}
+      />
     </div>
     </Layout>
   );

@@ -1,9 +1,11 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { ShieldAlert, Loader2, RefreshCw, ChevronRight, Filter } from 'lucide-react';
 import Layout from '../../components/layout/Layout';
 import { ensambladoraGarantiasApi } from '../../api/ensambladora';
+import Pagination from '../../components/common/Pagination';
+import usePaginatedList from '../../hooks/usePaginatedList';
 import { GARANTIA_ESTADO_CONFIG } from '../../utils/garantiaEstados';
 
 const fmtDate = (d) => {
@@ -26,27 +28,21 @@ const FILTROS = [
 // GET /ensambladora/garantias/todas, pass-through puro, mismo criterio que
 // LiquidacionesPage.jsx).
 export default function GarantiasPage() {
-  const [garantias, setGarantias] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [filtro, setFiltro] = useState('todas');
 
-  const load = useCallback(async ({ silent = false } = {}) => {
-    silent ? setRefreshing(true) : setLoading(true);
-    try {
-      const res = await ensambladoraGarantiasApi.listAll();
-      setGarantias(res.data?.data ?? []);
-    } catch (err) {
-      toast.error('No se pudieron cargar las garantías');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, []);
-
-  useEffect(() => { load(); }, [load]);
-
-  const visibles = filtro === 'todas' ? garantias : garantias.filter((g) => g.estado === filtro);
+  // El Core devuelve todo; el backend filtra por estado y pagina.
+  const list = usePaginatedList(
+    (params, opts) => ensambladoraGarantiasApi.listAll(params, opts),
+    {
+      filters: { estado: filtro !== 'todas' ? filtro : '' },
+      onError: () => toast.error('No se pudieron cargar las garantías'),
+    },
+  );
+  const visibles = list.rows;
+  const garantiasTotal = list.meta?.total_sin_filtro ?? list.total;
+  // Primera carga = spinner; las siguientes conservan la lista (botón girando).
+  const loading = list.loading && visibles.length === 0;
+  const refreshing = list.loading && visibles.length > 0;
 
   return (
     <Layout>
@@ -57,7 +53,7 @@ export default function GarantiasPage() {
             <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Garantías</h1>
           </div>
           <button
-            onClick={() => load({ silent: true })}
+            onClick={list.reload}
             disabled={refreshing}
             title="Actualizar"
             className="p-2 rounded-lg border border-gray-200 dark:border-white/10 text-gray-500 hover:text-primary-600 disabled:opacity-40"
@@ -96,7 +92,7 @@ export default function GarantiasPage() {
           <div className="text-center py-16 border border-dashed border-gray-300 dark:border-white/10 rounded-xl">
             <ShieldAlert className="w-10 h-10 mx-auto text-gray-300 mb-3" />
             <p className="text-sm font-medium text-gray-700 dark:text-gray-200">
-              {garantias.length === 0 ? 'Todavía no hay garantías radicadas' : 'No hay garantías con ese estado'}
+              {garantiasTotal === 0 ? 'Todavía no hay garantías radicadas' : 'No hay garantías con ese estado'}
             </p>
           </div>
         )}
@@ -133,6 +129,8 @@ export default function GarantiasPage() {
             })}
           </ul>
         )}
+
+        <Pagination {...list.paginationProps} className="mt-4" />
       </div>
     </Layout>
   );

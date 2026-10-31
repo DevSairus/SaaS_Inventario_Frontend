@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Plus, Eye, Upload, ClipboardList } from 'lucide-react';
 import Layout from '../../components/layout/Layout';
 import { physicalCountsAPI } from '../../api/physicalCounts';
 import { formatCurrency, formatDateTime } from '../../utils/formatters';
 import toast from 'react-hot-toast';
+import Pagination from '../../components/common/Pagination';
+import useUrlPageSync from '../../hooks/useUrlPageSync';
 
 // Historial de sesiones de conteo físico.
 // Ver: 00 - Documentación/Pitbox-Tecnicos-InventarioFisico-EnTramite-Analisis-y-Plan.md, sección 2.3.
@@ -27,10 +29,14 @@ const PhysicalCountsPage = () => {
     }
   };
 
+  const [searchParams] = useSearchParams();
   useEffect(() => {
+    // Con ?page=N la primera carga la hace useUrlPageSync
+    if (Number(searchParams.get('page')) > 1) return;
     fetchCounts(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  useUrlPageSync(pagination.page, fetchCounts);
 
   const getStatusBadge = (status) => {
     const badges = {
@@ -140,27 +146,14 @@ const PhysicalCountsPage = () => {
                 </table>
               </div>
 
-              {pagination.pages > 1 && (
-                <div className="bg-white px-4 py-3 border-t border-gray-200 flex items-center justify-between dark:bg-graphite dark:border-white/10">
-                  <button
-                    onClick={() => fetchCounts(pagination.page - 1)}
-                    disabled={pagination.page === 1}
-                    className="px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 dark:border-white/10 dark:text-gray-300 dark:bg-graphite dark:hover:bg-white/5"
-                  >
-                    Anterior
-                  </button>
-                  <p className="text-sm text-gray-700 dark:text-gray-300">
-                    Página {pagination.page} de {pagination.pages}
-                  </p>
-                  <button
-                    onClick={() => fetchCounts(pagination.page + 1)}
-                    disabled={pagination.page === pagination.pages}
-                    className="px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 dark:border-white/10 dark:text-gray-300 dark:bg-graphite dark:hover:bg-white/5"
-                  >
-                    Siguiente
-                  </button>
-                </div>
-              )}
+              <Pagination
+                className="bg-white px-4 py-3 border-t border-gray-200 dark:bg-graphite dark:border-white/10"
+                currentPage={pagination.page}
+                totalPages={pagination.pages}
+                totalItems={pagination.total}
+                pageSize={pagination.limit}
+                onPageChange={fetchCounts}
+              />
             </>
           )}
         </div>

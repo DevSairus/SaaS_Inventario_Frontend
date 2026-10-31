@@ -54,8 +54,9 @@ const useNexaStore = create((set, get) => ({
 
   fetchPendingCount: async () => {
     try {
-      const res = await aiAssistantAPI.listProposals('pending');
-      set({ pendingProposalsCount: (res.data || []).length });
+      // Solo interesa el conteo: el listado viene paginado.
+      const res = await aiAssistantAPI.listProposals('pending', { limit: 1 });
+      set({ pendingProposalsCount: res.pagination?.total ?? (res.data || []).length });
     } catch (error) {
       // Silencioso: si el módulo no está activo o el rol no tiene acceso,
       // simplemente no mostramos badge — no rompemos el resto de la UI.

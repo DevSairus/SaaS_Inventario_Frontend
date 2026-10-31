@@ -58,7 +58,8 @@ export default function OrderListsPage() {
     setShowNew(true);
     setNewSupplier(null);
     if (!suppliers) {
-      suppliersAPI.getAll({ is_active: true, limit: 10000, sort_by: 'name', sort_order: 'ASC' })
+      // Solo para hojear; el resto lo encuentra el remoteSearch del Combobox.
+      suppliersAPI.getAll({ is_active: true, limit: 100, sort_by: 'name', sort_order: 'ASC' })
         .then((res) => setSuppliers(res.data || []))
         .catch(() => toast.error('Error al cargar proveedores'));
     }
@@ -212,6 +213,7 @@ export default function OrderListsPage() {
               displayValue={supplierLabel(newSupplier)}
               onSelect={setNewSupplier}
               onClear={() => setNewSupplier(null)}
+              remoteSearch={(q) => suppliersAPI.search(q, { is_active: true })}
               getSearchText={(s) => [s.name, s.business_name, s.tax_id].filter(Boolean).join(' ')}
               renderItem={(s, q) => (
                 <div>

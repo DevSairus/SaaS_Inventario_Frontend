@@ -61,6 +61,10 @@ function displayName(conv) {
 
 const GRADIENT_BG = 'bg-gradient-to-r from-orange-500 via-rose-500 to-fuchsia-600';
 const DEFAULT_STAGE_COLOR = '#64748b';
+// Conversaciones por tanda en la bandeja ("Cargar más"); al refrescar se
+// vuelven a pedir hasta WA_MAX_RELOAD para no perder lo ya cargado.
+const WA_PAGE = 50;
+const WA_MAX_RELOAD = 200;
 const AVATAR_COLORS = ['bg-purple-500', 'bg-blue-500', 'bg-emerald-500', 'bg-amber-500', 'bg-pink-500', 'bg-indigo-500', 'bg-teal-500'];
 
 // Nombre "real" del contacto: si solo hay número, el chat no tiene nombre.
@@ -242,6 +246,11 @@ export default function WhatsAppInboxPage() {
 
   const [conversations, setConversations] = useState([]);
   const [loadingList, setLoadingList] = useState(true);
+  // "Cargar más": cuántas conversaciones hay cargadas (al refrescar se
+  // vuelven a pedir las mismas, no solo la primera página) y si quedan más.
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const loadedCountRef = useRef(WA_PAGE);
   const [selectedId, setSelectedId] = useState(null);
   const [messages, setMessages] = useState([]);
   const [loadingMsgs, setLoadingMsgs] = useState(false);
@@ -288,7 +297,7 @@ export default function WhatsAppInboxPage() {
 
   const loadDeals = useCallback(async () => {
     try {
-      const [stagesRes, oppsRes] = await Promise.all([crmApi.listPipelineStages(), crmApi.listOpportunities()]);
+      const [stagesRes, oppsRes] = await Promise.all([crmApi.listPipelineStages(), crmApi.listOpportunities({ open_only: true })]);
       const stageList = stagesRes.data.data || [];
       const openKeys = new Set(stageList.filter(s => s.stage_type === 'open').map(s => s.key));
       setStages(stageList);
@@ -335,27 +344,50 @@ export default function WhatsAppInboxPage() {
     }
   };
 
+  const listParams = useCallback(() => {
+    const params = {};
+    if (q.trim()) params.q = q.trim();
+    if (filter === 'mine') params.scope = 'mine';
+    if (filter === 'followups') params.scope = canAssignOthers ? undefined : 'mine';
+    // Sin asignar / seguimientos / fijadas se filtran en el servidor.
+    if (['unassigned', 'followups', 'pinned'].includes(filter)) params.view = filter;
+    return params;
+  }, [q, filter, canAssignOthers]);
+
   const loadConversations = useCallback(async () => {
     setLoadingList(true);
     try {
-      const params = {};
-      if (q.trim()) params.q = q.trim();
-      if (filter === 'mine') params.scope = 'mine';
-      if (filter === 'followups') params.scope = canAssignOthers ? undefined : 'mine';
-      const res = await crmApi.listWaConversations(params);
-      let list = res.data.data || [];
-      if (filter === 'unassigned') list = list.filter((c) => !c.assigned_user_id);
-      if (filter === 'followups') {
-        list = list.filter((c) => c.follow_up_at && new Date(c.follow_up_at) <= new Date(Date.now() + 48 * 3600 * 1000));
-      }
-      if (filter === 'pinned') list = list.filter((c) => c.is_pinned);
+      const limit = Math.min(Math.max(WA_PAGE, loadedCountRef.current), WA_MAX_RELOAD);
+      const res = await crmApi.listWaConversations({ ...listParams(), limit, offset: 0 });
+      const list = res.data.data || [];
+      loadedCountRef.current = Math.max(WA_PAGE, list.length);
       setConversations(list);
+      setHasMore(!!res.data.has_more);
     } catch {
       toast.error('No se pudieron cargar las conversaciones');
     } finally {
       setLoadingList(false);
     }
-  }, [q, filter, canAssignOthers]);
+  }, [listParams]);
+
+  const loadMoreConversations = async () => {
+    setLoadingMore(true);
+    try {
+      const res = await crmApi.listWaConversations({ ...listParams(), limit: WA_PAGE, offset: conversations.length });
+      const more = res.data.data || [];
+      setConversations((prev) => {
+        const ids = new Set(prev.map((c) => c.id));
+        const next = prev.concat(more.filter((c) => !ids.has(c.id)));
+        loadedCountRef.current = next.length;
+        return next;
+      });
+      setHasMore(!!res.data.has_more);
+    } catch {
+      toast.error('No se pudieron cargar más conversaciones');
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   const loadMessages = useCallback(async (id) => {
     if (!id) return;
@@ -372,6 +404,8 @@ export default function WhatsAppInboxPage() {
     }
   }, []);
 
+  // Búsqueda o vista nuevas: vuelve a la primera página.
+  useEffect(() => { loadedCountRef.current = WA_PAGE; }, [q, filter]);
   useEffect(() => { loadConversations(); }, [loadConversations]);
 
   useEffect(() => {
@@ -899,6 +933,17 @@ export default function WhatsAppInboxPage() {
                   </button>
                 );
               })}
+              {hasMore && !loadingList && (
+                <button
+                  type="button"
+                  onClick={loadMoreConversations}
+                  disabled={loadingMore}
+                  className="w-full py-3 text-sm font-medium text-emerald-700 hover:bg-emerald-50 disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {loadingMore && <Loader2 className="animate-spin" size={14} />}
+                  Cargar más conversaciones
+                </button>
+              )}
             </div>
           </div>
 

@@ -1,8 +1,10 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useState } from 'react';
 import toast from 'react-hot-toast';
 import { ShieldCheck, Loader2, RefreshCw, Filter, User, Bot } from 'lucide-react';
 import Layout from '../../components/layout/Layout';
 import { ensambladoraAuditoriaApi } from '../../api/ensambladora';
+import Pagination from '../../components/common/Pagination';
+import usePaginatedList from '../../hooks/usePaginatedList';
 
 const fmtDateTime = (d) => {
   if (!d) return null;
@@ -40,27 +42,20 @@ const ENTIDAD_FILTROS = [
 // con garantía (accion "evento_core_...") quedan también acá si el Core
 // llega a empujarlos.
 export default function AuditoriaPage() {
-  const [registros, setRegistros] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [entidadTipo, setEntidadTipo] = useState('todas');
 
-  const load = useCallback(async ({ silent = false } = {}) => {
-    silent ? setRefreshing(true) : setLoading(true);
-    try {
-      const filtros = {};
-      if (entidadTipo !== 'todas') filtros.entidad_tipo = entidadTipo;
-      const res = await ensambladoraAuditoriaApi.list(filtros);
-      setRegistros(res.data?.data ?? []);
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'No se pudo cargar el log de auditoría');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, [entidadTipo]);
-
-  useEffect(() => { load(); }, [load]);
+  const list = usePaginatedList(
+    (params, opts) => ensambladoraAuditoriaApi.list(params, opts),
+    {
+      filters: { entidad_tipo: entidadTipo !== 'todas' ? entidadTipo : '' },
+      defaultPageSize: 100,
+      onError: (err) => toast.error(err.response?.data?.message || 'No se pudo cargar el log de auditoría'),
+    },
+  );
+  const registros = list.rows;
+  // Primera carga = spinner; las siguientes conservan la lista (botón girando).
+  const loading = list.loading && registros.length === 0;
+  const refreshing = list.loading && registros.length > 0;
 
   return (
     <Layout>
@@ -71,7 +66,7 @@ export default function AuditoriaPage() {
             <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Auditoría</h1>
           </div>
           <button
-            onClick={() => load({ silent: true })}
+            onClick={list.reload}
             disabled={refreshing}
             title="Actualizar"
             className="p-2 rounded-lg border border-gray-200 dark:border-white/10 text-gray-500 hover:text-primary-600 disabled:opacity-40"
@@ -137,6 +132,8 @@ export default function AuditoriaPage() {
             ))}
           </ul>
         )}
+
+        <Pagination {...list.paginationProps} pageSizeOptions={[50, 100, 200]} className="mt-4" />
       </div>
     </Layout>
   );

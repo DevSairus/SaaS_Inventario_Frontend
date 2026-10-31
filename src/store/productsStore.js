@@ -23,7 +23,7 @@ const useProductsStore = create((set, get) => ({
   pagination: {
     total: 0,
     page: 1,
-    limit: 10,
+    limit: 25,
     totalPages: 0
   },
   filters: {
@@ -210,6 +210,13 @@ const useProductsStore = create((set, get) => ({
   setPage: (page) => {
     set((state) => ({
       pagination: { ...state.pagination, page }
+    }));
+  },
+
+  // Cambiar filas por página (vuelve a la primera)
+  setLimit: (limit) => {
+    set((state) => ({
+      pagination: { ...state.pagination, limit, page: 1 }
     }));
   },
 

@@ -1,4 +1,6 @@
 import React, { useState, useRef, useMemo, useCallback } from 'react';
+import api from '../../api/axios';
+import useRemoteOptions from '../../hooks/useRemoteOptions';
 import { MagnifyingGlassIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import {
   FloatingPanel, HighlightMatch, matchesSearch, useClickOutside, useListNavigation, optionCls,
@@ -15,31 +17,48 @@ const MAX_RESULTS = 50;
  * - onChange: función que recibe el ID del cliente
  * - placeholder: texto placeholder
  * - className: clases adicionales
+ * - remote: con 2+ letras también busca en el servidor (default true), para
+ *   encontrar clientes que no vinieron en la lista precargada (que suele
+ *   ser solo una página).
  */
 const CustomerSearchInput = ({
   customers = [],
   value,
   onChange,
   placeholder = "Buscar cliente...",
-  className = ""
+  className = "",
+  remote = true,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
+  // Cliente elegido desde la búsqueda remota (no está en `customers`).
+  const [picked, setPicked] = useState(null);
   const [isOpen, setIsOpen] = useState(false);
   const wrapperRef = useRef(null);
   const inputRef = useRef(null);
 
-  const selectedCustomer = customers.find(c => String(c.id) === String(value));
+  const selectedCustomer = customers.find(c => String(c.id) === String(value))
+    || (picked && String(picked.id) === String(value) ? picked : null);
+
+  const { options: remoteOptions } = useRemoteOptions(
+    (q) => api.get('/customers', { params: { search: q, limit: 30 } }).then(r => r.data?.data || []),
+    remote && isOpen ? searchTerm : '',
+  );
 
   const { list, total } = useMemo(() => {
-    const all = searchTerm
+    let all = searchTerm
       ? customers.filter(c => matchesSearch(searchTerm, c.full_name, c.business_name, c.tax_id, c.email, c.phone))
       : customers;
+    if (searchTerm && remoteOptions.length) {
+      const ids = new Set(all.map(c => String(c.id)));
+      all = all.concat(remoteOptions.filter(c => !ids.has(String(c.id))));
+    }
     return { list: all.slice(0, MAX_RESULTS), total: all.length };
-  }, [customers, searchTerm]);
+  }, [customers, searchTerm, remoteOptions]);
 
   const close = useCallback(() => setIsOpen(false), []);
 
   const handleSelect = (customer) => {
+    setPicked(customer);
     onChange(String(customer.id));
     setSearchTerm('');
     setIsOpen(false);

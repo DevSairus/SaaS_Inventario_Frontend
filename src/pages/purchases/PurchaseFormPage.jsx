@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { usePurchasesStore } from '../../store/purchasesStore';
 import { suppliersAPI } from '../../api/suppliers';
@@ -7,6 +7,7 @@ import ProductSearchInput from '../../components/common/ProductSearchInput';
 import Layout from '../../components/layout/Layout';
 import NumericInput from '../../components/inputs/NumericInput';
 import Combobox, { HighlightMatch } from '../../components/common/Combobox';
+import mergeById from '../../utils/mergeById';
 import { retentionsAPI } from '../../api/retentions';
 import { linkOrderListPurchase } from '../../api/orderLists';
 import {
@@ -17,6 +18,14 @@ import {
   INPUT_CONFIG
 } from '../../utils/formatters';
 import toast from 'react-hot-toast';
+import { purchasesAPI } from '../../api/purchases';
+import useTenantStore from '../../store/tenantStore';
+import { maxMarginFor } from '../../utils/salePricing';
+import { downloadPurchaseLinesTemplate, parsePurchaseLinesFile } from '../../utils/excelExport';
+
+// Margen opcional de una línea: vacío = el producto conserva el suyo. Al
+// recibir la compra pasa al producto (backend: purchaseCost.service.js).
+const marginOrNull = (v) => (v === '' || v === null || v === undefined ? null : Number(v));
 
 const PurchaseFormPage = () => {
   const navigate = useNavigate();
@@ -29,6 +38,12 @@ const PurchaseFormPage = () => {
   // store de proveedores porque está paginado (10 por página) para el listado.
   const [suppliers, setSuppliers] = useState([]);
   const { searchProducts } = useProductsStore();
+  const marginMethod = useTenantStore((s) => s.marginMethod);
+  const maxMargin = maxMarginFor(marginMethod);
+  const excelInputRef = useRef(null);
+  const [importingExcel, setImportingExcel] = useState(false);
+  // Resultado de la última importación de Excel: filas que no se pudieron cargar.
+  const [excelReport, setExcelReport] = useState(null);
 
   const [formData, setFormData] = useState({
     supplier_id: '',
@@ -70,10 +85,20 @@ const PurchaseFormPage = () => {
   const [orderListLink, setOrderListLink] = useState(null);
 
   useEffect(() => {
-    suppliersAPI.getAll({ is_active: true, limit: 10000, sort_by: 'name', sort_order: 'ASC' })
-      .then(res => setSuppliers(res.data || []))
+    // Solo para hojear; el resto lo encuentra el remoteSearch del Combobox.
+    suppliersAPI.getAll({ is_active: true, limit: 100, sort_by: 'name', sort_order: 'ASC' })
+      .then(res => setSuppliers(prev => mergeById(res.data || [], prev)))
       .catch(() => toast.error('Error al cargar proveedores'));
   }, []);
+
+  // El proveedor elegido (o el de la compra que se edita) puede no estar en
+  // la precarga: se agrega a la lista para mostrarlo y leer sus datos.
+  const rememberSupplier = (s) => s && setSuppliers(prev => mergeById(prev, [s]));
+  useEffect(() => {
+    const id = formData.supplier_id;
+    if (!id || suppliers.some(s => String(s.id) === String(id))) return;
+    suppliersAPI.getById(id).then(res => rememberSupplier(res.data?.data || res.data)).catch(() => {});
+  }, [formData.supplier_id]);
 
   const supplierLabel = (s) => s ? `${s.name}${s.tax_id ? ` - ${s.tax_id}` : ''}` : '';
   const selectedSupplier = suppliers.find(s => String(s.id) === String(formData.supplier_id));
@@ -235,6 +260,8 @@ const PurchaseFormPage = () => {
             tax_rate: toNumber(item.tax_rate ?? 19, 19),
             inc_rate: toNumber(item.inc_rate, 0),
             discount_percentage: toNumber(item.discount_percentage, 0),
+            profit_margin_pct: item.profit_margin_pct ?? '',
+            current_margin: item.product?.profit_margin_percentage ?? null,
             product_name: item.product?.name || 'Producto desconocido',
             product_sku: item.product?.sku || '',
             ...totals
@@ -259,7 +286,7 @@ const PurchaseFormPage = () => {
     } else if (name === 'supplier_id') {
       // Autocompletar el plazo de pago con el que tenga configurado el proveedor
       // por defecto (el usuario lo puede cambiar libremente después).
-      const selectedSupplier = suppliers.find(s => s.id === value);
+      const selectedSupplier = e.supplier || suppliers.find(s => s.id === value);
       setRetentionLines(null);
       setFormData(prev => ({
         ...prev,
@@ -291,6 +318,7 @@ const PurchaseFormPage = () => {
       product_id: product.id,
       _product_name: product.name,
       _product_sku: product.sku,
+      _current_margin: product.profit_margin_percentage ?? null,
       // IVA por defecto: el del producto (0 si es exento o excluido); el de
       // la factura del proveedor manda y se puede cambiar.
       tax_rate: product.tax_config?.iva_status === 'excluido' || product.has_tax === false
@@ -323,6 +351,8 @@ const PurchaseFormPage = () => {
       ...currentItem,
       product_name: currentItem._product_name || '',
       product_sku: currentItem._product_sku || '',
+      current_margin: currentItem._current_margin ?? null,
+      profit_margin_pct: '',
       ...totals
     };
 
@@ -337,6 +367,67 @@ const PurchaseFormPage = () => {
       discount_percentage: 0
     });
     setProductSearch('');
+  };
+
+  // Importar líneas desde Excel: se buscan los códigos (SKU, código de barras o
+  // código del proveedor elegido) y se agregan a la tabla; un producto que ya
+  // estaba en la compra se actualiza con los datos del archivo.
+  const handleExcelFile = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setImportingExcel(true);
+    setExcelReport(null);
+    try {
+      const { rows, errors } = await parsePurchaseLinesFile(file);
+      if (!rows.length && !errors.length) {
+        toast('El archivo no tiene líneas');
+        return;
+      }
+      const res = rows.length
+        ? await purchasesAPI.resolveProductCodes(rows.map((r) => r.code), formData.supplier_id)
+        : { data: { products: {} } };
+      const found = res.data.products || {};
+      const problems = [...errors];
+      const byProduct = new Map();
+      for (const r of rows) {
+        const p = found[r.code];
+        if (!p) { problems.push({ row: r.row, code: r.code, message: 'no se encontró el producto' }); continue; }
+        if (r.profit_margin_pct !== null && r.profit_margin_pct > maxMargin) {
+          problems.push({ row: r.row, code: r.code, message: `el margen debe ser menor o igual a ${maxMargin} %` });
+          continue;
+        }
+        byProduct.set(p.id, { r, p }); // código repetido: gana la última fila
+      }
+      const next = [...items];
+      let added = 0;
+      let updated = 0;
+      for (const { r, p } of byProduct.values()) {
+        const taxDefault = p.tax_config?.iva_status === 'excluido' || p.has_tax === false ? 0 : (Number(p.tax_percentage) || 0);
+        const base = {
+          product_id: p.id,
+          product_name: p.name,
+          product_sku: p.sku,
+          current_margin: p.profit_margin_percentage ?? null,
+          quantity: r.quantity,
+          unit_cost: r.unit_cost,
+          tax_rate: r.tax_rate ?? taxDefault,
+          discount_percentage: r.discount_percentage,
+          profit_margin_pct: r.profit_margin_pct ?? '',
+        };
+        const idx = next.findIndex((it) => it.product_id === p.id);
+        const merged = idx >= 0 ? { ...next[idx], ...base } : { inc_rate: 0, ...base };
+        const line = { ...merged, ...calculateItemTotals(merged) };
+        if (idx >= 0) { next[idx] = line; updated += 1; } else { next.push(line); added += 1; }
+      }
+      setItems(next);
+      if (added || updated) toast.success(`Excel: ${added} línea(s) agregada(s)${updated ? `, ${updated} actualizada(s)` : ''}`);
+      if (problems.length) setExcelReport(problems.sort((a, b) => a.row - b.row));
+    } catch (err) {
+      toast.error(err.response?.data?.message || err.message || 'No se pudo leer el archivo');
+    } finally {
+      setImportingExcel(false);
+    }
   };
 
   const removeItem = (index) => {
@@ -412,6 +503,13 @@ const PurchaseFormPage = () => {
       return;
     }
 
+    const badMargin = items.find((it) => marginOrNull(it.profit_margin_pct) !== null
+      && !(marginOrNull(it.profit_margin_pct) >= 0 && marginOrNull(it.profit_margin_pct) <= maxMargin));
+    if (badMargin) {
+      toast(`El margen de ${badMargin.product_name} debe estar entre 0 y ${maxMargin} %`);
+      return;
+    }
+
     // Las líneas precargadas desde un pedido pueden llegar en 0 (producto sin
     // compras previas): pedir el costo, igual que al agregar un producto. Solo
     // en ese caso, para no bloquear compras existentes con ítems bonificados.
@@ -433,7 +531,8 @@ const PurchaseFormPage = () => {
         unit_cost: toInteger(item.unit_cost),
         tax_rate: toInteger(item.tax_rate),
         inc_rate: toNumber(item.inc_rate, 0),
-        discount_percentage: toInteger(item.discount_percentage)
+        discount_percentage: toInteger(item.discount_percentage),
+        profit_margin_pct: marginOrNull(item.profit_margin_pct),
       }))
     };
 
@@ -518,9 +617,10 @@ const PurchaseFormPage = () => {
                 items={suppliers}
                 value={formData.supplier_id || null}
                 displayValue={supplierLabel(selectedSupplier)}
-                onSelect={(s) => handleFormChange({ target: { name: 'supplier_id', value: s.id } })}
+                onSelect={(s) => { rememberSupplier(s); handleFormChange({ target: { name: 'supplier_id', value: s.id }, supplier: s }); }}
                 onClear={() => handleFormChange({ target: { name: 'supplier_id', value: '' } })}
                 getSearchText={(s) => [s.name, s.business_name, s.tax_id, s.contact_name].filter(Boolean).join(' ')}
+                remoteSearch={(q) => suppliersAPI.search(q, { is_active: true })}
                 renderItem={(s, q) => (
                   <div>
                     <p className="font-medium text-gray-800 dark:text-gray-100"><HighlightMatch text={s.name} query={q} /></p>
@@ -652,7 +752,44 @@ const PurchaseFormPage = () => {
 
         {/* Agregar Producto */}
         <div className="bg-white rounded-lg shadow mb-6 p-6">
-          <h2 className="text-xl font-semibold text-gray-800 mb-4">Agregar Productos</h2>
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+            <h2 className="text-xl font-semibold text-gray-800">Agregar Productos</h2>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => downloadPurchaseLinesTemplate()}
+                className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+              >
+                Plantilla Excel
+              </button>
+              <button
+                type="button"
+                disabled={importingExcel}
+                onClick={() => excelInputRef.current?.click()}
+                className="px-3 py-2 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 disabled:opacity-50"
+                title="Código, Cantidad, Costo Unitario, IVA, Descuento y Margen por línea"
+              >
+                {importingExcel ? 'Importando…' : 'Importar desde Excel'}
+              </button>
+              <input ref={excelInputRef} type="file" accept=".xlsx" className="hidden" onChange={handleExcelFile} />
+            </div>
+          </div>
+          {!formData.supplier_id && (
+            <p className="-mt-2 mb-3 text-xs text-gray-500">Elige primero el proveedor si el Excel trae los códigos del proveedor.</p>
+          )}
+          {excelReport && (
+            <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm">
+              <div className="flex items-start justify-between gap-2">
+                <p className="font-medium text-amber-900">{excelReport.length} fila(s) del Excel no se cargaron:</p>
+                <button type="button" onClick={() => setExcelReport(null)} className="text-amber-700 hover:text-amber-900">✕</button>
+              </div>
+              <ul className="mt-1 max-h-40 overflow-y-auto text-amber-800">
+                {excelReport.map((p, i) => (
+                  <li key={i}>Fila {p.row}{p.code ? ` (${p.code})` : ''}: {p.message}</li>
+                ))}
+              </ul>
+            </div>
+          )}
           
           <div className="grid grid-cols-1 md:grid-cols-6 gap-4 items-end">
             <div className="md:col-span-2 relative product-search-container">
@@ -768,6 +905,7 @@ const PurchaseFormPage = () => {
                     <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Costo Unit.</th>
                     <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">IVA</th>
                     <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Desc.</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase" title="Opcional. Vacío = el producto conserva su margen. Se aplica al recibir la compra.">Margen %</th>
                     <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Subtotal</th>
                     <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
                     <th className="px-4 py-3"></th>
@@ -802,6 +940,19 @@ const PurchaseFormPage = () => {
                         {toNumber(item.inc_rate, 0) > 0 && <div className="text-xs text-gray-500">INC {item.inc_rate}%</div>}
                       </td>
                       <td className="px-4 py-3 text-right text-sm text-gray-900">{item.discount_percentage}%</td>
+                      <td className="px-4 py-3 text-right text-sm text-gray-900">
+                        <input
+                          type="number" min="0" max={maxMargin} step="0.01"
+                          value={item.profit_margin_pct ?? ''}
+                          placeholder={item.current_margin !== null && item.current_margin !== undefined ? String(Number(item.current_margin)) : '—'}
+                          title="Vacío = el producto conserva su margen. Se aplica al recibir la compra."
+                          onWheel={(e) => e.target.blur()}
+                          onChange={(e) => updateItem(index, 'profit_margin_pct', e.target.value)}
+                          className={`w-20 px-2 py-1 border rounded text-right focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                            item.profit_margin_pct !== '' && item.profit_margin_pct !== null && item.profit_margin_pct !== undefined
+                              ? 'border-amber-400 bg-amber-50' : 'border-gray-300'}`}
+                        />
+                      </td>
                       <td className="px-4 py-3 text-right text-sm font-medium text-gray-900">
                         {formatCurrency(item.subtotal)}
                       </td>

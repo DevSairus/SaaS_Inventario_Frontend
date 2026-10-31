@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom';
 import Layout from '../../components/layout/Layout';
 import { vehiclesApi } from '../../api/workshop';
 import axios from '../../api/axios';
@@ -12,6 +12,7 @@ import {
 import toast from 'react-hot-toast';
 import NumericInput from '../../components/inputs/NumericInput';
 import VehicleLabelPrintModal from '../../components/workshop/VehicleLabelPrintModal';
+import useRemoteOptions from '../../hooks/useRemoteOptions';
 import {
   MAINTENANCE_STATUS, VEHICLE_TYPE_LABELS, fmtKm, fmtDateOnly, describeRemaining, fmtKmPerDay,
 } from '../../components/workshop/maintenanceStatus';
@@ -50,6 +51,7 @@ function docStatus(expiryDate) {
 export default function VehicleDetailPage() {
   const { id }   = useParams();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [vehicle,  setVehicle]  = useState(null);
   const [history,  setHistory]  = useState([]);
@@ -57,7 +59,6 @@ export default function VehicleDetailPage() {
   const [editing,  setEditing]  = useState(false);
   const [saving,   setSaving]   = useState(false);
   const [form,     setForm]     = useState({});
-  const [customers, setCustomers] = useState([]);
   const [custSearch, setCustSearch] = useState('');
   const [showCustDrop, setShowCustDrop] = useState(false);
   const [maintenance, setMaintenance] = useState(null); // { upcoming, records, portal_url }
@@ -66,9 +67,12 @@ export default function VehicleDetailPage() {
   const [reminders, setReminders] = useState([]); // recordatorios de vencimiento enviados
 
   useEffect(() => { load(); }, [id]);
-  useEffect(() => {
-    axios.get('/customers?limit=500').then(r => setCustomers(r.data.data || [])).catch(() => {});
-  }, []);
+  // Búsqueda en el servidor: precargar un tope fijo dejaba clientes por fuera.
+  // Solo consulta con el desplegable abierto (tras elegir, custSearch es el nombre).
+  const { options: custFiltered, loading: custLoading } = useRemoteOptions(
+    (q) => axios.get('/customers', { params: { search: q, limit: 8 } }).then(r => r.data.data || []),
+    showCustDrop ? custSearch : '',
+  );
 
   const load = async () => {
     setLoading(true);
@@ -193,6 +197,19 @@ export default function VehicleDetailPage() {
 
   const setF = useCallback((k, v) => setForm(f => ({ ...f, [k]: v })), []);
 
+  // ?edit=1 abre la ficha directo en modo edición -- lo usa el aviso
+  // "Completar datos del vehículo" de la OT (vehículos creados solo con la
+  // placa desde la OT rápida). Se quita el parámetro para que recargar la
+  // página no vuelva a abrir la edición.
+  useEffect(() => {
+    if (!vehicle || searchParams.get('edit') !== '1') return;
+    startEdit();
+    const next = new URLSearchParams(searchParams);
+    next.delete('edit');
+    setSearchParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [vehicle]);
+
   if (loading) return (
     <Layout>
       <div className="flex items-center justify-center h-80">
@@ -208,10 +225,6 @@ export default function VehicleDetailPage() {
   const soatSt    = docStatus(vehicle.soat_expiry);
   const tecnomSt  = docStatus(vehicle.tecnomecanica_expiry);
   const activeOTs = history.filter(o => !['entregado','cancelado'].includes(o.status));
-  const custFiltered = customers.filter(c => {
-    const n = (c.business_name || c.full_name || `${c.first_name} ${c.last_name}`).toLowerCase();
-    return n.includes(custSearch.toLowerCase()) || (c.phone||'').includes(custSearch);
-  }).slice(0, 8);
 
   // ── RENDER ──────────────────────────────────────────────────────────
   return (
@@ -575,7 +588,7 @@ export default function VehicleDetailPage() {
                       <div className="absolute z-30 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-48 overflow-y-auto"
                         onMouseDown={e => e.preventDefault()}>
                         {custFiltered.length === 0
-                          ? <p className="text-xs text-gray-400 text-center py-3">Sin resultados</p>
+                          ? <p className="text-xs text-gray-400 text-center py-3">{custSearch.trim().length < 2 ? 'Escribe al menos 2 letras…' : custLoading ? 'Buscando…' : 'Sin resultados'}</p>
                           : custFiltered.map(c => {
                             const name = c.business_name || c.full_name || `${c.first_name} ${c.last_name}`;
                             return (

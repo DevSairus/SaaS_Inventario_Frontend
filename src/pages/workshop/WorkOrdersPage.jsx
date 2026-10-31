@@ -5,7 +5,8 @@ import useWorkshopStore from '../../store/workshopStore';
 import useAuthStore from '../../store/authStore';
 import { workOrdersApi } from '../../api/workshop';
 import toast from 'react-hot-toast';
-import { Wrench, Plus, Search, Car, User, Clock, ChevronRight, Share2 } from 'lucide-react';
+import { Wrench, Plus, Search, Car, User, Clock, ChevronRight, Share2, Zap } from 'lucide-react';
+import QuickWorkOrderModal from '../../components/workshop/QuickWorkOrderModal';
 import {
   InboxArrowDownIcon,
   WrenchScrewdriverIcon,
@@ -14,6 +15,10 @@ import {
   TruckIcon,
   XCircleIcon,
 } from '@heroicons/react/24/outline';
+import Pagination from '../../components/common/Pagination';
+import useUrlPageSync from '../../hooks/useUrlPageSync';
+
+const PAGE_SIZE = 20;
 
 const STATUS_CONFIG = {
   recibido:   {
@@ -77,6 +82,7 @@ export default function WorkOrdersPage() {
   const [status, setStatus] = useState('activas'); // activas = excluye entregado/cancelado
   const [page, setPage] = useState(1);
   const [sendingId, setSendingId] = useState(null);
+  const [showQuick, setShowQuick] = useState(false);
 
   const handleSendWhatsApp = async (e, orderId) => {
     e.stopPropagation();
@@ -107,8 +113,9 @@ export default function WorkOrdersPage() {
   const activeStatuses = ['recibido','en_proceso','en_espera','listo'];
   useEffect(() => {
     const statusParam = status === 'activas' ? activeStatuses.join(',') : status;
-    fetchWorkOrders({ search, status: statusParam, page, limit: 20 });
+    fetchWorkOrders({ search, status: statusParam, page, limit: PAGE_SIZE });
   }, [search, status, page]);
+  useUrlPageSync(page, setPage);
 
   const statuses = Object.entries(STATUS_CONFIG);
 
@@ -116,7 +123,7 @@ export default function WorkOrdersPage() {
     <Layout>
     <div className="p-4 sm:p-6 max-w-7xl mx-auto">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-blue-600 rounded-xl">
             <Wrench size={22} className="text-white" />
@@ -126,13 +133,23 @@ export default function WorkOrdersPage() {
             <p className="text-sm text-gray-500">{workOrdersTotal} órdenes en total</p>
           </div>
         </div>
-        <button
-          onClick={() => navigate('/workshop/work-orders/new')}
-          className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-blue-700 transition"
-        >
-          <Plus size={16} /> Nueva OT
-        </button>
+        <div className="flex items-center gap-2">
+          {/* OT rápida: placa + cliente + km, el resto se completa después */}
+          <button
+            onClick={() => setShowQuick(true)}
+            className="flex items-center gap-2 bg-white border border-blue-200 text-blue-700 px-4 py-2 rounded-xl text-sm font-medium hover:bg-blue-50 transition dark:bg-graphite dark:border-blue-800/40 dark:text-blue-300 dark:hover:bg-blue-900/30"
+          >
+            <Zap size={16} /> OT rápida
+          </button>
+          <button
+            onClick={() => navigate('/workshop/work-orders/new')}
+            className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-blue-700 transition"
+          >
+            <Plus size={16} /> Nueva OT
+          </button>
+        </div>
       </div>
+      <QuickWorkOrderModal isOpen={showQuick} onClose={() => setShowQuick(false)} />
 
       {/* Filtros rápidos por estado */}
       <div className="flex gap-2 flex-wrap mb-4">
@@ -250,15 +267,14 @@ export default function WorkOrdersPage() {
       )}
 
       {/* Paginación */}
-      {workOrdersTotal > 20 && (
-        <div className="flex justify-center gap-2 mt-6">
-          <button onClick={() => setPage(p => Math.max(1, p-1))} disabled={page === 1}
-            className="px-3 py-1.5 text-sm border rounded-lg disabled:opacity-40 hover:bg-gray-50">← Anterior</button>
-          <span className="px-3 py-1.5 text-sm text-gray-500">Pág. {page}</span>
-          <button onClick={() => setPage(p => p+1)} disabled={page * 20 >= workOrdersTotal}
-            className="px-3 py-1.5 text-sm border rounded-lg disabled:opacity-40 hover:bg-gray-50">Siguiente →</button>
-        </div>
-      )}
+      <Pagination
+        className="mt-6"
+        currentPage={page}
+        totalPages={Math.ceil((workOrdersTotal || 0) / PAGE_SIZE)}
+        totalItems={workOrdersTotal || 0}
+        pageSize={PAGE_SIZE}
+        onPageChange={setPage}
+      />
     </div>
     </Layout>
   );

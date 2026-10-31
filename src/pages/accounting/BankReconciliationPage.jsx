@@ -9,6 +9,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { bankAccountsAPI, RECONCILIATION_STATUS_LABELS } from '../../api/accounting';
 import Layout from '../../components/layout/Layout';
+import Pagination from '../../components/common/Pagination';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import {
   ArrowUpTrayIcon, ArrowPathIcon, LinkIcon, XMarkIcon, NoSymbolIcon, ArrowLeftIcon,
@@ -26,6 +27,9 @@ const BankReconciliationPage = () => {
   const [view, setView] = useState(null); // { bank_account, bank_transactions, accounting_candidates }
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('pendiente');
+  // Cada columna pagina por separado en el servidor.
+  const [txPage, setTxPage] = useState(1);
+  const [candPage, setCandPage] = useState(1);
   const [running, setRunning] = useState(false);
 
   // Import en curso
@@ -56,16 +60,24 @@ const BankReconciliationPage = () => {
   const load = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await bankAccountsAPI.getReconciliation(id, statusFilter ? { status: statusFilter } : {});
+      const params = { page: txPage, candidates_page: candPage };
+      if (statusFilter) params.status = statusFilter;
+      const res = await bankAccountsAPI.getReconciliation(id, params);
       setView(res.data);
+      // Si una conciliación vació la última página, volver a la anterior.
+      const txPages = res.data?.bank_transactions_pagination?.pages || 1;
+      const candPages = res.data?.accounting_candidates_pagination?.pages || 1;
+      if (txPage > txPages) setTxPage(txPages);
+      if (candPage > candPages) setCandPage(candPages);
     } catch (error) {
       toast.error(error.response?.data?.message || 'Error cargando la conciliación');
     } finally {
       setLoading(false);
     }
-  }, [id, statusFilter]);
+  }, [id, statusFilter, txPage, candPage]);
 
   useEffect(() => { load(); }, [load]);
+  useEffect(() => { setTxPage(1); }, [id, statusFilter]);
 
   const handleFileSelect = async (e) => {
     const file = e.target.files?.[0];
@@ -226,14 +238,14 @@ const BankReconciliationPage = () => {
           )}
         </div>
 
-        {loading && <p className="text-center text-gray-400 py-8">Cargando...</p>}
+        {loading && !view && <p className="text-center text-gray-400 py-8">Cargando...</p>}
 
-        {!loading && view && (
+        {view && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {/* Columna banco */}
             <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
               <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
-                <h3 className="text-sm font-semibold text-gray-700">Movimientos del banco ({view.bank_transactions.length})</h3>
+                <h3 className="text-sm font-semibold text-gray-700">Movimientos del banco ({view.bank_transactions_pagination?.total ?? view.bank_transactions.length})</h3>
               </div>
               <div className="divide-y divide-gray-100 max-h-[70vh] overflow-y-auto">
                 {view.bank_transactions.length === 0 && (
@@ -275,12 +287,23 @@ const BankReconciliationPage = () => {
                   );
                 })}
               </div>
+              {view.bank_transactions_pagination?.pages > 1 && (
+                <div className="px-4 py-3 border-t border-gray-200">
+                  <Pagination
+                    currentPage={txPage}
+                    totalPages={view.bank_transactions_pagination.pages}
+                    onPageChange={setTxPage}
+                    totalItems={view.bank_transactions_pagination.total}
+                    pageSize={view.bank_transactions_pagination.limit}
+                  />
+                </div>
+              )}
             </div>
 
             {/* Columna contable */}
             <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
               <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
-                <h3 className="text-sm font-semibold text-gray-700">Movimientos contables sin conciliar ({view.accounting_candidates.length})</h3>
+                <h3 className="text-sm font-semibold text-gray-700">Movimientos contables sin conciliar ({view.accounting_candidates_pagination?.total ?? view.accounting_candidates.length})</h3>
               </div>
               <div className="divide-y divide-gray-100 max-h-[70vh] overflow-y-auto">
                 {view.accounting_candidates.length === 0 && (
@@ -307,6 +330,17 @@ const BankReconciliationPage = () => {
                   );
                 })}
               </div>
+              {view.accounting_candidates_pagination?.pages > 1 && (
+                <div className="px-4 py-3 border-t border-gray-200">
+                  <Pagination
+                    currentPage={candPage}
+                    totalPages={view.accounting_candidates_pagination.pages}
+                    onPageChange={setCandPage}
+                    totalItems={view.accounting_candidates_pagination.total}
+                    pageSize={view.accounting_candidates_pagination.limit}
+                  />
+                </div>
+              )}
             </div>
           </div>
         )}

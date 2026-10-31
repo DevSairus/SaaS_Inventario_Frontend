@@ -8,6 +8,12 @@ export const accountsPayableAPI = {
     return response.data;
   },
 
+  // Documentos con saldo pendiente, paginados (?page=&limit=&search=)
+  getDocuments: async (params = {}, config = {}) => {
+    const response = await api.get('/accounts-payable/documents', { params, ...config });
+    return response.data;
+  },
+
   // Obtener reporte de antigüedad
   getAgingReport: async () => {
     const response = await api.get('/accounts-payable/aging-report');

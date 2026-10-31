@@ -18,6 +18,8 @@ import InvoiceImportModal from '../../components/purchases/InvoiceImportModal';
 import DianInvoiceViewModal from '../../components/purchases/DianInvoiceViewModal';
 import { dianDocumentsAPI } from '../../api/dianDocuments';
 import { formatCurrency } from '../../utils/formatters';
+import Pagination from '../../components/common/Pagination';
+import useUrlPageSync from '../../hooks/useUrlPageSync';
 
 const STATUS_TABS = [
   { id: 'pending', label: 'Pendientes' },
@@ -80,6 +82,7 @@ export default function DianDocumentsPage() {
   };
 
   useEffect(() => { setSelected(new Set()); load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [status, type, page]);
+  useUrlPageSync(page, setPage);
 
   const handleUpload = async (file) => {
     if (!file) return;
@@ -381,16 +384,14 @@ export default function DianDocumentsPage() {
               ))}
             </tbody>
           </table>
-          {pagination.pages > 1 && (
-            <div className="flex items-center justify-between px-4 py-2 border-t border-gray-100 dark:border-white/10 text-sm">
-              <span className="text-gray-500">{pagination.total} documento(s)</span>
-              <div className="flex gap-2">
-                <button disabled={page <= 1} onClick={() => setPage((p) => p - 1)} className="px-3 py-1 rounded border border-gray-300 dark:border-white/10 disabled:opacity-40">Anterior</button>
-                <span className="px-2 py-1 text-gray-500">{page} / {pagination.pages}</span>
-                <button disabled={page >= pagination.pages} onClick={() => setPage((p) => p + 1)} className="px-3 py-1 rounded border border-gray-300 dark:border-white/10 disabled:opacity-40">Siguiente</button>
-              </div>
-            </div>
-          )}
+          <Pagination
+            className="px-4 py-2 border-t border-gray-100 dark:border-white/10"
+            currentPage={page}
+            totalPages={pagination?.pages}
+            totalItems={pagination?.total}
+            pageSize={100}
+            onPageChange={setPage}
+          />
         </div>
       </div>
 

@@ -6,6 +6,8 @@ import { formatCurrency, toLocalDateString } from '../../utils/formatters';
 import NumericInput from '../../components/inputs/NumericInput';
 import useBranchStore from '../../store/branchStore';
 import Layout from '../../components/layout/Layout';
+import Pagination from '../../components/common/Pagination';
+import usePaginatedList from '../../hooks/usePaginatedList';
 import {
   LockOpenIcon,
   LockClosedIcon,
@@ -84,7 +86,6 @@ const CashSessionsPage = () => {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
   const [currentSession, setCurrentSession] = useState(null);
-  const [history, setHistory] = useState([]);
 
   // Modal de apertura
   const [showOpenModal, setShowOpenModal] = useState(false);
@@ -109,17 +110,26 @@ const CashSessionsPage = () => {
     if (!branchesLoaded) fetchBranches();
   }, [branchesLoaded, fetchBranches]);
 
+  // Historial paginado en servidor (una sesión por día y sede: crece sin fin).
+  const historyList = usePaginatedList(
+    (params, opts) => cashSessionsAPI.list(params, opts),
+    {
+      filters: { branch_id: activeBranchId },
+      enabled: !!activeBranchId,
+      onError: () => toast.error('Error cargando el historial de cajas'),
+    },
+  );
+  const history = historyList.rows;
+  const reloadHistory = historyList.reload;
+
   const loadData = useCallback(async () => {
     if (!activeBranchId) return;
     try {
       setLoading(true);
       setLoadError(null);
-      const [currentRes, historyRes] = await Promise.all([
-        cashSessionsAPI.getCurrent(activeBranchId),
-        cashSessionsAPI.list({ branch_id: activeBranchId }),
-      ]);
+      const currentRes = await cashSessionsAPI.getCurrent(activeBranchId);
       setCurrentSession(currentRes.data.data);
-      setHistory(historyRes.data.data || []);
+      reloadHistory();
     } catch (error) {
       setLoadError(error.response?.data?.message || 'Error cargando la información de caja');
     } finally {
@@ -372,6 +382,9 @@ const CashSessionsPage = () => {
                       })}
                     </tbody>
                   </table>
+                </div>
+                <div className="px-4 py-3 border-t border-gray-200">
+                  <Pagination {...historyList.paginationProps} />
                 </div>
               </div>
             </>

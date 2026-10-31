@@ -40,11 +40,12 @@ export default function NewDealModal({ isOpen, onClose, onCreated, initialCustom
     setNewCustomerForm({ ...EMPTY_CUSTOMER, phone: initialPhone || '' });
     setLines([]);
     setDiscount({ type: 'percentage', value: '' });
-    // El buscador solo muestra clientes de la lista: si el preseleccionado no
-    // vino en los primeros 200, se agrega para que aparezca elegido.
+    // La lista es solo para hojear (el buscador consulta el servidor al
+    // escribir); si el preseleccionado no vino en ella, se agrega para que
+    // aparezca elegido.
     const withInitial = (list) => (initialCustomer && !list.some(c => c.id === initialCustomer.id) ? [initialCustomer, ...list] : list);
     if (customers.length === 0) {
-      customersApi.getAll({ limit: 200, is_active: true })
+      customersApi.getAll({ limit: 50 })
         .then(res => setCustomers(withInitial(res.data.data || [])))
         .catch(() => setCustomers(withInitial([])));
     } else {

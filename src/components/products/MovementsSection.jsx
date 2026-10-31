@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useMovementsStore } from '../../store/movementsStore';
 import { Activity } from 'lucide-react';
 import { getMovementReasonLabel } from '../../constants/movementReasons';
+import Pagination from '../common/Pagination';
 
 const formatMovementDate = (value) => {
   if (!value) return 'Sin fecha';
@@ -106,28 +107,15 @@ export default function MovementsSection({ productId }) {
           </table>
         </div>
 
-        {kardex?.pagination && kardex.pagination.pages > 1 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
-            <p className="text-sm text-gray-500">
-              Página {kardex.pagination.page} de {kardex.pagination.pages}
-            </p>
-            <div className="flex items-center gap-2">
-              <button
-                disabled={page <= 1}
-                onClick={() => setPage((p) => p - 1)}
-                className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg disabled:opacity-40 hover:bg-gray-50"
-              >
-                ← Anterior
-              </button>
-              <button
-                disabled={page >= kardex.pagination.pages}
-                onClick={() => setPage((p) => p + 1)}
-                className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg disabled:opacity-40 hover:bg-gray-50"
-              >
-                Siguiente →
-              </button>
-            </div>
-          </div>
+        {kardex?.pagination && (
+          <Pagination
+            className="px-4 py-3 border-t border-gray-100"
+            currentPage={page}
+            totalPages={kardex.pagination.pages}
+            totalItems={kardex.pagination.total}
+            pageSize={25}
+            onPageChange={setPage}
+          />
         )}
       </div>
     </div>

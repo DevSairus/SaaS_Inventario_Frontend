@@ -2,6 +2,9 @@
 import api from './axios';
 
 const salesApi = {
+  // Cotizaciones de Ventas + Taller en un solo listado paginado
+  getQuotes: (params = {}, config = {}) => api.get('/sales/quotes', { params, ...config }),
+
   // Obtener todas las ventas con filtros
   getAll: (filters = {}) => {
     const params = new URLSearchParams();

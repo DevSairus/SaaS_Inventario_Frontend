@@ -84,6 +84,8 @@ export default function CustomerDetailPage() {
   const [ltv, setLtv]               = useState(0);
   const [vehicles, setVehicles]     = useState([]);
   const [workOrders, setWorkOrders] = useState([]);
+  // Total real de OTs (la lista trae solo las 100 más recientes).
+  const [workOrdersTotal, setWorkOrdersTotal] = useState(0);
   const [receivable, setReceivable] = useState(null);
   const [loading,  setLoading]      = useState(true);
   const [timelineLimit, setTimelineLimit] = useState(15);
@@ -127,7 +129,10 @@ export default function CustomerDetailPage() {
         setCustomer(mainRes.data.data);
       }
       if (vRes) setVehicles(vRes.data.data || []);
-      if (otRes) setWorkOrders(otRes.data.data || []);
+      if (otRes) {
+        setWorkOrders(otRes.data.data || []);
+        setWorkOrdersTotal(otRes.data.total ?? (otRes.data.data || []).length);
+      }
       if (arRes) setReceivable(arRes.data || null);
       if (hasReceivables) loadAdvances();
     } catch {
@@ -257,7 +262,7 @@ export default function CustomerDetailPage() {
     { label: 'Total facturado', value: COP(totalFact), Icon: CurrencyDollarIcon },
     { label: 'Facturas venta',  value: sales.length,   Icon: DocumentTextIcon },
     ...(hasWorkshop ? [
-      { label: 'Órd. de trabajo', value: workOrders.length,  Icon: WrenchIcon },
+      { label: 'Órd. de trabajo', value: workOrdersTotal,    Icon: WrenchIcon },
       { label: 'Vehículos',       value: allVehicles.length, Icon: MotorcycleIcon },
     ] : []),
     ...(hasReceivables && balance != null ? [
@@ -554,6 +559,11 @@ export default function CustomerDetailPage() {
               <Car size={15} className="text-orange-500" />
               <h2 className="font-semibold text-sm text-gray-800">Vehículos y Órdenes de Trabajo</h2>
             </div>
+            {workOrdersTotal > workOrders.length && (
+              <p className="text-xs text-gray-500 bg-gray-50 px-3 py-2 rounded-lg mb-3">
+                Se muestran las {workOrders.length} órdenes más recientes de {workOrdersTotal}.
+              </p>
+            )}
 
             {allVehicles.length === 0 && workOrders.length === 0 ? (
               <div className="text-center py-10 text-gray-400">

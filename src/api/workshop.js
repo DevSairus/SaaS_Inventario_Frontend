@@ -4,6 +4,8 @@ import axios from './axios';
 export const vehiclesApi = {
   list: (params) => axios.get('/workshop/vehicles', { params }),
   getById: (id) => axios.get(`/workshop/vehicles/${id}`),
+  // Búsqueda exacta por placa (sin espacios/guiones) -- modal de OT rápida. data=null si no existe.
+  getByPlate: (plate) => axios.get(`/workshop/vehicles/by-plate/${encodeURIComponent(plate)}`),
   getHistory: (id) => axios.get(`/workshop/vehicles/${id}/history`),
   create: (data) => axios.post('/workshop/vehicles', data),
   update: (id, data) => axios.put(`/workshop/vehicles/${id}`, data),
@@ -35,6 +37,9 @@ export const workOrdersApi = {
   list: (params) => axios.get('/workshop/work-orders', { params }),
   getById: (id) => axios.get(`/workshop/work-orders/${id}`),
   create: (data) => axios.post('/workshop/work-orders', data),
+  // OT rápida: placa + cliente (existente o nuevo) + km en una sola transacción.
+  // Sin cola offline a propósito: si no hay red se muestra el error.
+  quickCreate: (data) => axios.post('/workshop/work-orders/quick', data),
   update: (id, data) => axios.put(`/workshop/work-orders/${id}`, data),
   changeStatus: (id, data) => axios.patch(`/workshop/work-orders/${id}/status`, data),
   // Reversar OT bloqueada (solo admin) -- requiere conexión, no pasa por el

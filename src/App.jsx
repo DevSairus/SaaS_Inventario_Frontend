@@ -29,6 +29,7 @@ const MovementsPage = lazy(() => import('./pages/movements/MovementsPage'));
 const StockAlertsPage = lazy(() => import('./pages/stock-alerts/StockAlertsPage'));
 const OrderListsPage = lazy(() => import('./pages/order-lists/OrderListsPage'));
 const OrderListDetailPage = lazy(() => import('./pages/order-lists/OrderListDetailPage'));
+const PriceAdjustmentsPage = lazy(() => import('./pages/price-adjustments/PriceAdjustmentsPage'));
 const PayableAlertsPage = lazy(() => import('./pages/payable-alerts/PayableAlertsPage'));
 const UsersPage = lazy(() => import('./pages/users/UsersPage'));
 const UserForm = lazy(() => import('./pages/users/UserForm'));
@@ -405,6 +406,7 @@ function App() {
         <Route path="stock-alerts" element={<TenantRoute module="inventory"><Suspense fallback={<Loading fullScreen />}><StockAlertsPage /></Suspense></TenantRoute>} />
         <Route path="order-lists"     element={<TenantRoute module="inventory"><Suspense fallback={<Loading fullScreen />}><OrderListsPage /></Suspense></TenantRoute>} />
         <Route path="order-lists/:id" element={<TenantRoute module="inventory"><Suspense fallback={<Loading fullScreen />}><OrderListDetailPage /></Suspense></TenantRoute>} />
+        <Route path="price-adjustments" element={<TenantRoute module="inventory"><Suspense fallback={<Loading fullScreen />}><PriceAdjustmentsPage /></Suspense></TenantRoute>} />
 
         {/* ── Ventas ─────────────────────────────────── */}
         <Route path="sales"          element={<TenantRoute module="sales"><Suspense fallback={<Loading fullScreen />}><SalesPage /></Suspense></TenantRoute>} />

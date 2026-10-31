@@ -7,6 +7,13 @@ export const suppliersAPI = {
     return response.data;
   },
 
+  // Buscador de proveedores (Combobox remoteSearch): consulta el servidor en
+  // vez de descargar todo el catálogo. `params` agrega filtros (is_active…).
+  search: async (q, params = {}) => {
+    const response = await api.get('/inventory/suppliers', { params: { search: q, limit: 30, sort_by: 'name', sort_order: 'ASC', ...params } });
+    return response.data?.data || [];
+  },
+
   // Obtener un proveedor por ID
   getById: async (id) => {
     const response = await api.get(`/inventory/suppliers/${id}`);

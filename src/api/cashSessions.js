@@ -8,5 +8,5 @@ export const cashSessionsAPI = {
   getPayments: (id) => api.get(`/cash-sessions/${id}/payments`),
   close: (id, payload) => api.post(`/cash-sessions/${id}/close`, payload),
   getById: (id) => api.get(`/cash-sessions/${id}`),
-  list: (params = {}) => api.get('/cash-sessions', { params }),
+  list: (params = {}, config = {}) => api.get('/cash-sessions', { params, ...config }),
 };

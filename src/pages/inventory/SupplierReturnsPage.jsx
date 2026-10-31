@@ -6,6 +6,7 @@ import api from '../../api/axios';
 import toast from 'react-hot-toast';
 import { formatNumber } from '../../utils/formatters';
 import Pagination from '../../components/common/Pagination';
+import useUrlPageSync from '../../hooks/useUrlPageSync';
 import useIsManagement from '../../hooks/useIsManagement';
 import { SUPPLIER_RETURN_REASONS, labelOf } from '../../utils/returnLabels';
 import ApproveSupplierReturnModal from '../../components/inventory/ApproveSupplierReturnModal';
@@ -31,6 +32,7 @@ const SupplierReturnsPage = () => {
   useEffect(() => {
     fetchReturns();
   }, [filters]);
+  useUrlPageSync(filters.page, (page) => setFilters(prev => ({ ...prev, page })));
 
   const fetchReturns = async () => {
     setLoading(true);

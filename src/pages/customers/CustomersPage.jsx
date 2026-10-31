@@ -12,6 +12,8 @@ import { HabeasStatusBadge } from '../../components/consents/HabeasDataPanel';
 import LibroAuxiliarModal from '../../components/accounting/LibroAuxiliarModal';
 import useCanReadAccounting from '../../hooks/useCanReadAccounting';
 import toast from 'react-hot-toast';
+import Pagination from '../../components/common/Pagination';
+import useUrlPageSync from '../../hooks/useUrlPageSync';
 
 const PAGE_SIZE = 50;
 
@@ -36,6 +38,7 @@ export default function CustomersPage() {
     }, searchTerm ? 300 : 0);
     return () => clearTimeout(timer);
   }, [searchTerm, page]);
+  useUrlPageSync(page, setPage);
 
   const handleSearchChange = (value) => { setSearchTerm(value); setPage(1); };
 
@@ -135,19 +138,14 @@ export default function CustomersPage() {
               </tbody>
             </table>
           </div>
-          {customersTotal > PAGE_SIZE && (
-            <div className="flex items-center justify-between px-6 py-3 border-t border-gray-200 dark:border-white/10">
-              <span className="text-xs text-gray-500 dark:text-gray-500">
-                {customersTotal} clientes en total — página {page} de {Math.ceil(customersTotal / PAGE_SIZE)}
-              </span>
-              <div className="flex gap-2">
-                <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
-                  className="px-3 py-1.5 text-sm border rounded-lg disabled:opacity-40 hover:bg-gray-50 dark:border-white/10 dark:hover:bg-white/5">← Anterior</button>
-                <button onClick={() => setPage(p => p + 1)} disabled={page * PAGE_SIZE >= customersTotal}
-                  className="px-3 py-1.5 text-sm border rounded-lg disabled:opacity-40 hover:bg-gray-50 dark:border-white/10 dark:hover:bg-white/5">Siguiente →</button>
-              </div>
-            </div>
-          )}
+          <Pagination
+            className="px-6 py-3 border-t border-gray-200 dark:border-white/10"
+            currentPage={page}
+            totalPages={Math.ceil(customersTotal / PAGE_SIZE)}
+            totalItems={customersTotal}
+            pageSize={PAGE_SIZE}
+            onPageChange={setPage}
+          />
         </div>
 
         <CustomerFormModal isOpen={showModal} onClose={handleCloseModal} customer={editingCustomer} onSaved={reload} />

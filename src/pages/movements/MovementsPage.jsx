@@ -6,6 +6,11 @@ import useBranchStore from '../../store/branchStore';
 import Layout from '../../components/layout/Layout';
 import { formatCurrency } from '../../utils/formatters';
 import { MOVEMENT_REASONS, getMovementReasonLabel } from '../../constants/movementReasons';
+import Pagination from '../../components/common/Pagination';
+import useUrlPageSync from '../../hooks/useUrlPageSync';
+
+// Mismo tamaño de página que la lista principal (movementsStore: limit 50).
+const KARDEX_PAGE_SIZE = 50;
 
 const MovementsPage = () => {
   const {
@@ -28,6 +33,8 @@ const MovementsPage = () => {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [kardexPage, setKardexPage] = useState(1);
 
+  // Antes de los efectos de carga: la primera consulta ya usa la página de la URL
+  useUrlPageSync(pagination.page, setPage);
   useEffect(() => {
     fetchProducts();
     fetchMovements();
@@ -55,7 +62,7 @@ const MovementsPage = () => {
       start_date: localFilters.start_date,
       end_date: localFilters.end_date,
       page,
-      limit: 25
+      limit: KARDEX_PAGE_SIZE
     });
   };
 
@@ -268,28 +275,14 @@ const MovementsPage = () => {
         </div>
 
         {/* Paginación lista principal */}
-        {pagination.total > 0 && (
-          <div className="flex items-center justify-between py-3 px-1">
-            <p className="text-sm text-gray-500">
-              Mostrando {((pagination.page - 1) * pagination.limit) + 1}–{Math.min(pagination.page * pagination.limit, pagination.total)} de {pagination.total} movimientos
-            </p>
-            <div className="flex items-center gap-2">
-              <button
-                disabled={pagination.page <= 1}
-                onClick={() => { setPage(pagination.page - 1); }}
-                className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg disabled:opacity-40 hover:bg-gray-50 transition"
-              >← Anterior</button>
-              <span className="text-sm text-gray-600 px-1">
-                Página {pagination.page} de {pagination.pages}
-              </span>
-              <button
-                disabled={pagination.page >= pagination.pages}
-                onClick={() => { setPage(pagination.page + 1); }}
-                className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg disabled:opacity-40 hover:bg-gray-50 transition"
-              >Siguiente →</button>
-            </div>
-          </div>
-        )}
+        <Pagination
+          className="py-3 px-1"
+          currentPage={pagination.page}
+          totalPages={pagination.pages}
+          totalItems={pagination.total}
+          pageSize={pagination.limit}
+          onPageChange={setPage}
+        />
 
         {/* Modal de Kardex — via portal: escapa del stacking context de <main>
             (Layout.jsx usa z-10 ahí) para poder quedar por encima del sidebar (z-40). */}
@@ -385,26 +378,14 @@ const MovementsPage = () => {
                 </table>
 
                 {kardex.pagination && (
-                  <div className="flex items-center justify-between mt-4 pt-4 border-t">
-                    <p className="text-sm text-gray-500">
-                      Mostrando {((kardexPage - 1) * 25) + 1}–{Math.min(kardexPage * 25, kardex?.pagination?.total ?? 0)} de {kardex?.pagination?.total ?? 0} movimientos
-                    </p>
-                    <div className="flex items-center gap-2">
-                      <button
-                        disabled={kardexPage <= 1}
-                        onClick={() => handleViewKardex(selectedProduct.id, kardexPage - 1)}
-                        className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg disabled:opacity-40 hover:bg-gray-50"
-                      >← Anterior</button>
-                      <span className="text-sm text-gray-600">
-                        Página {kardexPage} de {kardex?.pagination?.pages ?? 1}
-                      </span>
-                      <button
-                        disabled={kardexPage >= (kardex?.pagination?.pages ?? 1)}
-                        onClick={() => handleViewKardex(selectedProduct.id, kardexPage + 1)}
-                        className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg disabled:opacity-40 hover:bg-gray-50"
-                      >Siguiente →</button>
-                    </div>
-                  </div>
+                  <Pagination
+                    className="mt-4 pt-4 border-t"
+                    currentPage={kardexPage}
+                    totalPages={kardex.pagination.pages ?? 1}
+                    totalItems={kardex.pagination.total ?? 0}
+                    pageSize={KARDEX_PAGE_SIZE}
+                    onPageChange={(p) => handleViewKardex(selectedProduct.id, p)}
+                  />
                 )}
               </div>
               )}

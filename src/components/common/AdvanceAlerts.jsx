@@ -19,7 +19,7 @@ function AdvanceAlerts() {
   const fetchActiveAlerts = useCallback(async () => {
     setIsLoading(true);
     try {
-      const response = await getAdvanceAlerts({ status: 'active', limit: 500, sort_by: 'days_since_received', sort_order: 'DESC' });
+      const response = await getAdvanceAlerts({ status: 'active', limit: 200, sort_by: 'days_since_received', sort_order: 'DESC' });
       if (response && response.success) {
         setAlerts(response.data || []);
       }

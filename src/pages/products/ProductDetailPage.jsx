@@ -10,7 +10,10 @@ import EquivalencesSection from '../../components/products/EquivalencesSection';
 import VehicleApplicationsSection from '../../components/products/VehicleApplicationsSection';
 import MovementsSection from '../../components/products/MovementsSection';
 import SuppliersSection from '../../components/products/SuppliersSection';
-import { ArrowLeft, Package, Users, Truck, Car, Activity, Edit3, ZoomIn, ClipboardList } from 'lucide-react';
+import { ArrowLeft, Package, Users, Truck, Car, Activity, Edit3, ZoomIn, ClipboardList, Tags } from 'lucide-react';
+import PriceAdjustmentModal from '../../components/price-adjustments/PriceAdjustmentModal';
+import PriceHistorySection from '../../components/products/PriceHistorySection';
+import { PRICE_ADJUSTMENT_WRITE_ROLES } from '../../api/priceAdjustments';
 import AddToOrderListModal from '../../components/order-lists/AddToOrderListModal';
 import toast from 'react-hot-toast';
 import { productsAPI } from '../../api/products';
@@ -26,6 +29,7 @@ const TABS = [
   { key: 'equivalencias', label: 'Equivalencias', icon: Users },
   { key: 'vehiculos', label: 'Aplicación Vehicular', icon: Car },
   { key: 'movimientos', label: 'Movimientos', icon: Activity },
+  { key: 'precios', label: 'Precios', icon: Tags },
 ];
 
 export default function ProductDetailPage() {
@@ -40,6 +44,9 @@ export default function ProductDetailPage() {
   const canEditProducts = ['admin', 'manager', 'warehouse_keeper', 'super_admin'].includes(role);
   const [showImageViewer, setShowImageViewer] = useState(false);
   const [showAddToOrder, setShowAddToOrder] = useState(false);
+  const canAdjustPrice = PRICE_ADJUSTMENT_WRITE_ROLES.includes(role);
+  const [showPriceAdjust, setShowPriceAdjust] = useState(false);
+  const [priceHistoryKey, setPriceHistoryKey] = useState(0);
   const [showInProcess, setShowInProcess] = useState(false);
   const [inProcessDocs, setInProcessDocs] = useState(null);
   const [inProcessLoading, setInProcessLoading] = useState(false);
@@ -152,6 +159,13 @@ export default function ProductDetailPage() {
             >
               <ClipboardList className="w-4 h-4" />
               Agregar a pedido
+            </button>}
+            {canAdjustPrice && <button
+              onClick={() => setShowPriceAdjust(true)}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+            >
+              <Tags className="w-4 h-4" />
+              Ajustar precio
             </button>}
             {canEditProducts && <button
               onClick={() => setShowEditModal(true)}
@@ -366,7 +380,18 @@ export default function ProductDetailPage() {
         {activeTab === 'movimientos' && (
           <MovementsSection productId={id} />
         )}
+
+        {activeTab === 'precios' && (
+          <PriceHistorySection productId={id} refreshKey={priceHistoryKey} />
+        )}
       </div>
+
+      <PriceAdjustmentModal
+        isOpen={showPriceAdjust}
+        onClose={() => setShowPriceAdjust(false)}
+        productIds={product ? [product.id] : []}
+        onSaved={() => { fetchProductById(id); setPriceHistoryKey((k) => k + 1); }}
+      />
 
       {/* Modal de edición */}
       <ProductFormModal

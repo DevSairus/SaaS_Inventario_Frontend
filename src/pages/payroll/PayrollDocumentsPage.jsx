@@ -11,6 +11,11 @@ import { useNavigate } from 'react-router-dom';
 import { usePayrollDocumentsStore } from '../../store/payrollDocumentsStore';
 import { payrollPeriodsAPI, employeesAPI } from '../../api/payroll';
 import Layout from '../../components/layout/Layout';
+import Combobox from '../../components/common/Combobox';
+import Pagination from '../../components/common/Pagination';
+import useUrlPageSync from '../../hooks/useUrlPageSync';
+import fetchAllRows from '../../utils/fetchAllRows';
+import mergeById from '../../utils/mergeById';
 import { DIAN_DOCUMENT_STATUSES } from '../../constants/payroll';
 import {
   MagnifyingGlassIcon,
@@ -56,18 +61,26 @@ const PayrollDocumentsPage = () => {
   const [filterPeriod, setFilterPeriod] = useState('');
   const [filterEmployee, setFilterEmployee] = useState('');
 
-  // Catálogos para los <select> de filtro — se cargan una sola vez, no son
-  // paginados aquí a propósito (son listas de referencia, no el listado
-  // principal de la página).
+  // Catálogos de los filtros. Periodos: todos (crecen ~24 al año y un tope
+  // fijo escondía los viejos). Empleados: una muestra para hojear; el
+  // buscador consulta el servidor al escribir.
   useEffect(() => {
-    payrollPeriodsAPI.getAll({ limit: 100 }).then((r) => setPeriods(r.data || [])).catch(() => {});
-    employeesAPI.getAll({ limit: 500, sort_by: 'first_name', sort_order: 'ASC' }).then((r) => setEmployees(r.data || [])).catch(() => {});
+    fetchAllRows((page, limit) => payrollPeriodsAPI.getAll({ page, limit })
+      .then((r) => ({ rows: r.data || [], total: r.pagination?.total })))
+      .then(setPeriods).catch(() => {});
+    employeesAPI.getAll({ limit: 50, sort_by: 'first_name', sort_order: 'ASC' }).then((r) => setEmployees(prev => mergeById(r.data || [], prev))).catch(() => {});
   }, []);
+  const employeeName = (emp) => [emp.first_name, emp.first_surname].filter(Boolean).join(' ');
 
   useEffect(() => {
+    // Solo si cambian: setFilters vuelve a la página 1 (al volver se conserva)
+    if (filters.search === search && filters.dian_status === filterStatus
+      && filters.payroll_period_id === filterPeriod && filters.employee_id === filterEmployee) return;
     setFilters({ search, dian_status: filterStatus, payroll_period_id: filterPeriod, employee_id: filterEmployee });
   }, [search, filterStatus, filterPeriod, filterEmployee]);
 
+  // Antes de los efectos de carga: la primera consulta ya usa la página de la URL
+  useUrlPageSync(pagination.page, setPage);
   useEffect(() => {
     fetchDocuments();
   }, [filters, pagination.page]);
@@ -158,18 +171,22 @@ const PayrollDocumentsPage = () => {
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-500 dark:text-gray-500 mb-1">Empleado</label>
-                <select
-                  value={filterEmployee}
-                  onChange={(e) => setFilterEmployee(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-white/10 dark:bg-graphite-2 dark:text-gray-100 rounded-lg text-sm"
-                >
-                  <option value="">Todos</option>
-                  {employees.map((emp) => (
-                    <option key={emp.id} value={emp.id}>
-                      {[emp.first_name, emp.first_surname].filter(Boolean).join(' ')}
-                    </option>
-                  ))}
-                </select>
+                <Combobox
+                  placeholder="Todos — buscar por nombre o documento..."
+                  items={employees}
+                  value={filterEmployee || null}
+                  displayValue={(() => { const e = employees.find((x) => x.id === filterEmployee); return e ? employeeName(e) : ''; })()}
+                  onSelect={(emp) => { setEmployees((prev) => mergeById(prev, [emp])); setFilterEmployee(emp.id); }}
+                  onClear={() => setFilterEmployee('')}
+                  remoteSearch={(q) => employeesAPI.getAll({ search: q, limit: 30 }).then((r) => r.data || [])}
+                  getSearchText={(emp) => [emp.first_name, emp.other_names, emp.first_surname, emp.second_surname, emp.document_number].filter(Boolean).join(' ')}
+                  renderItem={(emp) => (
+                    <div>
+                      <p className="text-sm text-gray-800 dark:text-gray-100">{employeeName(emp)}</p>
+                      {emp.document_number && <p className="text-xs text-gray-500">{emp.document_number}</p>}
+                    </div>
+                  )}
+                />
               </div>
             </div>
           )}
@@ -268,28 +285,15 @@ const PayrollDocumentsPage = () => {
           )}
 
           {/* Paginación */}
-          {!isLoading && pagination.pages > 1 && (
-            <div className="px-4 py-3 border-t border-gray-100 dark:border-white/10 flex items-center justify-between text-sm">
-              <span className="text-gray-500 dark:text-gray-500">
-                {(pagination.page - 1) * pagination.limit + 1}–{Math.min(pagination.page * pagination.limit, pagination.total)} de {pagination.total}
-              </span>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setPage(pagination.page - 1)}
-                  disabled={pagination.page === 1}
-                  className="px-3 py-1.5 border border-gray-300 dark:border-white/10 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  ← Anterior
-                </button>
-                <button
-                  onClick={() => setPage(pagination.page + 1)}
-                  disabled={pagination.page >= pagination.pages}
-                  className="px-3 py-1.5 border border-gray-300 dark:border-white/10 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  Siguiente →
-                </button>
-              </div>
-            </div>
+          {!isLoading && (
+            <Pagination
+              className="px-4 py-3 border-t border-gray-100 dark:border-white/10"
+              currentPage={pagination.page}
+              totalPages={pagination.pages}
+              totalItems={pagination.total}
+              pageSize={pagination.limit}
+              onPageChange={setPage}
+            />
           )}
         </div>
       </div>

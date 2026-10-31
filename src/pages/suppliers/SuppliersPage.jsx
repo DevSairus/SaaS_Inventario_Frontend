@@ -20,6 +20,8 @@ import {
   EnvelopeIcon,
   BookOpenIcon,
 } from '@heroicons/react/24/outline';
+import Pagination from '../../components/common/Pagination';
+import useUrlPageSync from '../../hooks/useUrlPageSync';
 
 /* ─── componente ──────────────────────────────────────────── */
 const SuppliersPage = () => {
@@ -53,14 +55,21 @@ const SuppliersPage = () => {
   // Cambió la búsqueda o el estado: volver a la página 1 (en otra página el
   // resultado podía quedar vacío). Al montar no consulta: lo hace el efecto
   // de página de abajo.
-  const firstFilterRun = useRef(true);
+  const lastFilterKey = useRef(null);
   useEffect(() => {
     setFilters({ search: debouncedSearch, is_active: filterActive });
-    if (firstFilterRun.current) { firstFilterRun.current = false; return; }
+    // Clave en vez de bandera: la re-ejecución de StrictMode no cuenta como cambio
+    const key = `${debouncedSearch}|${filterActive}`;
+    const isMount = lastFilterKey.current === null;
+    if (lastFilterKey.current === key) return;
+    lastFilterKey.current = key;
+    if (isMount) return;
     if (pagination.page !== 1) setPage(1); // el efecto de página trae los datos
     else fetchSuppliers();
   }, [debouncedSearch, filterActive]);
 
+  // Antes de los efectos de carga: la primera consulta ya usa la página de la URL
+  useUrlPageSync(pagination.page, setPage);
   useEffect(() => {
     fetchSuppliers();
   }, [pagination.page]);
@@ -318,28 +327,15 @@ const SuppliersPage = () => {
           )}
 
           {/* Paginación */}
-          {!isLoading && (pagination.pages || pagination.totalPages) > 1 && (
-            <div className="px-4 py-3 border-t border-gray-100 flex items-center justify-between text-sm">
-              <span className="text-gray-500">
-                {(pagination.page - 1) * pagination.limit + 1}–{Math.min(pagination.page * pagination.limit, pagination.total)} de {pagination.total}
-              </span>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setPage(pagination.page - 1)}
-                  disabled={pagination.page === 1}
-                  className="px-3 py-1.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  ← Anterior
-                </button>
-                <button
-                  onClick={() => setPage(pagination.page + 1)}
-                  disabled={pagination.page >= (pagination.pages || pagination.totalPages)}
-                  className="px-3 py-1.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  Siguiente →
-                </button>
-              </div>
-            </div>
+          {!isLoading && (
+            <Pagination
+              className="px-4 py-3 border-t border-gray-100"
+              currentPage={pagination.page}
+              totalPages={pagination.pages || pagination.totalPages}
+              totalItems={pagination.total}
+              pageSize={pagination.limit}
+              onPageChange={setPage}
+            />
           )}
         </div>
       </div>

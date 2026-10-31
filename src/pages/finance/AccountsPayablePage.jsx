@@ -1,5 +1,5 @@
 // frontend/src/pages/finance/AccountsPayablePage.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { accountsPayableAPI } from '../../api/accountsPayable';
 import Layout from '../../components/layout/Layout';
 import toast from 'react-hot-toast';
@@ -16,6 +16,20 @@ import { formatCurrency } from '../../utils/formatters';
 import NumericInput from '../../components/inputs/NumericInput';
 import BankAccountSelect from '../../components/accounting/BankAccountSelect';
 import api from '../../api/axios';
+import Pagination from '../../components/common/Pagination';
+import usePaginatedList from '../../hooks/usePaginatedList';
+
+// Compras pendientes de un proveedor (detalle desplegable), paginadas en
+// el servidor. supplierId null = compras sin proveedor.
+const SupplierPurchases = ({ supplierId, filters, refreshKey, children }) => {
+  const list = usePaginatedList(
+    (params, opts) => accountsPayableAPI.getDocuments(params, opts),
+    { filters: { ...filters, supplier_id: supplierId ?? 'none' }, syncUrl: false },
+  );
+  const firstKey = useRef(refreshKey);
+  useEffect(() => { if (refreshKey !== firstKey.current) list.reload(); }, [refreshKey]);
+  return children(list);
+};
 
 const AccountsPayablePage = () => {
   const [loading, setLoading] = useState(true);
@@ -24,7 +38,6 @@ const AccountsPayablePage = () => {
   const [supplierCredits, setSupplierCredits] = useState([]);
   const [applyingCreditId, setApplyingCreditId] = useState(null);
   const [bySupplier, setBySupplier] = useState([]);
-  const [allPurchases, setAllPurchases] = useState([]);
   const [selectedSupplier, setSelectedSupplier] = useState(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedPurchase, setSelectedPurchase] = useState(null);
@@ -39,18 +52,44 @@ const AccountsPayablePage = () => {
     to_date: ''
   });
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  // Sube tras cada pago/abono para recargar los listados paginados.
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     loadData();
   }, [filters]);
 
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search.trim()), 350);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  // "Todas las compras": paginado en el servidor (el resumen solo trae
+  // totales y la agrupación por proveedor).
+  const purchasesList = usePaginatedList(
+    (params, opts) => accountsPayableAPI.getDocuments(params, opts),
+    {
+      filters: { ...filters, search: debouncedSearch },
+      enabled: view === 'all-purchases',
+      onError: (error) => toast.error(error.response?.data?.message || 'Error cargando las compras pendientes'),
+    },
+  );
+
+  useEffect(() => { if (refreshKey) purchasesList.reload(); }, [refreshKey]);
+
+  // Tras un pago o un saldo a favor aplicado: resumen + listados paginados.
+  const refreshAfterChange = () => {
+    loadData();
+    setRefreshKey((k) => k + 1);
+  };
+
   const loadData = async () => {
     try {
       setLoading(true);
-      const response = await accountsPayableAPI.getSummary(filters);
+      const response = await accountsPayableAPI.getSummary({ ...filters, lite: true });
       setSummary(response.data.summary);
       setBySupplier(response.data.by_supplier);
-      setAllPurchases(response.data.all_purchases);
       setSupplierCredits(response.data.supplier_credits || []);
     } catch (error) {
       toast.error(error.response?.data?.message || 'Error cargando cuentas por pagar');
@@ -64,7 +103,7 @@ const AccountsPayablePage = () => {
     try {
       const res = await api.post(`/inventory/supplier-returns/${credit.supplier_return_id}/apply-credit`);
       toast.success(res.data?.message || 'Saldo a favor aplicado');
-      loadData();
+      refreshAfterChange();
     } catch (error) {
       toast.error(error.response?.data?.message || 'Error al aplicar el saldo a favor');
     } finally {
@@ -92,7 +131,7 @@ const AccountsPayablePage = () => {
       setSelectedPurchase(null);
       setPaymentAmount('');
       setPaymentNotes('');
-      loadData();
+      refreshAfterChange();
     } catch (error) {
       toast.error(error?.response?.data?.message || 'Error al registrar el pago');
     }
@@ -108,13 +147,7 @@ const AccountsPayablePage = () => {
   const filteredBySupplier = searchLower
     ? bySupplier.filter(s => (s.supplier_name || '').toLowerCase().includes(searchLower))
     : bySupplier;
-  const filteredPurchases = searchLower
-    ? allPurchases.filter(p =>
-        (p.supplier_name || '').toLowerCase().includes(searchLower) ||
-        (p.purchase_number || '').toLowerCase().includes(searchLower) ||
-        (p.invoice_number || '').toLowerCase().includes(searchLower)
-      )
-    : allPurchases;
+  const filteredPurchases = purchasesList.rows;
 
   return (
     <Layout>
@@ -262,8 +295,11 @@ const AccountsPayablePage = () => {
             {selectedSupplier && (
               <div className="border-t border-gray-200 p-4 bg-gray-50">
                 <h3 className="text-sm font-semibold text-gray-700 mb-3">Compras pendientes</h3>
+                <SupplierPurchases supplierId={selectedSupplier} filters={filters} refreshKey={refreshKey}>
+                {(supplierList) => (<>
                 <div className="space-y-2">
-                  {(bySupplier.find(s => s.supplier_id === selectedSupplier)?.purchases || []).map(p => (
+                  {supplierList.loading && supplierList.rows.length === 0 && <p className="text-sm text-gray-400">Cargando...</p>}
+                  {supplierList.rows.map(p => (
                     <div key={p.id} className="flex items-center justify-between bg-white rounded-lg border border-gray-200 p-3">
                       <div>
                         <div className="text-sm font-medium text-gray-900">{p.purchase_number}{p.invoice_number ? ` · Fact. ${p.invoice_number}` : ''}</div>
@@ -281,6 +317,9 @@ const AccountsPayablePage = () => {
                     </div>
                   ))}
                 </div>
+                <Pagination {...supplierList.paginationProps} onPageSizeChange={undefined} className="mt-3" />
+                </>)}
+                </SupplierPurchases>
               </div>
             )}
           </div>
@@ -296,7 +335,10 @@ const AccountsPayablePage = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {filteredPurchases.length === 0 && (
+                  {purchasesList.loading && filteredPurchases.length === 0 && (
+                    <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400">Cargando...</td></tr>
+                  )}
+                  {!purchasesList.loading && filteredPurchases.length === 0 && (
                     <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400">Sin compras pendientes</td></tr>
                   )}
                   {filteredPurchases.map(p => (
@@ -331,6 +373,9 @@ const AccountsPayablePage = () => {
                   ))}
                 </tbody>
               </table>
+            </div>
+            <div className="px-4 py-3 border-t border-gray-200">
+              <Pagination {...purchasesList.paginationProps} />
             </div>
           </div>
         )}

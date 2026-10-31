@@ -25,7 +25,7 @@ function StockAlerts() {
       // Endpoint dedicado — se sigue usando solo para el refresh al abrir
       // el dropdown (acción del usuario, no un timer).
       const { getStockAlerts } = await import('../../api/stockAlerts');
-      const response = await getStockAlerts({ status: 'active', limit: 500 });
+      const response = await getStockAlerts({ status: 'active', limit: 200 });
       if (response && response.success) {
         setAllProducts(mapAlertsToProducts(response.data));
       }

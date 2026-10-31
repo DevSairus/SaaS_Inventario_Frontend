@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ClipboardList, Search, Eye, CheckCircle, XCircle, Plus } from 'lucide-react';
 import Layout from '../../components/layout/Layout';
+import Pagination from '../../components/common/Pagination';
+import useUrlPageSync from '../../hooks/useUrlPageSync';
 import useInternalConsumptionsStore from '../../store/internalConsumptionsStore';
 import toast from 'react-hot-toast';
 import { formatNumber } from '../../utils/formatters';
@@ -31,9 +33,15 @@ const InternalConsumptionsPage = () => {
   const [selectedConsumption, setSelectedConsumption] = useState(null);
   const [rejectionReason, setRejectionReason] = useState('');
 
+  const [searchParams] = useSearchParams();
   useEffect(() => {
+    // Si ?page pide otra página, la carga la hace useUrlPageSync
+    const urlPage = Number(searchParams.get('page')) || 1;
+    if (urlPage > 1 && urlPage !== Number(pagination.page || 1)) return;
     fetchConsumptions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  useUrlPageSync(pagination.page || 1, (page) => setFilters({ page }));
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -257,23 +265,14 @@ const InternalConsumptionsPage = () => {
         </div>
 
         {/* Pagination */}
-        {pagination.pages > 1 && (
-          <div className="mt-6 flex justify-center gap-2">
-            {Array.from({ length: pagination.pages }, (_, i) => i + 1).map((page) => (
-              <button
-                key={page}
-                onClick={() => setFilters({ page })}
-                className={`px-4 py-2 rounded-lg ${
-                  pagination.page === page
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                {page}
-              </button>
-            ))}
-          </div>
-        )}
+        <Pagination
+          className="mt-4"
+          currentPage={pagination.page || 1}
+          totalPages={pagination.pages || 1}
+          onPageChange={(page) => setFilters({ page })}
+          totalItems={pagination.total}
+          pageSize={pagination.limit}
+        />
       </div>
 
       {/* Approve Modal */}

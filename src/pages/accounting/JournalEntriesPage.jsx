@@ -9,6 +9,8 @@ import { formatCurrency } from '../../utils/formatters';
 import NumericInput from '../../components/inputs/NumericInput';
 import Combobox, { HighlightMatch } from '../../components/common/Combobox';
 import ThirdPartyPicker, { ThirdPartyBadge } from '../../components/accounting/ThirdPartyPicker';
+import Pagination from '../../components/common/Pagination';
+import usePaginatedList from '../../hooks/usePaginatedList';
 
 const STATUS_STYLES = {
   draft: 'bg-yellow-100 text-yellow-800',
@@ -43,8 +45,6 @@ const ThirdPartyCell = ({ tp, muted = false, extra = 0 }) => {
 };
 
 const JournalEntriesPage = () => {
-  const [entries, setEntries] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({ status: '', source_type: '', from: '', to: '', branch_id: '' });
   const [thirdPartyFilter, setThirdPartyFilter] = useState(null);
   const [searchText, setSearchText] = useState('');
@@ -61,24 +61,18 @@ const JournalEntriesPage = () => {
     const t = setTimeout(() => setDebouncedSearch(searchText.trim()), 350);
     return () => clearTimeout(t);
   }, [searchText]);
-  useEffect(() => { load(); }, [filters, thirdPartyFilter, debouncedSearch]);
   useEffect(() => { fetchBranches(); }, []);
 
-  const load = async () => {
-    try {
-      setLoading(true);
-      const params = {};
-      Object.entries(filters).forEach(([k, v]) => { if (v) params[k] = v; });
-      if (thirdPartyFilter) params.third_party_id = thirdPartyFilter.id;
-      if (debouncedSearch) params.q = debouncedSearch;
-      const res = await journalEntriesAPI.getAll(params);
-      setEntries(res.data || []);
-    } catch (error) {
-      toast.error('Error cargando los asientos');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const list = usePaginatedList(
+    (params, opts) => journalEntriesAPI.getAll(params, opts),
+    {
+      filters: { ...filters, third_party_id: thirdPartyFilter?.id, q: debouncedSearch },
+      onError: () => toast.error('Error cargando los asientos'),
+    },
+  );
+  const entries = list.rows;
+  const loading = list.loading;
+  const load = list.reload;
 
   const openDetail = async (id) => {
     try {
@@ -264,7 +258,7 @@ const JournalEntriesPage = () => {
         </div>
 
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <div className="overflow-x-auto">
+          <div className={`overflow-x-auto transition-opacity ${loading && entries.length ? 'opacity-60' : ''}`}>
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
@@ -274,9 +268,9 @@ const JournalEntriesPage = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {loading && <tr><td colSpan={9} className="px-4 py-8 text-center text-gray-400">Cargando...</td></tr>}
+                {loading && entries.length === 0 && <tr><td colSpan={9} className="px-4 py-8 text-center text-gray-400">Cargando...</td></tr>}
                 {!loading && entries.length === 0 && <tr><td colSpan={9} className="px-4 py-8 text-center text-gray-400">Sin asientos</td></tr>}
-                {!loading && entries.map((entry) => (
+                {entries.map((entry) => (
                   <tr key={entry.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => openDetail(entry.id)}>
                     <td className="px-4 py-2.5 text-sm font-mono text-gray-600 whitespace-nowrap">{entry.entry_number}</td>
                     <td className="px-4 py-2.5 text-sm text-gray-600 whitespace-nowrap">{entry.entry_date}</td>
@@ -299,6 +293,9 @@ const JournalEntriesPage = () => {
                 ))}
               </tbody>
             </table>
+          </div>
+          <div className="px-4 py-3 border-t border-gray-200">
+            <Pagination {...list.paginationProps} />
           </div>
         </div>
       </div>

@@ -98,7 +98,8 @@ function NotificationRow({ icon, iconClass, title, subtitle, tag, tagClass, onGo
 //   - count + children: sin acordeón, para secciones con pocas filas posibles (CRM)
 function Section({ title, count, items, renderItem, initialCount = 4, children }) {
   const [expanded, setExpanded] = useState(false);
-  const total = items ? items.length : (count || 0);
+  // `count` manda cuando la lista viene recortada (el total real es mayor).
+  const total = count != null ? count : (items ? items.length : 0);
   if (!total) return null;
 
   const visibleItems = items ? (expanded ? items : items.slice(0, initialCount)) : null;
@@ -145,6 +146,8 @@ function NotificationsCenter() {
   const [stockProducts, setStockProducts] = useState([]);
   const [payable, setPayable] = useState([]);
   const [advance, setAdvance] = useState([]);
+  // Totales reales del servidor: las listas traen como máximo 200.
+  const [serverTotals, setServerTotals] = useState({});
   const [crmSummary, setCrmSummary] = useState(null);
   const [quotes, setQuotes] = useState([]);
   const [appointments, setAppointments] = useState([]);
@@ -155,6 +158,7 @@ function NotificationsCenter() {
   useEffect(() => { if (bundle.stock) setStockProducts(mapStockAlertsToProducts(bundle.stock)); }, [bundle.stock]);
   useEffect(() => { if (bundle.payable) setPayable(bundle.payable); }, [bundle.payable]);
   useEffect(() => { if (bundle.advance) setAdvance(bundle.advance); }, [bundle.advance]);
+  useEffect(() => { if (bundle.counts) setServerTotals(t => ({ ...t, ...bundle.counts })); }, [bundle.counts]);
   useEffect(() => { if (hasCrm && bundle.crm) setCrmSummary(bundle.crm); }, [hasCrm, bundle.crm]);
   useEffect(() => { if (hasWorkshop && bundle.quotes) setQuotes(bundle.quotes); }, [hasWorkshop, bundle.quotes]);
   useEffect(() => { if (hasWorkshop && bundle.appointments) setAppointments(bundle.appointments); }, [hasWorkshop, bundle.appointments]);
@@ -164,18 +168,18 @@ function NotificationsCenter() {
   const refreshAll = useCallback(async () => {
     setRefreshing(true);
     const jobs = [
-      getStockAlerts({ status: 'active', limit: 500 })
-        .then(r => r?.success && setStockProducts(mapStockAlertsToProducts(r.data)))
+      getStockAlerts({ status: 'active', limit: 200 })
+        .then(r => { if (r?.success) { setStockProducts(mapStockAlertsToProducts(r.data)); setServerTotals(t => ({ ...t, stock: r.pagination?.total })); } })
         .catch(() => {}),
     ];
     if (hasTreasury) {
-      jobs.push(getPayableAlerts({ status: 'active', limit: 500, sort_by: 'days_to_due', sort_order: 'ASC' })
-        .then(r => r?.success && setPayable(r.data || []))
+      jobs.push(getPayableAlerts({ status: 'active', limit: 200, sort_by: 'days_to_due', sort_order: 'ASC' })
+        .then(r => { if (r?.success) { setPayable(r.data || []); setServerTotals(t => ({ ...t, payable: r.pagination?.total })); } })
         .catch(() => {}));
     }
     if (hasReceivables) {
-      jobs.push(getAdvanceAlerts({ status: 'active', limit: 500, sort_by: 'days_since_received', sort_order: 'DESC' })
-        .then(r => r?.success && setAdvance(r.data || []))
+      jobs.push(getAdvanceAlerts({ status: 'active', limit: 200, sort_by: 'days_since_received', sort_order: 'DESC' })
+        .then(r => { if (r?.success) { setAdvance(r.data || []); setServerTotals(t => ({ ...t, advance: r.pagination?.total })); } })
         .catch(() => {}));
     }
     if (hasCrm) {
@@ -241,8 +245,15 @@ function NotificationsCenter() {
   const crmOverdue = hasCrm ? (crmSummary?.overdue_followups || 0) : 0;
   const crmLeads = hasCrm ? (crmSummary?.unattended_leads || 0) : 0;
 
+  // Si el servidor tiene más de las que se descargaron, se cuenta el total
+  // real (la lista muestra las primeras 200).
+  const countOf = (key, loadedRows, shown) => (serverTotals[key] > loadedRows ? serverTotals[key] : shown);
+  const stockCount = countOf('stock', stockProducts.length, stockAlerts.length);
+  const payableCount = countOf('payable', payable.length, payable.length);
+  const advanceCount = countOf('advance', advance.length, advance.length);
+
   const total =
-    stockAlerts.length + payable.length + advance.length +
+    stockCount + payableCount + advanceCount +
     crmOverdue + crmLeads + quotes.length + appointments.length;
 
   return (
@@ -353,6 +364,7 @@ function NotificationsCenter() {
                   <Section
                     title="Stock"
                     items={stockAlerts}
+                    count={stockCount}
                     renderItem={(product) => (
                       <NotificationRow
                         key={product.id}
@@ -373,6 +385,7 @@ function NotificationsCenter() {
                   <Section
                     title="Cuentas por pagar"
                     items={payable}
+                    count={payableCount}
                     renderItem={(alert) => (
                       <NotificationRow
                         key={alert.id}
@@ -393,6 +406,7 @@ function NotificationsCenter() {
                   <Section
                     title="Anticipos sin aplicar"
                     items={advance}
+                    count={advanceCount}
                     renderItem={(alert) => (
                       <NotificationRow
                         key={alert.id}

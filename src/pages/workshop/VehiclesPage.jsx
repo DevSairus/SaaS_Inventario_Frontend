@@ -6,12 +6,17 @@ import { vehiclesApi } from '../../api/workshop';
 import RuntConsultaModal from '../../components/workshop/RuntConsultaModal';
 import axios from '../../api/axios';
 import toast from 'react-hot-toast';
+import useRemoteOptions from '../../hooks/useRemoteOptions';
 import {
   Car, Bike, Plus, Search, History, X, Wrench, Clock,
   AlertTriangle, CheckCircle, ChevronRight, Gauge,
   User, FileText, Package, Banknote, XCircle, PencilLine,
   Trash2, Save,
 } from 'lucide-react';
+import Pagination from '../../components/common/Pagination';
+import useUrlPageSync from '../../hooks/useUrlPageSync';
+
+const VEHICLES_PAGE_SIZE = 25;
 
 const FUEL_OPTIONS = [
   { value: 'gasolina', label: 'Gasolina' },
@@ -53,12 +58,13 @@ function CreateVehicleModal({ onClose, onCreated }) {
   const [form, setForm]             = useState(EMPTY_VEHICLE);
   const [saving, setSaving]         = useState(false);
   const [showRunt, setShowRunt]     = useState(false);
-  const [customers, setCustomers]   = useState([]);
   const [custSearch, setCustSearch] = useState('');
-
-  useEffect(() => {
-    axios.get('/customers?limit=500').then(r => setCustomers(r.data.data || [])).catch(() => {});
-  }, []);
+  const [selCustomer, setSelCustomer] = useState(null);
+  // Búsqueda en el servidor: precargar un tope fijo dejaba clientes por fuera.
+  const { options: filteredCustomers } = useRemoteOptions(
+    (q) => axios.get('/customers', { params: { search: q, limit: 8 } }).then(r => r.data.data || []),
+    custSearch,
+  );
 
   const setF = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
@@ -103,11 +109,6 @@ function CreateVehicleModal({ onClose, onCreated }) {
     } finally { setSaving(false); }
   };
 
-  const filteredCustomers = customers.filter(c => {
-    const name = (c.business_name || `${c.first_name} ${c.last_name}`).toLowerCase();
-    return name.includes(custSearch.toLowerCase()) || (c.phone || '').includes(custSearch);
-  }).slice(0, 8);
-  const selCustomer = customers.find(c => c.id === form.customer_id);
 
   return (
     <>
@@ -232,7 +233,7 @@ function CreateVehicleModal({ onClose, onCreated }) {
                     </p>
                     {selCustomer.phone && <p className="text-xs text-blue-500 dark:text-blue-400">{selCustomer.phone}</p>}
                   </div>
-                  <button onClick={() => { setF('customer_id', ''); setCustSearch(''); }} className="text-blue-400 hover:text-blue-600 dark:text-blue-500 dark:hover:text-blue-300 p-1">
+                  <button onClick={() => { setF('customer_id', ''); setSelCustomer(null); setCustSearch(''); }} className="text-blue-400 hover:text-blue-600 dark:text-blue-500 dark:hover:text-blue-300 p-1">
                     <X size={14} />
                   </button>
                 </div>
@@ -243,7 +244,7 @@ function CreateVehicleModal({ onClose, onCreated }) {
                   {custSearch && filteredCustomers.length > 0 && (
                     <div className="absolute z-10 top-full left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg mt-1 max-h-44 overflow-y-auto dark:bg-graphite-2 dark:border-white/10">
                       {filteredCustomers.map(c => (
-                        <button key={c.id} onClick={() => { setF('customer_id', c.id); setCustSearch(''); }}
+                        <button key={c.id} onClick={() => { setF('customer_id', c.id); setSelCustomer(c); setCustSearch(''); }}
                           className="w-full text-left px-3 py-2 text-sm hover:bg-blue-50 dark:hover:bg-white/5 transition">
                           <p className="font-medium text-gray-800 dark:text-gray-200">{c.business_name || `${c.first_name} ${c.last_name}`}</p>
                           {c.phone && <p className="text-xs text-gray-400 dark:text-gray-500">{c.phone}</p>}
@@ -319,7 +320,8 @@ export default function VehiclesPage() {
   const [showCreate, setShowCreate]       = useState(false);
   const [deleteTarget, setDeleteTarget]   = useState(null);
 
-  useEffect(() => { fetchVehicles({ search, page, limit: 25 }); }, [search, page]);
+  useEffect(() => { fetchVehicles({ search, page, limit: VEHICLES_PAGE_SIZE }); }, [search, page]);
+  useUrlPageSync(page, setPage);
 
   const openHistory = async (vehicle) => {
     setShowHistory(vehicle); setHistory(null); setExpandedOrder(null);
@@ -331,7 +333,7 @@ export default function VehiclesPage() {
 
   const handleCreated = useCallback(() => {
     setShowCreate(false);
-    fetchVehicles({ search, page, limit: 25 });
+    fetchVehicles({ search, page, limit: VEHICLES_PAGE_SIZE });
   }, [search, page]);
 
   const handleDelete = async () => {
@@ -340,7 +342,7 @@ export default function VehiclesPage() {
       await vehiclesApi.remove(deleteTarget.id);
       toast.success(`Vehículo ${deleteTarget.plate} eliminado`);
       setDeleteTarget(null);
-      fetchVehicles({ search, page, limit: 25 });
+      fetchVehicles({ search, page, limit: VEHICLES_PAGE_SIZE });
     } catch (e) { toast.error(e.response?.data?.message || 'Error al eliminar'); }
   };
 
@@ -452,15 +454,14 @@ export default function VehiclesPage() {
         )}
 
         {/* Pagination */}
-        {vehiclesTotal > 25 && (
-          <div className="flex justify-center gap-2 mt-6">
-            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
-              className="px-3 py-1.5 text-sm border rounded-lg disabled:opacity-40 hover:bg-gray-50 dark:border-white/10 dark:text-gray-300 dark:hover:bg-white/5">← Anterior</button>
-            <span className="px-3 py-1.5 text-sm text-gray-500 dark:text-gray-400">Pág. {page}</span>
-            <button onClick={() => setPage(p => p + 1)} disabled={page * 25 >= vehiclesTotal}
-              className="px-3 py-1.5 text-sm border rounded-lg disabled:opacity-40 hover:bg-gray-50 dark:border-white/10 dark:text-gray-300 dark:hover:bg-white/5">Siguiente →</button>
-          </div>
-        )}
+        <Pagination
+          className="mt-6"
+          currentPage={page}
+          totalPages={Math.ceil((vehiclesTotal || 0) / VEHICLES_PAGE_SIZE)}
+          totalItems={vehiclesTotal || 0}
+          pageSize={VEHICLES_PAGE_SIZE}
+          onPageChange={setPage}
+        />
 
         {/* Modales */}
         {showCreate && <CreateVehicleModal onClose={() => setShowCreate(false)} onCreated={handleCreated} />}

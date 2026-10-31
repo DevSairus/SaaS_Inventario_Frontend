@@ -387,6 +387,12 @@ const PurchaseDetailPage = () => {
                             <div className="text-sm text-gray-500">
                               {item.product?.sku}
                             </div>
+                            {/* Margen escrito en la línea: pasa al producto al recibir la compra. */}
+                            {item.profit_margin_pct !== null && item.profit_margin_pct !== undefined && (
+                              <div className="text-xs text-amber-700" title="Al recibir la compra pasa a ser el margen del producto y el precio de venta se calcula con él">
+                                Margen {purchase.status === 'received' ? 'aplicado' : 'al recibir'}: {Number(item.profit_margin_pct).toLocaleString('es-CO')} %
+                              </div>
+                            )}
                           </div>
                         </div>
                       </td>

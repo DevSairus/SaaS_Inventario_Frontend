@@ -19,6 +19,8 @@ import { getSupportDocuments } from '../../api/dian';
 import { expensesAPI } from '../../api/expenses';
 import { suppliersAPI } from '../../api/suppliers';
 import { formatCurrency } from '../../utils/formatters';
+import Combobox, { HighlightMatch } from '../../components/common/Combobox';
+import mergeById from '../../utils/mergeById';
 
 const IVA_RATE_OPTIONS = [0, 5, 19];
 
@@ -83,8 +85,9 @@ export default function SupportDocumentsPage() {
 
   useEffect(() => {
     // Documento Soporte: solo proveedores no obligados a facturar.
-    suppliersAPI.getAll({ is_active: true, is_obligated_to_invoice: false, limit: 500, sort_by: 'name', sort_order: 'ASC' })
-      .then(res => setSuppliers(res.data || []))
+    // Solo para hojear; el resto lo encuentra el remoteSearch del Combobox.
+    suppliersAPI.getAll({ is_active: true, is_obligated_to_invoice: false, limit: 100, sort_by: 'name', sort_order: 'ASC' })
+      .then(res => setSuppliers(prev => mergeById(res.data || [], prev)))
       .catch(() => {});
   }, []);
 
@@ -268,16 +271,22 @@ export default function SupportDocumentsPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Proveedor</label>
-                <select
-                  value={form.supplier_id}
-                  onChange={e => setForm(f => ({ ...f, supplier_id: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                >
-                  <option value="">Sin proveedor (capturar datos al generar)</option>
-                  {suppliers.map(s => (
-                    <option key={s.id} value={s.id}>{s.name}{s.tax_id ? ` — ${s.tax_id}` : ''}</option>
-                  ))}
-                </select>
+                <Combobox
+                  placeholder="Sin proveedor (capturar datos al generar) — buscar por nombre o NIT..."
+                  items={suppliers}
+                  value={form.supplier_id || null}
+                  displayValue={suppliers.find(s => s.id === form.supplier_id)?.name || ''}
+                  onSelect={(s) => { setSuppliers(prev => mergeById(prev, [s])); setForm(f => ({ ...f, supplier_id: s.id })); }}
+                  onClear={() => setForm(f => ({ ...f, supplier_id: '' }))}
+                  remoteSearch={(q) => suppliersAPI.search(q, { is_active: true, is_obligated_to_invoice: false })}
+                  getSearchText={(s) => [s.name, s.business_name, s.tax_id].filter(Boolean).join(' ')}
+                  renderItem={(s, q) => (
+                    <div>
+                      <p className="font-medium text-gray-800"><HighlightMatch text={s.name} query={q} /></p>
+                      {s.tax_id && <p className="text-xs text-gray-500">NIT <HighlightMatch text={s.tax_id} query={q} /></p>}
+                    </div>
+                  )}
+                />
                 <p className="mt-1 text-xs text-gray-500">Solo se listan los proveedores marcados como no obligados a facturar.</p>
               </div>
 

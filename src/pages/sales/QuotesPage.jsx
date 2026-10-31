@@ -1,11 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import salesApi from '../../api/sales';
-import { workOrdersApi } from '../../api/workshop';
 import useBranchStore from '../../store/branchStore';
 import useTenantStore from '../../store/tenantStore';
 import useAuthStore from '../../store/authStore';
 import Layout from '../../components/layout/Layout';
+import Pagination from '../../components/common/Pagination';
+import usePaginatedList from '../../hooks/usePaginatedList';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import { PlusIcon, MagnifyingGlassIcon, FunnelIcon, Cog6ToothIcon } from '@heroicons/react/24/outline';
 
@@ -33,49 +34,12 @@ const ORIGIN_LABELS = {
 const EMPTY_FILTERS = { quote_status: '', from_date: '', to_date: '', branch_id: '', vehicle_plate: '' };
 const FILTER_KEYS = Object.keys(EMPTY_FILTERS);
 
-// Normaliza una Sale (document_type='cotizacion') al shape unificado de la
-// tabla. Una cotización ya convertida en remisión/factura conserva su número
-// COT- en quote_number y abre la venta resultante.
-function fromSale(sale) {
-  const converted = sale.document_type !== 'cotizacion' && !!sale.quote_number;
-  return {
-    id: sale.id,
-    source: 'sale',
-    converted,
-    number: converted ? sale.quote_number : sale.sale_number,
-    sale_number: converted ? sale.sale_number : null,
-    customer_name: sale.customer_name,
-    vehicle_plate: sale.vehicle_plate,
-    branch_name: sale.branch?.name,
-    date: sale.sale_date,
-    valid_until: sale.quote_valid_until,
-    total_amount: sale.total_amount,
-    quote_status: converted ? 'convertida' : sale.quote_status,
-  };
-}
-
-// Normaliza una ronda de WorkOrderQuoteRequest (cotización hecha dentro de
-// una Orden de Trabajo) al mismo shape.
-function fromWorkshopQuote(q) {
-  return {
-    id: q.id,
-    source: 'workshop',
-    work_order_id: q.work_order_id,
-    number: q.order_number,
-    customer_name: q.customer_name,
-    vehicle_plate: q.vehicle_plate,
-    branch_name: null,
-    date: q.sent_at,
-    total_amount: q.total_amount,
-    quote_status: q.quote_status,
-  };
-}
-
 // Página independiente de Ventas (SalesPage.jsx). Usa estado local en vez del
 // store compartido useSalesStore para no arrastrar filtros de un lado al
 // otro al navegar entre /sales y /quotes (ambos apuntan al mismo modelo Sale).
 // Combina, además, las cotizaciones hechas dentro de Órdenes de Trabajo
-// (Taller) cuando el tenant tiene ese módulo habilitado.
+// (Taller) cuando el tenant tiene ese módulo habilitado: el backend
+// (GET /sales/quotes) une ambas fuentes y pagina ya ordenado.
 export default function QuotesPage() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -89,43 +53,21 @@ export default function QuotesPage() {
   // del detalle (botón "Volver" o atrás del navegador) la lista se restaura
   // con los mismos resultados en vez de arrancar vacía.
   const [searchParams, setSearchParams] = useSearchParams();
-  const [quotes, setQuotes] = useState([]);
-  const [loading, setLoading] = useState(false);
   const [filters, setFilters] = useState(() =>
     Object.fromEntries(FILTER_KEYS.map(k => [k, searchParams.get(k) || '']))
   );
   const [searchInput, setSearchInput] = useState(() => searchParams.get('q') || '');
+  const [debouncedSearch, setDebouncedSearch] = useState(searchInput);
   const [showFilters, setShowFilters] = useState(() => FILTER_KEYS.some(k => searchParams.get(k)));
 
   useEffect(() => {
     const next = new URLSearchParams();
     if (searchInput) next.set('q', searchInput);
     FILTER_KEYS.forEach(k => { if (filters[k]) next.set(k, filters[k]); });
+    // page/limit los maneja usePaginatedList
+    ['page', 'limit'].forEach(k => { if (searchParams.get(k)) next.set(k, searchParams.get(k)); });
     if (next.toString() !== searchParams.toString()) setSearchParams(next, { replace: true });
   }, [searchInput, filters]);
-
-  const fetchQuotes = async (customFilters = filters) => {
-    setLoading(true);
-    try {
-      const commonFilters = { ...customFilters, customer_name: searchInput };
-
-      const requests = [
-        salesApi.getAll({ ...commonFilters, quote_view: true }).then(res => res.data.data.map(fromSale)),
-      ];
-      // 'convertida' solo existe en cotizaciones de venta.
-      if (hasWorkshop && customFilters.quote_status !== 'convertida') {
-        requests.push(
-          workOrdersApi.getWorkshopQuotes(commonFilters).then(res => res.data.data.map(fromWorkshopQuote))
-        );
-      }
-
-      const results = await Promise.all(requests);
-      const merged = results.flat().sort((a, b) => new Date(b.date) - new Date(a.date));
-      setQuotes(merged);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   useEffect(() => {
     fetchFeatures();
@@ -133,26 +75,33 @@ export default function QuotesPage() {
   }, []);
 
   useEffect(() => {
-    fetchQuotes(filters);
-  }, [hasWorkshop]);
-
-  useEffect(() => {
-    const t = setTimeout(() => {
-      fetchQuotes(filters);
-    }, 400);
+    const t = setTimeout(() => setDebouncedSearch(searchInput), 400);
     return () => clearTimeout(t);
   }, [searchInput]);
 
+  // include_workshop va fuera de los filtros: cuando cargan los módulos del
+  // tenant se recarga sin perder la página que venía en la URL.
+  const list = usePaginatedList(
+    (params, opts) => salesApi.getQuotes({ ...params, include_workshop: hasWorkshop ? 'true' : undefined }, opts).then(res => res.data),
+    { filters: { ...filters, customer_name: debouncedSearch } },
+  );
+  const quotes = list.rows;
+  const loading = list.loading;
+  const workshopLoaded = useRef(hasWorkshop);
+  useEffect(() => {
+    if (workshopLoaded.current === hasWorkshop) return;
+    workshopLoaded.current = hasWorkshop;
+    list.reload();
+  }, [hasWorkshop]);
+
   const handleFilterChange = (key, value) => {
-    const updated = { ...filters, [key]: value };
-    setFilters(updated);
-    fetchQuotes(updated);
+    setFilters({ ...filters, [key]: value });
   };
 
   const handleReset = () => {
     setSearchInput('');
+    setDebouncedSearch('');
     setFilters(EMPTY_FILTERS);
-    fetchQuotes(EMPTY_FILTERS);
   };
 
   // `from` le dice al detalle a dónde volver (esta lista, con su búsqueda).
@@ -173,7 +122,7 @@ export default function QuotesPage() {
           <div>
             <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Cotizaciones</h1>
             <p className="text-sm text-gray-500 dark:text-gray-500 mt-0.5">
-              {loading ? 'Cargando...' : `${quotes.length} resultado${quotes.length !== 1 ? 's' : ''}`}
+              {loading && !quotes.length ? 'Cargando...' : `${list.total} resultado${list.total !== 1 ? 's' : ''}`}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -274,7 +223,7 @@ export default function QuotesPage() {
         </div>
 
         <div className="bg-white dark:bg-graphite rounded-lg border border-gray-200 dark:border-white/10 overflow-hidden">
-          {loading ? (
+          {loading && !quotes.length ? (
             <div className="flex items-center justify-center py-20">
               <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
             </div>
@@ -374,6 +323,9 @@ export default function QuotesPage() {
                     </div>
                   );
                 })}
+              </div>
+              <div className="px-4 py-3 border-t border-gray-100 dark:border-white/10">
+                <Pagination {...list.paginationProps} />
               </div>
             </>
           )}

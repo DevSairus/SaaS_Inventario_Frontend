@@ -8,6 +8,8 @@ import toast from 'react-hot-toast';
 import { loansAPI, chartOfAccountsAPI, LOAN_TYPE_LABELS } from '../../api/accounting';
 import { branchesService } from '../../api/branches';
 import Layout from '../../components/layout/Layout';
+import Pagination from '../../components/common/Pagination';
+import usePaginatedList from '../../hooks/usePaginatedList';
 import NumericInput from '../../components/inputs/NumericInput';
 import { formatCurrency, formatDate, formatPercentage } from '../../utils/formatters';
 import { PlusIcon } from '@heroicons/react/24/outline';
@@ -25,7 +27,6 @@ const emptyForm = {
 
 const LoansPage = () => {
   const navigate = useNavigate();
-  const [loans, setLoans] = useState([]);
   const [report, setReport] = useState(null);
   const [liabilityAccounts, setLiabilityAccounts] = useState([]);
   const [expenseAccounts, setExpenseAccounts] = useState([]);
@@ -37,16 +38,21 @@ const LoansPage = () => {
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
 
+  const list = usePaginatedList(
+    (params, opts) => loansAPI.getAll(params, opts),
+    { filters: { status: statusFilter }, onError: (error) => toast.error(error.response?.data?.message || 'Error cargando los créditos') },
+  );
+  const loans = list.rows;
+  const tableLoading = list.loading && loans.length === 0;
+
   const load = useCallback(async () => {
     try {
       setLoading(true);
-      const [loansRes, reportRes, accountsRes, branchesRes] = await Promise.all([
-        loansAPI.getAll(statusFilter ? { status: statusFilter } : {}),
+      const [reportRes, accountsRes, branchesRes] = await Promise.all([
         loansAPI.getReport(),
         chartOfAccountsAPI.getAll(),
         branchesService.getAll(),
       ]);
-      setLoans(loansRes.data || []);
       setReport(reportRes.data || null);
       const accounts = accountsRes.data || [];
       setLiabilityAccounts(accounts.filter((a) => a.account_type === 'pasivo' && a.accepts_entries));
@@ -57,9 +63,12 @@ const LoansPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [statusFilter]);
+  }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  // Tras crear/dar de baja/pagar: reporte + listado.
+  const refreshAll = () => { load(); list.reload(); };
 
   const openCreate = () => {
     setForm(emptyForm);
@@ -86,7 +95,7 @@ const LoansPage = () => {
       await loansAPI.create({ ...form, branch_id: form.branch_id || null });
       toast.success('Crédito creado, tabla de amortización generada');
       setShowModal(false);
-      load();
+      refreshAll();
     } catch (error) {
       toast.error(error.response?.data?.message || 'Error creando el crédito');
     } finally {
@@ -162,11 +171,11 @@ const LoansPage = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {loading && <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400">Cargando...</td></tr>}
-                {!loading && loans.length === 0 && (
+                {tableLoading && <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400">Cargando...</td></tr>}
+                {!list.loading && loans.length === 0 && (
                   <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400">Sin créditos registrados</td></tr>
                 )}
-                {!loading && loans.map((l) => (
+                {loans.map((l) => (
                   <tr key={l.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => navigate(`/accounting/loans/${l.id}`)}>
                     <td className="px-4 py-3 font-medium text-gray-900">{l.lender_name}</td>
                     <td className="px-4 py-3 text-gray-600">{LOAN_TYPE_LABELS[l.loan_type] || l.loan_type}</td>
@@ -183,6 +192,9 @@ const LoansPage = () => {
                 ))}
               </tbody>
             </table>
+          </div>
+          <div className="px-4 py-3 border-t border-gray-200">
+            <Pagination {...list.paginationProps} />
           </div>
         </div>
       </div>

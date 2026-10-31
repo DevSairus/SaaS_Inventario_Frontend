@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useState } from 'react';
 import toast from 'react-hot-toast';
 import {
   Activity, Loader2, RefreshCw, ArrowUpRight, ArrowDownLeft,
@@ -6,6 +6,8 @@ import {
 } from 'lucide-react';
 import Layout from '../../components/layout/Layout';
 import { ensambladoraSyncApi } from '../../api/ensambladora';
+import Pagination from '../../components/common/Pagination';
+import usePaginatedList from '../../hooks/usePaginatedList';
 import useAuthStore from '../../store/authStore';
 
 const fmtDateTime = (d) => {
@@ -43,40 +45,36 @@ export default function SyncMonitorPage() {
   const { user } = useAuthStore();
   const revisadoPor = `${user?.first_name ?? ''} ${user?.last_name ?? ''}`.trim() || user?.email || 'desconocido';
 
-  const [eventos, setEventos] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [estado, setEstado] = useState('todos');
   const [direccion, setDireccion] = useState('todas');
   const [soloNoRevisados, setSoloNoRevisados] = useState(false);
   const [reintentandoId, setReintentandoId] = useState(null);
   const [marcandoId, setMarcandoId] = useState(null);
 
-  const load = useCallback(async ({ silent = false } = {}) => {
-    silent ? setRefreshing(true) : setLoading(true);
-    try {
-      const filtros = {};
-      if (estado !== 'todos') filtros.estado = estado;
-      if (direccion !== 'todas') filtros.direccion = direccion;
-      if (soloNoRevisados) filtros.revisado = false;
-      const res = await ensambladoraSyncApi.listEvents(filtros);
-      setEventos(res.data?.data ?? []);
-    } catch (err) {
-      toast.error('No se pudieron cargar los eventos de sincronización');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, [estado, direccion, soloNoRevisados]);
-
-  useEffect(() => { load(); }, [load]);
+  const list = usePaginatedList(
+    (params, opts) => ensambladoraSyncApi.listEvents(params, opts),
+    {
+      filters: {
+        estado: estado !== 'todos' ? estado : '',
+        direccion: direccion !== 'todas' ? direccion : '',
+        revisado: soloNoRevisados ? false : '',
+      },
+      defaultPageSize: 100,
+      onError: () => toast.error('No se pudieron cargar los eventos de sincronización'),
+    },
+  );
+  const eventos = list.rows;
+  // Primera carga = spinner; las siguientes conservan la lista (botón girando).
+  const loading = list.loading && eventos.length === 0;
+  const refreshing = list.loading && eventos.length > 0;
+  const load = list.reload;
 
   const handleReintentar = async (eventId) => {
     setReintentandoId(eventId);
     try {
       await ensambladoraSyncApi.reintentar(eventId);
       toast.success('Evento reenviado y confirmado');
-      await load({ silent: true });
+      load();
     } catch (err) {
       const msg = err.response?.data?.message || 'No se pudo confirmar el reintento con la Ensambladora';
       toast.error(msg);
@@ -89,7 +87,7 @@ export default function SyncMonitorPage() {
     setMarcandoId(eventId);
     try {
       await ensambladoraSyncApi.marcarRevisado(eventId, revisadoPor);
-      await load({ silent: true });
+      load();
     } catch (err) {
       toast.error(err.response?.data?.message || 'No se pudo marcar como revisado');
     } finally {
@@ -97,7 +95,8 @@ export default function SyncMonitorPage() {
     }
   };
 
-  const pendientesOError = eventos.filter((e) => e.estado === 'pendiente' || e.estado === 'error').length;
+  // Contado en el servidor sobre todo el filtro, no solo esta página.
+  const pendientesOError = list.meta?.pendientes_o_error ?? 0;
 
   return (
     <Layout>
@@ -108,7 +107,7 @@ export default function SyncMonitorPage() {
             <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Sincronización con la Ensambladora</h1>
           </div>
           <button
-            onClick={() => load({ silent: true })}
+            onClick={load}
             disabled={refreshing}
             title="Actualizar"
             className="p-2 rounded-lg border border-gray-200 dark:border-white/10 text-gray-500 hover:text-primary-600 disabled:opacity-40"
@@ -117,7 +116,7 @@ export default function SyncMonitorPage() {
           </button>
         </div>
         <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-          {loading ? 'Cargando…' : `${eventos.length} evento${eventos.length === 1 ? '' : 's'}${pendientesOError > 0 ? ` — ${pendientesOError} pendiente(s)/error` : ''}`}
+          {loading ? 'Cargando…' : `${list.total} evento${list.total === 1 ? '' : 's'}${pendientesOError > 0 ? ` — ${pendientesOError} pendiente(s)/error` : ''}`}
         </p>
 
         <div className="space-y-2 mb-5">
@@ -243,6 +242,8 @@ export default function SyncMonitorPage() {
             })}
           </ul>
         )}
+
+        <Pagination {...list.paginationProps} pageSizeOptions={[50, 100, 200]} className="mt-4" />
       </div>
     </Layout>
   );

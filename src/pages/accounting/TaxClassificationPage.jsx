@@ -7,10 +7,12 @@
 //  1. revisa las compras del año por concepto (lo que irá a la Exógena 1001),
 //  2. asigna conceptos por CATEGORÍA (pocas; las heredan sus productos),
 //  3. marca EXCEPCIONES por producto, en bloque.
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import Layout from '../../components/layout/Layout';
+import Pagination from '../../components/common/Pagination';
+import useUrlPageSync from '../../hooks/useUrlPageSync';
 import { taxClassificationAPI } from '../../api/accounting';
 import { invalidateRetentionCatalog } from '../../hooks/useRetentionCatalog';
 
@@ -28,7 +30,7 @@ export default function TaxClassificationPage() {
 
   // Excepciones por producto
   const [filters, setFilters] = useState({ search: '', category_id: '', type: '', only_overrides: false });
-  const [products, setProducts] = useState({ rows: [], total: 0, page: 1, pages: 1 });
+  const [products, setProducts] = useState({ rows: [], total: 0, page: 1, pages: 1, limit: 50 });
   const [selected, setSelected] = useState(new Set());
   const [bulkConcept, setBulkConcept] = useState('');
   const [savingProducts, setSavingProducts] = useState(false);
@@ -49,7 +51,7 @@ export default function TaxClassificationPage() {
   const loadProducts = useCallback(async (page = 1) => {
     try {
       const res = await taxClassificationAPI.products({ ...filters, only_overrides: filters.only_overrides ? 'true' : undefined, page });
-      setProducts({ rows: res.data, total: res.pagination.total, page: res.pagination.page, pages: res.pagination.pages });
+      setProducts({ rows: res.data, total: res.pagination.total, page: res.pagination.page, pages: res.pagination.pages, limit: res.pagination.limit });
       setSelected(new Set());
     } catch (e) {
       toast.error('Error cargando productos');
@@ -57,7 +59,19 @@ export default function TaxClassificationPage() {
   }, [filters]);
 
   useEffect(() => { load(); }, [load]);
-  useEffect(() => { loadProducts(1); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [filters.category_id, filters.type, filters.only_overrides]);
+  // Al cambiar filtros vuelve a la página 1. Al montar con ?page=N la carga
+  // la hace useUrlPageSync (la clave evita repetir en el doble efecto de StrictMode).
+  const [searchParams] = useSearchParams();
+  const lastFiltersKey = useRef(null);
+  useEffect(() => {
+    const key = [filters.category_id, filters.type, filters.only_overrides].join('|');
+    if (lastFiltersKey.current === key) return;
+    const isMount = lastFiltersKey.current === null;
+    lastFiltersKey.current = key;
+    if (isMount && Number(searchParams.get('page')) > 1) return;
+    loadProducts(1);
+  }, [filters.category_id, filters.type, filters.only_overrides]); // eslint-disable-line react-hooks/exhaustive-deps
+  useUrlPageSync(products.page, (p) => loadProducts(p));
 
   const concepts = data?.concepts || [];
   const conceptName = useMemo(() => {
@@ -286,16 +300,14 @@ export default function TaxClassificationPage() {
               </tbody>
             </table>
           </div>
-          {products.pages > 1 && (
-            <div className="flex items-center justify-between px-3 py-2 border-t border-gray-100 dark:border-white/10 text-sm">
-              <span className="text-gray-500">{products.total} producto(s)</span>
-              <div className="flex gap-2">
-                <button disabled={products.page <= 1} onClick={() => loadProducts(products.page - 1)} className="px-3 py-1 rounded border border-gray-300 disabled:opacity-40">Anterior</button>
-                <span className="px-2 py-1 text-gray-500">{products.page} / {products.pages}</span>
-                <button disabled={products.page >= products.pages} onClick={() => loadProducts(products.page + 1)} className="px-3 py-1 rounded border border-gray-300 disabled:opacity-40">Siguiente</button>
-              </div>
-            </div>
-          )}
+          <Pagination
+            className="px-3 py-2 border-t border-gray-100 dark:border-white/10"
+            currentPage={products.page}
+            totalPages={products.pages}
+            totalItems={products.total}
+            pageSize={products.limit}
+            onPageChange={(p) => loadProducts(p)}
+          />
         </div>
       </div>
 

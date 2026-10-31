@@ -180,6 +180,7 @@ const NAV = [
       { label: "Pedidos a proveedores", path: "/order-lists" },
       { label: "Movimientos",       path: "/movements" },
       { label: "Ajustes",           path: "/adjustments" },
+      { label: "Ajustes de precio", path: "/price-adjustments" },
       { label: "Inventario físico", path: "/inventory/physical-counts" },
       { label: "Categorias",        path: "/categories" },
       { label: "Combos",            path: "/combos" },

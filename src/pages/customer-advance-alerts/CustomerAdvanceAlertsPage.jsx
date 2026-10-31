@@ -10,6 +10,7 @@ import {
 } from '@heroicons/react/24/outline';
 import useCustomerAdvanceAlertsStore from '../../store/customerAdvanceAlertsStore';
 import Layout from '../../components/layout/Layout';
+import Pagination from '../../components/common/Pagination';
 import useIsManagement from '../../hooks/useIsManagement';
 
 const CustomerAdvanceAlertsPage = () => {
@@ -22,11 +23,14 @@ const CustomerAdvanceAlertsPage = () => {
     stats = {},
     aging,
     filters = {},
+    pagination = {},
     loading,
     fetchAlerts,
     fetchStats,
     fetchAging,
     setFilters,
+    setPage,
+    setPageSize,
     resolveAlert,
     ignoreAlert,
     reactivateAlert,
@@ -292,6 +296,18 @@ const CustomerAdvanceAlertsPage = () => {
                       ))}
                     </tbody>
                   </table>
+                </div>
+              )}
+              {pagination?.pages > 1 && (
+                <div className="px-4 py-3 border-t border-gray-200">
+                  <Pagination
+                    currentPage={pagination.page || 1}
+                    totalPages={pagination.pages}
+                    onPageChange={setPage}
+                    totalItems={pagination.total || 0}
+                    pageSize={pagination.limit || 50}
+                    onPageSizeChange={setPageSize}
+                  />
                 </div>
               )}
             </div>

@@ -5,6 +5,7 @@ import { receiptsAPI } from '../../api/receipts';
 import { formatCurrency } from '../../utils/formatters';
 import Layout from '../../components/layout/Layout';
 import Pagination from '../../components/common/Pagination';
+import useUrlPageSync from '../../hooks/useUrlPageSync';
 import { DocumentTextIcon, MagnifyingGlassIcon, PrinterIcon } from '@heroicons/react/24/outline';
 import useAuthStore from '../../store/authStore';
 import { getPosSettings, printPosDocument } from '../../utils/posPrinting';
@@ -60,6 +61,7 @@ const ReceiptsPage = () => {
 
   useEffect(() => { setPage(1); }, [filters]);
   useEffect(() => { loadData(); }, [loadData]);
+  useUrlPageSync(page, setPage);
 
   const tenantId = useAuthStore((s) => s.user?.tenant_id);
   const posEnabled = getPosSettings(tenantId).enabled;

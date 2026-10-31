@@ -473,6 +473,10 @@ export default function PipelinePage() {
   const [sourceFilter, setSourceFilter] = useState('');
   const [priorityOnly, setPriorityOnly] = useState(false);
   const [dateFrom, setDateFrom] = useState('');
+  // Ganadas/perdidas: solo las cerradas en esta ventana (días). Las abiertas
+  // siempre se ven; las cerradas crecen sin fin y el tablero las descargaba
+  // todas. '' = todas.
+  const [closedWindow, setClosedWindow] = useState('90');
   const [dateTo, setDateTo] = useState('');
 
   const [createModal, setCreateModal] = useState(false);
@@ -494,6 +498,7 @@ export default function PipelinePage() {
     setLoading(true);
     try {
       const params = ownerFilter ? { owner_user_id: ownerFilter } : {};
+      if (closedWindow) params.closed_days = closedWindow;
       const res = await crmApi.listOpportunities(params);
       setOpportunities(res.data.data || []);
     } catch {
@@ -501,7 +506,7 @@ export default function PipelinePage() {
     } finally {
       setLoading(false);
     }
-  }, [ownerFilter]);
+  }, [ownerFilter, closedWindow]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -568,6 +573,7 @@ export default function PipelinePage() {
   // (abiertas + que ya avanzaron más allá), para mostrar el "ancho" real del
   // embudo y no solo lo que hay hoy parado en cada columna. Se calcula sobre
   // el histórico visible (todas las oportunidades cargadas), no solo abiertas.
+  // Las ganadas cuentan solo dentro de la ventana de "Cerradas" elegida.
   const funnelData = useMemo(() => {
     const openStages = stages.filter(s => s.stage_type === 'open');
     const wonCount = filteredOpportunities.filter(o => stageTypeByKey[o.stage] === 'won').length;
@@ -842,6 +848,14 @@ export default function PipelinePage() {
             }`}>
             <Flame size={12} className={priorityOnly ? 'text-white' : 'text-accent'} /> Solo prioritarias
           </button>
+          <select value={closedWindow} onChange={e => setClosedWindow(e.target.value)}
+            title="Ganadas y perdidas a mostrar (las abiertas se ven siempre)"
+            className="border border-gray-200 rounded-lg px-2 py-1 text-xs text-gray-600">
+            <option value="30">Cerradas: últimos 30 días</option>
+            <option value="90">Cerradas: últimos 90 días</option>
+            <option value="365">Cerradas: último año</option>
+            <option value="">Cerradas: todas</option>
+          </select>
           <div className="flex items-center gap-1.5 flex-wrap text-xs text-gray-500">
             <span>Creadas</span>
             <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}

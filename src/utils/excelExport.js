@@ -809,3 +809,102 @@ export const exportPurchasesToExcel = async (purchases, filename = 'compras') =>
   const timestamp = new Date().toISOString().split('T')[0];
   await downloadWorkbook(wb, `${filename}_${timestamp}.xlsx`);
 };
+
+// ========================================
+// LÍNEAS DE UNA COMPRA (Nueva compra → Importar desde Excel)
+// ========================================
+
+// Encabezados de la plantilla. El código se busca como SKU, código de barras
+// o código del proveedor (POST /inventory/purchases/resolve-products).
+export const PURCHASE_LINES_COLUMNS = {
+  code: 'Código*',
+  quantity: 'Cantidad*',
+  unitCost: 'Costo Unitario*',
+  tax: 'IVA (%)',
+  discount: 'Descuento (%)',
+  margin: 'Margen (%)',
+};
+
+export const downloadPurchaseLinesTemplate = buildOpeningBalanceTemplate(
+  'Lineas compra',
+  'plantilla_lineas_compra.xlsx',
+  {
+    [PURCHASE_LINES_COLUMNS.code]: 'PROD001',
+    [PURCHASE_LINES_COLUMNS.quantity]: 10,
+    [PURCHASE_LINES_COLUMNS.unitCost]: 12000,
+    [PURCHASE_LINES_COLUMNS.tax]: 19,
+    [PURCHASE_LINES_COLUMNS.discount]: '',
+    [PURCHASE_LINES_COLUMNS.margin]: 35,
+  },
+  [
+    '',
+    '📋 INSTRUCCIONES — LÍNEAS DE UNA COMPRA',
+    '',
+    '1️⃣ El producto debe existir en Pitbox. El Código puede ser el SKU, el código de barras',
+    '   o el código con que el proveedor elegido identifica el producto.',
+    '2️⃣ Obligatorios: Código, Cantidad y Costo Unitario (sin IVA).',
+    '3️⃣ IVA (%) vacío → el IVA del producto. Descuento (%) vacío → 0.',
+    '4️⃣ Margen (%) vacío → el producto conserva su margen. Si lo escribes, al RECIBIR la compra',
+    '   pasa a ser el margen del producto y el precio de venta se calcula con él.',
+    '5️⃣ Los números no deben llevar símbolos ($, %, puntos de miles).',
+    '6️⃣ Si un código está repetido, se usa la última fila.',
+  ]
+);
+
+// Número de una celda del Excel: acepta 12000, "12000", "12.000,5" o "12,000.5".
+const excelNumber = (v) => {
+  if (v === null || v === undefined || v === '') return null;
+  if (typeof v === 'number') return v;
+  if (typeof v === 'object' && v.result !== undefined) return excelNumber(v.result);
+  let s = String(v).trim().replace(/[$%\s]/g, '');
+  if (!s) return null;
+  if (s.includes(',') && s.includes('.')) {
+    s = s.lastIndexOf(',') > s.lastIndexOf('.') ? s.replace(/\./g, '').replace(',', '.') : s.replace(/,/g, '');
+  } else if (s.includes(',')) {
+    s = s.replace(',', '.');
+  }
+  const n = Number(s);
+  return Number.isFinite(n) ? n : NaN;
+};
+
+const excelText = (v) => {
+  if (v === null || v === undefined) return '';
+  if (typeof v === 'object') {
+    if (Array.isArray(v.richText)) return v.richText.map((t) => t.text).join('').trim();
+    if (v.text !== undefined) return String(v.text).trim();
+    if (v.result !== undefined) return String(v.result).trim();
+  }
+  return String(v).trim();
+};
+
+/**
+ * Lee el Excel de líneas de compra. Devuelve { rows, errors }:
+ * rows: [{ row, code, quantity, unit_cost, tax_rate|null, discount_percentage, profit_margin_pct|null }]
+ * errors: [{ row, message }] (filas con datos inválidos; no se incluyen en rows).
+ */
+export const parsePurchaseLinesFile = async (file) => {
+  const data = await parseImportedFile(file);
+  const C = PURCHASE_LINES_COLUMNS;
+  const rows = [];
+  const errors = [];
+  data.forEach((obj, i) => {
+    const row = i + 2; // fila 1 = encabezados
+    const code = excelText(obj[C.code]);
+    const quantity = excelNumber(obj[C.quantity]);
+    const unitCost = excelNumber(obj[C.unitCost]);
+    const tax = excelNumber(obj[C.tax]);
+    const discount = excelNumber(obj[C.discount]);
+    const margin = excelNumber(obj[C.margin]);
+    if (!code && quantity === null && unitCost === null) return; // fila vacía
+    const problems = [];
+    if (!code) problems.push('falta el Código');
+    if (!(quantity > 0)) problems.push('la Cantidad debe ser mayor a 0');
+    if (!(unitCost >= 0) || unitCost === null) problems.push('falta el Costo Unitario');
+    if (Number.isNaN(tax) || (tax !== null && (tax < 0 || tax > 100))) problems.push('IVA inválido');
+    if (Number.isNaN(discount) || (discount !== null && (discount < 0 || discount > 100))) problems.push('Descuento inválido');
+    if (Number.isNaN(margin) || (margin !== null && margin < 0)) problems.push('Margen inválido');
+    if (problems.length) { errors.push({ row, code, message: problems.join(', ') }); return; }
+    rows.push({ row, code, quantity, unit_cost: unitCost, tax_rate: tax, discount_percentage: discount || 0, profit_margin_pct: margin });
+  });
+  return { rows, errors };
+};

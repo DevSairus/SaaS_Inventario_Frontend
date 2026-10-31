@@ -1,9 +1,11 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { Receipt, Loader2, RefreshCw, ChevronRight, Filter } from 'lucide-react';
 import Layout from '../../components/layout/Layout';
 import { ensambladoraLiquidacionesApi } from '../../api/ensambladora';
+import Pagination from '../../components/common/Pagination';
+import usePaginatedList from '../../hooks/usePaginatedList';
 import { formatCurrency } from '../../utils/formatters';
 
 const fmtDate = (d) => {
@@ -36,27 +38,21 @@ const FILTROS = [
 // una consulta en vivo al Core (ver ensambladoraLiquidacionesApi.list /
 // GET /ensambladora/liquidaciones, pass-through puro).
 export default function LiquidacionesPage() {
-  const [liquidaciones, setLiquidaciones] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [filtro, setFiltro] = useState('todas');
 
-  const load = useCallback(async ({ silent = false } = {}) => {
-    silent ? setRefreshing(true) : setLoading(true);
-    try {
-      const res = await ensambladoraLiquidacionesApi.list();
-      setLiquidaciones(res.data?.data ?? []);
-    } catch (err) {
-      toast.error('No se pudieron cargar las liquidaciones');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, []);
-
-  useEffect(() => { load(); }, [load]);
-
-  const visibles = filtro === 'todas' ? liquidaciones : liquidaciones.filter((l) => l.estado === filtro);
+  // El Core devuelve todo; el backend filtra por estado y pagina.
+  const list = usePaginatedList(
+    (params, opts) => ensambladoraLiquidacionesApi.list(params, opts),
+    {
+      filters: { estado: filtro !== 'todas' ? filtro : '' },
+      onError: () => toast.error('No se pudieron cargar las liquidaciones'),
+    },
+  );
+  const visibles = list.rows;
+  const liquidacionesTotal = list.meta?.total_sin_filtro ?? list.total;
+  // Primera carga = spinner; las siguientes conservan la lista (botón girando).
+  const loading = list.loading && visibles.length === 0;
+  const refreshing = list.loading && visibles.length > 0;
 
   return (
     <Layout>
@@ -67,7 +63,7 @@ export default function LiquidacionesPage() {
             <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Liquidaciones</h1>
           </div>
           <button
-            onClick={() => load({ silent: true })}
+            onClick={list.reload}
             disabled={refreshing}
             title="Actualizar"
             className="p-2 rounded-lg border border-gray-200 dark:border-white/10 text-gray-500 hover:text-primary-600 disabled:opacity-40"
@@ -106,7 +102,7 @@ export default function LiquidacionesPage() {
           <div className="text-center py-16 border border-dashed border-gray-300 dark:border-white/10 rounded-xl">
             <Receipt className="w-10 h-10 mx-auto text-gray-300 mb-3" />
             <p className="text-sm font-medium text-gray-700 dark:text-gray-200">
-              {liquidaciones.length === 0 ? 'Todavía no hay liquidaciones' : 'No hay liquidaciones con ese estado'}
+              {liquidacionesTotal === 0 ? 'Todavía no hay liquidaciones' : 'No hay liquidaciones con ese estado'}
             </p>
           </div>
         )}
@@ -141,6 +137,8 @@ export default function LiquidacionesPage() {
             })}
           </ul>
         )}
+
+        <Pagination {...list.paginationProps} className="mt-4" />
       </div>
     </Layout>
   );

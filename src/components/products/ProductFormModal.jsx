@@ -525,22 +525,48 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
                 </h3>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Costo Promedio
-                  <span className="ml-2 text-xs text-blue-600 font-normal">Ingresa el costo SIN IVA</span>
-                </label>
-                <NumericInput
-                  name="average_cost"
-                  value={formData.average_cost}
-                  onChange={handleChange}
-                  decimals={2}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100"
-                  placeholder="0,00"
-                />
-                <p className="mt-1 text-xs text-gray-500 dark:text-gray-500">Ejemplo: Si compras a $11,900 (con IVA 19%), ingresa $10,000</p>
-                <p className="mt-0.5 text-xs text-gray-400 dark:text-gray-500">Se actualiza automáticamente con las compras</p>
-              </div>
+              {/* El costo de un producto existente solo cambia con entradas de
+                  inventario (compras, ajuste rápido de entrada): el backend
+                  descarta average_cost al editar para no mover el valor del
+                  inventario sin kardex ni asiento. Por eso aquí es solo lectura. */}
+              {product ? (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Costo</label>
+                  <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-2 text-sm dark:border-white/10 dark:bg-white/5">
+                    <div className="flex justify-between gap-2">
+                      <span className="text-gray-500">Costo promedio</span>
+                      <span className="font-medium text-gray-900 dark:text-gray-100">${formatNumber(parseFloat(product.average_cost) || 0, 2)}</span>
+                    </div>
+                    <div className="flex justify-between gap-2">
+                      <span className="text-gray-500">Último costo de compra</span>
+                      <span className="font-medium text-gray-900 dark:text-gray-100">
+                        {lastPurchaseCost > 0 ? `$${formatNumber(lastPurchaseCost, 2)}` : '—'}
+                      </span>
+                    </div>
+                  </div>
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-500">
+                    No se edita aquí: se actualiza con las compras y las entradas de inventario con costo
+                    (doble clic en el stock del producto, en la lista de Productos, para un ajuste rápido).
+                  </p>
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Costo Promedio
+                    <span className="ml-2 text-xs text-blue-600 font-normal">Ingresa el costo SIN IVA</span>
+                  </label>
+                  <NumericInput
+                    name="average_cost"
+                    value={formData.average_cost}
+                    onChange={handleChange}
+                    decimals={2}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100"
+                    placeholder="0,00"
+                  />
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-500">Ejemplo: Si compras a $11,900 (con IVA 19%), ingresa $10,000</p>
+                  <p className="mt-0.5 text-xs text-gray-400 dark:text-gray-500">Después solo cambia con las compras y las entradas de inventario</p>
+                </div>
+              )}
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">

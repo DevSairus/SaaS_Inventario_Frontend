@@ -11,6 +11,8 @@ import {
   DocumentTextIcon,
   InboxIcon,
 } from '@heroicons/react/24/outline';
+import Pagination from '../../components/common/Pagination';
+import useUrlPageSync from '../../hooks/useUrlPageSync';
 
 const STATUS_COLORS = {
   accepted: 'bg-green-100 text-green-800',
@@ -35,6 +37,7 @@ export default function DianEventsPage() {
   const LIMIT = 20;
 
   useEffect(() => { load(); }, [offset]);
+  useUrlPageSync(Math.floor(offset / LIMIT) + 1, (p) => setOffset((p - 1) * LIMIT));
 
   async function load() {
     setLoading(true);
@@ -126,23 +129,13 @@ export default function DianEventsPage() {
       </div>
 
       {/* Paginación */}
-      {total > LIMIT && (
-        <div className="flex items-center justify-between text-sm text-gray-600">
-          <span>{total} eventos en total</span>
-          <div className="flex gap-2">
-            <button disabled={offset === 0}
-              onClick={() => setOffset(Math.max(0, offset - LIMIT))}
-              className="px-3 py-1 border rounded disabled:opacity-40 hover:bg-gray-50">
-              ← Anterior
-            </button>
-            <button disabled={offset + LIMIT >= total}
-              onClick={() => setOffset(offset + LIMIT)}
-              className="px-3 py-1 border rounded disabled:opacity-40 hover:bg-gray-50">
-              Siguiente →
-            </button>
-          </div>
-        </div>
-      )}
+      <Pagination
+        currentPage={Math.floor(offset / LIMIT) + 1}
+        totalPages={Math.ceil(total / LIMIT)}
+        totalItems={total}
+        pageSize={LIMIT}
+        onPageChange={(p) => setOffset((p - 1) * LIMIT)}
+      />
     </div>
     </Layout>
   );

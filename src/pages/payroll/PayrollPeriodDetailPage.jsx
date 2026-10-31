@@ -20,6 +20,7 @@ import { employeesAPI } from '../../api/payroll';
 import useBranchStore from '../../store/branchStore';
 import useAuthStore from '../../store/authStore';
 import Layout from '../../components/layout/Layout';
+import fetchAllRows from '../../utils/fetchAllRows';
 import PayrollPeriodModal from '../../components/payroll/PayrollPeriodModal';
 import PayrollNovedadModal from '../../components/payroll/PayrollNovedadModal';
 import PayrollAccountingPanel from '../../components/payroll/PayrollAccountingPanel';
@@ -132,15 +133,18 @@ const PayrollPeriodDetailPage = () => {
   const loadEmployees = useCallback(async (branchId, periodType) => {
     setEmployeesLoading(true);
     try {
-      const response = await employeesAPI.getAll({
+      // Todas las páginas: es la lista de a quién se le liquida, no puede
+      // quedar cortada.
+      const rows = await fetchAllRows((page, limit) => employeesAPI.getAll({
         is_active: true,
         branch_id: branchId || undefined,
         payroll_periodicity: periodType || undefined,
-        limit: 200,
+        page,
+        limit,
         sort_by: 'first_name',
         sort_order: 'ASC',
-      });
-      setEmployees(response.data || []);
+      }).then((r) => ({ rows: r.data || [], total: r.pagination?.total })));
+      setEmployees(rows);
     } catch {
       setEmployees([]);
     } finally {

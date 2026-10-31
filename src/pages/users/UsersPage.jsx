@@ -18,6 +18,7 @@ import Button from '../../components/common/Button';
 import Loading from '../../components/common/Loading';
 import Badge from '../../components/common/Badge';
 import Pagination from '../../components/common/Pagination';
+import useUrlPageSync from '../../hooks/useUrlPageSync';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
 import Dropdown from '../../components/common/Dropdown';
 
@@ -48,6 +49,8 @@ const UsersPage = () => {
   useEffect(() => {
     doFetch();
   }, [doFetch]);
+  // Página local: pagination.currentPage del store persiste de la visita anterior
+  useUrlPageSync(page, setPage);
 
   // Redirigir si no tiene permisos (después de todos los hooks)
   useEffect(() => {

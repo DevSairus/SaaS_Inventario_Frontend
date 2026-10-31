@@ -19,6 +19,9 @@ import SupportDocumentPanel from '../../components/dian/SupportDocumentPanel';
 import BankAccountSelect from '../../components/accounting/BankAccountSelect';
 import useAuthStore from '../../store/authStore';
 import Pagination from '../../components/common/Pagination';
+import useUrlPageSync from '../../hooks/useUrlPageSync';
+import Combobox, { HighlightMatch } from '../../components/common/Combobox';
+import mergeById from '../../utils/mergeById';
 
 // Tratamiento de IVA del gasto: tarifa, exento (0 %, sí es IVA) o excluido
 // (no causa IVA). El valor 'excluido' viaja en tax_rate solo en el formulario.
@@ -99,10 +102,12 @@ const ExpensesPage = () => {
   useEffect(() => {
     loadData();
   }, [filters.category, filters.payment_status, debouncedSearch, page]);
+  useUrlPageSync(page, setPage);
 
   useEffect(() => {
-    suppliersAPI.getAll({ is_active: true, limit: 200 })
-      .then(res => setSuppliers(res.data || []))
+    // Solo para hojear; el resto lo encuentra el remoteSearch del Combobox.
+    suppliersAPI.getAll({ is_active: true, limit: 100, sort_by: 'name', sort_order: 'ASC' })
+      .then(res => setSuppliers(prev => mergeById(res.data || [], prev)))
       .catch(() => {});
   }, []);
 
@@ -253,8 +258,9 @@ const ExpensesPage = () => {
     return () => { cancelled = true; clearTimeout(timer); };
   }, [showFiscalDetail, form.supplier_id, form.category, form.subtotal, form.total_amount, form.tax_rate, ratesTouched]);
 
-  const handleSelectSupplier = (supplierId) => {
-    const supplier = suppliers.find(s => s.id === supplierId);
+  const handleSelectSupplier = (supplier) => {
+    const supplierId = supplier?.id || '';
+    if (supplier) setSuppliers(prev => mergeById(prev, [supplier]));
     setRatesTouched(false);
     setForm(f => ({
       ...f,
@@ -545,16 +551,25 @@ const ExpensesPage = () => {
                 <div className="mt-3 space-y-3 bg-gray-50 rounded-lg p-3">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Proveedor</label>
-                    <select
-                      value={form.supplier_id}
-                      onChange={e => handleSelectSupplier(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                    >
-                      <option value="">Sin proveedor (capturar datos al generar)</option>
-                      {suppliers.map(s => (
-                        <option key={s.id} value={s.id}>{s.name}{s.is_obligated_to_invoice === false ? ' — no factura' : ''}</option>
-                      ))}
-                    </select>
+                    <Combobox
+                      placeholder="Sin proveedor (capturar datos al generar) — buscar por nombre o NIT..."
+                      items={suppliers}
+                      value={form.supplier_id || null}
+                      displayValue={suppliers.find(s => s.id === form.supplier_id)?.name || ''}
+                      onSelect={handleSelectSupplier}
+                      onClear={() => handleSelectSupplier(null)}
+                      remoteSearch={(q) => suppliersAPI.search(q, { is_active: true })}
+                      getSearchText={(s) => [s.name, s.business_name, s.tax_id].filter(Boolean).join(' ')}
+                      renderItem={(s, q) => (
+                        <div>
+                          <p className="font-medium text-gray-800"><HighlightMatch text={s.name} query={q} /></p>
+                          <p className="text-xs text-gray-500">
+                            {s.tax_id && <>NIT <HighlightMatch text={s.tax_id} query={q} /></>}
+                            {s.is_obligated_to_invoice === false && ' · no factura'}
+                          </p>
+                        </div>
+                      )}
+                    />
                   </div>
 
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">

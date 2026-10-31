@@ -8,6 +8,7 @@
 // selectores de la pantalla.
 import React, { useEffect, useState } from 'react';
 import { suppliersAPI } from '../../api/suppliers';
+import fetchAllRows from '../../utils/fetchAllRows';
 
 export const FUND_TYPE_LABELS = {
   eps: 'EPS',
@@ -22,8 +23,10 @@ export const FUND_TYPE_LABELS = {
 let suppliersPromise = null;
 const loadSuppliers = () => {
   if (!suppliersPromise) {
-    suppliersPromise = suppliersAPI.getAll({ is_active: true, payroll_only: true, limit: 1000, sort_by: 'name', sort_order: 'ASC' })
-      .then((res) => res.data || [])
+    // Catálogo completo de entidades de nómina, leído por páginas (el
+    // backend topa cada página en 200).
+    suppliersPromise = fetchAllRows((page, limit) => suppliersAPI.getAll({ is_active: true, payroll_only: true, page, limit, sort_by: 'name', sort_order: 'ASC' })
+      .then((res) => ({ rows: res.data || [], total: res.pagination?.total })))
       .catch(() => {
         suppliersPromise = null;
         return [];

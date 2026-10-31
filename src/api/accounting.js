@@ -9,7 +9,7 @@ export const chartOfAccountsAPI = {
 };
 
 export const journalEntriesAPI = {
-  getAll: async (params = {}) => (await api.get('/accounting/journal-entries', { params })).data,
+  getAll: async (params = {}, config = {}) => (await api.get('/accounting/journal-entries', { params, ...config })).data,
   getById: async (id) => (await api.get(`/accounting/journal-entries/${id}`)).data,
   create: async (payload) => (await api.post('/accounting/journal-entries', payload)).data,
   update: async (id, payload) => (await api.put(`/accounting/journal-entries/${id}`, payload)).data,
@@ -70,7 +70,7 @@ export const accountingHealthAPI = {
 };
 
 export const fixedAssetsAPI = {
-  getAll: async (params = {}) => (await api.get('/accounting/fixed-assets', { params })).data,
+  getAll: async (params = {}, config = {}) => (await api.get('/accounting/fixed-assets', { params, ...config })).data,
   getById: async (id) => (await api.get(`/accounting/fixed-assets/${id}`)).data,
   getReport: async (params = {}) => (await api.get('/accounting/fixed-assets/report', { params })).data,
   create: async (payload) => (await api.post('/accounting/fixed-assets', payload)).data,
@@ -88,7 +88,7 @@ export const FIXED_ASSET_CATEGORY_LABELS = {
 };
 
 export const loansAPI = {
-  getAll: async (params = {}) => (await api.get('/accounting/loans', { params })).data,
+  getAll: async (params = {}, config = {}) => (await api.get('/accounting/loans', { params, ...config })).data,
   getById: async (id) => (await api.get(`/accounting/loans/${id}`)).data,
   getReport: async () => (await api.get('/accounting/loans/report')).data,
   create: async (payload) => (await api.post('/accounting/loans', payload)).data,

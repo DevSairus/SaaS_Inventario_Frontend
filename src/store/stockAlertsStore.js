@@ -21,7 +21,7 @@ const useStockAlertsStore = create((set, get) => ({
   pagination: {
     total: 0,
     page: 1,
-    limit: 500, // ✅ Aumentado a 500 para mostrar todas las alertas
+    limit: 50,
     pages: 0
   },
   filters: {
@@ -37,8 +37,11 @@ const useStockAlertsStore = create((set, get) => ({
   error: null,
 
   // Acciones
+  // Un filtro nuevo vuelve a la página 1 (la página vive en `pagination`,
+  // nunca en `filters`).
   setFilters: async (newFilters) => {
-    set({ filters: { ...get().filters, ...newFilters } });
+    const { page, ...rest } = newFilters || {};
+    set({ filters: { ...get().filters, ...rest }, pagination: { ...get().pagination, page: 1 } });
     // Automáticamente recargar alertas cuando cambien los filtros
     await get().fetchAlerts();
   },
@@ -46,6 +49,11 @@ const useStockAlertsStore = create((set, get) => ({
   setPage: async (page) => {
     set({ pagination: { ...get().pagination, page } });
     // Automáticamente recargar alertas cuando cambie la página
+    await get().fetchAlerts();
+  },
+
+  setPageSize: async (limit) => {
+    set({ pagination: { ...get().pagination, limit, page: 1 } });
     await get().fetchAlerts();
   },
 

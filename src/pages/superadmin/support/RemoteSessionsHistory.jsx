@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Monitor, Clock, CheckCircle, XCircle, AlertCircle, Loader2, Filter, X } from 'lucide-react';
 import { getRemoteSessions } from '../../../api/superadminSupport';
+import Pagination from '../../../components/common/Pagination';
+import useUrlPageSync from '../../../hooks/useUrlPageSync';
 
 const STATUS_OPTIONS = [
   { value: '', label: 'Todos' },
@@ -26,6 +28,7 @@ export default function RemoteSessionsHistory() {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState({
     status: '',
@@ -50,12 +53,14 @@ export default function RemoteSessionsHistory() {
         if (data.success) {
           setSessions(data.data);
           setTotalPages(data.pages);
+          setTotal(data.total || 0);
         }
       } catch { /* silent */ }
       setLoading(false);
     };
     load();
   }, [page, filters]);
+  useUrlPageSync(page, setPage);
 
   const handleFilterChange = (key, value) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
@@ -228,25 +233,14 @@ export default function RemoteSessionsHistory() {
             </table>
           </div>
 
-          {totalPages > 1 && (
-            <div className="flex items-center justify-center gap-2 mt-4">
-              <button
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page === 1}
-                className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm disabled:opacity-50 dark:bg-graphite-2 dark:border-white/10 dark:text-gray-200"
-              >
-                Anterior
-              </button>
-              <span className="text-sm text-gray-500 dark:text-gray-500">Página {page} de {totalPages}</span>
-              <button
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={page === totalPages}
-                className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm disabled:opacity-50 dark:bg-graphite-2 dark:border-white/10 dark:text-gray-200"
-              >
-                Siguiente
-              </button>
-            </div>
-          )}
+          <Pagination
+            className="mt-4"
+            currentPage={page}
+            totalPages={totalPages}
+            totalItems={total}
+            pageSize={20}
+            onPageChange={setPage}
+          />
         </>
       )}
     </div>

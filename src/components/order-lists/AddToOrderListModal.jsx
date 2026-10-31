@@ -53,7 +53,8 @@ export default function AddToOrderListModal({ isOpen, onClose, product, source =
 
   const loadAllSuppliers = () => {
     if (allSuppliers) return;
-    suppliersAPI.getAll({ is_active: true, limit: 10000, sort_by: 'name', sort_order: 'ASC' })
+    // Solo para hojear; el resto lo encuentra el remoteSearch del Combobox.
+    suppliersAPI.getAll({ is_active: true, limit: 100, sort_by: 'name', sort_order: 'ASC' })
       .then((res) => setAllSuppliers(res.data || []))
       .catch(() => toast.error('Error al cargar proveedores'));
   };
@@ -128,6 +129,7 @@ export default function AddToOrderListModal({ isOpen, onClose, product, source =
                   displayValue={supplierLabel(otherSupplier)}
                   onSelect={setOtherSupplier}
                   onClear={() => setOtherSupplier(null)}
+                  remoteSearch={(q) => suppliersAPI.search(q, { is_active: true })}
                   getSearchText={(s) => [s.name, s.business_name, s.tax_id].filter(Boolean).join(' ')}
                   renderItem={(s, q) => (
                     <div>

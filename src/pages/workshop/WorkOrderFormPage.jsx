@@ -14,6 +14,7 @@ import RuntConsultaModal from '../../components/workshop/RuntConsultaModal';
 import NumericInput from '../../components/inputs/NumericInput';
 import DraftRecoveryBanner from '../../components/common/DraftRecoveryBanner';
 import useFormDraft from '../../hooks/useFormDraft';
+import { notifyReceptionResult } from '../../components/workshop/receptionNotice';
 
 const inputCls = "w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white";
 
@@ -112,8 +113,9 @@ export default function WorkOrderFormPage() {
     : '');
 
   useEffect(() => {
-    vehiclesApi.list({ limit: 500 }).then(r => setVehicles(r.data.data || [])).catch(() => {});
-    axios.get('/customers?limit=500').then(r => setCustomers(r.data.data || [])).catch(() => {});
+    // Solo para hojear al abrir; el resto lo encuentra remoteSearch del Combobox.
+    vehiclesApi.list({ limit: 50 }).then(r => setVehicles(r.data.data || [])).catch(() => {});
+    axios.get('/customers?limit=50').then(r => setCustomers(r.data.data || [])).catch(() => {});
     axios.get('/users?limit=100&role=technician').then(r => {
       const list = r.data.data?.users || r.data.users || r.data.data || [];
       setTechnicians(Array.isArray(list) ? list.filter(t => t.role === 'technician' && t.is_active !== false) : []);
@@ -331,30 +333,6 @@ export default function WorkOrderFormPage() {
       toast.success(extras
         ? `Datos RUNT cargados — incluye ${extras}. Revisa y guarda`
         : 'Datos cargados desde el RUNT — revisa y guarda');
-    }
-  };
-
-  // Resultado del aviso automático de recepción (Configuración → Datos
-  // personales → "Avisar al cliente al recibir el vehículo"). Si WhatsApp no
-  // salió por Cloud API, se ofrece el wa.me para enviarlo desde el celular.
-  const notifyReceptionResult = (notice) => {
-    if (!notice) return;
-    const sentBy = [notice.whatsapp?.sent && 'WhatsApp', notice.email?.sent && 'correo'].filter(Boolean);
-    if (sentBy.length) toast.success(`Aviso de recepción enviado al cliente por ${sentBy.join(' y ')}`);
-    const waUrl = notice.whatsapp?.whatsapp_url;
-    if (waUrl) {
-      toast((t) => (
-        <span className="flex items-center gap-3 text-sm">
-          Aviso de recepción listo para WhatsApp
-          <button
-            type="button"
-            className="px-2 py-1 rounded bg-green-600 text-white text-xs font-medium"
-            onClick={() => { window.open(waUrl, '_blank'); toast.dismiss(t.id); }}
-          >
-            Enviar
-          </button>
-        </span>
-      ), { duration: 20000 });
     }
   };
 

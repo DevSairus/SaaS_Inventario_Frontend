@@ -714,7 +714,8 @@ export default function WorkOrderDetailPage() {
     axios.get('/inventory/warehouses').then(r => {
       setWarehouses(r.data.data || []);
     }).catch(() => {});
-    axios.get('/customers?limit=500').then(r => {
+    // Solo para hojear al abrir; el resto lo encuentra remoteSearch del Combobox.
+    axios.get('/customers?limit=50').then(r => {
       setCustomers(r.data.data || []);
     }).catch(() => {});
   }, []);
@@ -1123,6 +1124,19 @@ export default function WorkOrderDetailPage() {
                   )}
                 </div>
               </div>
+              {/* Vehículo creado con solo la placa (ej. desde la OT rápida):
+                  aviso no bloqueante para completar la ficha. El editor es el
+                  de la ficha del vehículo (?edit=1 lo abre en modo edición). */}
+              {order.vehicle_id && (!order.vehicle?.brand || !order.vehicle?.model) && (
+                <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs bg-amber-50 border border-amber-200 text-amber-800 rounded-lg px-3 py-2 dark:bg-amber-900/30 dark:border-amber-800/40 dark:text-amber-300">
+                  <span>Faltan datos del vehículo (marca, modelo…).</span>
+                  <button
+                    onClick={() => navigate(`/workshop/vehicles/${order.vehicle_id}?edit=1`)}
+                    className="font-semibold underline hover:text-amber-900 dark:hover:text-amber-200">
+                    Completar datos del vehículo
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Trabajo */}

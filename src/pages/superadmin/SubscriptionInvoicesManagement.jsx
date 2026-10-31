@@ -5,21 +5,28 @@ import Card from '@components/common/Card';
 import Button from '@components/common/Button';
 import Badge from '@components/common/Badge';
 import Loading from '@components/common/Loading';
+import Pagination from '@components/common/Pagination';
 
 const SubscriptionInvoicesManagement = () => {
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  // Paginado en el servidor; los contadores vienen calculados sobre todo.
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState(null);
+  const [stats, setStats] = useState({ total: 0, paid: 0, pending: 0, total_amount: 0 });
 
   useEffect(() => {
     fetchInvoices();
-  }, []);
+  }, [page]);
 
   const fetchInvoices = async () => {
     try {
       setLoading(true);
-      const { data } = await api.get('/superadmin/subscription-invoices');
+      const { data } = await api.get('/superadmin/subscription-invoices', { params: { page, limit: 50 } });
       setInvoices(data.invoices || []);
+      setPagination(data.pagination || null);
+      if (data.stats) setStats(data.stats);
       setError(null);
     } catch (err) {
       setError('Error al cargar facturas');
@@ -77,7 +84,7 @@ const SubscriptionInvoicesManagement = () => {
           <div className="text-center">
             <p className="text-sm text-gray-600">Total</p>
             <p className="text-3xl font-bold text-gray-900">
-              {invoices.length}
+              {stats.total}
             </p>
           </div>
         </Card>
@@ -85,7 +92,7 @@ const SubscriptionInvoicesManagement = () => {
           <div className="text-center">
             <p className="text-sm text-gray-600">Pagadas</p>
             <p className="text-3xl font-bold text-green-600">
-              {invoices.filter((i) => i.status === 'paid').length}
+              {stats.paid}
             </p>
           </div>
         </Card>
@@ -93,7 +100,7 @@ const SubscriptionInvoicesManagement = () => {
           <div className="text-center">
             <p className="text-sm text-gray-600">Pendientes</p>
             <p className="text-3xl font-bold text-orange-600">
-              {invoices.filter((i) => i.status === 'pending').length}
+              {stats.pending}
             </p>
           </div>
         </Card>
@@ -102,9 +109,7 @@ const SubscriptionInvoicesManagement = () => {
             <p className="text-sm text-gray-600">Monto Total</p>
             <p className="text-2xl font-bold text-gray-900">
               $
-              {invoices
-                .reduce((sum, i) => sum + (i.amount || 0), 0)
-                .toLocaleString('es-CO')}
+              {Number(stats.total_amount || 0).toLocaleString('es-CO')}
             </p>
           </div>
         </Card>
@@ -189,6 +194,17 @@ const SubscriptionInvoicesManagement = () => {
             </tbody>
           </table>
         </div>
+        {pagination && (
+          <div className="px-4 py-3 border-t border-gray-200 dark:border-white/10">
+            <Pagination
+              currentPage={page}
+              totalPages={pagination.pages}
+              onPageChange={setPage}
+              totalItems={pagination.total}
+              pageSize={pagination.limit}
+            />
+          </div>
+        )}
       </Card>
     </div>
   );

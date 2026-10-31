@@ -20,7 +20,7 @@ const usePayableAlertsStore = create((set, get) => ({
   pagination: {
     total: 0,
     page: 1,
-    limit: 500,
+    limit: 50,
     pages: 0
   },
   filters: {
@@ -34,13 +34,21 @@ const usePayableAlertsStore = create((set, get) => ({
   error: null,
 
   // Acciones
+  // Un filtro nuevo vuelve a la página 1 (la página vive en `pagination`,
+  // nunca en `filters`).
   setFilters: async (newFilters) => {
-    set({ filters: { ...get().filters, ...newFilters } });
+    const { page, ...rest } = newFilters || {};
+    set({ filters: { ...get().filters, ...rest }, pagination: { ...get().pagination, page: 1 } });
     await get().fetchAlerts();
   },
 
   setPage: async (page) => {
     set({ pagination: { ...get().pagination, page } });
+    await get().fetchAlerts();
+  },
+
+  setPageSize: async (limit) => {
+    set({ pagination: { ...get().pagination, limit, page: 1 } });
     await get().fetchAlerts();
   },
 

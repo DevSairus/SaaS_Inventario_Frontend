@@ -13,15 +13,18 @@
  *   - Se incorporan funciones que no estaban en el landing anterior:
  *     seguimiento público de OT sin login, consulta RUNT, liquidación de
  *     comisiones e importación de facturas XML de proveedores
- *   - SPA con navegación scroll-spy, carrusel de capturas, tabs de módulos,
+ *   - SPA con navegación scroll-spy, demo interactivo por módulos, tabs de módulos,
  *     contadores animados y modal de registro con validación de NIT
  *     (misma lógica de negocio y rutas que la versión anterior)
  */
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import NexaIcon from '../components/common/NexaIcon';
+
+/* Demo interactivo ("Mira cómo funciona"): carga diferida, fuera del bundle inicial. */
+const DemoSection = lazy(() => import('./landing/demo/DemoSection'));
 
 const CONTACT_EMAIL = 'info@esc-datacore.com';
 
@@ -241,334 +244,10 @@ function ScreenTaller() {
   );
 }
 
-function ScreenInventario() {
-  return (
-    <svg viewBox="0 0 560 340" style={{ width: '100%', height: 'auto', borderRadius: 12 }}>
-      <rect width="560" height="340" fill="#101114"/>
-      <rect width="160" height="340" fill="#0A0A0C"/>
-      {[['Dashboard',52,false],['Inventario',84,true],['Transferencias',116,false]].map(([lbl,y,act]) => (
-        <g key={lbl}>
-          <rect x="12" y={y} width="136" height="26" rx="6" fill={act?C.accent:'transparent'}/>
-          <text x="28" y={y+17} fill={act?'#fff':'#7A7C82'} fontSize="11" fontFamily="system-ui">{lbl}</text>
-        </g>
-      ))}
-      <text x="180" y="28" fill="#F3F1EA" fontSize="16" fontWeight="700" fontFamily="system-ui">Inventario multi-bodega</text>
-      <rect x="180" y="42" width="360" height="26" rx="6" fill="#1B1C20" stroke="#2A2B30" strokeWidth="1"/>
-      <text x="192" y="59" fill="#5C5E64" fontSize="10" fontFamily="system-ui">Buscar por SKU o nombre...</text>
-      <rect x="180" y="82" width="360" height="22" fill="#0A0A0C"/>
-      {['SKU','PRODUCTO','PRINCIPAL','SUCURSAL SUR'].map((h,i)=>(
-        <text key={h} x={[188,238,398,470][i]} y="97" fill="#5C5E64" fontSize="8" fontWeight="700" fontFamily="system-ui">{h}</text>
-      ))}
-      {[
-        ['FA-220','Filtro de aceite',34,12,C.signal],
-        ['PF-88','Pastillas de freno',6,2,C.caution],
-        ['BJ-14','Batería 12V 45A',9,5,C.signal],
-        ['LL-500','Llanta 195/65 R15',18,10,C.signal],
-        ['CR-77','Correa de distribución',3,0,C.accent],
-        ['BU-09','Bujía NGK',52,30,C.signal],
-      ].map(([sku,name,a,b,c],i)=>(
-        <g key={i}>
-          <rect x="180" y={104+i*24} width="360" height="23" rx="3" fill={i%2?'#161719':'#101114'}/>
-          <text x="188" y={120+i*24} fill={C.accentL} fontSize="9" fontFamily="system-ui">{sku}</text>
-          <text x="238" y={120+i*24} fill="#CBD5E1" fontSize="9" fontFamily="system-ui">{name}</text>
-          <text x="398" y={120+i*24} fill={a<8?C.caution:'#8B8D94'} fontSize="9" fontFamily="system-ui">{a} und</text>
-          <text x="470" y={120+i*24} fill={b<5?C.caution:'#8B8D94'} fontSize="9" fontFamily="system-ui">{b} und</text>
-        </g>
-      ))}
-    </svg>
-  );
-}
-
-function ScreenFacturacion() {
-  return (
-    <svg viewBox="0 0 560 340" style={{ width: '100%', height: 'auto', borderRadius: 12 }}>
-      <rect width="560" height="340" fill="#101114"/>
-      <rect width="160" height="340" fill="#0A0A0C"/>
-      {[['Ventas',52,false],['Facturación DIAN',84,true],['Clientes',116,false]].map(([lbl,y,act]) => (
-        <g key={lbl}>
-          <rect x="12" y={y} width="136" height="26" rx="6" fill={act?C.accent:'transparent'}/>
-          <text x="28" y={y+17} fill={act?'#fff':'#7A7C82'} fontSize="10.5" fontFamily="system-ui">{lbl}</text>
-        </g>
-      ))}
-      <text x="180" y="28" fill="#F3F1EA" fontSize="16" fontWeight="700" fontFamily="system-ui">Facturación electrónica</text>
-      {[[180,40,'Emitidas hoy','128',C.signalL],[302,40,'Aceptadas DIAN','126',C.signal],[424,40,'Con novedad','2',C.caution]].map(([x,y,l,v,c])=>(
-        <g key={l}>
-          <rect x={x} y={y} width="116" height="50" rx="8" fill="#1B1C20" stroke="#2A2B30" strokeWidth="1"/>
-          <text x={x+10} y={y+16} fill="#7A7C82" fontSize="8" fontFamily="system-ui">{l}</text>
-          <text x={x+10} y={y+38} fill={c} fontSize="22" fontWeight="700" fontFamily="system-ui">{v}</text>
-        </g>
-      ))}
-      <rect x="180" y="100" width="360" height="22" fill="#0A0A0C"/>
-      {['FACTURA','CLIENTE','TOTAL','DIAN'].map((h,i)=>(
-        <text key={h} x={[188,258,398,478][i]} y="115" fill="#5C5E64" fontSize="8" fontWeight="700" fontFamily="system-ui">{h}</text>
-      ))}
-      {[
-        ['FES-1128','Taller Rápido S.A.S.','$284.500','Aceptada',C.signal],
-        ['FES-1127','Ana María Ríos','$96.000','Aceptada',C.signal],
-        ['FES-1126','Repuestos del Sur','$1.240.000','Aceptada',C.signal],
-        ['FES-1125','Juan Camilo Rendón','$58.900','En validación',C.caution],
-        ['FES-1124','Distribuidora Andina','$742.300','Aceptada',C.signal],
-      ].map(([n,cli,total,e,c],i)=>(
-        <g key={i}>
-          <rect x="180" y={122+i*27} width="360" height="26" rx="3" fill={i%2?'#161719':'#101114'}/>
-          <text x="188" y={139+i*27} fill={C.accentL} fontSize="9" fontFamily="system-ui">{n}</text>
-          <text x="258" y={139+i*27} fill="#8B8D94" fontSize="9" fontFamily="system-ui">{cli}</text>
-          <text x="398" y={139+i*27} fill="#CBD5E1" fontSize="9" fontFamily="system-ui">{total}</text>
-          <rect x="478" y={130+i*27} width="70" height="13" rx="6" fill={c+'22'}/>
-          <text x="513" y={140+i*27} fill={c} fontSize="8" fontWeight="600" textAnchor="middle" fontFamily="system-ui">{e}</text>
-        </g>
-      ))}
-    </svg>
-  );
-}
-
-function ScreenContabilidad() {
-  return (
-    <svg viewBox="0 0 560 340" style={{ width: '100%', height: 'auto', borderRadius: 12 }}>
-      <rect width="560" height="340" fill="#101114"/>
-      <rect width="160" height="340" fill="#0A0A0C"/>
-      {[['Plan de cuentas',52,false],['Contabilidad',84,true],['Reportes',116,false]].map(([lbl,y,act]) => (
-        <g key={lbl}>
-          <rect x="12" y={y} width="136" height="26" rx="6" fill={act?C.accent:'transparent'}/>
-          <text x="28" y={y+17} fill={act?'#fff':'#7A7C82'} fontSize="10.5" fontFamily="system-ui">{lbl}</text>
-        </g>
-      ))}
-      <text x="180" y="28" fill="#F3F1EA" fontSize="16" fontWeight="700" fontFamily="system-ui">Estados financieros</text>
-      {[[180,40,'Activos','$182.4M',C.signalL],[302,40,'Pasivos','$64.1M',C.caution],[424,40,'Patrimonio','$118.3M',C.accentL]].map(([x,y,l,v,c])=>(
-        <g key={l}>
-          <rect x={x} y={y} width="116" height="50" rx="8" fill="#1B1C20" stroke="#2A2B30" strokeWidth="1"/>
-          <text x={x+10} y={y+16} fill="#7A7C82" fontSize="8" fontFamily="system-ui">{l}</text>
-          <text x={x+10} y={y+38} fill={c} fontSize="16" fontWeight="700" fontFamily="system-ui">{v}</text>
-        </g>
-      ))}
-      <rect x="180" y="100" width="360" height="22" fill="#0A0A0C"/>
-      {['ASIENTO','CUENTA','DÉBITO','ESTADO'].map((h,i)=>(
-        <text key={h} x={[188,258,398,478][i]} y="115" fill="#5C5E64" fontSize="8" fontWeight="700" fontFamily="system-ui">{h}</text>
-      ))}
-      {[
-        ['AS-3391','Gastos · Repuestos','$340.000','Propuesto NEXA',C.ai],
-        ['AS-3390','Ventas · Ingresos','$1.240.000','Contabilizado',C.signal],
-        ['AS-3389','Bancos','$96.000','Contabilizado',C.signal],
-        ['AS-3388','IVA por pagar','$58.900','Propuesto NEXA',C.ai],
-      ].map(([n,cta,total,e,c],i)=>(
-        <g key={i}>
-          <rect x="180" y={122+i*27} width="360" height="26" rx="3" fill={i%2?'#161719':'#101114'}/>
-          <text x="188" y={139+i*27} fill={C.accentL} fontSize="9" fontFamily="system-ui">{n}</text>
-          <text x="258" y={139+i*27} fill="#8B8D94" fontSize="9" fontFamily="system-ui">{cta}</text>
-          <text x="398" y={139+i*27} fill="#CBD5E1" fontSize="9" fontFamily="system-ui">{total}</text>
-          <rect x="470" y={130+i*27} width="78" height="13" rx="6" fill={c+'22'}/>
-          <text x="509" y={140+i*27} fill={c} fontSize="7.5" fontWeight="600" textAnchor="middle" fontFamily="system-ui">{e}</text>
-        </g>
-      ))}
-      <rect x="180" y="240" width="360" height="86" rx="8" fill="#1B1C20" stroke="#2A2B30" strokeWidth="1"/>
-      <text x="194" y="258" fill="#8B8D94" fontSize="9" fontWeight="600" fontFamily="system-ui">RESULTADO DEL MES</text>
-      {[0,1,2,3,4,5,6,7,8,9,10,11].map(i => {
-        const h = [22,30,18,34,26,40,24,44,32,38,42,36][i];
-        return <rect key={i} x={194+i*13.6} y={310-h} width="9" height={h} rx="2" fill={i===11?C.signalL:`${C.signalL}55`} />;
-      })}
-    </svg>
-  );
-}
-
-function ScreenNexa() {
-  return (
-    <svg viewBox="0 0 560 340" style={{ width: '100%', height: 'auto', borderRadius: 12 }}>
-      <rect width="560" height="340" fill="#101114"/>
-      <rect width="160" height="340" fill="#0A0A0C"/>
-      {[['Dashboard',52,false],['NEXA · IA',84,true],['Propuestas',116,false]].map(([lbl,y,act]) => (
-        <g key={lbl}>
-          <rect x="12" y={y} width="136" height="26" rx="6" fill={act?C.ai:'transparent'}/>
-          <text x="28" y={y+17} fill={act?'#fff':'#7A7C82'} fontSize="10.5" fontFamily="system-ui">{lbl}</text>
-        </g>
-      ))}
-      <text x="180" y="28" fill="#F3F1EA" fontSize="16" fontWeight="700" fontFamily="system-ui">Propuestas de NEXA</text>
-      <rect x="180" y="44" width="360" height="60" rx="10" fill="#1B1C20" stroke={C.ai+'40'} strokeWidth="1"/>
-      <text x="196" y="64" fill="#E5E3DC" fontSize="10" fontFamily="system-ui">Detecté un pago de $340.000 a Repuestos del Sur.</text>
-      <text x="196" y="80" fill="#8B8D94" fontSize="9" fontFamily="system-ui">Propongo registrar el gasto y su asiento contable.</text>
-      <rect x="196" y="88" width="70" height="12" rx="6" fill={C.ai}/>
-      <text x="231" y="97" fill="#fff" fontSize="7" fontWeight="700" textAnchor="middle" fontFamily="system-ui">APROBAR</text>
-      <rect x="274" y="88" width="70" height="12" rx="6" fill="none" stroke="#3A3B42"/>
-      <text x="309" y="97" fill="#8B8D94" fontSize="7" fontWeight="700" textAnchor="middle" fontFamily="system-ui">RECHAZAR</text>
-
-      <rect x="180" y="114" width="360" height="46" rx="10" fill="#1B1C20" stroke="#2A2B30" strokeWidth="1"/>
-      <text x="196" y="132" fill="#CBD5E1" fontSize="9.5" fontFamily="system-ui">Venta FES-1128 → asiento de ingreso generado</text>
-      <text x="196" y="146" fill="#8B8D94" fontSize="8" fontFamily="system-ui">Contabilizado automáticamente al aprobar la venta</text>
-
-      <rect x="180" y="170" width="360" height="46" rx="10" fill="#1B1C20" stroke="#2A2B30" strokeWidth="1"/>
-      <text x="196" y="188" fill="#CBD5E1" fontSize="9.5" fontFamily="system-ui">IVA por pagar del período recalculado</text>
-      <text x="196" y="202" fill="#8B8D94" fontSize="8" fontFamily="system-ui">Con base en ventas, compras y gastos del mes</text>
-
-      <rect x="180" y="228" width="360" height="98" rx="10" fill="#1B1C20" stroke="#2A2B30" strokeWidth="1"/>
-      <text x="196" y="248" fill="#8B8D94" fontSize="9" fontWeight="600" fontFamily="system-ui">NEXA VE MÁS MIENTRAS MÁS ACTIVES</text>
-      {['Inventario','Ventas','Tesorería','Contabilidad'].map((m,i)=>(
-        <g key={m}>
-          <circle cx="204" cy={264+i*17} r="3" fill={C.signalL}/>
-          <text x="216" y={268+i*17} fill="#CBD5E1" fontSize="9" fontFamily="system-ui">{m} conectado</text>
-        </g>
-      ))}
-    </svg>
-  );
-}
-
-function ScreenNomina() {
-  const rows = [
-    ['Juan Pérez','Operativo','$1.850.000','Aceptada',C.signal],
-    ['Ana Torres','Administrativo','$2.400.000','Aceptada',C.signal],
-    ['Carlos Ruiz','Técnico','$1.950.000','En validación',C.caution],
-    ['María Díaz','Técnico','$1.950.000','Aceptada',C.signal],
-  ];
-  return (
-    <svg viewBox="0 0 560 340" style={{ width: '100%', height: 'auto', borderRadius: 12 }}>
-      <rect width="560" height="340" fill="#101114"/>
-      <rect width="160" height="340" fill="#0A0A0C"/>
-      {[['Empleados',52,false],['Nómina',84,true],['Certificados',116,false]].map(([lbl,y,act]) => (
-        <g key={lbl}>
-          <rect x="12" y={y} width="136" height="26" rx="6" fill={act?C.accent:'transparent'}/>
-          <text x="28" y={y+17} fill={act?'#fff':'#7A7C82'} fontSize="11" fontFamily="system-ui">{lbl}</text>
-        </g>
-      ))}
-      <text x="180" y="28" fill="#F3F1EA" fontSize="16" fontWeight="700" fontFamily="system-ui">Periodo · Septiembre 2026</text>
-      {[[180,40,'Empleados activos','24',C.signalL],[302,40,'Devengado total','$46.2M',C.accentL],[424,40,'Comprobantes DIAN','23/24',C.signal]].map(([x,y,l,v,c])=>(
-        <g key={l}>
-          <rect x={x} y={y} width="116" height="50" rx="8" fill="#1B1C20" stroke="#2A2B30" strokeWidth="1"/>
-          <text x={x+10} y={y+16} fill="#7A7C82" fontSize="8" fontFamily="system-ui">{l}</text>
-          <text x={x+10} y={y+38} fill={c} fontSize="18" fontWeight="700" fontFamily="system-ui">{v}</text>
-        </g>
-      ))}
-      <rect x="180" y="100" width="360" height="22" fill="#0A0A0C"/>
-      {['EMPLEADO','CARGO','DEVENGADO','DIAN'].map((h,i)=>(
-        <text key={h} x={[188,308,398,478][i]} y="115" fill="#5C5E64" fontSize="8" fontWeight="700" fontFamily="system-ui">{h}</text>
-      ))}
-      {rows.map(([n,cargo,total,e,c],i)=>(
-        <g key={i}>
-          <rect x="180" y={122+i*27} width="360" height="26" rx="3" fill={i%2?'#161719':'#101114'}/>
-          <text x="188" y={139+i*27} fill="#CBD5E1" fontSize="9" fontFamily="system-ui">{n}</text>
-          <text x="308" y={139+i*27} fill="#8B8D94" fontSize="9" fontFamily="system-ui">{cargo}</text>
-          <text x="398" y={139+i*27} fill="#CBD5E1" fontSize="9" fontFamily="system-ui">{total}</text>
-          <rect x="478" y={130+i*27} width="70" height="13" rx="6" fill={c+'22'}/>
-          <text x="513" y={140+i*27} fill={c} fontSize="8" fontWeight="600" textAnchor="middle" fontFamily="system-ui">{e}</text>
-        </g>
-      ))}
-      <rect x="180" y="248" width="360" height="60" rx="8" fill="#1B1C20" stroke="#2A2B30" strokeWidth="1"/>
-      <Ico d={icons.bell} size={14} color={C.caution} />
-      <text x="204" y="266" fill="#CBD5E1" fontSize="9" fontWeight="600" fontFamily="system-ui">Alerta de vencimiento de contrato</text>
-      <text x="204" y="280" fill="#5C5E64" fontSize="8" fontFamily="system-ui">Carlos Ruiz · contrato a término fijo vence en 12 días</text>
-    </svg>
-  );
-}
-
-const SLIDES = [
-  { id: 0, label: 'Taller', desc: 'Órdenes de trabajo, comisiones y seguimiento del vehículo, con un enlace público para que el cliente vea su estado sin iniciar sesión.', Screen: ScreenTaller },
-  { id: 1, label: 'Ventas y facturación DIAN', desc: 'Cada venta se factura electrónicamente con validación DIAN integrada, sin exportar a otro sistema.', Screen: ScreenFacturacion },
-  { id: 2, label: 'Nómina electrónica', desc: 'Liquidación automática, comprobantes electrónicos ante la DIAN y alertas de vencimiento de contrato, sin hojas de cálculo.', Screen: ScreenNomina },
-  { id: 3, label: 'Contabilidad', desc: 'Plan de cuentas, asientos y estados financieros que se generan solos a partir de tu operación diaria.', Screen: ScreenContabilidad },
-  { id: 4, label: 'NEXA · IA', desc: 'Tu asistente de inteligencia artificial: propone gastos, pagos y asientos contables listos para aprobar.', Screen: ScreenNexa },
-  { id: 5, label: 'Inventario', desc: 'Control multi-bodega con transferencias trazables y alertas automáticas de stock bajo.', Screen: ScreenInventario },
-];
-
-function AppCarousel() {
-  const [current, setCurrent] = useState(0);
-  const [animDir, setAnimDir] = useState(null);
-  const [visible, setVisible] = useState(true);
-  const timerRef = useRef(null);
-
-  const goTo = useCallback((next, dir = 'right') => {
-    if (next === current) return;
-    setAnimDir(dir);
-    setVisible(false);
-    setTimeout(() => {
-      setCurrent(next);
-      setVisible(true);
-      setAnimDir(null);
-    }, 260);
-  }, [current]);
-
-  const prev = () => goTo((current - 1 + SLIDES.length) % SLIDES.length, 'left');
-  const next = () => goTo((current + 1) % SLIDES.length, 'right');
-
-  useEffect(() => {
-    timerRef.current = setInterval(() => {
-      setCurrent(c => (c + 1) % SLIDES.length);
-    }, 4500);
-    return () => clearInterval(timerRef.current);
-  }, []);
-
-  const slide = SLIDES[current];
-  const Scr = slide.Screen;
-
-  return (
-    <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 clamp(1.5rem,5vw,4rem)' }}>
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center', marginBottom: 32 }}>
-        {SLIDES.map((s, i) => (
-          <button key={i} onClick={() => { clearInterval(timerRef.current); goTo(i, i > current ? 'right' : 'left'); }}
-            style={{
-              padding: '8px 18px', borderRadius: 100, fontSize: 13, fontWeight: 600, cursor: 'pointer',
-              border: `1.5px solid ${i === current ? C.accentL : 'rgba(255,255,255,0.15)'}`,
-              background: i === current ? 'rgba(207,58,11,0.15)' : 'transparent',
-              color: i === current ? C.accentL : 'rgba(255,255,255,0.5)',
-              transition: 'all 0.2s',
-            }}>
-            {s.label}
-          </button>
-        ))}
-      </div>
-
-      <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-        <button onClick={() => { clearInterval(timerRef.current); prev(); }} style={{
-          flexShrink: 0, width: 40, height: 40, borderRadius: '50%',
-          background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)',
-          color: C.white, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}>
-          <Ico d={icons.arrowLeft} size={18} color={C.white} />
-        </button>
-
-        <div style={{ flex: 1, overflow: 'hidden', borderRadius: 16 }}>
-          <div style={{
-            opacity: visible ? 1 : 0,
-            transform: visible ? 'translateX(0)' : `translateX(${animDir === 'right' ? '32px' : '-32px'})`,
-            transition: 'opacity 0.26s ease, transform 0.26s ease',
-            border: '1px solid rgba(255,255,255,0.1)',
-            borderRadius: 16,
-            boxShadow: '0 24px 64px rgba(0,0,0,0.5)',
-            overflow: 'hidden',
-            background: '#101114',
-          }}>
-            <Scr />
-          </div>
-        </div>
-
-        <button onClick={() => { clearInterval(timerRef.current); next(); }} style={{
-          flexShrink: 0, width: 40, height: 40, borderRadius: '50%',
-          background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)',
-          color: C.white, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}>
-          <Ico d={icons.arrowRight} size={18} color={C.white} />
-        </button>
-      </div>
-
-      <div style={{ textAlign: 'center', marginTop: 24 }}>
-        <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 14, maxWidth: 560, margin: '0 auto', lineHeight: 1.6 }}>
-          {slide.desc}
-        </p>
-        <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 16 }}>
-          {SLIDES.map((_, i) => (
-            <button key={i} onClick={() => { clearInterval(timerRef.current); goTo(i, i > current ? 'right' : 'left'); }} style={{
-              width: i === current ? 24 : 8, height: 8, borderRadius: 4,
-              background: i === current ? C.accentL : 'rgba(255,255,255,0.2)',
-              border: 'none', cursor: 'pointer', padding: 0,
-              transition: 'width 0.3s, background 0.3s',
-            }} />
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 /* ─────────────────────────────────────────
    NAVBAR
 ───────────────────────────────────────── */
-const NAV_SECTIONS = ['taller', 'producto', 'nexa', 'modulos', 'sectores', 'contacto'];
+const NAV_SECTIONS = ['taller', 'producto', 'nexa', 'demo', 'modulos', 'sectores', 'contacto'];
 
 function Logomark({ size = 34 }) {
   return (
@@ -607,6 +286,7 @@ function Navbar({ onCta }) {
     { label: 'Taller', href: '#taller' },
     { label: 'Producto', href: '#producto' },
     { label: 'NEXA · IA', href: '#nexa' },
+    { label: 'Demo', href: '#demo' },
     { label: 'Módulos', href: '#modulos' },
     { label: 'Sectores', href: '#sectores' },
     { label: 'Contacto', href: '#contacto' },
@@ -1205,42 +885,6 @@ function ProductSection() {
 }
 
 /* ─────────────────────────────────────────
-   SECCIÓN: CARRUSEL DE CAPTURAS
-───────────────────────────────────────── */
-function AppShowcase() {
-  const [ref, visible] = useInView();
-  return (
-    <section style={{
-      background: `linear-gradient(165deg, ${C.inkD} 0%, #121317 100%)`,
-      padding: 'clamp(4rem,8vw,7rem) 0',
-    }}>
-      <div ref={ref} style={{
-        textAlign: 'center', marginBottom: 48,
-        padding: '0 clamp(1.5rem,5vw,4rem)',
-        opacity: visible ? 1 : 0,
-        transform: visible ? 'translateY(0)' : 'translateY(16px)',
-        transition: 'opacity 0.6s, transform 0.6s',
-      }}>
-        <div style={{ display: 'inline-block', background: 'rgba(207,58,11,0.1)', border: '1px solid rgba(207,58,11,0.25)', borderRadius: 100, padding: '6px 16px', marginBottom: 16 }}>
-          <span style={{ fontSize: 12, color: C.accentL, fontWeight: 700, letterSpacing: '0.05em' }}>El aplicativo en acción</span>
-        </div>
-        <h2 style={{
-          fontFamily: "'Space Grotesk', sans-serif",
-          fontSize: 'clamp(1.8rem,4vw,2.6rem)', fontWeight: 700, color: C.white,
-          letterSpacing: '-0.02em', lineHeight: 1.15, marginBottom: 12,
-        }}>
-          Diseñado para quienes operan<br />todos los días, sin pausas
-        </h2>
-        <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: 15, maxWidth: 540, margin: '0 auto' }}>
-          Una interfaz clara y rápida para gestionar taller, ventas, nómina, contabilidad e inventario en un solo lugar.
-        </p>
-      </div>
-      <AppCarousel />
-    </section>
-  );
-}
-
-/* ─────────────────────────────────────────
    SECCIÓN: NEXA (motor de valor — destacado)
 ───────────────────────────────────────── */
 function NexaBanner({ onCta }) {
@@ -1834,7 +1478,7 @@ function validateNIT(nit) {
   return (rem > 1 ? 11 - rem : rem) === dv;
 }
 
-function OnboardingModal({ onClose }) {
+function OnboardingModal({ onClose, interest }) {
   const [form, setForm] = useState({
     nombre: '', cargo: '', negocio: '', nit: '', email: '', telefono: '',
   });
@@ -1877,6 +1521,9 @@ function OnboardingModal({ onClose }) {
     nit:      form.nit,
     email:    form.email,
     telefono: form.telefono,
+    // Qué recorrido del demo vio el visitante (null si abrió el formulario desde otro botón)
+    moduloInteres:  interest?.module || '',
+    recorridoVisto: interest?.title || '',
   };
 
   return (
@@ -1912,6 +1559,16 @@ function OnboardingModal({ onClose }) {
         <p style={{ fontSize: 13, color: C.gray500, marginBottom: 24, lineHeight: 1.6 }}>
           Cuéntanos sobre tu negocio y te contactamos para mostrarte Pitbox en acción.
         </p>
+        {interest && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20, padding: '9px 12px', borderRadius: 10,
+            background: 'rgba(207,58,11,0.07)', border: '1px solid rgba(207,58,11,0.22)',
+            fontSize: 12.5, color: C.gray700, lineHeight: 1.45,
+          }}>
+            <Ico d={icons.check} size={14} color={C.accent} strokeWidth={2.4} />
+            <span>Viste el recorrido <b>{interest.title}</b> ({interest.module}). Te lo mostramos con tus datos.</span>
+          </div>
+        )}
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
@@ -2052,6 +1709,10 @@ const GLOBAL_CSS = `
 ───────────────────────────────────────── */
 export default function LandingPage() {
   const [showModal, setShowModal] = useState(false);
+  const [interest, setInterest] = useState(null); // recorrido del demo que vio el visitante
+
+  const openModal = () => { setInterest(null); setShowModal(true); };
+  const openFromTour = (tour) => { setInterest(tour); setShowModal(true); };
 
   useEffect(() => {
     const style = document.createElement('style');
@@ -2063,19 +1724,21 @@ export default function LandingPage() {
 
   return (
     <div style={{ margin: 0, padding: 0, overflowX: 'hidden', fontFamily: "'Inter', sans-serif" }}>
-      <Navbar onCta={() => setShowModal(true)} />
-      <Hero onCta={() => setShowModal(true)} />
+      <Navbar onCta={openModal} />
+      <Hero onCta={openModal} />
       <StatsBar />
-      <TallerSpotlight onCta={() => setShowModal(true)} />
+      <TallerSpotlight onCta={openModal} />
       <ProductSection />
-      <NexaBanner onCta={() => setShowModal(true)} />
-      <AppShowcase />
+      <NexaBanner onCta={openModal} />
+      <Suspense fallback={<section id="demo" style={{ minHeight: 560, background: C.inkD }} />}>
+        <DemoSection onCta={openFromTour} />
+      </Suspense>
       <ModulesSection />
       <ComplianceStrip />
       <Sectors />
-      <FinalCta onCta={() => setShowModal(true)} />
-      <Footer onCta={() => setShowModal(true)} />
-      {showModal && <OnboardingModal onClose={() => setShowModal(false)} />}
+      <FinalCta onCta={openModal} />
+      <Footer onCta={openModal} />
+      {showModal && <OnboardingModal interest={interest} onClose={() => setShowModal(false)} />}
     </div>
   );
 }

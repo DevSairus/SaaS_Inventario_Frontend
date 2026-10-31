@@ -11,6 +11,7 @@ import {
 } from '@heroicons/react/24/outline';
 import usePayableAlertsStore from '../../store/payableAlertsStore';
 import Layout from '../../components/layout/Layout';
+import Pagination from '../../components/common/Pagination';
 
 const PayableAlertsPage = () => {
   const navigate = useNavigate();
@@ -18,10 +19,13 @@ const PayableAlertsPage = () => {
     alerts = [],
     stats = {},
     filters = {},
+    pagination = {},
     loading,
     fetchAlerts,
     fetchStats,
     setFilters,
+    setPage,
+    setPageSize,
     resolveAlert,
     ignoreAlert,
     reactivateAlert,
@@ -277,6 +281,18 @@ const PayableAlertsPage = () => {
                   ))}
                 </tbody>
               </table>
+            </div>
+          )}
+          {pagination?.pages > 1 && (
+            <div className="px-4 py-3 border-t border-gray-200">
+              <Pagination
+                currentPage={pagination.page || 1}
+                totalPages={pagination.pages}
+                onPageChange={setPage}
+                totalItems={pagination.total || 0}
+                pageSize={pagination.limit || 50}
+                onPageSizeChange={setPageSize}
+              />
             </div>
           )}
         </div>

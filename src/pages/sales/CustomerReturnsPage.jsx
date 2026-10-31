@@ -7,6 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import { Package, Search, Eye, CheckCircle, XCircle, Plus, Trash2 } from 'lucide-react';
 import Layout from '../../components/layout/Layout';
 import Pagination from '../../components/common/Pagination';
+import useUrlPageSync from '../../hooks/useUrlPageSync';
 import { customerReturnsApi } from '../../api/customerReturns';
 import toast from 'react-hot-toast';
 import { formatCurrency } from '../../utils/formatters';
@@ -52,6 +53,7 @@ const CustomerReturnsPage = () => {
 
   useEffect(() => { setPage(1); }, [debouncedSearch, status]);
   useEffect(() => { fetchReturns(); }, [debouncedSearch, status, page]);
+  useUrlPageSync(page, setPage);
 
   const fetchReturns = async () => {
     const seq = ++loadSeq.current;

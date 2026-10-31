@@ -234,7 +234,8 @@ export default function FollowUpsPage() {
     setCreateModal(true);
     if (customers.length === 0) {
       try {
-        const res = await customersApi.getAll({ limit: 200, is_active: true });
+        // Solo para hojear; el buscador consulta el servidor al escribir.
+        const res = await customersApi.getAll({ limit: 50 });
         setCustomers(res.data.data || []);
       } catch { /* el buscador queda vacío si falla, no bloquea el modal */ }
     }

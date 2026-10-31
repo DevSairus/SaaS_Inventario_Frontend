@@ -27,6 +27,8 @@ import {
   EnvelopeIcon,
   BookOpenIcon,
 } from '@heroicons/react/24/outline';
+import Pagination from '../../components/common/Pagination';
+import useUrlPageSync from '../../hooks/useUrlPageSync';
 
 const contractLabel = (value) => CONTRACT_TYPES.find((c) => c.value === value)?.label || value;
 const periodicityLabel = (value) => PERIOD_TYPES.find((p) => p.value === value)?.label || value;
@@ -52,9 +54,13 @@ const EmployeesPage = () => {
   }, []);
 
   useEffect(() => {
+    // Solo si cambian: setFilters vuelve a la página 1 (al volver se conserva)
+    if (filters.search === search && filters.is_active === filterActive && filters.contract_type === filterContractType) return;
     setFilters({ search, is_active: filterActive, contract_type: filterContractType });
   }, [search, filterActive, filterContractType]);
 
+  // Antes de los efectos de carga: la primera consulta ya usa la página de la URL
+  useUrlPageSync(pagination.page, setPage);
   useEffect(() => {
     fetchEmployees();
   }, [filters, pagination.page]);
@@ -310,28 +316,15 @@ const EmployeesPage = () => {
           )}
 
           {/* Paginación */}
-          {!isLoading && pagination.pages > 1 && (
-            <div className="px-4 py-3 border-t border-gray-100 dark:border-white/10 flex items-center justify-between text-sm">
-              <span className="text-gray-500 dark:text-gray-500">
-                {(pagination.page - 1) * pagination.limit + 1}–{Math.min(pagination.page * pagination.limit, pagination.total)} de {pagination.total}
-              </span>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setPage(pagination.page - 1)}
-                  disabled={pagination.page === 1}
-                  className="px-3 py-1.5 border border-gray-300 dark:border-white/10 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  ← Anterior
-                </button>
-                <button
-                  onClick={() => setPage(pagination.page + 1)}
-                  disabled={pagination.page >= pagination.pages}
-                  className="px-3 py-1.5 border border-gray-300 dark:border-white/10 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  Siguiente →
-                </button>
-              </div>
-            </div>
+          {!isLoading && (
+            <Pagination
+              className="px-4 py-3 border-t border-gray-100 dark:border-white/10"
+              currentPage={pagination.page}
+              totalPages={pagination.pages}
+              totalItems={pagination.total}
+              pageSize={pagination.limit}
+              onPageChange={setPage}
+            />
           )}
         </div>
       </div>

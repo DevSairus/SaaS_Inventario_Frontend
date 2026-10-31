@@ -19,7 +19,7 @@ function PayableAlerts() {
   const fetchActiveAlerts = useCallback(async () => {
     setIsLoading(true);
     try {
-      const response = await getPayableAlerts({ status: 'active', limit: 500, sort_by: 'days_to_due', sort_order: 'ASC' });
+      const response = await getPayableAlerts({ status: 'active', limit: 200, sort_by: 'days_to_due', sort_order: 'ASC' });
       if (response && response.success) {
         setAlerts(response.data || []);
       }

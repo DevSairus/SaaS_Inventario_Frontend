@@ -9,6 +9,8 @@ import { openingBalancesAPI, chartOfAccountsAPI } from '../../api/accounting';
 import customersApi from '../../api/customers';
 import { suppliersAPI } from '../../api/suppliers';
 import { productsAPI } from '../../api/products';
+import api from '../../api/axios';
+import fetchAllRows from '../../utils/fetchAllRows';
 import {
   downloadOpeningReceivableTemplate,
   validateImportedOpeningReceivableRows,
@@ -125,15 +127,23 @@ const OpeningBalancesPage = () => {
 
   useEffect(() => {
     if (activeTab === 'receivable' && customers.length === 0) {
-      customersApi.getAll({ limit: 1000 }).then((res) => setCustomers(res.data?.data || res.data?.customers || res.data || [])).catch(() => {});
+      // Todo el catálogo (no solo una página): se usa para cruzar el Excel
+      // importado por NIT/SKU. Antes un tope fijo dejaba registros sin cruzar.
+      fetchAllRows((page, limit) => api.get('/customers', { params: { limit, offset: (page - 1) * limit } })
+        .then((res) => ({ rows: res.data?.data || [], total: res.data?.pagination?.total })))
+        .then(setCustomers).catch(() => {});
       loadRows('receivable');
     }
     if (activeTab === 'payable' && suppliers.length === 0) {
-      suppliersAPI.getAll({ limit: 1000 }).then((res) => setSuppliers(res.data || [])).catch(() => {});
+      fetchAllRows((page, limit) => suppliersAPI.getAll({ page, limit })
+        .then((res) => ({ rows: res.data || [], total: res.pagination?.total })))
+        .then(setSuppliers).catch(() => {});
       loadRows('payable');
     }
     if (activeTab === 'inventory' && products.length === 0) {
-      productsAPI.getAll({ limit: 1000 }).then((res) => setProducts(res.data || [])).catch(() => {});
+      fetchAllRows((page, limit) => productsAPI.getAll({ page, limit })
+        .then((res) => ({ rows: res.data || [], total: res.pagination?.total })))
+        .then(setProducts).catch(() => {});
     }
     if (activeTab === 'account' && accounts.length === 0) {
       chartOfAccountsAPI.getAll().then((res) => setAccounts((res.data || []).filter((a) => a.accepts_entries))).catch(() => {});

@@ -72,5 +72,12 @@ export const purchasesAPI = {
   getStats: async () => {
     const response = await api.get('/inventory/purchases/stats');
     return response.data;
+  },
+
+  // Importar líneas desde Excel: busca cada código como SKU, código de barras
+  // o código del proveedor. Devuelve { products: { código: producto } }.
+  resolveProductCodes: async (codes, supplierId) => {
+    const response = await api.post('/inventory/purchases/resolve-products', { codes, supplier_id: supplierId || null });
+    return response.data;
   }
 };

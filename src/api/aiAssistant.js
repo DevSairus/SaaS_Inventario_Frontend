@@ -17,8 +17,8 @@ export const aiAssistantAPI = {
   },
 
   // Propuestas (Fase 2)
-  listProposals: async (status = 'pending') => {
-    const response = await api.get('/ai-assistant/proposals', { params: { status } });
+  listProposals: async (status = 'pending', params = {}, config = {}) => {
+    const response = await api.get('/ai-assistant/proposals', { params: { status, ...params }, ...config });
     return response.data;
   },
   getProposal: async (id) => {

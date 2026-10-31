@@ -1,5 +1,5 @@
 // frontend/src/pages/nexa/NexaApprovalsPage.jsx
-import { useEffect, useState, useCallback } from 'react';
+import { useState } from 'react';
 import toast from 'react-hot-toast';
 import {
   CheckIcon,
@@ -11,6 +11,8 @@ import Layout from '../../components/layout/Layout';
 import NexaIcon from '../../components/common/NexaIcon';
 import { aiAssistantAPI, PROPOSAL_ACTION_LABELS, PROPOSAL_STATUS_LABELS } from '../../api/aiAssistant';
 import useNexaStore from '../../store/nexaStore';
+import Pagination from '../../components/common/Pagination';
+import usePaginatedList from '../../hooks/usePaginatedList';
 
 const STATUS_STYLES = {
   pending: 'bg-amber-50 text-amber-700 border-amber-200',
@@ -63,37 +65,30 @@ function PayloadPreview({ actionType, payload }) {
 
 export default function NexaApprovalsPage() {
   const [tab, setTab] = useState('pending');
-  const [proposals, setProposals] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [actingId, setActingId] = useState(null);
   const fetchPendingCount = useNexaStore((s) => s.fetchPendingCount);
 
-  const load = useCallback(async (status) => {
-    setLoading(true);
-    try {
-      const res = await aiAssistantAPI.listProposals(status);
-      setProposals(res.data || []);
-    } catch (error) {
-      toast.error(error.response?.data?.message || 'No se pudieron cargar las propuestas de NEXA');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    load(tab);
-  }, [tab, load]);
+  const list = usePaginatedList(
+    ({ status, ...params }, opts) => aiAssistantAPI.listProposals(status, params, opts),
+    {
+      filters: { status: tab },
+      onError: (error) => toast.error(error.response?.data?.message || 'No se pudieron cargar las propuestas de NEXA'),
+    },
+  );
+  const proposals = list.rows;
+  const loading = list.loading && proposals.length === 0;
+  const load = list.reload;
 
   const handleApprove = async (id) => {
     setActingId(id);
     try {
       await aiAssistantAPI.approveProposal(id);
       toast.success('Propuesta aprobada y ejecutada');
-      await load(tab);
+      load();
       fetchPendingCount();
     } catch (error) {
       toast.error(error.response?.data?.message || 'No se pudo aprobar la propuesta');
-      await load(tab);
+      load();
     } finally {
       setActingId(null);
     }
@@ -104,7 +99,7 @@ export default function NexaApprovalsPage() {
     try {
       await aiAssistantAPI.rejectProposal(id);
       toast.success('Propuesta rechazada');
-      await load(tab);
+      load();
       fetchPendingCount();
     } catch (error) {
       toast.error(error.response?.data?.message || 'No se pudo rechazar la propuesta');
@@ -127,7 +122,7 @@ export default function NexaApprovalsPage() {
             </div>
           </div>
           <button
-            onClick={() => load(tab)}
+            onClick={load}
             className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors"
             title="Actualizar"
           >
@@ -217,6 +212,8 @@ export default function NexaApprovalsPage() {
             ))}
           </div>
         )}
+
+        <Pagination {...list.paginationProps} className="mt-4" />
       </div>
     </Layout>
   );

@@ -3,6 +3,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { usePurchasesStore } from '../../store/purchasesStore';
 import { suppliersAPI } from '../../api/suppliers';
+import mergeById from '../../utils/mergeById';
 import useBranchStore from '../../store/branchStore';
 import Layout from '../../components/layout/Layout';
 import InvoiceImportModal from '../../components/purchases/InvoiceImportModal';
@@ -25,6 +26,8 @@ import {
   ArchiveBoxIcon,
   TableCellsIcon,
 } from '@heroicons/react/24/outline';
+import Pagination from '../../components/common/Pagination';
+import useUrlPageSync from '../../hooks/useUrlPageSync';
 
 /* ─── helpers ─────────────────────────────────────────────── */
 const fmtCOP  = (v) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(v || 0);
@@ -63,12 +66,15 @@ const PurchasesPage = () => {
 
   useEffect(() => {
     fetchStats();
-    suppliersAPI.getAll({ limit: 10000, sort_by: 'name', sort_order: 'ASC' })
-      .then(res => setSuppliers(res.data || []))
+    // Solo para hojear; el resto lo encuentra el remoteSearch del Combobox.
+    suppliersAPI.getAll({ limit: 100, sort_by: 'name', sort_order: 'ASC' })
+      .then(res => setSuppliers(prev => mergeById(res.data || [], prev)))
       .catch(() => {});
     fetchBranches();
   }, []);
 
+  // Antes de los efectos de carga: la primera consulta ya usa la página de la URL
+  useUrlPageSync(pagination.page, setPage);
   useEffect(() => {
     setFilters(serverFilters);
     fetchPurchases(serverFilters);
@@ -214,7 +220,8 @@ const PurchasesPage = () => {
                   items={suppliers}
                   value={serverFilters.supplier_id || null}
                   displayValue={suppliers.find(s => String(s.id) === String(serverFilters.supplier_id))?.name || ''}
-                  onSelect={(s) => setServerFilters(f => ({ ...f, supplier_id: s.id }))}
+                  onSelect={(s) => { setSuppliers(prev => mergeById(prev, [s])); setServerFilters(f => ({ ...f, supplier_id: s.id })); }}
+                  remoteSearch={(q) => suppliersAPI.search(q)}
                   onClear={() => setServerFilters(f => ({ ...f, supplier_id: '' }))}
                   getSearchText={(s) => [s.name, s.business_name, s.tax_id].filter(Boolean).join(' ')}
                   renderItem={(s, q) => (
@@ -345,45 +352,17 @@ const PurchasesPage = () => {
           )}
 
           {/* Paginación */}
-          {!isLoading && pagination.total > 0 && (
-            <div className="px-4 py-3 border-t border-gray-100 flex flex-wrap items-center justify-between gap-3 text-sm">
-              <div className="flex items-center gap-3 text-gray-500">
-                <span>
-                  {((pagination.page - 1) * pagination.limit) + 1}–{Math.min(pagination.page * pagination.limit, pagination.total)} de {pagination.total}
-                </span>
-                <label className="flex items-center gap-1.5">
-                  Mostrar
-                  <select
-                    value={pagination.limit}
-                    onChange={(e) => setLimit(Number(e.target.value))}
-                    className="border border-gray-300 rounded-lg px-2 py-1 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    {[10, 25, 50, 100, 200].map((n) => (
-                      <option key={n} value={n}>{n}</option>
-                    ))}
-                  </select>
-                  por página
-                </label>
-              </div>
-              {pagination.total > pagination.limit && (
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setPage(pagination.page - 1)}
-                    disabled={pagination.page === 1}
-                    className="px-3 py-1.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
-                  >
-                    ← Anterior
-                  </button>
-                  <button
-                    onClick={() => setPage(pagination.page + 1)}
-                    disabled={pagination.page >= pagination.pages}
-                    className="px-3 py-1.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
-                  >
-                    Siguiente →
-                  </button>
-                </div>
-              )}
-            </div>
+          {!isLoading && (
+            <Pagination
+              className="px-4 py-3 border-t border-gray-100"
+              currentPage={pagination.page}
+              totalPages={pagination.pages}
+              totalItems={pagination.total}
+              pageSize={pagination.limit}
+              onPageChange={setPage}
+              onPageSizeChange={setLimit}
+              pageSizeOptions={[10, 25, 50, 100, 200]}
+            />
           )}
         </div>
       </div>

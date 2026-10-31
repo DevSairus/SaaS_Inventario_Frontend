@@ -126,11 +126,11 @@ export const ensambladoraEntregasApi = {
 // Backend: pass-through puro hacia el Core, sin tabla local (ver
 // liquidaciones.controller.js) -- el CSA no "crea" nada acá, solo consulta
 // lo que el Core ya generó en su cierre de periodo.
-//   GET /ensambladora/liquidaciones        -> { success, data: [liquidacion...] }
+//   GET /ensambladora/liquidaciones?estado=&page=&limit= -> { success, data: [liquidacion...], pagination }
 //   GET /ensambladora/liquidaciones/:id    -> { success, data: liquidacion } (con items)
 //   GET /ensambladora/tarifario?marca_id=  -> { success, data: [tarifa...] }
 export const ensambladoraLiquidacionesApi = {
-  list: () => axios.get('/ensambladora/liquidaciones'),
+  list: (params = {}, config = {}) => axios.get('/ensambladora/liquidaciones', { params, ...config }),
   getById: (id) => axios.get(`/ensambladora/liquidaciones/${encodeURIComponent(id)}`),
   tarifarioVigente: (marcaId) => axios.get('/ensambladora/tarifario', { params: { marca_id: marcaId } }),
 };
@@ -170,7 +170,7 @@ export const ensambladoraTecnicosApi = {
 // hay que hacerlo desde el panel del Core (la idempotencia por event_id
 // haría que esto solo devuelva el estado viejo, ver LEEME de Fase 8).
 export const ensambladoraSyncApi = {
-  listEvents: (filtros = {}) => axios.get('/ensambladora/sync/events', { params: filtros }),
+  listEvents: (filtros = {}, config = {}) => axios.get('/ensambladora/sync/events', { params: filtros, ...config }),
   reintentar: (eventId) => axios.post(`/ensambladora/sync/events/${encodeURIComponent(eventId)}/reintentar`),
   marcarRevisado: (eventId, revisadoPor) =>
     axios.post(`/ensambladora/sync/events/${encodeURIComponent(eventId)}/marcar-revisado`, { revisado_por: revisadoPor }),
@@ -178,7 +178,7 @@ export const ensambladoraSyncApi = {
 
 // ── Auditoría de garantía/alistamiento/etc (ver auditoria.controller.js) ──
 export const ensambladoraAuditoriaApi = {
-  list: (filtros = {}) => axios.get('/ensambladora/auditoria', { params: filtros }),
+  list: (filtros = {}, config = {}) => axios.get('/ensambladora/auditoria', { params: filtros, ...config }),
 };
 
 // ── Fase 4: garantías ────────────────────────────────────────────────────
@@ -191,7 +191,7 @@ export const ensambladoraAuditoriaApi = {
 // por eso existe listByVin, para cruzar core_orden_garantia_id -> id local.
 export const ensambladoraGarantiasApi = {
   listByVin: (vin) => axios.get('/ensambladora/garantias', { params: { vin } }),
-  listAll: () => axios.get('/ensambladora/garantias/todas'),
+  listAll: (params = {}, config = {}) => axios.get('/ensambladora/garantias/todas', { params, ...config }),
   create: (data, itemFiles = {}) => {
     const hasFiles = Object.keys(itemFiles).length > 0;
     if (hasFiles) {

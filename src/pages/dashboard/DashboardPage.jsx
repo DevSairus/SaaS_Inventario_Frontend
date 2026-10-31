@@ -9,6 +9,7 @@ import Layout from '../../components/layout/Layout';
 import useAuthStore from '../../store/authStore';
 import useDashboardStore from '../../store/dashboardStore';
 import axios from '../../api/axios';
+import QuickWorkOrderModal from '../../components/workshop/QuickWorkOrderModal';
 import {
   ExclamationTriangleIcon,
   ExclamationCircleIcon,
@@ -113,6 +114,8 @@ function KpiCard({ icon, from, to, labelCls, label, value, sub, onClick, trendPc
    ninguna sugerencia real que mostrar (ver sección PARA_TI_AHORA). ── */
 const QUICK_ACCESS = [
   { icon: <ShoppingCartIcon className="w-7 h-7" />, label: 'Nueva Venta',   path: '/sales/new',               bg: 'bg-blue-50   hover:bg-blue-100',   text: 'text-blue-900',   roles: ['admin', 'manager', 'seller'] },
+  // OT rápida abre el modal aquí mismo (quickWorkOrder) en vez de navegar.
+  { icon: <BoltIcon className="w-7 h-7" />, label: 'OT rápida', path: '#ot-rapida', quickWorkOrder: true, bg: 'bg-indigo-50 hover:bg-indigo-100', text: 'text-indigo-900', roles: ['admin', 'manager', 'seller', 'technician'] },
   { icon: <WrenchScrewdriverIcon className="w-7 h-7" />, label: 'Nueva OT', path: '/workshop/work-orders/new', bg: 'bg-sky-50    hover:bg-sky-100',    text: 'text-sky-900',    roles: ['admin', 'manager', 'seller', 'technician'] },
   { icon: <CubeIcon className="w-7 h-7" />, label: 'Productos',             path: '/products',                bg: 'bg-purple-50 hover:bg-purple-100', text: 'text-purple-900', roles: ['admin', 'manager', 'warehouse_keeper', 'seller'] },
   { icon: <ChartBarIcon className="w-7 h-7" />, label: 'Reportes',          path: '/reports',                 bg: 'bg-green-50  hover:bg-green-100',  text: 'text-green-900',  roles: ['admin', 'manager', 'accountant'] },
@@ -159,6 +162,7 @@ function DashboardPage() {
   const [receivableStats, setReceivableStats] = useState(null);
   const [suggestions, setSuggestions] = useState([]);
   const [suggestionsLoading, setSuggestionsLoading] = useState(true);
+  const [showQuickOT, setShowQuickOT] = useState(false);
 
   const canSeeSalesFinance = roleCan(user?.role, SALES_FINANCE_ROLES);
   const canSeeInventoryValue = roleCan(user?.role, INVENTORY_VALUE_ROLES);
@@ -428,9 +432,16 @@ function DashboardPage() {
         <div className="bg-white rounded-xl p-4 sm:p-5 shadow-sm border border-gray-100 dark:bg-graphite dark:border-white/10">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm sm:text-base font-semibold text-gray-800 flex items-center gap-2 dark:text-gray-100"><WrenchScrewdriverIcon className="w-4 h-4 text-gray-500 dark:text-gray-500" /> Taller — Estado actual</h3>
-            <button onClick={() => navigate('/workshop/work-orders')} className="text-xs text-indigo-600 hover:underline dark:text-indigo-400">
-              Ver todas →
-            </button>
+            <div className="flex items-center gap-3">
+              {/* Acceso a OT rápida siempre visible (los accesos directos de
+                  abajo solo aparecen cuando "Para ti ahora" está vacío). */}
+              <button onClick={() => setShowQuickOT(true)} className="flex items-center gap-1 text-xs font-medium text-blue-600 hover:underline dark:text-blue-400">
+                <BoltIcon className="w-3.5 h-3.5" /> OT rápida
+              </button>
+              <button onClick={() => navigate('/workshop/work-orders')} className="text-xs text-indigo-600 hover:underline dark:text-indigo-400">
+                Ver todas →
+              </button>
+            </div>
           </div>
 
           {workshopLoading ? (
@@ -573,13 +584,13 @@ function DashboardPage() {
               })}
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3">
               {QUICK_ACCESS
                 .filter(q => !q.roles || q.roles.includes(user?.role) || user?.role === 'super_admin')
-                .map(({ icon, label, path, bg, text }) => (
+                .map(({ icon, label, path, bg, text, quickWorkOrder }) => (
                   <button
                     key={path}
-                    onClick={() => navigate(path)}
+                    onClick={() => (quickWorkOrder ? setShowQuickOT(true) : navigate(path))}
                     className={`p-3 sm:p-4 ${bg} border border-gray-100 dark:border-white/10 rounded-xl hover:shadow-md transition-all text-center group`}
                   >
                     <div className={`flex justify-center mb-1.5 group-hover:scale-110 transition-transform ${text}`}>{icon}</div>
@@ -607,6 +618,7 @@ function DashboardPage() {
         )}
 
       </div>
+      <QuickWorkOrderModal isOpen={showQuickOT} onClose={() => setShowQuickOT(false)} />
     </Layout>
   );
 }

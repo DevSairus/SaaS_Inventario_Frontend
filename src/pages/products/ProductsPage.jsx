@@ -13,6 +13,8 @@ import { formatCurrency } from '../../utils/formatters';
 import { vehicleApplicationsAPI } from '../../api/vehicleApplications';
 import toast from 'react-hot-toast';
 import { Car, X } from 'lucide-react';
+import Pagination from '../../components/common/Pagination';
+import useUrlPageSync from '../../hooks/useUrlPageSync';
 
 function ProductsPage() {
   const navigate = useNavigate();
@@ -31,6 +33,7 @@ function ProductsPage() {
     fetchStats,
     setFilters,
     setPage,
+    setLimit,
     deleteProduct,
     deactivateProduct,
     createProduct,
@@ -78,6 +81,9 @@ function ProductsPage() {
     }
   }, [vehicleFilter.line, vehicleFilter.brand, brandsAndLines]);
 
+  // Antes de los efectos de carga: la primera consulta ya usa la página de la URL
+  useUrlPageSync(pagination.page, setPage);
+
   // Refresh al entrar a la página
   useEffect(() => {
     fetchProducts(true);
@@ -99,7 +105,7 @@ function ProductsPage() {
     // Pasar vehicleParams como parte de los filtros al store
     // Necesitamos modificar fetchProducts para aceptar estos params
     fetchProducts(false, vehicleParams);
-  }, [filters.search, filters.category_id, filters.is_active, filters.sort_by, filters.sort_order, pagination.page, vehicleFilter.brand, vehicleFilter.line, vehicleFilter.year]);
+  }, [filters.search, filters.category_id, filters.is_active, filters.sort_by, filters.sort_order, pagination.page, pagination.limit, vehicleFilter.brand, vehicleFilter.line, vehicleFilter.year]);
 
   // Búsqueda en tiempo real con debounce
   useEffect(() => {
@@ -627,149 +633,17 @@ function ProductsPage() {
               </div>
 
               {/* Pagination */}
-              {pagination && pagination.totalPages > 1 && (
-                <div className="bg-gray-50 px-6 py-4 border-t border-gray-200">
-                  {/* Mobile */}
-                  <div className="flex justify-between sm:hidden mb-3">
-                    <button
-                      onClick={() => setPage(pagination.page - 1)}
-                      disabled={pagination.page === 1}
-                      className="px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
-                    >
-                      Anterior
-                    </button>
-                    <span className="px-4 py-2 text-sm text-gray-700">
-                      Pág. {pagination.page} de {pagination.totalPages}
-                    </span>
-                    <button
-                      onClick={() => setPage(pagination.page + 1)}
-                      disabled={pagination.page === pagination.totalPages}
-                      className="px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
-                    >
-                      Siguiente
-                    </button>
-                  </div>
-
-                  {/* Desktop */}
-                  <div className="hidden sm:flex sm:items-center sm:justify-between">
-                    <div>
-                      <p className="text-sm text-gray-700">
-                        Mostrando <span className="font-medium">{((pagination.page - 1) * pagination.limit) + 1}</span> a{' '}
-                        <span className="font-medium">
-                          {Math.min(pagination.page * pagination.limit, pagination.total)}
-                        </span>{' '}
-                        de <span className="font-medium">{pagination.total}</span> productos
-                      </p>
-                    </div>
-                    
-                    <div className="flex gap-2">
-                      {/* Primera página */}
-                      <button
-                        onClick={() => setPage(1)}
-                        disabled={pagination.page === 1}
-                        className="px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                        title="Primera página"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
-                        </svg>
-                      </button>
-
-                      {/* Anterior */}
-                      <button
-                        onClick={() => setPage(pagination.page - 1)}
-                        disabled={pagination.page === 1}
-                        className="px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                        </svg>
-                      </button>
-
-                      {/* Números de página con ellipsis */}
-                      {(() => {
-                        const pages = [];
-                        const delta = 2; // páginas a cada lado
-                        const start = Math.max(1, pagination.page - delta);
-                        const end = Math.min(pagination.totalPages, pagination.page + delta);
-
-                        // Primera página
-                        if (start > 1) {
-                          pages.push(
-                            <button
-                              key={1}
-                              onClick={() => setPage(1)}
-                              className="px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
-                            >
-                              1
-                            </button>
-                          );
-                          if (start > 2) {
-                            pages.push(<span key="ellipsis1" className="px-2 py-2 text-gray-500">...</span>);
-                          }
-                        }
-
-                        // Páginas del rango
-                        for (let i = start; i <= end; i++) {
-                          pages.push(
-                            <button
-                              key={i}
-                              onClick={() => setPage(i)}
-                              className={`px-3 py-2 border rounded-lg text-sm font-medium ${
-                                pagination.page === i
-                                  ? 'bg-blue-50 border-blue-500 text-blue-600'
-                                  : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
-                              }`}
-                            >
-                              {i}
-                            </button>
-                          );
-                        }
-
-                        // Última página
-                        if (end < pagination.totalPages) {
-                          if (end < pagination.totalPages - 1) {
-                            pages.push(<span key="ellipsis2" className="px-2 py-2 text-gray-500">...</span>);
-                          }
-                          pages.push(
-                            <button
-                              key={pagination.totalPages}
-                              onClick={() => setPage(pagination.totalPages)}
-                              className="px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
-                            >
-                              {pagination.totalPages}
-                            </button>
-                          );
-                        }
-
-                        return pages;
-                      })()}
-
-                      {/* Siguiente */}
-                      <button
-                        onClick={() => setPage(pagination.page + 1)}
-                        disabled={pagination.page === pagination.totalPages}
-                        className="px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                      </button>
-
-                      {/* Última página */}
-                      <button
-                        onClick={() => setPage(pagination.totalPages)}
-                        disabled={pagination.page === pagination.totalPages}
-                        className="px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                        title="Última página"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
-                        </svg>
-                      </button>
-                    </div>
-                  </div>
-                </div>
+              {pagination && (
+                <Pagination
+                  className="bg-gray-50 px-6 py-4 border-t border-gray-200"
+                  currentPage={pagination.page}
+                  totalPages={pagination.totalPages}
+                  totalItems={pagination.total}
+                  pageSize={pagination.limit}
+                  onPageChange={setPage}
+                  onPageSizeChange={setLimit}
+                  pageSizeOptions={[25, 50, 100, 200]}
+                />
               )}
             </>
           )}

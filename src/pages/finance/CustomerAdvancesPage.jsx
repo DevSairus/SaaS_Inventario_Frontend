@@ -25,6 +25,7 @@ import BankAccountSelect from '../../components/accounting/BankAccountSelect';
 import ReassignAdvanceModal from '../../components/finance/ReassignAdvanceModal';
 import Dropdown from '../../components/common/Dropdown';
 import Pagination from '../../components/common/Pagination';
+import useUrlPageSync from '../../hooks/useUrlPageSync';
 import useIsManagement from '../../hooks/useIsManagement';
 import { MoreVertical, Eye, Undo2, ArrowLeftRight, Ban } from 'lucide-react';
 
@@ -87,6 +88,7 @@ const CustomerAdvancesPage = () => {
 
   useEffect(() => { setPage(1); }, [filters, debouncedSearch]);
   useEffect(() => { loadData(); }, [filters, debouncedSearch, page]);
+  useUrlPageSync(page, setPage);
 
   const loadData = async () => {
     const seq = ++loadSeq.current;

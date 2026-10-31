@@ -5,6 +5,7 @@ import { AlertTriangle, CheckCircle, XCircle, Eye, RefreshCw, Package, ShoppingC
 import { InformationCircleIcon, ExclamationTriangleIcon, XCircleIcon as XCircleSolid, UserIcon, CurrencyDollarIcon, CalendarDaysIcon, PhoneIcon, EnvelopeIcon } from '@heroicons/react/24/outline';
 import useStockAlertsStore from '../../store/stockAlertsStore';
 import Layout from '../../components/layout/Layout';
+import Pagination from '../../components/common/Pagination';
 import CostAlertsPanel from '../../components/stock-alerts/CostAlertsPanel';
 import AddToOrderListModal from '../../components/order-lists/AddToOrderListModal';
 import { getPendingProducts } from '../../api/orderLists';
@@ -23,6 +24,8 @@ const StockAlertsPage = () => {
     fetchAlerts,
     fetchStats,
     setFilters,
+    setPage,
+    setPageSize,
     resolveAlert,
     ignoreAlert,
     checkAlerts
@@ -69,14 +72,12 @@ const StockAlertsPage = () => {
 
   const handleFilterChange = (field, value) => {
     if (setFilters) {
-      setFilters({ ...filters, [field]: value, page: 1 });
+      setFilters({ ...filters, [field]: value });
     }
   };
 
   const handlePageChange = (newPage) => {
-    if (setFilters) {
-      setFilters({ ...filters, page: newPage });
-    }
+    if (setPage) setPage(newPage);
   };
 
   const handleResolve = (alert) => {
@@ -419,18 +420,6 @@ const StockAlertsPage = () => {
 
         {/* Tabla de alertas */}
         <div className="bg-white rounded-xl shadow-md overflow-hidden">
-          {/* Banner informativo si hay paginación */}
-          {pagination?.total > pagination?.limit && (
-            <div className="bg-yellow-50 border-b border-yellow-200 px-6 py-3">
-              <p className="text-sm text-yellow-800 flex items-center gap-1">
-                <InformationCircleIcon className="w-4 h-4 flex-shrink-0" /> Mostrando <strong>{alerts.length}</strong> de <strong>{pagination.total}</strong> alertas totales. 
-                {pagination.pages > 1 && (
-                  <span> Estás en la página {pagination.page} de {pagination.pages}.</span>
-                )}
-              </p>
-            </div>
-          )}
-          
           {loading ? (
             <div className="p-12 text-center">
               <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600"></div>
@@ -587,39 +576,15 @@ const StockAlertsPage = () => {
                 </table>
               </div>
 
-              {/* Paginación - Siempre mostrar contador */}
               <div className="bg-gray-50 px-6 py-4 border-t border-gray-200">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <p className="text-sm text-gray-600">
-                      Mostrando <span className="font-medium">{alerts.length}</span> de{' '}
-                      <span className="font-medium">{pagination?.total || 0}</span> alertas totales
-                    </p>
-                    {pagination?.pages > 1 && (
-                      <span className="text-xs text-gray-500 bg-yellow-50 border border-yellow-200 px-2 py-1 rounded">
-                        Página {pagination?.page || 1} de {pagination?.pages}
-                      </span>
-                    )}
-                  </div>
-                  {pagination?.pages > 1 && (
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => handlePageChange((pagination?.page || 1) - 1)}
-                        disabled={(pagination?.page || 1) === 1}
-                        className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                      >
-                        Anterior
-                      </button>
-                      <button
-                        onClick={() => handlePageChange((pagination?.page || 1) + 1)}
-                        disabled={(pagination?.page || 1) >= (pagination?.pages || 1)}
-                        className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                      >
-                        Siguiente
-                      </button>
-                    </div>
-                  )}
-                </div>
+                <Pagination
+                  currentPage={pagination?.page || 1}
+                  totalPages={pagination?.pages || 1}
+                  onPageChange={handlePageChange}
+                  totalItems={pagination?.total || 0}
+                  pageSize={pagination?.limit || 50}
+                  onPageSizeChange={setPageSize}
+                />
               </div>
             </>
           )}

@@ -204,6 +204,9 @@ const InvoiceImportModal = ({ isOpen, onClose, onSuccess, dianDocumentId = null 
   const [fileInputKey, setFileInputKey]   = useState(0);
   // IVA editable por ítem: { índice: porcentaje }
   const [itemTaxOverrides, setItemTaxOverrides] = useState({});
+  // Margen por línea: { idx: pct }. Vacío = el general de abajo (productos
+  // nuevos) o el que ya tiene el producto. Al recibir la compra pasa al producto.
+  const [itemMargins, setItemMargins] = useState({});
   // Vínculo producto por ítem: { índice: product_id | 'CREATE_NEW' }.
   // Se pre-carga con la sugerencia del backend (sku_internal / name_fuzzy),
   // editable por el usuario — es lo único que confirma y guarda un mapeo
@@ -236,7 +239,7 @@ const InvoiceImportModal = ({ isOpen, onClose, onSuccess, dianDocumentId = null 
   };
 
   const handlePreview = async (selectedFile) => {
-    setLoading(true); setError(null); setPreview(null); setRemovedItems([]); setShippingCost(''); setItemTaxOverrides({}); setManualLinks({}); setNewProductData({});
+    setLoading(true); setError(null); setPreview(null); setRemovedItems([]); setShippingCost(''); setItemTaxOverrides({}); setItemMargins({}); setManualLinks({}); setNewProductData({});
     try {
       const fd = new FormData();
       if (dianDocumentId) fd.append('dian_document_id', dianDocumentId);
@@ -305,6 +308,9 @@ const InvoiceImportModal = ({ isOpen, onClose, onSuccess, dianDocumentId = null 
     return { subtotal, tax, inc, freight, discount, total: subtotal + tax + inc + freight - discount };
   };
 
+  const marginsInvalid = Object.entries(itemMargins).some(([idx, v]) => v !== '' && !removedItems.includes(Number(idx))
+    && !(Number(v) >= 0 && Number(v) <= maxMargin));
+
   const handleImport = async () => {
     if (!file && !dianDocumentId) return;
     setLoading(true); setError(null);
@@ -318,6 +324,9 @@ const InvoiceImportModal = ({ isOpen, onClose, onSuccess, dianDocumentId = null 
       fd.append('shipping_cost', shippingCost || 0);
       fd.append('discount_amount', discountAmount || 0);
       fd.append('items_tax_overrides', JSON.stringify(itemTaxOverrides));
+      fd.append('items_margins', JSON.stringify(Object.fromEntries(
+        Object.entries(itemMargins).filter(([idx, v]) => v !== '' && !removedItems.includes(Number(idx)))
+      )));
       fd.append('manual_links', JSON.stringify(manualLinks));
       fd.append('new_product_data', JSON.stringify(newProductData));
       const res = await api.post('/invoice-import/import', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
@@ -333,7 +342,7 @@ const InvoiceImportModal = ({ isOpen, onClose, onSuccess, dianDocumentId = null 
   const handleClose = () => {
     setFile(null); setPreview(null); setError(null); setResult(null);
     setIsDragging(false); setProfitMargin(''); setSupplierName('');
-    setRemovedItems([]); setShippingCost(''); setDiscountAmount(''); setItemTaxOverrides({}); setManualLinks({}); setNewProductData({});
+    setRemovedItems([]); setShippingCost(''); setDiscountAmount(''); setItemTaxOverrides({}); setItemMargins({}); setManualLinks({}); setNewProductData({});
     setFileInputKey(k => k + 1);
     onClose();
   };
@@ -489,6 +498,10 @@ const InvoiceImportModal = ({ isOpen, onClose, onSuccess, dianDocumentId = null 
                           IVA %
                           <span className="block text-[10px] text-gray-400 dark:text-gray-500 font-normal leading-none">editable</span>
                         </th>
+                        <th className="px-3 py-2 text-center font-medium text-gray-600 dark:text-gray-400">
+                          Margen %
+                          <span className="block text-[10px] text-gray-400 dark:text-gray-500 font-normal leading-none">opcional</span>
+                        </th>
                         <th className="px-3 py-2 text-right font-medium text-gray-600 dark:text-gray-400">Subtotal</th>
                         <th className="px-3 py-2 w-10"></th>
                       </tr>
@@ -501,6 +514,17 @@ const InvoiceImportModal = ({ isOpen, onClose, onSuccess, dianDocumentId = null 
                           ? parseFloat(item.tax_amount || 0) // el IVA que trae el XML
                           : parseFloat(item.subtotal || 0) * (taxPct / 100);
                         const isOverridden = itemTaxOverrides[idx] !== undefined;
+                        // Producto que ya existe (vinculado por código o elegido en
+                        // el selector): vacío = conserva su margen. Nuevo: el general.
+                        const createsNew = manualLinks[idx] === 'CREATE_NEW' || (!item.suggestion && !manualLinks[idx]);
+                        const currentMargin = !createsNew && item.suggestion
+                          && (item.suggestion.match_type === 'code_exact' || !manualLinks[idx] || manualLinks[idx] === item.suggestion.product_id)
+                          ? item.suggestion.margin_pct : null;
+                        const marginPlaceholder = createsNew
+                          ? (profitMargin !== '' ? String(profitMargin) : 'Cat.')
+                          : (currentMargin !== null && currentMargin !== undefined ? String(currentMargin) : 'Actual');
+                        const marginValue = itemMargins[idx] ?? '';
+                        const marginBad = marginValue !== '' && !(Number(marginValue) >= 0 && Number(marginValue) <= maxMargin);
                         return (
                           <tr key={idx} className={removed ? 'bg-red-50 dark:bg-red-900/20' : 'hover:bg-gray-50 dark:hover:bg-white/5'}>
                             <td className={`px-3 py-2.5 ${removed ? 'line-through text-gray-400 dark:text-gray-500' : 'text-gray-900 dark:text-gray-100'}`}>
@@ -578,6 +602,30 @@ const InvoiceImportModal = ({ isOpen, onClose, onSuccess, dianDocumentId = null 
                                       className="text-blue-400 hover:text-blue-600 dark:hover:text-blue-300 text-xs leading-none"
                                     >↩</button>
                                   )}
+                                </div>
+                              )}
+                            </td>
+                            <td className="px-3 py-2.5 text-center">
+                              {removed ? (
+                                <span className="text-gray-300 dark:text-gray-600 text-xs">—</span>
+                              ) : (
+                                <div>
+                                  <input
+                                    type="number" min="0" max={maxMargin} step="0.01"
+                                    value={marginValue}
+                                    placeholder={marginPlaceholder}
+                                    title={createsNew ? 'Vacío = margen general (o el de la categoría)' : 'Vacío = el producto conserva su margen'}
+                                    onWheel={e => e.target.blur()}
+                                    onChange={e => setItemMargins(prev => ({ ...prev, [idx]: e.target.value }))}
+                                    className={`w-20 px-1.5 py-1 text-center border rounded text-sm font-medium focus:ring-2 focus:ring-amber-400 focus:border-transparent ${
+                                      marginBad
+                                        ? 'border-red-400 bg-red-50 text-red-700'
+                                        : marginValue !== ''
+                                          ? 'border-amber-400 bg-amber-50 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300'
+                                          : 'border-gray-200 dark:border-white/10 dark:bg-graphite-2 text-gray-700 dark:text-gray-300'
+                                    }`}
+                                  />
+                                  {marginBad && <div className="text-[10px] text-red-600 mt-0.5">0 a {maxMargin}</div>}
                                 </div>
                               )}
                             </td>
@@ -696,7 +744,7 @@ const InvoiceImportModal = ({ isOpen, onClose, onSuccess, dianDocumentId = null 
                 <div className="flex items-center justify-between gap-4">
                   <div>
                     <p className="font-semibold text-amber-900 dark:text-amber-300 text-sm">{marginMethod === 'markup' ? '% Margen sobre el costo para productos nuevos' : '% Margen sobre la venta para productos nuevos'}</p>
-                    <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">Solo aplica a productos que no existen en el catálogo. Vacío = el margen de su categoría (o el global)</p>
+                    <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">Solo aplica a productos que no existen en el catálogo y no tienen margen en su línea. Vacío = el margen de su categoría (o el global). Para cualquier producto puedes escribir su margen en la columna Margen % de la tabla.</p>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <input type="number" min="0" max={maxMargin} value={profitMargin} placeholder="Cat."
@@ -716,13 +764,13 @@ const InvoiceImportModal = ({ isOpen, onClose, onSuccess, dianDocumentId = null 
               {/* Botones */}
               <div className="flex gap-3 pt-1">
                 <button
-                  onClick={() => { setFile(null); setPreview(null); setRemovedItems([]); setShippingCost(''); setDiscountAmount(''); setItemTaxOverrides({}); setManualLinks({}); setNewProductData({}); setFileInputKey(k => k + 1); }}
+                  onClick={() => { setFile(null); setPreview(null); setRemovedItems([]); setShippingCost(''); setDiscountAmount(''); setItemTaxOverrides({}); setItemMargins({}); setManualLinks({}); setNewProductData({}); setFileInputKey(k => k + 1); }}
                   className="flex-1 px-6 py-3 border border-gray-300 dark:border-white/10 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-white/5 transition-colors font-medium">
                   Cancelar
                 </button>
                 <button
                   onClick={handleImport}
-                  disabled={loading || !preview.isValid || activeItems.length === 0 || pendingLinkCount > 0}
+                  disabled={loading || !preview.isValid || activeItems.length === 0 || pendingLinkCount > 0 || marginsInvalid}
                   className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
                   {loading
                     ? <><div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div><span>Importando...</span></>

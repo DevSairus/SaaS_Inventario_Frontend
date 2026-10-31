@@ -9,6 +9,8 @@ import toast from 'react-hot-toast';
 import { fixedAssetsAPI, chartOfAccountsAPI, FIXED_ASSET_CATEGORY_LABELS } from '../../api/accounting';
 import { branchesService } from '../../api/branches';
 import Layout from '../../components/layout/Layout';
+import Pagination from '../../components/common/Pagination';
+import usePaginatedList from '../../hooks/usePaginatedList';
 import NumericInput from '../../components/inputs/NumericInput';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import { PlusIcon, ArrowPathIcon, ArchiveBoxXMarkIcon } from '@heroicons/react/24/outline';
@@ -26,7 +28,6 @@ const emptyForm = {
 
 const FixedAssetsPage = () => {
   const navigate = useNavigate();
-  const [assets, setAssets] = useState([]);
   const [report, setReport] = useState(null);
   const [accounts, setAccounts] = useState([]);
   const [branches, setBranches] = useState([]);
@@ -43,16 +44,21 @@ const FixedAssetsPage = () => {
 
   const [runningDepreciation, setRunningDepreciation] = useState(false);
 
+  const list = usePaginatedList(
+    (params, opts) => fixedAssetsAPI.getAll(params, opts),
+    { filters: { status: statusFilter }, onError: (error) => toast.error(error.response?.data?.message || 'Error cargando los activos fijos') },
+  );
+  const assets = list.rows;
+  const tableLoading = list.loading && assets.length === 0;
+
   const load = useCallback(async () => {
     try {
       setLoading(true);
-      const [assetsRes, reportRes, accountsRes, branchesRes] = await Promise.all([
-        fixedAssetsAPI.getAll(statusFilter ? { status: statusFilter } : {}),
+      const [reportRes, accountsRes, branchesRes] = await Promise.all([
         fixedAssetsAPI.getReport(),
         chartOfAccountsAPI.getAll(),
         branchesService.getAll(),
       ]);
-      setAssets(assetsRes.data || []);
       setReport(reportRes.data || null);
       setAccounts((accountsRes.data || []).filter((a) => a.account_type === 'activo' && a.accepts_entries));
       setBranches(branchesRes.data || branchesRes || []);
@@ -61,9 +67,12 @@ const FixedAssetsPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [statusFilter]);
+  }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  // Tras crear/dar de baja/pagar: reporte + listado.
+  const refreshAll = () => { load(); list.reload(); };
 
   const openCreate = () => {
     setForm(emptyForm);
@@ -92,7 +101,7 @@ const FixedAssetsPage = () => {
       });
       toast.success('Activo fijo creado');
       setShowModal(false);
-      load();
+      refreshAll();
     } catch (error) {
       toast.error(error.response?.data?.message || 'Error creando el activo fijo');
     } finally {
@@ -112,7 +121,7 @@ const FixedAssetsPage = () => {
       await fixedAssetsAPI.dispose(showDispose.id, disposeForm);
       toast.success('Activo dado de baja');
       setShowDispose(null);
-      load();
+      refreshAll();
     } catch (error) {
       toast.error(error.response?.data?.message || 'Error dando de baja el activo');
     } finally {
@@ -125,7 +134,7 @@ const FixedAssetsPage = () => {
       setRunningDepreciation(true);
       const res = await fixedAssetsAPI.runDepreciation();
       toast.success(res.message || 'Depreciación generada');
-      load();
+      refreshAll();
     } catch (error) {
       toast.error(error.response?.data?.message || 'Error generando la depreciación');
     } finally {
@@ -201,11 +210,11 @@ const FixedAssetsPage = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {loading && <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400">Cargando...</td></tr>}
-                {!loading && assets.length === 0 && (
+                {tableLoading && <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400">Cargando...</td></tr>}
+                {!list.loading && assets.length === 0 && (
                   <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400">Sin activos fijos registrados</td></tr>
                 )}
-                {!loading && assets.map((a) => (
+                {assets.map((a) => (
                   <tr key={a.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => navigate(`/accounting/fixed-assets/${a.id}`)}>
                     <td className="px-4 py-3 font-medium text-gray-900">{a.name}</td>
                     <td className="px-4 py-3 text-gray-600">{FIXED_ASSET_CATEGORY_LABELS[a.category] || a.category}</td>
@@ -229,6 +238,9 @@ const FixedAssetsPage = () => {
                 ))}
               </tbody>
             </table>
+          </div>
+          <div className="px-4 py-3 border-t border-gray-200">
+            <Pagination {...list.paginationProps} />
           </div>
         </div>
       </div>

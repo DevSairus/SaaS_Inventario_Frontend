@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import useSalesStore from '../../store/salesStore';
 import useBranchStore from '../../store/branchStore';
 import useTenantStore from '../../store/tenantStore';
@@ -8,6 +8,7 @@ import Layout from '../../components/layout/Layout';
 import DianStatusBadge from '../../components/dian/DianStatusBadge';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
 import Pagination from '../../components/common/Pagination';
+import useUrlPageSync from '../../hooks/useUrlPageSync';
 import RegisterSalePaymentModal from '../../components/sales/RegisterSalePaymentModal';
 import salesApi from '../../api/sales';
 import toast from 'react-hot-toast';
@@ -235,11 +236,15 @@ export default function SalesPage() {
     }
   };
 
+  const [searchParams] = useSearchParams();
   useEffect(() => {
-    fetchSales();
+    // Si ?page pide otra página, la carga la hace useUrlPageSync
+    const urlPage = Number(searchParams.get('page')) || 1;
+    if (urlPage <= 1 || urlPage === page) fetchSales();
     fetchStats();
     fetchBranches();
   }, []);
+  useUrlPageSync(page, handlePageChange);
 
   useEffect(() => {
     const t = setTimeout(() => {

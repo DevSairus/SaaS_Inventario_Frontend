@@ -1,5 +1,5 @@
 // frontend/src/pages/sales/AccountsReceivablePage.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { accountsReceivableAPI } from '../../api/accountsReceivable';
 import Layout from '../../components/layout/Layout';
 import toast from 'react-hot-toast';
@@ -16,12 +16,25 @@ import {
 import { formatCurrency } from '../../utils/formatters';
 import ApplyAdvanceModal from '../../components/finance/ApplyAdvanceModal';
 import RegisterSalePaymentModal from '../../components/sales/RegisterSalePaymentModal';
+import Pagination from '../../components/common/Pagination';
+import usePaginatedList from '../../hooks/usePaginatedList';
+
+// Documentos pendientes de un cliente (detalle desplegable), paginados en
+// el servidor. customerId null = documentos sin cliente.
+const CustomerInvoices = ({ customerId, filters, refreshKey, children }) => {
+  const list = usePaginatedList(
+    (params, opts) => accountsReceivableAPI.getDocuments(params, opts),
+    { filters: { ...filters, customer_id: customerId ?? 'none' }, syncUrl: false },
+  );
+  const firstKey = useRef(refreshKey);
+  useEffect(() => { if (refreshKey !== firstKey.current) list.reload(); }, [refreshKey]);
+  return children(list);
+};
 
 const AccountsReceivablePage = () => {
   const [loading, setLoading] = useState(true);
   const [summary, setSummary] = useState(null);
   const [byCustomer, setByCustomer] = useState([]);
-  const [allInvoices, setAllInvoices] = useState([]);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [view, setView] = useState('by-customer'); // 'by-customer' o 'all-invoices'
@@ -32,18 +45,43 @@ const AccountsReceivablePage = () => {
     to_date: ''
   });
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  // Sube tras cada pago/anticipo para recargar los listados paginados.
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     loadData();
   }, [filters]);
 
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search.trim()), 350);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  // "Todas las facturas": paginado en el servidor (el resumen solo trae
+  // totales y la agrupación por cliente).
+  const invoicesList = usePaginatedList(
+    (params, opts) => accountsReceivableAPI.getDocuments(params, opts),
+    {
+      filters: { ...filters, search: debouncedSearch },
+      enabled: view === 'all-invoices',
+      onError: (error) => toast.error(error.response?.data?.message || 'Error cargando las facturas pendientes'),
+    },
+  );
+  useEffect(() => { if (refreshKey) invoicesList.reload(); }, [refreshKey]);
+
+  // Tras un pago o un anticipo aplicado: resumen + listados paginados.
+  const refreshAfterChange = () => {
+    loadData();
+    setRefreshKey((k) => k + 1);
+  };
+
   const loadData = async () => {
     try {
       setLoading(true);
-      const response = await accountsReceivableAPI.getSummary(filters);
+      const response = await accountsReceivableAPI.getSummary({ ...filters, lite: true });
       setSummary(response.data.summary);
       setByCustomer(response.data.by_customer);
-      setAllInvoices(response.data.all_invoices);
     } catch (error) {
       toast.error(error.response?.data?.message || 'Error cargando cuentas por cobrar');
     } finally {
@@ -65,12 +103,7 @@ const AccountsReceivablePage = () => {
         (c.customer?.tax_id || '').toLowerCase().includes(searchLower)
       )
     : byCustomer;
-  const filteredAllInvoices = searchLower
-    ? allInvoices.filter(inv =>
-        (inv.customer_name || '').toLowerCase().includes(searchLower) ||
-        (inv.customer?.tax_id || '').toLowerCase().includes(searchLower)
-      )
-    : allInvoices;
+  const filteredAllInvoices = invoicesList.rows;
 
   if (loading) {
     return (
@@ -95,7 +128,7 @@ const AccountsReceivablePage = () => {
           </p>
         </div>
         <button
-          onClick={loadData}
+          onClick={refreshAfterChange}
           className="mt-4 sm:mt-0 inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
         >
           <ArrowPathIcon className="h-5 w-5 mr-2" />
@@ -315,8 +348,11 @@ const AccountsReceivablePage = () => {
                   {selectedCustomer?.customer_id === customer.customer_id && (
                     <tr>
                       <td colSpan="5" className="px-6 py-4 bg-gray-50">
+                        <CustomerInvoices customerId={customer.customer_id} filters={filters} refreshKey={refreshKey}>
+                        {(customerList) => (<>
                         <div className="space-y-2">
-                          {customer.invoices.map((invoice) => (
+                          {customerList.loading && customerList.rows.length === 0 && <p className="text-sm text-gray-400">Cargando...</p>}
+                          {customerList.rows.map((invoice) => (
                             <div
                               key={invoice.id}
                               className="flex items-center justify-between bg-white p-3 rounded border"
@@ -370,6 +406,9 @@ const AccountsReceivablePage = () => {
                             </div>
                           ))}
                         </div>
+                        <Pagination {...customerList.paginationProps} onPageSizeChange={undefined} className="mt-3" />
+                        </>)}
+                        </CustomerInvoices>
                       </td>
                     </tr>
                   )}
@@ -415,7 +454,12 @@ const AccountsReceivablePage = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredAllInvoices.length === 0 && (
+              {invoicesList.loading && filteredAllInvoices.length === 0 && (
+                <tr>
+                  <td colSpan="8" className="px-6 py-8 text-center text-sm text-gray-400">Cargando...</td>
+                </tr>
+              )}
+              {!invoicesList.loading && filteredAllInvoices.length === 0 && (
                 <tr>
                   <td colSpan="8" className="px-6 py-8 text-center text-sm text-gray-400">
                     {search ? 'No hay resultados para la búsqueda.' : 'No hay facturas pendientes.'}
@@ -479,6 +523,9 @@ const AccountsReceivablePage = () => {
             </tbody>
           </table>
         </div>
+        <div className="px-6 py-3 border-t border-gray-200">
+          <Pagination {...invoicesList.paginationProps} />
+        </div>
         </div>
       )}
 
@@ -487,7 +534,7 @@ const AccountsReceivablePage = () => {
         <RegisterSalePaymentModal
           invoice={selectedInvoice}
           onClose={() => setSelectedInvoice(null)}
-          onSuccess={() => { setSelectedInvoice(null); loadData(); }}
+          onSuccess={() => { setSelectedInvoice(null); refreshAfterChange(); }}
         />
       )}
 
@@ -495,7 +542,7 @@ const AccountsReceivablePage = () => {
       <ApplyAdvanceModal
         isOpen={!!applyAdvanceTarget}
         onClose={() => setApplyAdvanceTarget(null)}
-        onSuccess={loadData}
+        onSuccess={refreshAfterChange}
         sale={applyAdvanceTarget}
       />
       </div>
