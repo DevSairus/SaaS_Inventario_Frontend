@@ -10,11 +10,34 @@
 // principal" de cara a SEO.
 import { marked } from 'marked';
 
+const escapeHtml = (s) =>
+  String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+// Solo esquemas seguros en href/src: bloquea javascript:, data:, vbscript:, etc.
+const safeUrl = (href) => /^(https?:|mailto:|\/|#)/i.test(href || '');
+
 marked.use({
   renderer: {
     heading({ tokens, depth }) {
       const shifted = Math.min(depth + 1, 6);
       return `<h${shifted}>${this.parser.parseInline(tokens)}</h${shifted}>\n`;
+    },
+    // HTML crudo dentro del Markdown se escapa: el contenido del blog no debe
+    // poder inyectar <script>/<iframe>/on*= (XSS). Mismo criterio que
+    // legalMarkdown.js. shortcut: cubre HTML a nivel bloque; si algún día el
+    // blog acepta autores no confiables, pasar a DOMPurify (maneja también
+    // HTML inline y atributos).
+    html({ text }) {
+      return escapeHtml(text);
+    },
+    link({ href, title, tokens }) {
+      const text = this.parser.parseInline(tokens);
+      if (!safeUrl(href)) return text;
+      return `<a href="${escapeHtml(href)}"${title ? ` title="${escapeHtml(title)}"` : ''}>${text}</a>`;
+    },
+    image({ href, title, text }) {
+      if (!safeUrl(href)) return escapeHtml(text);
+      return `<img src="${escapeHtml(href)}" alt="${escapeHtml(text)}"${title ? ` title="${escapeHtml(title)}"` : ''} />`;
     },
   },
 });
