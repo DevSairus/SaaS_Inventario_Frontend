@@ -464,10 +464,10 @@ const TenantSettingsPage = () => {
                     <MessageCircle size={20} strokeWidth={2} />
                   </div>
                   <div>
-                    <p className="font-semibold text-gray-900">WhatsApp Business</p>
+                    <p className="font-semibold text-gray-900">Meta y WhatsApp</p>
                     <p className="text-sm text-gray-500 mt-0.5">
-                      Conecta el número de WhatsApp del negocio (Embedded Signup o token propio),
-                      administra el webhook y el modo demo.
+                      Conecta el número de WhatsApp del negocio, el webhook, el modo demo
+                      y los formularios de anuncios de Facebook/Instagram.
                     </p>
                   </div>
                 </div>

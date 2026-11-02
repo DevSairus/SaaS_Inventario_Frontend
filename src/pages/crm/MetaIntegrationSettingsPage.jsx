@@ -1,232 +1,44 @@
-import { useEffect, useState, useCallback } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+// Todo lo de Meta (WhatsApp y formularios de anuncios) vive en
+// Configuración → Meta y WhatsApp. Esta ruta queda como aviso y como destino
+// del callback OAuth (metaIntegration.controller.js redirige aquí).
+import { Link, Navigate, useLocation } from 'react-router-dom';
+import { Facebook } from 'lucide-react';
 import Layout from '../../components/layout/Layout';
-import crmApi from '../../api/crm';
-import { Facebook, CheckCircle2, Building2, Users } from 'lucide-react';
-import Button from '../../components/common/Button';
-import toast from 'react-hot-toast';
-
-const fmtDateTime = d => d ? new Date(d).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
-
-// El backend arma el redirect URI del OAuth y la URL del webhook a partir de
-// esta misma base -- el tenant tiene que pegar exactamente estas URLs en el
-// dashboard de SU App de Meta (Facebook Login y Webhooks), ver
-// metaIntegration.controller.js (CALLBACK_PATH).
-const BACKEND_ORIGIN = (import.meta.env.VITE_API_URL || '').replace(/\/api\/?$/, '');
-const OAUTH_REDIRECT_URI = `${BACKEND_ORIGIN}/api/webhooks/meta/oauth-callback`;
-const WEBHOOK_URL = `${BACKEND_ORIGIN}/api/webhooks/meta`;
+import useAuthStore from '../../store/authStore';
 
 export default function MetaIntegrationSettingsPage() {
-  const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const [status, setStatus] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [connecting, setConnecting] = useState(null); // 'own' | 'pitbox' | null
-  const [ownForm, setOwnForm] = useState({ own_app_id: '', own_app_secret: '', own_webhook_verify_token: '' });
+  const { search } = useLocation();
+  const isAdmin = useAuthStore((s) => s.user?.role) === 'admin';
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await crmApi.getMetaIntegrationStatus();
-      setStatus(res.data.data);
-    } catch {
-      toast.error('Error cargando el estado de la integración con Meta');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { load(); }, [load]);
-
-  // Resultado del callback OAuth (ver metaIntegration.controller.js -> redirige acá)
-  useEffect(() => {
-    const connected = searchParams.get('connected');
-    if (connected === null) return;
-    if (connected === '1') toast.success('Cuenta de Meta conectada correctamente');
-    else toast.error(searchParams.get('message') || 'No se pudo conectar con Meta');
-    setSearchParams({}, { replace: true });
-    load();
-  }, [searchParams, setSearchParams, load]);
-
-  const handleConnectOwn = async () => {
-    if (!ownForm.own_app_id.trim() || !ownForm.own_app_secret.trim()) {
-      toast.error('Completa el App ID y el App Secret de tu App de Meta');
-      return;
-    }
-    setConnecting('own');
-    try {
-      const res = await crmApi.startMetaOwnConnection({
-        own_app_id: ownForm.own_app_id.trim(),
-        own_app_secret: ownForm.own_app_secret.trim(),
-        own_webhook_verify_token: ownForm.own_webhook_verify_token.trim() || undefined,
-      });
-      window.location.href = res.data.data.oauth_url;
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Error al iniciar la conexión con Meta');
-      setConnecting(null);
-    }
-  };
-
-  const handleConnectPitbox = async () => {
-    setConnecting('pitbox');
-    try {
-      const res = await crmApi.connectMetaPitboxMode();
-      toast.success(res.data.message || 'Servicio de Meta de Pitbox activado');
-      load();
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Error al activar el servicio de Meta');
-    } finally {
-      setConnecting(null);
-    }
-  };
-
-  const handleDisconnect = async () => {
-    if (!window.confirm('¿Desconectar la integración con Meta? Los leads nuevos dejarán de crear oportunidades automáticamente.')) return;
-    try {
-      await crmApi.disconnectMetaIntegration();
-      toast.success('Integración desconectada');
-      load();
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Error al desconectar');
-    }
-  };
-
-  if (loading || !status) {
-    return (
-      <Layout>
-        <div className="flex items-center justify-center h-80">
-          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-accent" />
-        </div>
-      </Layout>
-    );
+  if (new URLSearchParams(search).has('connected')) {
+    return <Navigate to={`/settings/whatsapp${search}`} replace />;
   }
-
-  const isConnected = !!status.provider_mode && status.is_active;
 
   return (
     <Layout>
-      <div className="p-4 sm:p-6 max-w-3xl mx-auto space-y-5">
-
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-[#1877F2] rounded-xl">
+      <div className="p-4 sm:p-6 flex justify-center">
+        <div className="w-full sm:[max-width:28rem] bg-white border border-gray-100 rounded-xl shadow-[0_1px_2px_rgba(15,15,15,0.04)] p-6 text-center space-y-4">
+          <div className="mx-auto w-11 h-11 flex items-center justify-center rounded-xl bg-[#1877F2]">
             <Facebook className="w-5 h-5 text-white" />
           </div>
-          <div>
-            <h1 className="text-xl font-bold text-gray-900 tracking-tight">Integración con Meta</h1>
-            <p className="text-sm text-gray-500">Los leads de tus formularios de Facebook/Instagram entran directo al pipeline como oportunidades nuevas</p>
+          <div className="space-y-1">
+            <h1 className="text-lg font-bold text-gray-900">La integración con Meta se movió</h1>
+            <p className="text-sm text-gray-500">
+              WhatsApp y los formularios de anuncios ahora se configuran juntos en Meta y WhatsApp.
+            </p>
           </div>
+          {isAdmin ? (
+            <Link to="/settings/whatsapp"
+              className="inline-flex justify-center w-full px-4 py-2.5 rounded-lg text-sm font-semibold text-white bg-gradient-to-r from-orange-500 via-rose-500 to-fuchsia-600 hover:opacity-90 shadow-sm shadow-rose-500/30">
+              Ir a Meta y WhatsApp
+            </Link>
+          ) : (
+            <p className="text-xs text-gray-500">Pídele a un administrador que lo configure.</p>
+          )}
+          <Link to="/support/tickets" className="block text-xs text-gray-500 hover:text-gray-700 hover:underline">
+            ¿Necesitas ayuda? Contactar a Pitbox
+          </Link>
         </div>
-
-        {isConnected ? (
-          <div className="bg-white border border-gray-100 rounded-xl shadow-[0_1px_2px_rgba(15,15,15,0.04)] p-5 space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="w-5 h-5 text-green-500" />
-                <span className="font-semibold text-gray-800">
-                  Conectado — {status.provider_mode === 'own' ? 'cuenta propia' : 'servicio Pitbox'}
-                </span>
-              </div>
-              <button onClick={handleDisconnect} className="text-xs font-medium text-red-500 hover:underline">
-                Desconectar
-              </button>
-            </div>
-
-            {status.provider_mode === 'own' && (
-              <div className="text-sm text-gray-600 space-y-1">
-                <p><span className="text-gray-400">Página:</span> {status.own_page_name || status.own_page_id || '—'}</p>
-                <p><span className="text-gray-400">Conectado desde:</span> {fmtDateTime(status.connected_at)}</p>
-              </div>
-            )}
-            {status.provider_mode === 'pitbox' && (
-              <div className="text-sm text-gray-600 space-y-1">
-                <p><span className="text-gray-400">Formularios vinculados:</span> {status.pitbox_lead_form_count}</p>
-                {status.pitbox_lead_form_count === 0 && (
-                  <p className="text-amber-600 text-xs">Un asesor de soporte todavía tiene que vincular tus formularios de anuncios para que empiecen a llegar los leads.</p>
-                )}
-              </div>
-            )}
-
-            <div className="flex items-center gap-4 text-sm pt-2 border-t border-gray-100">
-              <div>
-                <p className="text-gray-400 text-xs">Último lead recibido</p>
-                <p className="font-medium text-gray-700">{fmtDateTime(status.last_lead_at)}</p>
-              </div>
-              {status.last_error && (
-                <div>
-                  <p className="text-gray-400 text-xs">Último error</p>
-                  <p className="font-medium text-red-500">{status.last_error}</p>
-                </div>
-              )}
-            </div>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="bg-white border border-gray-100 rounded-xl shadow-[0_1px_2px_rgba(15,15,15,0.04)] hover:shadow-[0_4px_12px_-2px_rgba(15,15,15,0.08)] transition-shadow p-5 space-y-3">
-              <div className="w-10 h-10 flex items-center justify-center rounded-lg bg-gradient-to-br from-accent to-accent-soft">
-                <Building2 className="w-5 h-5 text-white" />
-              </div>
-              <h2 className="font-semibold text-gray-800">Usar mi propia cuenta de Meta</h2>
-              <p className="text-sm text-gray-500">
-                Conecta tu propia App de Meta for Developers — tus campañas y anuncios siguen exactamente igual, Pitbox solo lee los leads nuevos con tus propias credenciales.
-              </p>
-
-              <details className="text-xs text-gray-500 bg-gray-50 rounded-lg p-2.5 space-y-1.5">
-                <summary className="cursor-pointer font-medium text-gray-600">¿Dónde consigo esto?</summary>
-                <p>1. Crea una App en <span className="font-mono">developers.facebook.com/apps</span> (tipo "Empresa").</p>
-                <p>2. En Facebook Login, agrega este Redirect URI:</p>
-                <p className="font-mono bg-white border border-gray-200 rounded px-1.5 py-1 break-all select-all">{OAUTH_REDIRECT_URI}</p>
-                <p>3. En Webhooks, suscribe el objeto Page al campo <span className="font-mono">leadgen</span> con esta URL:</p>
-                <p className="font-mono bg-white border border-gray-200 rounded px-1.5 py-1 break-all select-all">{WEBHOOK_URL}</p>
-                <p>4. Elige ahí un Verify Token (cualquier texto) y repítelo abajo.</p>
-              </details>
-
-              <div className="space-y-2">
-                <input
-                  type="text"
-                  placeholder="App ID"
-                  value={ownForm.own_app_id}
-                  onChange={e => setOwnForm(f => ({ ...f, own_app_id: e.target.value }))}
-                  className="w-full text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30"
-                />
-                <input
-                  type="password"
-                  placeholder="App Secret"
-                  value={ownForm.own_app_secret}
-                  onChange={e => setOwnForm(f => ({ ...f, own_app_secret: e.target.value }))}
-                  className="w-full text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30"
-                />
-                <input
-                  type="text"
-                  placeholder="Webhook Verify Token (opcional)"
-                  value={ownForm.own_webhook_verify_token}
-                  onChange={e => setOwnForm(f => ({ ...f, own_webhook_verify_token: e.target.value }))}
-                  className="w-full text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/30"
-                />
-              </div>
-
-              <Button variant="primary" onClick={handleConnectOwn} disabled={connecting === 'own'} className="!bg-gradient-to-br !from-accent !to-accent-soft hover:!opacity-90 !shadow-sm !shadow-accent/30">
-                {connecting === 'own' ? 'Redirigiendo...' : 'Conectar con Meta'}
-              </Button>
-            </div>
-
-            <div className="bg-white border border-gray-100 rounded-xl shadow-[0_1px_2px_rgba(15,15,15,0.04)] hover:shadow-[0_4px_12px_-2px_rgba(15,15,15,0.08)] transition-shadow p-5 space-y-3">
-              <div className="w-10 h-10 flex items-center justify-center rounded-lg bg-gray-100">
-                <Users className="w-5 h-5 text-gray-500" />
-              </div>
-              <h2 className="font-semibold text-gray-800">Usar el servicio de Pitbox</h2>
-              <p className="text-sm text-gray-500">
-                No tienes cuenta de Meta Business todavía — usamos nuestra propia página compartida. Un asesor de soporte te ayuda a vincular tus formularios.
-              </p>
-              <Button variant="secondary" onClick={handleConnectPitbox} disabled={connecting === 'pitbox'}>
-                {connecting === 'pitbox' ? 'Activando...' : 'Activar servicio Pitbox'}
-              </Button>
-            </div>
-          </div>
-        )}
-
-        <button onClick={() => navigate('/crm/pipeline')} className="text-sm text-accent hover:underline">
-          ← Volver al pipeline
-        </button>
       </div>
     </Layout>
   );

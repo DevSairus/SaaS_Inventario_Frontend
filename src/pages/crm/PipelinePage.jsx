@@ -887,7 +887,7 @@ export default function PipelinePage() {
                 className="flex items-center gap-2 px-4 py-2 bg-gradient-to-br from-accent to-accent-soft text-white rounded-xl text-sm font-medium shadow-sm shadow-accent/30 hover:shadow-md transition-all">
                 <Plus className="h-4 w-4" /> Nuevo negocio
               </button>
-              <button onClick={() => navigate('/crm/settings/meta')}
+              <button onClick={() => navigate(user?.role === 'admin' ? '/settings/whatsapp' : '/crm/settings/meta')}
                 className="flex items-center gap-2 px-4 py-2 border border-gray-200 text-gray-600 rounded-xl text-sm font-medium hover:bg-gray-50 transition">
                 Conectar Meta Ads
               </button>
