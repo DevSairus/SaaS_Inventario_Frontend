@@ -441,7 +441,7 @@ export default function WhatsAppSettingsPage() {
           <div className="p-5 bg-white border border-gray-200 rounded-xl space-y-3">
             <h2 className="font-semibold text-gray-800 text-sm">Plantillas Meta</h2>
             <p className="text-xs text-gray-500">
-              Sincroniza las plantillas APPROVED del WABA para recordatorios y campañas.
+              Trae las plantillas que creaste en Meta para esta empresa y elige cuál usa cada mensaje de Pitbox.
             </p>
             <button
               type="button"
