@@ -17,6 +17,7 @@ import {
 } from '@heroicons/react/24/outline';
 import Pagination from '../../components/common/Pagination';
 import useUrlPageSync from '../../hooks/useUrlPageSync';
+import useWhatsAppPitbox from '../../hooks/useWhatsAppPitbox';
 
 const PAGE_SIZE = 20;
 
@@ -77,6 +78,7 @@ export default function WorkOrdersPage() {
   const navigate = useNavigate();
   const { workOrders, workOrdersTotal, workOrdersLoading, fetchWorkOrders } = useWorkshopStore();
   const { user } = useAuthStore();
+  const { operational: waOperational, notifyWaMeFallback } = useWhatsAppPitbox();
   const hidePrices = user?.role === 'technician';
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('activas'); // activas = excluye entregado/cancelado
@@ -86,7 +88,7 @@ export default function WorkOrdersPage() {
 
   const handleSendWhatsApp = async (e, orderId) => {
     e.stopPropagation();
-    const win = window.open('', '_blank');
+    const win = waOperational ? null : window.open('', '_blank');
     setSendingId(orderId);
     try {
       const res = await workOrdersApi.sendWhatsApp(orderId);
@@ -97,6 +99,8 @@ export default function WorkOrdersPage() {
       } else if (waLink && win) {
         win.location.href = waLink;
         toast.success('Se abrió WhatsApp con el enlace de la OT. Presiona Enviar ↑', { duration: 5000 });
+      } else if (waLink) {
+        notifyWaMeFallback({ waLink });
       } else {
         win?.close();
         toast.error('No se pudo generar el enlace de WhatsApp.');

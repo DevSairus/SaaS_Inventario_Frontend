@@ -75,17 +75,18 @@ export default function useWhatsAppPitbox() {
     ), { duration: 8000, icon: '⏰' });
   }, [chatAction]);
 
-  // Envíos del backend (cotizaciones) que devolvieron wa.me: con Pitbox activo
-  // pasa por ventana cerrada o un error con Meta; sin Pitbox, porque el
-  // navegador bloqueó la pestaña.
+  // Envíos del backend (cotizaciones, OT, portal) que devolvieron wa.me: con
+  // Pitbox activo pasa por ventana cerrada o un error con Meta; sin Pitbox,
+  // porque el navegador bloqueó la pestaña.
   const notifyWaMeFallback = useCallback(({ phone, waLink }) => {
+    phone = phone || waLink.match(/wa\.me\/(\d+)/)?.[1];
     const pitbox = lastKnown === true;
     toast((t) => (
       <ChatToast t={t}
         text={pitbox
           ? 'No salió por WhatsApp Pitbox (el cliente no ha escrito en 24 h o falló la conexión con Meta).'
           : 'El navegador bloqueó la pestaña de WhatsApp.'}
-        actions={pitbox ? [chatAction(phone), waMeAction(waLink)] : [waMeAction(waLink)]} />
+        actions={pitbox && phone ? [chatAction(phone), waMeAction(waLink)] : [waMeAction(waLink)]} />
     ), { duration: 10000, icon: '⚠️' });
   }, [chatAction]);
 

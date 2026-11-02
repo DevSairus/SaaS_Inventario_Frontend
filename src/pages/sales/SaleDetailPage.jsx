@@ -276,7 +276,7 @@ export default function SaleDetailPage() {
         win.location.href = waLink;
         toast.success('Se abrió WhatsApp con el mensaje listo. Presiona Enviar ↑', { duration: 5000 });
       } else if (waLink) {
-        notifyWaMeFallback({ phone: waLink.match(/wa\.me\/(\d+)/)?.[1], waLink });
+        notifyWaMeFallback({ waLink });
       } else {
         win?.close();
         toast.error('No se pudo generar el enlace de WhatsApp.');

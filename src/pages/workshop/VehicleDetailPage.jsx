@@ -13,6 +13,7 @@ import toast from 'react-hot-toast';
 import NumericInput from '../../components/inputs/NumericInput';
 import VehicleLabelPrintModal from '../../components/workshop/VehicleLabelPrintModal';
 import useRemoteOptions from '../../hooks/useRemoteOptions';
+import useWhatsAppPitbox from '../../hooks/useWhatsAppPitbox';
 import {
   MAINTENANCE_STATUS, VEHICLE_TYPE_LABELS, fmtKm, fmtDateOnly, describeRemaining, fmtKmPerDay,
 } from '../../components/workshop/maintenanceStatus';
@@ -65,6 +66,7 @@ export default function VehicleDetailPage() {
   const [portalBusy, setPortalBusy] = useState(null);   // 'copy' | 'wa'
   const [showLabelModal, setShowLabelModal] = useState(false);
   const [reminders, setReminders] = useState([]); // recordatorios de vencimiento enviados
+  const { operational: waOperational, notifyWaMeFallback } = useWhatsAppPitbox();
 
   useEffect(() => { load(); }, [id]);
   // Búsqueda en el servidor: precargar un tope fijo dejaba clientes por fuera.
@@ -112,7 +114,7 @@ export default function VehicleDetailPage() {
   };
 
   const handleSendPortalWhatsApp = async () => {
-    const win = window.open('', '_blank');
+    const win = waOperational ? null : window.open('', '_blank');
     setPortalBusy('wa');
     try {
       const res = await vehiclesApi.sendPortalWhatsApp(id);
@@ -123,6 +125,8 @@ export default function VehicleDetailPage() {
       } else if (waLink && win) {
         win.location.href = waLink;
         toast.success('Se abrió WhatsApp con el enlace del portal. Presiona Enviar ↑', { duration: 5000 });
+      } else if (waLink) {
+        notifyWaMeFallback({ waLink });
       } else {
         win?.close();
         toast.error('No se pudo generar el enlace de WhatsApp.');
