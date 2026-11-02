@@ -14,3 +14,6 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     </ErrorBoundary>
   </React.StrictMode>,
 )
+
+// Sello estático de index.html, solo para crawlers sin JS (ver comentario allá).
+document.getElementById('static-badges')?.remove()

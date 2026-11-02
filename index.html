@@ -99,6 +99,17 @@
   </head>
   <body>
     <div id="root"></div>
+    <!-- Sello de ComparaSoftware en el HTML estático: la landing es una SPA y
+         su verificador no ejecuta JS, así que no veía el sello de
+         LandingPage.jsx. main.jsx quita este bloque al montar React (la
+         landing pinta el suyo). No tocar la línea de #root de arriba:
+         scripts/prerender-blog.js la reemplaza con match exacto. -->
+    <div id="static-badges" style="padding:16px;text-align:center;font-family:sans-serif;font-size:12px;color:#888">
+      <a href="https://www.comparasoftware.co/pitbox" target="_blank" rel="noopener" style="display:inline-block">
+        <img src="https://www.comparasoftware.co/badges/pitbox.svg?v=compacta" alt="Pitbox — opiniones en ComparaSoftware" width="200" height="60" style="display:block" />
+      </a>
+      <p>Lee opiniones de Pitbox en <a href="https://www.comparasoftware.co/pitbox" target="_blank" rel="noopener">ComparaSoftware</a>.</p>
+    </div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
