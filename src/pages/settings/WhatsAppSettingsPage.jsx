@@ -6,6 +6,7 @@ import crmApi from '../../api/crm';
 import toast from 'react-hot-toast';
 import useTenantStore from '../../store/tenantStore';
 import MetaLeadAdsSection from '../../components/settings/MetaLeadAdsSection';
+import WaEventTemplatesSection from '../../components/settings/WaEventTemplatesSection';
 import { invalidateWhatsAppPitboxStatus } from '../../hooks/useWhatsAppPitbox';
 
 function WhatsAppIcon({ className }) {
@@ -78,6 +79,7 @@ export default function WhatsAppSettingsPage() {
   });
   const [webhookVerifyToken, setWebhookVerifyToken] = useState('');
   const [savingWebhookToken, setSavingWebhookToken] = useState(false);
+  const [templatesSyncedAt, setTemplatesSyncedAt] = useState(0);
 
   const handleSaveWebhookVerifyToken = async (e) => {
     e.preventDefault();
@@ -447,6 +449,7 @@ export default function WhatsAppSettingsPage() {
                 try {
                   const res = await crmApi.syncWaTemplates();
                   toast.success(`Sincronizadas: ${res.data.data?.synced ?? 0}`);
+                  setTemplatesSyncedAt(Date.now());
                 } catch (err) {
                   toast.error(err.response?.data?.message || 'No se pudo sincronizar');
                 }
@@ -455,6 +458,7 @@ export default function WhatsAppSettingsPage() {
             >
               Sincronizar plantillas
             </button>
+            <WaEventTemplatesSection reloadKey={templatesSyncedAt} />
             <a href="/crm/whatsapp" className="block text-xs text-emerald-700 hover:underline">
               Ir al inbox WhatsApp →
             </a>
