@@ -7,14 +7,14 @@ import useBranchStore from '../../store/branchStore';
 import { vehiclesApi } from '../../api/workshop';
 import { vehiclesApiOffline } from '../../api/workshopOffline';
 import axios from '../../api/axios';
-import { ArrowLeft, Save, Car, User, Wrench, Plus, X, Search, Loader, ScanLine } from 'lucide-react';
+import { ArrowLeft, Save, Car, User, Wrench, Plus, X, Search, Loader } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 import RuntConsultaModal from '../../components/workshop/RuntConsultaModal';
 import NumericInput from '../../components/inputs/NumericInput';
 import DraftRecoveryBanner from '../../components/common/DraftRecoveryBanner';
 import useFormDraft from '../../hooks/useFormDraft';
-import { notifyReceptionResult } from '../../components/workshop/receptionNotice';
+import useReceptionNotice from '../../components/workshop/receptionNotice';
 
 const inputCls = "w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white";
 
@@ -30,6 +30,7 @@ function Field({ label, children }) {
 
 export default function WorkOrderFormPage() {
   const navigate        = useNavigate();
+  const notifyReceptionResult = useReceptionNotice();
   const [searchParams]  = useSearchParams();
   // C.3 — "Oportunidad → OT en un clic": si se llega desde el botón del
   // pipeline (PipelinePage#buildWorkOrderUrl), opportunity_id viaja en la

@@ -28,6 +28,7 @@ import WorkOrderPaymentsPanel from '../../components/workshop/WorkOrderPaymentsP
 import IntakeAuthorizationCard from '../../components/consents/IntakeAuthorizationCard';
 import { consentsAPI } from '../../api/consents';
 import { groupDocumentItems } from '../../components/combos/comboUtils';
+import useWhatsAppPitbox from '../../hooks/useWhatsAppPitbox';
 
 const STATUS_FLOW = ['recibido', 'en_proceso', 'en_espera', 'listo', 'entregado'];
 
@@ -86,6 +87,7 @@ export default function WorkOrderDetailPage() {
   // a la otra por accidente.
   const hideWorkOrderTax = features?.hide_workorder_tax === true;
   const { user } = useAuthStore();
+  const { sendFromBackend } = useWhatsAppPitbox();
   // El técnico ve/opera la OT (diagnóstico, checklist, ítems) pero no debe
   // ver ningún valor monetario -- ni de repuestos, mano de obra, servicios
   // ni totales -- para que no negocie precios con el cliente en el taller.
@@ -231,29 +233,9 @@ export default function WorkOrderDetailPage() {
   const [savingWorkPerformed, setSavingWorkPerformed]   = useState(false);
 
   const handleSendWhatsApp = async () => {
-    const win = window.open('', '_blank');
     setSendingWA(true);
-    try {
-      const res = await workOrdersApi.sendWhatsApp(id);
-      const { channel, waLink, message } = res.data;
-      if (channel === 'cloud_api') {
-        // Ya se envió directo por WhatsApp Cloud API -- no hay enlace que abrir.
-        win?.close();
-        toast.success(message || 'Orden enviada por WhatsApp Cloud API.', { duration: 5000 });
-      } else if (waLink && win) {
-        win.location.href = waLink;
-        toast.success('Se abrió WhatsApp con el enlace de la OT. Presiona Enviar ↑', { duration: 5000 });
-      } else {
-        win?.close();
-        toast.error('No se pudo generar el enlace de WhatsApp.');
-      }
-    } catch (e) {
-      win?.close();
-      const msg = e.response?.data?.message || e.message || 'Error al generar enlace de WhatsApp';
-      toast.error(msg, { duration: 6000 });
-    } finally {
-      setSendingWA(false);
-    }
+    await sendFromBackend(async () => (await workOrdersApi.sendWhatsApp(id)).data, { sentText: 'Orden enviada por WhatsApp Pitbox.' });
+    setSendingWA(false);
   };
 
   const handleCopyLink = async () => {
@@ -280,44 +262,17 @@ export default function WorkOrderDetailPage() {
   const [applyingQuoteId, setApplyingQuoteId] = useState(null);
   const [showApprovedItems, setShowApprovedItems] = useState(false);
 
+  // El store ya avisa el éxito y los errores de la cotización.
   const handleSendQuoteRequest = async () => {
-    const win = window.open('', '_blank');
     setSendingQuote(true);
-    try {
-      const data = await sendQuoteRequest(id);
-      if (data?.channel === 'cloud_api') {
-        win?.close();
-        toast.success('Cotización enviada por WhatsApp Cloud API');
-      } else if (data?.whatsapp_url && win) {
-        win.location.href = data.whatsapp_url;
-      } else {
-        win?.close();
-      }
-    } catch {
-      win?.close();
-    } finally {
-      setSendingQuote(false);
-    }
+    await sendFromBackend(() => sendQuoteRequest(id), { sentText: null, toastErrors: false });
+    setSendingQuote(false);
   };
 
   const handleResendQuoteRequest = async (quoteRequestId) => {
-    const win = window.open('', '_blank');
     setResendingQuoteId(quoteRequestId);
-    try {
-      const data = await resendQuoteRequest(id, quoteRequestId);
-      if (data?.channel === 'cloud_api') {
-        win?.close();
-        toast.success('Cotización reenviada por WhatsApp Cloud API');
-      } else if (data?.whatsapp_url && win) {
-        win.location.href = data.whatsapp_url;
-      } else {
-        win?.close();
-      }
-    } catch {
-      win?.close();
-    } finally {
-      setResendingQuoteId(null);
-    }
+    await sendFromBackend(() => resendQuoteRequest(id, quoteRequestId), { sentText: null, toastErrors: false });
+    setResendingQuoteId(null);
   };
 
   const handleApplyApprovedItems = async (quoteRequestId) => {

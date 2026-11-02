@@ -14,6 +14,7 @@ import { Copy, Mail, MessageCircle, QrCode, KeyRound, PenLine, ExternalLink } fr
 import Modal from '../common/Modal';
 import { consentsAPI } from '../../api/consents';
 import useAuthStore from '../../store/authStore';
+import useWhatsAppPitbox from '../../hooks/useWhatsAppPitbox';
 
 const CHANNEL_LABELS = { email: 'Correo', whatsapp: 'WhatsApp' };
 
@@ -33,6 +34,7 @@ export default function ConsentRequestModal({
   const [loading, setLoading] = useState(false);
   const [tab, setTab] = useState('link');
   const [busy, setBusy] = useState(false);
+  const { sendFromBackend } = useWhatsAppPitbox();
 
   const [otp, setOtp] = useState(null);
   const [code, setCode] = useState('');
@@ -81,23 +83,23 @@ export default function ConsentRequestModal({
 
   const sendLink = async (channel) => {
     setBusy(true);
-    try {
-      const r = await consentsAPI.sendLink(consent.id, [channel]);
-      if (channel === 'whatsapp') {
-        if (r.whatsapp?.sent) toast.success('Enlace enviado por WhatsApp');
-        else if (r.whatsapp?.whatsapp_url) window.open(r.whatsapp.whatsapp_url, '_blank');
-        else toast.error(r.whatsapp?.error || 'No se pudo enviar por WhatsApp');
-      } else if (r.email?.sent) {
-        toast.success('Enlace enviado por correo');
-      } else {
-        toast.error(r.email?.error || 'No se pudo enviar el correo');
+    if (channel === 'whatsapp') {
+      const r = await sendFromBackend(async () => (await consentsAPI.sendLink(consent.id, ['whatsapp'])).whatsapp, {
+        sentText: 'Enlace enviado por WhatsApp Pitbox.',
+        errorText: 'No se pudo enviar el enlace',
+      });
+      if (r) onChanged?.();
+    } else {
+      try {
+        const r = await consentsAPI.sendLink(consent.id, [channel]);
+        if (r.email?.sent) toast.success('Enlace enviado por correo');
+        else toast.error(r.email?.error || 'No se pudo enviar el correo');
+        onChanged?.();
+      } catch (e) {
+        toast.error(e?.response?.data?.message || 'No se pudo enviar el enlace');
       }
-      onChanged?.();
-    } catch (e) {
-      toast.error(e?.response?.data?.message || 'No se pudo enviar el enlace');
-    } finally {
-      setBusy(false);
     }
+    setBusy(false);
   };
 
   const sendOtp = async (channel) => {

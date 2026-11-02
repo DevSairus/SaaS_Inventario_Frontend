@@ -4,6 +4,9 @@ import Layout from '../../components/layout/Layout';
 import api from '../../api/axios';
 import crmApi from '../../api/crm';
 import toast from 'react-hot-toast';
+import useTenantStore from '../../store/tenantStore';
+import MetaLeadAdsSection from '../../components/settings/MetaLeadAdsSection';
+import { invalidateWhatsAppPitboxStatus } from '../../hooks/useWhatsAppPitbox';
 
 function WhatsAppIcon({ className }) {
   return (
@@ -54,6 +57,7 @@ function loadFacebookSdk(appId) {
 }
 
 export default function WhatsAppSettingsPage() {
+  const hasMetaLeads = (useTenantStore((s) => s.enabledModules) || []).includes('crm_meta_leads');
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState(null);
   const [waStatus, setWaStatus] = useState(null);
@@ -92,6 +96,8 @@ export default function WhatsAppSettingsPage() {
   };
 
   const loadWa = useCallback(async () => {
+    // Conectar, desconectar o cambiar el demo cambia por dónde salen los botones de WhatsApp.
+    invalidateWhatsAppPitboxStatus();
     setLoadingWa(true);
     try {
       const res = await crmApi.getWhatsAppCloudStatus();
@@ -248,9 +254,10 @@ export default function WhatsAppSettingsPage() {
       <div className="max-w-2xl mx-auto px-4 py-8 space-y-6">
 
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-1">WhatsApp</h1>
+          <h1 className="text-2xl font-bold text-gray-900 mb-1">Meta y WhatsApp</h1>
           <p className="text-sm text-gray-500">
-            Cloud API con coexistencia (mismo número en la app del celular y en Pitbox) + fallback wa.me.
+            WhatsApp Cloud API con coexistencia (mismo número en la app del celular y en Pitbox), fallback wa.me
+            y formularios de anuncios de Facebook/Instagram.
           </p>
         </div>
 
@@ -491,6 +498,8 @@ export default function WhatsAppSettingsPage() {
             </div>
           );
         })()}
+
+        {hasMetaLeads && <MetaLeadAdsSection />}
 
         {/* wa.me fallback */}
         <div className="flex items-start gap-4 p-5 bg-green-50 border border-green-200 rounded-xl">
