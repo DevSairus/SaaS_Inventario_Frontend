@@ -6,7 +6,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import crmApi from '../api/crm';
-import { buildWaLink, trackWhatsAppInteraction } from '../utils/whatsapp';
+import { buildWaLink, formatColombianPhone, trackWhatsAppInteraction } from '../utils/whatsapp';
 
 const STATUS_TTL_MS = 60 * 1000;
 let cached = { at: 0, promise: null };
@@ -52,9 +52,9 @@ export default function useWhatsAppPitbox() {
   }, []);
 
   const notifyWindowClosed = useCallback((phone) => {
-    const digits = String(phone || '').replace(/\D/g, '');
+    const digits = formatColombianPhone(phone);
     toast((t) => (
-      <ChatToast t={t} text="Pasaron más de 24 h desde el último mensaje del cliente. Envía una plantilla para retomar."
+      <ChatToast t={t} text="El cliente no te ha escrito en las últimas 24 h. Envía una plantilla desde el chat para retomar."
         actionLabel="Abrir chat" onAction={() => navigate(`/crm/whatsapp?phone=${digits}`)} />
     ), { duration: 8000, icon: '⏰' });
   }, [navigate]);
@@ -72,7 +72,8 @@ export default function useWhatsAppPitbox() {
       return { channel: 'wa_me' };
     }
 
-    const digits = String(phone || '').replace(/\D/g, '');
+    // Meta exige el número con indicativo; a 10 dígitos sin él se les antepone 57.
+    const digits = formatColombianPhone(phone);
     if (!digits) {
       toast.error('El cliente no tiene teléfono');
       return { channel: null };

@@ -6,6 +6,7 @@ import DealModal from '../../components/crm/DealModal';
 import NewDealModal from '../../components/crm/NewDealModal';
 import WaTemplatePickerModal from '../../components/crm/WaTemplatePickerModal';
 import { groupMessagesByDay, phoneKey } from '../../utils/waChat';
+import { formatColombianPhone } from '../../utils/whatsapp';
 import crmApi from '../../api/crm';
 import { usersAPI } from '../../api/users';
 import useAuthStore from '../../store/authStore';
@@ -485,7 +486,7 @@ export default function WhatsAppInboxPage() {
           setSelectedId(conv.id);
         } else {
           setSelectedId(null);
-          setNewChatPhone(String(phone).replace(/\D/g, ''));
+          setNewChatPhone(formatColombianPhone(phone));
         }
       } catch {
         if (alive) toast.error('No se pudo abrir el chat');
