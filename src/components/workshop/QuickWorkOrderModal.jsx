@@ -7,7 +7,7 @@ import Combobox, { HighlightMatch } from '../common/Combobox';
 import NumericInput from '../inputs/NumericInput';
 import axios from '../../api/axios';
 import { vehiclesApi, workOrdersApi } from '../../api/workshop';
-import { notifyReceptionResult } from './receptionNotice';
+import useReceptionNotice from './receptionNotice';
 
 /**
  * OT rápida: recibir un vehículo con lo mínimo (placa, cliente, km y el
@@ -38,6 +38,7 @@ export default function QuickWorkOrderModal({ isOpen, onClose }) {
   const navigate = useNavigate();
   const plateRef = useRef(null);
 
+  const notifyReceptionResult = useReceptionNotice();
   const [plate, setPlate] = useState('');
   // idle | loading | found | notfound
   const [lookup, setLookup] = useState({ status: 'idle', vehicle: null });

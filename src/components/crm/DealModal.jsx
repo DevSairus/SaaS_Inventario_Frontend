@@ -45,7 +45,7 @@ const defaultDueAt = () => {
 
 export default function DealModal({ opportunity, stage, startInCreate = false, onClose, onChanged }) {
   const navigate = useNavigate();
-  const { operational: waOperational, sendViaWhatsApp, notifyWaMeFallback } = useWhatsAppPitbox();
+  const { sendViaWhatsApp, sendFromBackend } = useWhatsAppPitbox();
   const isOpen = !!opportunity;
   const [quoteId, setQuoteId] = useState(null);
   const [sale, setSale] = useState(null);
@@ -140,32 +140,10 @@ export default function DealModal({ opportunity, stage, startInCreate = false, o
   };
 
   const handleWhatsApp = async () => {
-    // La pestaña se abre en el mismo clic para que el navegador no la bloquee,
-    // y solo si el envío puede salir por wa.me.
-    const win = waOperational ? null : window.open('', '_blank');
     setBusy('wa');
-    try {
-      const res = await salesApi.sendWhatsApp(quoteId);
-      const { channel, waLink, message } = res.data;
-      if (channel === 'cloud_api') {
-        win?.close();
-        toast.success(message || 'Cotización enviada por WhatsApp Pitbox.', { duration: 5000 });
-      } else if (waLink && win) {
-        win.location.href = waLink;
-        toast.success('Se abrió WhatsApp con el mensaje listo. Presiona Enviar.', { duration: 5000 });
-      } else if (waLink) {
-        notifyWaMeFallback({ phone, waLink });
-      } else {
-        win?.close();
-        toast.error('No se pudo generar el enlace de WhatsApp.');
-      }
-      loadSale(quoteId);
-    } catch (e) {
-      win?.close();
-      toast.error(e.response?.data?.message || 'Error al enviar por WhatsApp');
-    } finally {
-      setBusy(null);
-    }
+    const sent = await sendFromBackend(async () => (await salesApi.sendWhatsApp(quoteId)).data, { sentText: 'Cotización enviada por WhatsApp Pitbox.' });
+    if (sent) loadSale(quoteId);
+    setBusy(null);
   };
 
   // Descarga directa: abrir una pestaña en blanco y llevarla al blob (lo de

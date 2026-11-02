@@ -75,20 +75,58 @@ export default function useWhatsAppPitbox() {
     ), { duration: 8000, icon: '⏰' });
   }, [chatAction]);
 
-  // Envíos del backend (cotizaciones, OT, portal) que devolvieron wa.me: con
-  // Pitbox activo pasa por ventana cerrada o un error con Meta; sin Pitbox,
-  // porque el navegador bloqueó la pestaña.
-  const notifyWaMeFallback = useCallback(({ phone, waLink }) => {
+  // Envío que el backend devolvió como wa.me sin pestaña abierta. `reason` es
+  // el fallback_reason del backend (ver services/whatsappDelivery.js).
+  const notifyWaMeFallback = useCallback(({ phone, waLink, reason }) => {
     phone = phone || waLink.match(/wa\.me\/(\d+)/)?.[1];
-    const pitbox = lastKnown === true;
+    const pitboxFailed = reason === 'window_closed' || reason === 'error' || (!reason && lastKnown === true);
+    const text = reason === 'window_closed'
+      ? 'El cliente no te ha escrito en las últimas 24 h: envíale una plantilla desde el chat o ábrelo en WhatsApp.'
+      : pitboxFailed
+        ? 'No salió por WhatsApp Pitbox (falló la conexión con Meta).'
+        : 'Mensaje listo para enviar por WhatsApp.';
     toast((t) => (
-      <ChatToast t={t}
-        text={pitbox
-          ? 'No salió por WhatsApp Pitbox (el cliente no ha escrito en 24 h o falló la conexión con Meta).'
-          : 'El navegador bloqueó la pestaña de WhatsApp.'}
-        actions={pitbox && phone ? [chatAction(phone), waMeAction(waLink)] : [waMeAction(waLink)]} />
-    ), { duration: 10000, icon: '⚠️' });
+      <ChatToast t={t} text={text}
+        actions={pitboxFailed && phone ? [chatAction(phone), waMeAction(waLink)] : [waMeAction(waLink)]} />
+    ), { duration: 10000, icon: pitboxFailed ? '⚠️' : '💬' });
   }, [chatAction]);
+
+  // Resultado de un envío que arma el backend ({ channel, waLink | whatsapp_url,
+  // fallback_reason }). `win` es la pestaña abierta en el clic, si la hay.
+  const resolveWaResult = useCallback((result, { win = null, sentText = 'Enviado por WhatsApp Pitbox.' } = {}) => {
+    const waLink = result?.waLink || result?.whatsapp_url;
+    if (result?.channel === 'cloud_api') {
+      win?.close();
+      if (sentText) toast.success(sentText);
+    } else if (waLink && win) {
+      win.location.href = waLink;
+    } else {
+      win?.close();
+      if (waLink) notifyWaMeFallback({ waLink, reason: result.fallback_reason });
+      else toast.error(result?.error || 'No se pudo generar el enlace de WhatsApp.');
+    }
+  }, [notifyWaMeFallback]);
+
+  // Clic en un botón cuyo envío arma el backend. La pestaña de wa.me se abre
+  // en el mismo clic (si no, el navegador la bloquea) y solo si Pitbox no está
+  // activo. `request` devuelve el resultado; errores van a toast salvo que el
+  // llamador ya los muestre (toastErrors: false). null = falló.
+  const sendFromBackend = useCallback(async (request, {
+    sentText,
+    errorText = 'No se pudo enviar por WhatsApp',
+    toastErrors = true,
+  } = {}) => {
+    const win = lastKnown === true ? null : window.open('', '_blank');
+    try {
+      const result = await request();
+      resolveWaResult(result, { win, sentText });
+      return result;
+    } catch (e) {
+      win?.close();
+      if (toastErrors) toast.error(e.response?.data?.message || errorText);
+      return null;
+    }
+  }, [resolveWaResult]);
 
   const sendViaWhatsApp = useCallback(async ({ phone, customerId, text = '', hasCrm = true }) => {
     const ok = lastKnown ?? await loadWhatsAppPitboxStatus();
@@ -135,5 +173,5 @@ export default function useWhatsAppPitbox() {
     }
   }, [navigate, notifyWindowClosed]);
 
-  return { operational, sendViaWhatsApp, notifyWindowClosed, notifyWaMeFallback };
+  return { operational, sendViaWhatsApp, sendFromBackend, resolveWaResult, notifyWindowClosed };
 }

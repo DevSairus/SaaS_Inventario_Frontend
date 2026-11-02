@@ -21,6 +21,7 @@ import { appointmentsApi } from '../../api/workshopAppointments';
 import { toLocalDateString } from '../../utils/formatters';
 import useAuthStore from '../../store/authStore';
 import useTenantStore from '../../store/tenantStore';
+import useWhatsAppPitbox from '../../hooks/useWhatsAppPitbox';
 
 const STATUS = {
   pendiente:  { label: 'Por confirmar', dot: 'bg-amber-500', cls: 'bg-amber-50 text-amber-800 ring-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:ring-amber-800/40', bar: 'bg-amber-400' },
@@ -234,6 +235,7 @@ export default function AppointmentsPage() {
   const [loading, setLoading] = useState(false);
   const [statusFilter, setStatusFilter] = useState('');
   const [busyId, setBusyId] = useState(null);
+  const { sendFromBackend, resolveWaResult } = useWhatsAppPitbox();
   const [plateModalFor, setPlateModalFor] = useState(null);
   const [cancelFor, setCancelFor] = useState(null);
   const [rescheduleFor, setRescheduleFor] = useState(null);
@@ -291,64 +293,62 @@ export default function AppointmentsPage() {
     if (!isSameMonth(d, month)) setMonth(startOfMonth(d));
   };
 
-  // Si el tenant tiene WhatsApp Cloud API conectado el mensaje ya salió
-  // directo (channel: 'cloud_api', sin waLink); si no, abre el link wa.me
-  // para que el asesor lo mande desde su propio WhatsApp.
-  const openWaLink = (wa) => {
-    if (wa?.channel === 'cloud_api') toast.success('Mensaje enviado por WhatsApp');
-    else if (wa?.waLink) window.open(wa.waLink, '_blank');
-  };
+  const waMessage = async (appointmentId, type) => (await appointmentsApi.sendWhatsApp(appointmentId, type)).data;
 
+  // El cambio de estado y su aviso por WhatsApp van en el mismo clic para que
+  // la pestaña de wa.me (si hace falta) no la bloquee el navegador.
   const handleConfirm = async (appointment) => {
     setBusyId(appointment.id);
-    try {
+    const done = await sendFromBackend(async () => {
       await appointmentsApi.confirm(appointment.id);
-      const wa = await appointmentsApi.sendWhatsApp(appointment.id, 'confirmacion');
-      openWaLink(wa.data);
-      toast.success('Cita confirmada');
+      return waMessage(appointment.id, 'confirmacion');
+    }, { sentText: 'Cita confirmada y avisada por WhatsApp Pitbox.', errorText: 'Error al confirmar la cita' });
+    if (done) {
+      if (done.channel !== 'cloud_api') toast.success('Cita confirmada');
       loadMonth();
-    } catch (e) {
-      toast.error(e.response?.data?.message || 'Error al confirmar la cita');
-    } finally {
-      setBusyId(null);
     }
+    setBusyId(null);
   };
 
   const handleCancel = async (reason, notify) => {
     const appointment = cancelFor;
     setBusyId(appointment.id);
-    try {
-      await appointmentsApi.cancel(appointment.id, reason);
-      if (notify) {
-        const wa = await appointmentsApi.sendWhatsApp(appointment.id, 'cancelacion');
-        openWaLink(wa.data);
-      }
-      toast.success('Cita cancelada');
+    const cancel = () => appointmentsApi.cancel(appointment.id, reason);
+    let done = null;
+    if (notify) {
+      done = await sendFromBackend(async () => {
+        await cancel();
+        return waMessage(appointment.id, 'cancelacion');
+      }, { sentText: 'Cita cancelada y avisada por WhatsApp Pitbox.', errorText: 'Error al cancelar la cita' });
+    } else {
+      done = await cancel().catch((e) => {
+        toast.error(e.response?.data?.message || 'Error al cancelar la cita');
+        return null;
+      });
+    }
+    if (done) {
+      if (done.channel !== 'cloud_api') toast.success('Cita cancelada');
       setCancelFor(null);
       loadMonth();
-    } catch (e) {
-      toast.error(e.response?.data?.message || 'Error al cancelar la cita');
-    } finally {
-      setBusyId(null);
     }
+    setBusyId(null);
   };
 
   const handleReminder = async (appointment) => {
     setBusyId(appointment.id);
-    try {
-      const wa = await appointmentsApi.sendWhatsApp(appointment.id, 'recordatorio');
-      openWaLink(wa.data);
-      loadMonth();
-    } catch (e) {
-      toast.error(e.response?.data?.message || 'Error al generar el recordatorio');
-    } finally {
-      setBusyId(null);
-    }
+    const done = await sendFromBackend(() => waMessage(appointment.id, 'recordatorio'), {
+      sentText: 'Recordatorio enviado por WhatsApp Pitbox.',
+      errorText: 'Error al generar el recordatorio',
+    });
+    if (done) loadMonth();
+    setBusyId(null);
   };
 
+  // Estos avisos llegan después de guardar en el modal: ya no hay clic que
+  // permita abrir pestaña, así que wa.me se ofrece en un aviso.
   const handleCreated = (wa, scheduledAt) => {
     setShowNew(false);
-    openWaLink(wa);
+    if (wa) resolveWaResult(wa, { sentText: 'Cita avisada por WhatsApp Pitbox.' });
     setStatusFilter('');
     goToDay(scheduledAt);
     loadMonth();
@@ -356,7 +356,7 @@ export default function AppointmentsPage() {
 
   const handleRescheduled = (wa, newAt) => {
     setRescheduleFor(null);
-    openWaLink(wa);
+    if (wa) resolveWaResult(wa, { sentText: 'Cita avisada por WhatsApp Pitbox.' });
     goToDay(newAt);
     loadMonth();
   };

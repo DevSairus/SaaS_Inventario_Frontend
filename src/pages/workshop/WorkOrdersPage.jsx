@@ -4,7 +4,6 @@ import { useNavigate } from 'react-router-dom';
 import useWorkshopStore from '../../store/workshopStore';
 import useAuthStore from '../../store/authStore';
 import { workOrdersApi } from '../../api/workshop';
-import toast from 'react-hot-toast';
 import { Wrench, Plus, Search, Car, User, Clock, ChevronRight, Share2, Zap } from 'lucide-react';
 import QuickWorkOrderModal from '../../components/workshop/QuickWorkOrderModal';
 import {
@@ -78,7 +77,7 @@ export default function WorkOrdersPage() {
   const navigate = useNavigate();
   const { workOrders, workOrdersTotal, workOrdersLoading, fetchWorkOrders } = useWorkshopStore();
   const { user } = useAuthStore();
-  const { operational: waOperational, notifyWaMeFallback } = useWhatsAppPitbox();
+  const { sendFromBackend } = useWhatsAppPitbox();
   const hidePrices = user?.role === 'technician';
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('activas'); // activas = excluye entregado/cancelado
@@ -88,30 +87,9 @@ export default function WorkOrdersPage() {
 
   const handleSendWhatsApp = async (e, orderId) => {
     e.stopPropagation();
-    const win = waOperational ? null : window.open('', '_blank');
     setSendingId(orderId);
-    try {
-      const res = await workOrdersApi.sendWhatsApp(orderId);
-      const { channel, waLink, message } = res.data;
-      if (channel === 'cloud_api') {
-        win?.close();
-        toast.success(message || 'Orden enviada por WhatsApp Cloud API.', { duration: 5000 });
-      } else if (waLink && win) {
-        win.location.href = waLink;
-        toast.success('Se abrió WhatsApp con el enlace de la OT. Presiona Enviar ↑', { duration: 5000 });
-      } else if (waLink) {
-        notifyWaMeFallback({ waLink });
-      } else {
-        win?.close();
-        toast.error('No se pudo generar el enlace de WhatsApp.');
-      }
-    } catch (err) {
-      win?.close();
-      const msg = err.response?.data?.message || err.message || 'Error al generar enlace de WhatsApp';
-      toast.error(msg, { duration: 6000 });
-    } finally {
-      setSendingId(null);
-    }
+    await sendFromBackend(async () => (await workOrdersApi.sendWhatsApp(orderId)).data, { sentText: 'Orden enviada por WhatsApp Pitbox.' });
+    setSendingId(null);
   };
 
   const activeStatuses = ['recibido','en_proceso','en_espera','listo'];

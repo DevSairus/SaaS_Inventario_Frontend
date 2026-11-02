@@ -68,7 +68,7 @@ export default function SaleDetailPage() {
   const hideRemisionTax = features?.hide_remision_tax === true;
   const [confirmDialog, setConfirmDialog] = useState({ show: false, action: null });
   const [sendingWA, setSendingWA] = useState(false);
-  const { operational: waOperational, notifyWaMeFallback } = useWhatsAppPitbox();
+  const { sendFromBackend } = useWhatsAppPitbox();
   const [copyingLink, setCopyingLink] = useState(false);
   const [showConfirmWithPayment, setShowConfirmWithPayment] = useState(false);
   const [confirmingPayment, setConfirmingPayment] = useState(false);
@@ -261,32 +261,9 @@ export default function SaleDetailPage() {
   };
 
   const handleSendWhatsApp = async () => {
-    // La pestaña se abre en el mismo clic para que el navegador no la bloquee,
-    // y solo si el envío puede salir por wa.me.
-    const win = waOperational ? null : window.open('', '_blank');
-    try {
-      setSendingWA(true);
-      const res = await salesApi.sendWhatsApp(id);
-      const { channel, waLink, message } = res.data;
-      if (channel === 'cloud_api') {
-        // Ya se envió directo por WhatsApp Cloud API -- no hay enlace que abrir.
-        win?.close();
-        toast.success(message || 'Documento enviado por WhatsApp Cloud API.', { duration: 5000 });
-      } else if (waLink && win) {
-        win.location.href = waLink;
-        toast.success('Se abrió WhatsApp con el mensaje listo. Presiona Enviar ↑', { duration: 5000 });
-      } else if (waLink) {
-        notifyWaMeFallback({ waLink });
-      } else {
-        win?.close();
-        toast.error('No se pudo generar el enlace de WhatsApp.');
-      }
-    } catch (e) {
-      win?.close();
-      toast.error(e.response?.data?.message || 'Error al generar enlace de WhatsApp');
-    } finally {
-      setSendingWA(false);
-    }
+    setSendingWA(true);
+    await sendFromBackend(async () => (await salesApi.sendWhatsApp(id)).data, { sentText: 'Documento enviado por WhatsApp Pitbox.' });
+    setSendingWA(false);
   };
 
   const handleCopyLink = async () => {
