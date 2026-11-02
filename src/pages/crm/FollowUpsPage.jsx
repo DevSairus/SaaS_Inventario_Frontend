@@ -10,7 +10,8 @@ import { notifyGoalMilestones } from '../../store/goalMilestoneStore';
 import { usersAPI } from '../../api/users';
 import useAuthStore from '../../store/authStore';
 import useTenantStore from '../../store/tenantStore';
-import { buildWaLink, bestPhone, trackWhatsAppInteraction } from '../../utils/whatsapp';
+import { bestPhone } from '../../utils/whatsapp';
+import useWhatsAppPitbox from '../../hooks/useWhatsAppPitbox';
 import {
   ListTodo, Check, X, Plus, MessageCircle, List, CalendarDays, Search, AlertTriangle, Flame,
   ChevronRight, ArrowUpRight,
@@ -102,6 +103,7 @@ export default function FollowUpsPage() {
   const { user } = useAuthStore();
   const canAssignOthers = ['admin', 'manager', 'super_admin'].includes(user?.role);
   const hasCrm = (useTenantStore((s) => s.enabledModules) || []).includes('crm');
+  const { sendViaWhatsApp } = useWhatsAppPitbox();
 
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -165,14 +167,7 @@ export default function FollowUpsPage() {
         customer_id: task.customer_id,
         opportunity_id: task.opportunity?.id,
       });
-      const phone = bestPhone(task.customer);
-      const text = res.data.data.text;
-      const link = buildWaLink(phone, text);
-      if (link) {
-        window.open(link, '_blank', 'noreferrer');
-        trackWhatsAppInteraction(task.customer_id, text, hasCrm);
-      }
-      else toast.error('Este cliente no tiene un teléfono registrado');
+      await sendViaWhatsApp({ phone: bestPhone(task.customer), customerId: task.customer_id, text: res.data.data.text, hasCrm });
     } catch (err) {
       toast.error(err.response?.data?.message || 'No se pudo generar el mensaje');
     }

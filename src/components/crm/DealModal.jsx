@@ -14,7 +14,8 @@ import crmApi from '../../api/crm';
 import salesApi from '../../api/sales';
 import { formatCurrency, toInteger } from '../../utils/formatters';
 import { downloadFile } from '../../utils/helpers';
-import { buildWaLink, bestPhone } from '../../utils/whatsapp';
+import { bestPhone } from '../../utils/whatsapp';
+import useWhatsAppPitbox from '../../hooks/useWhatsAppPitbox';
 
 const QUOTE_STATUS = {
   borrador: { label: 'Borrador', cls: 'bg-gray-100 text-gray-600' },
@@ -44,6 +45,7 @@ const defaultDueAt = () => {
 
 export default function DealModal({ opportunity, stage, startInCreate = false, onClose, onChanged }) {
   const navigate = useNavigate();
+  const { operational: waOperational, sendViaWhatsApp, notifyWindowClosed } = useWhatsAppPitbox();
   const isOpen = !!opportunity;
   const [quoteId, setQuoteId] = useState(null);
   const [sale, setSale] = useState(null);
@@ -138,7 +140,9 @@ export default function DealModal({ opportunity, stage, startInCreate = false, o
   };
 
   const handleWhatsApp = async () => {
-    const win = window.open('', '_blank');
+    // La pestaña se abre en el mismo clic para que el navegador no la bloquee,
+    // y solo si el envío puede salir por wa.me.
+    const win = waOperational ? null : window.open('', '_blank');
     setBusy('wa');
     try {
       const res = await salesApi.sendWhatsApp(quoteId);
@@ -149,6 +153,8 @@ export default function DealModal({ opportunity, stage, startInCreate = false, o
       } else if (waLink && win) {
         win.location.href = waLink;
         toast.success('Se abrió WhatsApp con el mensaje listo. Presiona Enviar.', { duration: 5000 });
+      } else if (waLink) {
+        notifyWindowClosed(phone);
       } else {
         win?.close();
         toast.error('No se pudo generar el enlace de WhatsApp.');
@@ -223,8 +229,6 @@ export default function DealModal({ opportunity, stage, startInCreate = false, o
     }
   };
 
-  const waLink = phone ? buildWaLink(phone, '') : null;
-
   return (
     <Modal isOpen={isOpen} onClose={() => !saving && onClose()} title="Negocio" size="lg">
       {opportunity && (
@@ -248,12 +252,11 @@ export default function DealModal({ opportunity, stage, startInCreate = false, o
               </div>
               {phone && (
                 <div className="mt-2 flex items-center gap-2">
-                  {waLink && (
-                    <a href={waLink} target="_blank" rel="noreferrer" title="Abrir chat de WhatsApp"
-                      className="p-2 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition">
-                      <MessageCircle size={16} />
-                    </a>
-                  )}
+                  <button type="button" title="Abrir chat de WhatsApp"
+                    onClick={() => sendViaWhatsApp({ phone, customerId: opportunity.customer_id, hasCrm: false })}
+                    className="!p-2 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition">
+                    <MessageCircle size={16} />
+                  </button>
                   <a href={`tel:${phone}`} title="Llamar" className="p-2 rounded-lg bg-sky-50 text-sky-600 hover:bg-sky-100 transition">
                     <Phone size={16} />
                   </a>

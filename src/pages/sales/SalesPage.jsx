@@ -15,6 +15,7 @@ import toast from 'react-hot-toast';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import { SALE_STATUS_LABELS, PAYMENT_STATUS_LABELS } from '../../constants/salesStatus';
 import { bestPhone, buildWaLink } from '../../utils/whatsapp';
+import useWhatsAppPitbox from '../../hooks/useWhatsAppPitbox';
 import { PlusIcon, MagnifyingGlassIcon, FunnelIcon, ChatBubbleLeftRightIcon } from '@heroicons/react/24/outline';
 
 const STATUS_LABELS = SALE_STATUS_LABELS;
@@ -101,7 +102,8 @@ const daysAgoLabel = (date) => {
 // como interacción del cliente.
 function CollectActions({ sale, onCollect, onRemind }) {
   const text = reminderText(sale);
-  const waLink = buildWaLink(bestPhone(sale.customer) || sale.customer_phone, text);
+  const phone = bestPhone(sale.customer) || sale.customer_phone;
+  const waLink = buildWaLink(phone, text);
   const isDraft = sale.status === 'draft';
   return (
     <div>
@@ -113,16 +115,14 @@ function CollectActions({ sale, onCollect, onRemind }) {
           {isDraft ? 'Confirmar y cobrar' : 'Registrar pago'}
         </button>
         {waLink && (
-          <a
-            href={waLink}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={() => onRemind(text)}
+          <button
+            type="button"
+            onClick={() => onRemind(text, phone)}
             title="Enviar recordatorio de pago por WhatsApp"
-            className="p-1.5 text-green-600 border border-gray-200 dark:border-white/10 rounded-lg hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors"
+            className="!p-1.5 text-green-600 border border-gray-200 dark:border-white/10 rounded-lg hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors"
           >
             <ChatBubbleLeftRightIcon className="w-4 h-4" />
-          </a>
+          </button>
         )}
       </div>
       {sale.last_reminder_at && (
@@ -156,6 +156,7 @@ export default function SalesPage() {
   const { sales, loading, fetchSales, setFilters, filters, stats, fetchStats, page, pageSize, total } = useSalesStore();
   const { branches, fetchBranches } = useBranchStore();
   const hasCrm = (useTenantStore(s => s.enabledModules) || []).includes('crm');
+  const { sendViaWhatsApp } = useWhatsAppPitbox();
 
   const [searchInput, setSearchInput] = useState(filters.customer_name || '');
   const [showFilters, setShowFilters] = useState(false);
@@ -189,10 +190,12 @@ export default function SalesPage() {
     else setPayingSale(sale);
   };
 
-  // Best-effort: el mensaje ya salió por wa.me; si falla el registro no se
-  // bloquea nada. Sin cliente registrado no hay historial donde guardarlo.
-  const handleRemind = (sale, message) => {
-    if (!sale.customer_id) return;
+  // El registro es best-effort: si falla no se bloquea nada. Sin cliente
+  // registrado no hay historial donde guardarlo. El recordatorio ya queda en
+  // el historial, por eso no se registra además la interacción de WhatsApp.
+  const handleRemind = async (sale, message, phone) => {
+    const sent = await sendViaWhatsApp({ phone, customerId: sale.customer_id, text: message, hasCrm: false });
+    if (!sent.channel || sent.windowClosed || sent.error || !sale.customer_id) return;
     salesApi.registerPaymentReminder(sale.id, { message })
       .then(() => {
         useSalesStore.setState(st => ({
@@ -600,7 +603,7 @@ export default function SalesPage() {
                               {sale.payment_status === 'partial' && <p className="text-[11px] text-gray-400 dark:text-gray-500">Abonado {formatCurrency(sale.paid_amount)}</p>}
                             </td>
                             <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
-                              <CollectActions sale={sale} onCollect={() => handleCollect(sale)} onRemind={text => handleRemind(sale, text)} />
+                              <CollectActions sale={sale} onCollect={() => handleCollect(sale)} onRemind={(text, phone) => handleRemind(sale, text, phone)} />
                             </td>
                           </>
                         ) : (
@@ -655,7 +658,7 @@ export default function SalesPage() {
                         <div className="flex items-end justify-between gap-2 mt-2">
                           <AgingBadge sale={sale} />
                           <div onClick={e => e.stopPropagation()}>
-                            <CollectActions sale={sale} onCollect={() => handleCollect(sale)} onRemind={text => handleRemind(sale, text)} />
+                            <CollectActions sale={sale} onCollect={() => handleCollect(sale)} onRemind={(text, phone) => handleRemind(sale, text, phone)} />
                           </div>
                         </div>
                       </div>

@@ -39,6 +39,7 @@ import ConvertQuoteToWorkOrderModal from '../../components/sales/ConvertQuoteToW
 import { groupDocumentItems } from '../../components/combos/comboUtils';
 import { saleBalance } from '../../utils/saleAmounts';
 import useIsManagement from '../../hooks/useIsManagement';
+import useWhatsAppPitbox from '../../hooks/useWhatsAppPitbox';
 import useAuthStore from '../../store/authStore';
 import { getPosSettings, printPosDocument } from '../../utils/posPrinting';
 import { SALE_STATUS_LABELS, PAYMENT_STATUS_LABELS } from '../../constants/salesStatus';
@@ -67,6 +68,7 @@ export default function SaleDetailPage() {
   const hideRemisionTax = features?.hide_remision_tax === true;
   const [confirmDialog, setConfirmDialog] = useState({ show: false, action: null });
   const [sendingWA, setSendingWA] = useState(false);
+  const { operational: waOperational, notifyWindowClosed } = useWhatsAppPitbox();
   const [copyingLink, setCopyingLink] = useState(false);
   const [showConfirmWithPayment, setShowConfirmWithPayment] = useState(false);
   const [confirmingPayment, setConfirmingPayment] = useState(false);
@@ -259,7 +261,9 @@ export default function SaleDetailPage() {
   };
 
   const handleSendWhatsApp = async () => {
-    const win = window.open('', '_blank');
+    // La pestaña se abre en el mismo clic para que el navegador no la bloquee,
+    // y solo si el envío puede salir por wa.me.
+    const win = waOperational ? null : window.open('', '_blank');
     try {
       setSendingWA(true);
       const res = await salesApi.sendWhatsApp(id);
@@ -271,6 +275,8 @@ export default function SaleDetailPage() {
       } else if (waLink && win) {
         win.location.href = waLink;
         toast.success('Se abrió WhatsApp con el mensaje listo. Presiona Enviar ↑', { duration: 5000 });
+      } else if (waLink) {
+        notifyWindowClosed(waLink.match(/wa\.me\/(\d+)/)?.[1]);
       } else {
         win?.close();
         toast.error('No se pudo generar el enlace de WhatsApp.');
