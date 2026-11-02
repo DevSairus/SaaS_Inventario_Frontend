@@ -135,9 +135,8 @@ function formatTime(iso) {
 
 const clockTime = (iso) => (iso ? new Date(iso).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' }) : '');
 
-const lastInboundLabel = (iso) => (iso
-  ? new Date(iso).toLocaleString('es-CO', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })
-  : null);
+const lastInboundLabel = (iso) =>
+  new Date(iso).toLocaleString('es-CO', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
 
 // Mismo tamaño de página que el backend (listMessages, limit 50 por defecto).
 const MSG_PAGE = 50;
@@ -474,7 +473,11 @@ export default function WhatsAppInboxPage() {
         } else {
           const key = phoneKey(phone);
           const res = await crmApi.listWaConversations({ q: key, limit: 20, offset: 0 });
-          conv = (res.data.data || []).find((x) => phoneKey(x.wa_contact_phone) === key) || null;
+          // Chats viejos guardados sin el 57 pueden repetir el número: gana el más reciente.
+          const lastAt = (x) => new Date(x.last_message_at || 0).getTime();
+          conv = (res.data.data || [])
+            .filter((x) => phoneKey(x.wa_contact_phone) === key)
+            .sort((a, b) => lastAt(b) - lastAt(a))[0] || null;
         }
         if (!alive) return;
         if (conv) {
@@ -1192,9 +1195,9 @@ export default function WhatsAppInboxPage() {
                       {windowClosed && (
                         <div className="flex flex-col sm:flex-row sm:items-center gap-2 px-3 py-2 rounded-lg bg-orange-50 border border-orange-200 text-xs text-orange-900">
                           <span className="flex-1">
-                            Pasaron más de 24 h desde el último mensaje del cliente
-                            {lastInboundLabel(selected.last_inbound_at) && ` (${lastInboundLabel(selected.last_inbound_at)})`}.
-                            Envía una plantilla para retomar la conversación.
+                            {selected.last_inbound_at
+                              ? `Pasaron más de 24 h desde el último mensaje del cliente (${lastInboundLabel(selected.last_inbound_at)}). Envía una plantilla para retomar la conversación.`
+                              : 'El cliente aún no te ha escrito. Envía una plantilla para iniciar la conversación.'}
                           </span>
                           <button type="button" onClick={() => setTemplateOpen(true)}
                             className={`shrink-0 !px-3 !py-1.5 rounded-lg !text-xs font-semibold text-white ${GRADIENT_BG}`}>
