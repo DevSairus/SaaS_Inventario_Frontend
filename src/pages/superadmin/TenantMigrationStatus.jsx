@@ -33,6 +33,16 @@ const formatDate = (value) => {
 // lanzaba un segundo corte en paralelo sobre el mismo schema.
 const LONG_ACTION_TIMEOUT = 15 * 60 * 1000;
 
+// Un corte en 'running' por más de esto se da por muerto (ej. el servidor se
+// reinició a mitad por un deploy) y se vuelve a ofrecer el botón. El backend
+// igual rechaza con 409 si de verdad sigue corriendo.
+const STALE_RUNNING_MS = 20 * 60 * 1000;
+const POLL_MS = 10000;
+
+const isCutoverRunning = (t) =>
+  t.cutover_last_status === 'running' &&
+  Date.now() - new Date(t.cutover_last_attempt_at).getTime() < STALE_RUNNING_MS;
+
 const TenantMigrationStatus = () => {
   const [loading, setLoading] = useState(true);
   const [tenants, setTenants] = useState([]);
@@ -54,6 +64,15 @@ const TenantMigrationStatus = () => {
     fetchStatus();
   }, [fetchStatus]);
 
+  // Mientras haya un corte en curso (p. ej. el automático de un tenant recién
+  // creado), refrescar solo para que pase a "Migrado" sin recargar la página.
+  const anyRunning = tenants.some(isCutoverRunning);
+  useEffect(() => {
+    if (!anyRunning) return undefined;
+    const id = setInterval(fetchStatus, POLL_MS);
+    return () => clearInterval(id);
+  }, [anyRunning, fetchStatus]);
+
   const handleCutover = async (slug) => {
     setActionSlug(slug);
     try {
@@ -61,7 +80,11 @@ const TenantMigrationStatus = () => {
       toast.success(`"${slug}" migrado a schema dedicado`);
       await fetchStatus();
     } catch (error) {
-      toast.error(error.response?.data?.error || `Error al migrar "${slug}"`);
+      if (error.response?.status === 409) {
+        toast(error.response.data.error, { icon: '⏳' });
+      } else {
+        toast.error(error.response?.data?.error || `Error al migrar "${slug}"`);
+      }
       await fetchStatus(); // igual refresca -- el error ya quedó guardado del lado del backend
     } finally {
       setActionSlug(null);
@@ -137,6 +160,7 @@ const TenantMigrationStatus = () => {
               {tenants.map((t) => {
                 const isBusy = actionSlug === t.slug;
                 const failed = t.cutover_last_status === 'failed';
+                const running = isCutoverRunning(t);
                 return (
                   <tr key={t.id} className={failed ? 'bg-red-50 dark:bg-red-900/20' : ''}>
                     <td className="px-4 py-3">
@@ -148,6 +172,12 @@ const TenantMigrationStatus = () => {
                         {t.status === 'migrado' ? <CheckCircle className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
                         {t.status === 'migrado' ? 'Migrado' : 'Legado'}
                       </span>
+                      {running && (
+                        <div className="mt-1 flex items-center gap-1 text-xs text-blue-700 dark:text-blue-400">
+                          <RefreshCw className="w-3 h-3 animate-spin" />
+                          Migración en curso, puede tardar varios minutos
+                        </div>
+                      )}
                       {failed && (
                         <div className="mt-1 flex items-start gap-1 text-xs text-red-700 max-w-xs dark:text-red-400">
                           <AlertTriangle className="w-3 h-3 mt-0.5 shrink-0" />
@@ -166,7 +196,7 @@ const TenantMigrationStatus = () => {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap gap-2">
-                        {t.status === 'legado' && (
+                        {t.status === 'legado' && !running && (
                           <Button
                             size="sm"
                             variant={failed ? 'danger' : 'primary'}

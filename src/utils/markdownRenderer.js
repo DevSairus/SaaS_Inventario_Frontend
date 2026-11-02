@@ -13,6 +13,12 @@ import { marked } from 'marked';
 const escapeHtml = (s) =>
   String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
+// Marked ya entrega escapados el href de los autolinks (<https://...>) y los
+// title; se des-escapan primero para no producir &amp;amp; al re-escapar.
+const unescapeHtml = (s) =>
+  String(s ?? '').replace(/&(amp|lt|gt|quot|#39);/g, (_, e) => ({ amp: '&', lt: '<', gt: '>', quot: '"', '#39': "'" }[e]));
+const attr = (s) => escapeHtml(unescapeHtml(s));
+
 // Solo esquemas seguros en href/src: bloquea javascript:, data:, vbscript:, etc.
 const safeUrl = (href) => /^(https?:|mailto:|\/|#)/i.test(href || '');
 
@@ -32,12 +38,12 @@ marked.use({
     },
     link({ href, title, tokens }) {
       const text = this.parser.parseInline(tokens);
-      if (!safeUrl(href)) return text;
-      return `<a href="${escapeHtml(href)}"${title ? ` title="${escapeHtml(title)}"` : ''}>${text}</a>`;
+      if (!safeUrl(unescapeHtml(href))) return text;
+      return `<a href="${attr(href)}"${title ? ` title="${attr(title)}"` : ''}>${text}</a>`;
     },
     image({ href, title, text }) {
-      if (!safeUrl(href)) return escapeHtml(text);
-      return `<img src="${escapeHtml(href)}" alt="${escapeHtml(text)}"${title ? ` title="${escapeHtml(title)}"` : ''} />`;
+      if (!safeUrl(unescapeHtml(href))) return escapeHtml(text);
+      return `<img src="${attr(href)}" alt="${attr(text)}"${title ? ` title="${attr(title)}"` : ''} />`;
     },
   },
 });
