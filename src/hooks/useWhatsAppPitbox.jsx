@@ -2,10 +2,14 @@
 // Un solo criterio para todos los botones de WhatsApp: con WhatsApp Pitbox
 // operativo (Cloud API o demo) el mensaje sale por Pitbox y queda en el chat
 // del cliente; si no, se abre wa.me como siempre.
+//   - sendViaWhatsApp: el texto lo arma la pantalla (CRM, seguimientos).
+//   - sendFromBackend: el endpoint arma y envía el mensaje (OT, ventas, citas…)
+//     y la pantalla solo muestra el resultado.
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import crmApi from '../api/crm';
+import useAuthStore from '../store/authStore';
 import { buildWaLink, formatColombianPhone, trackWhatsAppInteraction } from '../utils/whatsapp';
 
 const STATUS_TTL_MS = 60 * 1000;
@@ -36,6 +40,11 @@ export function invalidateWhatsAppPitboxStatus() {
   cached = { at: 0, promise: null };
   lastKnown = null;
 }
+
+// Otra sesión puede ser otro tenant: su conexión de WhatsApp no es la misma.
+useAuthStore.subscribe((state, prev) => {
+  if (state.token !== prev.token) invalidateWhatsAppPitboxStatus();
+});
 
 function ChatToast({ t, text, actions }) {
   return (

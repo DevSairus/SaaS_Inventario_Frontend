@@ -7,7 +7,7 @@ import useBranchStore from '../../store/branchStore';
 import { vehiclesApi } from '../../api/workshop';
 import { vehiclesApiOffline } from '../../api/workshopOffline';
 import axios from '../../api/axios';
-import { ArrowLeft, Save, Car, User, Wrench, Plus, X, Search, Loader, ScanLine } from 'lucide-react';
+import { ArrowLeft, Save, Car, User, Wrench, Plus, X, Search, Loader } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 import RuntConsultaModal from '../../components/workshop/RuntConsultaModal';
