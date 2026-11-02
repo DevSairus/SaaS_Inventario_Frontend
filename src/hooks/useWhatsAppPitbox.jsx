@@ -29,6 +29,9 @@ export function loadWhatsAppPitboxStatus() {
   return cached.promise;
 }
 
+// Estado vigente o null si venció (otra pestaña/tenant pudo cambiarlo).
+const known = () => (Date.now() - cached.at > STATUS_TTL_MS ? null : lastKnown);
+
 export function invalidateWhatsAppPitboxStatus() {
   cached = { at: 0, promise: null };
   lastKnown = null;
@@ -79,7 +82,7 @@ export default function useWhatsAppPitbox() {
   // el fallback_reason del backend (ver services/whatsappDelivery.js).
   const notifyWaMeFallback = useCallback(({ phone, waLink, reason }) => {
     phone = phone || waLink.match(/wa\.me\/(\d+)/)?.[1];
-    const pitboxFailed = reason === 'window_closed' || reason === 'error' || (!reason && lastKnown === true);
+    const pitboxFailed = reason === 'window_closed' || reason === 'error';
     const text = reason === 'window_closed'
       ? 'El cliente no te ha escrito en las últimas 24 h: envíale una plantilla desde el chat o ábrelo en WhatsApp.'
       : pitboxFailed
@@ -116,7 +119,8 @@ export default function useWhatsAppPitbox() {
     errorText = 'No se pudo enviar por WhatsApp',
     toastErrors = true,
   } = {}) => {
-    const win = lastKnown === true ? null : window.open('', '_blank');
+    const win = known() === true ? null : window.open('', '_blank');
+    loadWhatsAppPitboxStatus();
     try {
       const result = await request();
       resolveWaResult(result, { win, sentText });
@@ -129,7 +133,7 @@ export default function useWhatsAppPitbox() {
   }, [resolveWaResult]);
 
   const sendViaWhatsApp = useCallback(async ({ phone, customerId, text = '', hasCrm = true }) => {
-    const ok = lastKnown ?? await loadWhatsAppPitboxStatus();
+    const ok = known() ?? await loadWhatsAppPitboxStatus();
     loadWhatsAppPitboxStatus();
     if (!ok) {
       const link = buildWaLink(phone, text);
