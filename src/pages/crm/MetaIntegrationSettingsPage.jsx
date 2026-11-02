@@ -8,7 +8,7 @@ import useAuthStore from '../../store/authStore';
 
 export default function MetaIntegrationSettingsPage() {
   const { search } = useLocation();
-  const isAdmin = useAuthStore((s) => s.user?.role) === 'admin';
+  const isAdmin = ['admin', 'super_admin'].includes(useAuthStore((s) => s.user?.role));
 
   if (new URLSearchParams(search).has('connected')) {
     return <Navigate to={`/settings/whatsapp${search}`} replace />;

@@ -110,4 +110,25 @@ describe('plantillas', () => {
     });
     assert.equal(r.ok, false);
   });
+
+  const build = (components_schema) =>
+    buildTemplatePayload({ template: { name: 'x', language: 'es', components_schema }, customerName: 'A', companyName: 'B' });
+
+  test('variables que no empiezan en {{1}} no se pueden usar', () => {
+    const r = build([{ type: 'BODY', text: 'Hola {{2}}' }]);
+    assert.equal(r.ok, false);
+  });
+
+  test('encabezado de texto con variable no se puede usar', () => {
+    const r = build([{ type: 'HEADER', format: 'TEXT', text: 'Hola {{1}}' }, { type: 'BODY', text: 'Hola' }]);
+    assert.equal(r.ok, false);
+  });
+
+  test('botón con URL dinámica no se puede usar', () => {
+    const r = build([
+      { type: 'BODY', text: 'Hola' },
+      { type: 'BUTTONS', buttons: [{ type: 'URL', text: 'Ver', url: 'https://x.co/{{1}}' }] },
+    ]);
+    assert.equal(r.ok, false);
+  });
 });

@@ -38,13 +38,24 @@ const MAX_TEMPLATE_VARS = 2;
 // o con encabezado multimedia necesitan parámetros que aquí no tenemos.
 export function buildTemplatePayload({ template, customerName, companyName }) {
   const schema = template?.components_schema || [];
-  const header = schema.find((c) => String(c?.type).toUpperCase() === 'HEADER');
+  const byType = (type) => schema.find((c) => String(c?.type).toUpperCase() === type);
+  const header = byType('HEADER');
   if (header && header.format && String(header.format).toUpperCase() !== 'TEXT') {
     return { ok: false, reason: 'Esta plantilla tiene imagen o documento en el encabezado' };
+  }
+  if (/\{\{\d+\}\}/.test(header?.text || '')) {
+    return { ok: false, reason: 'Esta plantilla tiene datos variables en el encabezado' };
+  }
+  if ((byType('BUTTONS')?.buttons || []).some((b) => /\{\{\d+\}\}/.test(b?.url || ''))) {
+    return { ok: false, reason: 'Esta plantilla tiene un botón con enlace variable' };
   }
   const count = templateVariableCount(schema);
   if (count > MAX_TEMPLATE_VARS) {
     return { ok: false, reason: `Esta plantilla necesita ${count} datos; solo se llenan nombre y taller` };
+  }
+  const indexes = new Set((templateBody(schema).match(/\{\{(\d+)\}\}/g) || []).map((v) => Number(v.slice(2, -2))));
+  if ([...indexes].some((n) => n < 1 || n > count)) {
+    return { ok: false, reason: 'Las variables de esta plantilla deben ir de {{1}} en adelante' };
   }
   const values = [
     String(customerName || '').trim().split(/\s+/)[0] || 'cliente',

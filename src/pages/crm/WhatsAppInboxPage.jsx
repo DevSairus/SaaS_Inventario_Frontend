@@ -437,6 +437,7 @@ export default function WhatsAppInboxPage() {
     try {
       const res = await crmApi.listWaMessages(selectedId, { before: oldest, limit: MSG_PAGE });
       const older = res.data.data || [];
+      if (selectedIdRef.current !== selectedId) return;
       const el = msgListRef.current;
       keepScrollRef.current = el ? { height: el.scrollHeight, top: el.scrollTop } : null;
       setMessages((prev) => {
@@ -558,7 +559,10 @@ export default function WhatsAppInboxPage() {
       if (!cid) return;
       setConversations((prev) => {
         const idx = prev.findIndex((c) => c.id === cid);
-        const base = payload.conversation || {};
+        // El evento no trae el estado de la ventana: un mensaje del cliente la abre.
+        const base = payload.message?.direction === 'in'
+          ? { ...payload.conversation, last_inbound_at: payload.message.created_at || new Date().toISOString(), window: { open: true } }
+          : payload.conversation || {};
         if (idx >= 0) {
           const next = [...prev];
           next[idx] = { ...next[idx], ...base };
@@ -626,10 +630,6 @@ export default function WhatsAppInboxPage() {
     }
 
     if (!draft.trim()) return;
-    if (windowClosed) {
-      setTemplateOpen(true);
-      return;
-    }
     setSending(true);
     try {
       const res = await crmApi.sendWaConversationText(selectedId, { body: draft.trim() });
@@ -639,7 +639,9 @@ export default function WhatsAppInboxPage() {
       setDraft('');
       loadConversations();
     } catch (err) {
-      toast.error(err.response?.data?.message || 'No se pudo enviar');
+      // El servidor es quien valida la ventana de 24 h; si está cerrada, toca plantilla.
+      if (err.response?.status === 409) setTemplateOpen(true);
+      else toast.error(err.response?.data?.message || 'No se pudo enviar');
     } finally {
       setSending(false);
     }

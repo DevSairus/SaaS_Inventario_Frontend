@@ -68,7 +68,7 @@ export default function SaleDetailPage() {
   const hideRemisionTax = features?.hide_remision_tax === true;
   const [confirmDialog, setConfirmDialog] = useState({ show: false, action: null });
   const [sendingWA, setSendingWA] = useState(false);
-  const { operational: waOperational, notifyWindowClosed } = useWhatsAppPitbox();
+  const { operational: waOperational, notifyWaMeFallback } = useWhatsAppPitbox();
   const [copyingLink, setCopyingLink] = useState(false);
   const [showConfirmWithPayment, setShowConfirmWithPayment] = useState(false);
   const [confirmingPayment, setConfirmingPayment] = useState(false);
@@ -276,7 +276,7 @@ export default function SaleDetailPage() {
         win.location.href = waLink;
         toast.success('Se abrió WhatsApp con el mensaje listo. Presiona Enviar ↑', { duration: 5000 });
       } else if (waLink) {
-        notifyWindowClosed(waLink.match(/wa\.me\/(\d+)/)?.[1]);
+        notifyWaMeFallback({ phone: waLink.match(/wa\.me\/(\d+)/)?.[1], waLink });
       } else {
         win?.close();
         toast.error('No se pudo generar el enlace de WhatsApp.');

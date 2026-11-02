@@ -183,7 +183,7 @@ export default function MetaLeadAdsSection() {
             </div>
 
             <button type="button" onClick={handleConnectOwn} disabled={connecting === 'own'}
-              className="px-4 py-2 bg-[#1877F2] hover:opacity-90 disabled:opacity-50 text-white text-xs font-semibold rounded-lg">
+              className="!px-4 !py-2 bg-[#1877F2] hover:opacity-90 disabled:opacity-50 text-white text-xs font-semibold rounded-lg">
               {connecting === 'own' ? 'Redirigiendo…' : 'Conectar con Meta'}
             </button>
           </div>
@@ -197,7 +197,7 @@ export default function MetaLeadAdsSection() {
               ¿Aún no tienes cuenta de Meta Business? Usamos nuestra página compartida y un asesor de soporte te ayuda a vincular tus formularios.
             </p>
             <button type="button" onClick={handleConnectPitbox} disabled={connecting === 'pitbox'}
-              className="px-4 py-2 bg-gray-800 hover:bg-gray-900 disabled:opacity-50 text-white text-xs font-semibold rounded-lg">
+              className="!px-4 !py-2 bg-gray-800 hover:bg-gray-900 disabled:opacity-50 text-white text-xs font-semibold rounded-lg">
               {connecting === 'pitbox' ? 'Activando…' : 'Activar servicio Pitbox'}
             </button>
           </div>

@@ -45,7 +45,7 @@ const defaultDueAt = () => {
 
 export default function DealModal({ opportunity, stage, startInCreate = false, onClose, onChanged }) {
   const navigate = useNavigate();
-  const { operational: waOperational, sendViaWhatsApp, notifyWindowClosed } = useWhatsAppPitbox();
+  const { operational: waOperational, sendViaWhatsApp, notifyWaMeFallback } = useWhatsAppPitbox();
   const isOpen = !!opportunity;
   const [quoteId, setQuoteId] = useState(null);
   const [sale, setSale] = useState(null);
@@ -154,7 +154,7 @@ export default function DealModal({ opportunity, stage, startInCreate = false, o
         win.location.href = waLink;
         toast.success('Se abrió WhatsApp con el mensaje listo. Presiona Enviar.', { duration: 5000 });
       } else if (waLink) {
-        notifyWindowClosed(phone);
+        notifyWaMeFallback({ phone, waLink });
       } else {
         win?.close();
         toast.error('No se pudo generar el enlace de WhatsApp.');
