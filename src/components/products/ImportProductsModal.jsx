@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { downloadProductsTemplate } from '../../utils/excelExport';
 import { productsAPI } from '../../api/products';
+import { categoriesAPI } from '../../api/categories';
 import toast from 'react-hot-toast';
 
 function ImportProductsModal({ isOpen, onClose, onImported }) {
@@ -49,6 +50,19 @@ function ImportProductsModal({ isOpen, onClose, onImported }) {
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  // La plantilla lista las categorías existentes en una hoja de referencia;
+  // si no se pueden cargar, se descarga igual sin esa hoja llena.
+  const handleDownloadTemplate = async () => {
+    let categories = [];
+    try {
+      const res = await categoriesAPI.getAll(false);
+      categories = res.data || [];
+    } catch {
+      // sin categorías de referencia
+    }
+    await downloadProductsTemplate(categories);
   };
 
   const handleClose = () => {
@@ -102,6 +116,7 @@ function ImportProductsModal({ isOpen, onClose, onImported }) {
                   <ol className="text-sm text-blue-800 space-y-1 list-decimal list-inside">
                     <li>Descarga la plantilla de Excel (.xlsx)</li>
                     <li>Completa los datos de los productos</li>
+                    <li>Las categorías que no existan se crean automáticamente (usa "Padre &gt; Hija" para subcategorías)</li>
                     <li>Si tienes productos sustitutos, indica sus códigos en "Equivalente(s)"</li>
                     <li>Guarda el archivo (mantén el formato .xlsx)</li>
                     <li>Sube el archivo aquí</li>
@@ -110,7 +125,7 @@ function ImportProductsModal({ isOpen, onClose, onImported }) {
 
                 {/* Botón para descargar plantilla */}
                 <button
-                  onClick={downloadProductsTemplate}
+                  onClick={handleDownloadTemplate}
                   className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-lg hover:from-blue-600 hover:to-indigo-600 transition-all"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -186,6 +201,25 @@ function ImportProductsModal({ isOpen, onClose, onImported }) {
                   </div>
                 )}
 
+                {validation.categorias_nuevas?.length > 0 && (
+                  <div className="bg-sky-50 border border-sky-200 rounded-lg p-3">
+                    <p className="text-sm font-medium text-sky-900 mb-1">
+                      🗂️ Se crearán {validation.categorias_nuevas.length} categoría(s) nueva(s):
+                    </p>
+                    <p className="text-xs text-sky-700">{validation.categorias_nuevas.join(', ')}</p>
+                    <p className="text-xs text-sky-600 mt-1">
+                      Nacen sin margen propio: heredan el de su categoría padre o el global.
+                      Si un nombre está mal escrito, corrígelo en el archivo para no crear una categoría duplicada.
+                    </p>
+                  </div>
+                )}
+
+                {validation.columnas_ignoradas?.length > 0 && (
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-sm text-gray-700">
+                    ℹ️ Columnas que no se cargan (nombre no reconocido): {validation.columnas_ignoradas.join(', ')}
+                  </div>
+                )}
+
                 {validation.grupos_equivalencia_estimados > 0 && (
                   <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-3 text-sm text-indigo-800">
                     🔗 Se detectaron {validation.grupos_equivalencia_estimados} grupo(s) de equivalencia
@@ -254,6 +288,15 @@ function ImportProductsModal({ isOpen, onClose, onImported }) {
                     <p className="text-xs text-red-800">Con errores</p>
                   </div>
                 </div>
+
+                {result.categorias_creadas?.length > 0 && (
+                  <div className="bg-sky-50 border border-sky-200 rounded-lg p-3">
+                    <p className="text-sm font-medium text-sky-900 mb-1">
+                      🗂️ {result.categorias_creadas.length} categoría(s) creada(s):
+                    </p>
+                    <p className="text-xs text-sky-700">{result.categorias_creadas.join(', ')}</p>
+                  </div>
+                )}
 
                 {(result.grupos_equivalencia_creados > 0 || result.grupos_equivalencia_reusados > 0) && (
                   <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-3 text-sm text-indigo-800">

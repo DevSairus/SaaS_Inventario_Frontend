@@ -197,150 +197,168 @@ export const exportReceivablesToExcel = async (data, filename = 'cartera') => {
 
 
 /**
- * Descargar plantilla SIMPLIFICADA de Excel para importar productos
+ * Descargar plantilla de Excel para importar productos.
+ * Las columnas deben coincidir con COLUMN_ALIASES de
+ * backend/src/controllers/inventory/productsBulkImport.controller.js.
+ * @param {Array} categories categorías del tenant (opcional) para listarlas
+ *                           en una hoja de referencia.
  */
-export const downloadProductsTemplate = async () => {
+export const downloadProductsTemplate = async (categories = []) => {
   const wb = new ExcelJS.Workbook();
 
-  // Hoja 1: Plantilla con ejemplo
-  const templateData = [
-    {
-      'Código*': 'PROD001',
-      'Nombre*': 'Producto de Ejemplo',
-      'Unidad': 'Unidad',
-      'Costo Promedio': 10000,
-      'Precio Venta': 13000,
-      'Margen Utilidad (%)': 30,
-      'Cantidad': 100,
-      'Equivalente(s)': ''
-    },
-    {
-      'Código*': 'PROD002',
-      'Nombre*': 'Producto Sin Costo',
-      'Unidad': 'Kilogramo',
-      'Costo Promedio': '',
-      'Precio Venta': 15000,
-      'Margen Utilidad (%)': '',
-      'Cantidad': 50,
-      'Equivalente(s)': 'PROD003'
-    },
-    {
-      'Código*': 'PROD003',
-      'Nombre*': 'Producto Sin Cantidad',
-      'Unidad': '',
-      'Costo Promedio': 5000,
-      'Precio Venta': 6500,
-      'Margen Utilidad (%)': 30,
-      'Cantidad': '',
-      'Equivalente(s)': ''
-    }
+  const columns = [
+    { header: 'Código*', width: 18 },
+    { header: 'Nombre*', width: 35 },
+    { header: 'Categoría', width: 26 },
+    { header: 'Tipo', width: 15 },
+    { header: 'Marca', width: 16 },
+    { header: 'Código de barras', width: 18 },
+    { header: 'Descripción', width: 30 },
+    { header: 'Unidad', width: 13 },
+    { header: 'Costo', width: 14 },
+    { header: 'Margen Utilidad (%)', width: 20 },
+    { header: 'Precio Venta', width: 15 },
+    { header: 'Precio incluye IVA', width: 18 },
+    { header: 'IVA', width: 11 },
+    { header: 'INC (%)', width: 10 },
+    { header: 'Cantidad', width: 11 },
+    { header: 'Stock mínimo', width: 14 },
+    { header: 'Stock máximo', width: 14 },
+    { header: 'Permitir stock negativo', width: 22 },
+    { header: 'Equivalente(s)', width: 22 },
   ];
 
-  // Agregar 15 filas vacías para que el usuario complete
-  for (let i = 0; i < 15; i++) {
-    templateData.push({
-      'Código*': '',
-      'Nombre*': '',
-      'Unidad': '',
-      'Costo Promedio': '',
-      'Precio Venta': '',
-      'Margen Utilidad (%)': '',
-      'Cantidad': '',
-      'Equivalente(s)': ''
-    });
-  }
+  const examples = [
+    {
+      'Código*': 'FIL-001', 'Nombre*': 'Filtro de aceite', 'Categoría': 'Filtros', 'Tipo': 'Producto',
+      'Marca': 'Bosch', 'Código de barras': '7701234567890', 'Unidad': 'Unidad', 'Costo': 18000,
+      'Margen Utilidad (%)': 30, 'Precio incluye IVA': 'No', 'IVA': '19', 'Cantidad': 20,
+      'Stock mínimo': 5, 'Equivalente(s)': 'FIL-002',
+    },
+    {
+      'Código*': 'FIL-002', 'Nombre*': 'Filtro de aceite alterno', 'Categoría': 'Filtros', 'Tipo': 'Producto',
+      'Marca': 'Mann', 'Unidad': 'Unidad', 'Costo': 16000, 'IVA': '19', 'Cantidad': 10,
+    },
+    {
+      'Código*': 'ACE-20W50', 'Nombre*': 'Aceite 20W50 galón', 'Categoría': 'Lubricantes > Aceites de motor',
+      'Tipo': 'Producto', 'Unidad': 'Galón', 'Costo': 85000, 'Precio Venta': 119000,
+      'Precio incluye IVA': 'Sí', 'IVA': '19', 'Cantidad': 12, 'Permitir stock negativo': 'No',
+    },
+    {
+      'Código*': 'MO-ALIN', 'Nombre*': 'Alineación', 'Categoría': 'Servicios', 'Tipo': 'Mano de obra',
+      'Precio Venta': 60000, 'IVA': '19',
+    },
+  ];
 
-  const ws = addSheetFromObjects(wb, 'Productos', templateData);
+  const ws = wb.addWorksheet('Productos');
+  ws.columns = columns.map((c) => ({ header: c.header, key: c.header, width: c.width }));
+  examples.forEach((row) => ws.addRow(row));
+  ws.getRow(1).font = { bold: true };
+  ws.views = [{ state: 'frozen', ySplit: 1 }];
 
-  // Anchos de columnas
-  ws.getColumn('Código*').width = 20;
-  ws.getColumn('Nombre*').width = 35;
-  ws.getColumn('Unidad').width = 14;
-  ws.getColumn('Costo Promedio').width = 18;
-  ws.getColumn('Precio Venta').width = 18;
-  ws.getColumn('Margen Utilidad (%)').width = 20;
-  ws.getColumn('Cantidad').width = 15;
-  ws.getColumn('Equivalente(s)').width = 28;
+  // Listas desplegables (Excel las muestra; el backend igual valida el texto).
+  const lastRow = 1000;
+  const listValidation = (header, values) => {
+    const col = ws.getColumn(header).letter;
+    for (let r = 2; r <= lastRow; r++) {
+      ws.getCell(`${col}${r}`).dataValidation = {
+        type: 'list', allowBlank: true, formulae: [`"${values.join(',')}"`],
+      };
+    }
+  };
+  listValidation('Tipo', ['Producto', 'Servicio', 'Mano de obra']);
+  listValidation('IVA', ['19', '5', 'Exento', 'Excluido']);
+  listValidation('Precio incluye IVA', ['Sí', 'No']);
+  listValidation('Permitir stock negativo', ['Sí', 'No']);
+  listValidation('Unidad', ['Unidad', 'Kilogramo', 'Gramo', 'Libra', 'Litro', 'Mililitro', 'Galón', 'Metro', 'Centímetro', 'Caja', 'Paquete', 'Docena']);
 
   // Hoja 2: Instrucciones
   const instructions = [
     '',
     '📋 INSTRUCCIONES PARA IMPORTAR PRODUCTOS',
     '',
-    '✅ FORMATO SIMPLIFICADO',
-    '',
     '1️⃣ CAMPOS OBLIGATORIOS (marcados con *)',
-    '   • Código*: Código único del producto (SKU)',
-    '   • Nombre*: Nombre del producto',
+    '   • Código*: Código único del producto (SKU, máx. 50 caracteres)',
+    '   • Nombre*: Nombre del producto (máx. 200 caracteres)',
     '',
-    '2️⃣ CAMPOS OPCIONALES (valores por defecto si están vacíos)',
-    '   • Unidad: Unidad de medida (por defecto: Unidad)',
-    '     Valores aceptados: Unidad, Kilogramo, Gramo, Libra, Onza, Litro,',
-    '     Mililitro, Galón, Metro, Centímetro, Pie, Caja, Paquete, Docena',
-    '   • Costo Promedio: Costo de compra (por defecto: 0)',
-    '   • Precio Venta: Precio al público (se calcula si está vacío)',
-    '   • Margen Utilidad (%): Porcentaje de ganancia (por defecto: 30%)',
-    '   • Cantidad: Stock inicial (por defecto: 0)',
-    '   • Equivalente(s): Código(s) de producto(s) sustitutos, separados por "|"',
-    '     (ej. "PROD010|PROD011"). Puede ser un código de otra fila de este',
-    '     mismo archivo o el código de un producto que ya existe en el sistema.',
-    '     Basta con declararlo en UNA de las dos filas (no hace falta repetirlo',
-    '     en ambas). El sistema arma los grupos de equivalencia automáticamente',
-    '     por código -- no es necesario crear ni nombrar grupos a mano.',
+    '2️⃣ CATEGORÍA',
+    '   • Escribe el nombre de la categoría (no importan mayúsculas ni tildes).',
+    '   • Si la categoría NO existe, se crea automáticamente al importar.',
+    '     Antes de importar, la validación te muestra cuáles se van a crear.',
+    '   • Para crearla dentro de otra, escribe "Padre > Hija"',
+    '     (ej. "Lubricantes > Aceites de motor"). Si la hija ya existe, se usa',
+    '     la existente sin importar en qué categoría padre esté.',
+    '   • Vacía → el producto queda sin categoría.',
+    '   • En la hoja "Categorías" ves las que ya existen.',
     '',
-    '3️⃣ REGLAS AUTOMÁTICAS',
-    '   • Si Costo Promedio está vacío → se pone 0',
-    '   • Si Precio Venta está vacío → se calcula con Costo y Margen, según el',
-    '     cálculo elegido en Categorías → Márgenes de ganancia:',
+    '3️⃣ TIPO',
+    '   • Producto (por defecto): maneja inventario y stock.',
+    '   • Servicio: sin inventario (Cantidad, stock mínimo/máximo no aplican).',
+    '   • Mano de obra: servicio que en una OT se carga como mano de obra',
+    '     (aplica comisión a técnico).',
+    '   • Los vehículos no se importan: créalos desde el formulario.',
+    '',
+    '4️⃣ COSTO, MARGEN Y PRECIO',
+    '   • Costo: costo unitario sin IVA (por defecto 0).',
+    '   • Margen Utilidad (%): si lo dejas vacío, el producto HEREDA el margen',
+    '     de su categoría (o el margen global). Si no hay ninguno, queda en 30 %.',
+    '   • Precio Venta: si está vacío y hay costo, se calcula con Costo y Margen',
+    '     según el cálculo elegido en Categorías → Márgenes de ganancia:',
     '     sobre la venta: Costo ÷ (1 − Margen/100) · sobre el costo: Costo × (1 + Margen/100)',
-    '   • Si Margen Utilidad está vacío → el margen global (o 30% si no hay)',
-    '   • Si Cantidad está vacía → se pone 0',
-    '   • Si el código ya existe → se omite y continúa con los demás',
+    '   • Precio incluye IVA: "Sí" si el Precio Venta ya trae los impuestos',
+    '     (también el calculado los incluye). Por defecto: No.',
     '',
-    '4️⃣ EJEMPLOS',
-    '   Ejemplo 1 - Producto completo:',
-    '     Código: LAPTOP-001',
-    '     Nombre: Laptop HP',
-    '     Costo: 1000000',
-    '     Precio: 1300000',
-    '     Margen: 30',
-    '     Cantidad: 10',
+    '5️⃣ IMPUESTOS',
+    '   • IVA: 19 (por defecto), 5, Exento (IVA 0 %) o Excluido (no causa IVA).',
+    '   • INC (%): impoconsumo, solo si aplica (licores, bebidas, etc.).',
     '',
-    '   Ejemplo 2 - Solo nombre y precio (sin costo):',
-    '     Código: SERV-001',
-    '     Nombre: Servicio de Instalación',
-    '     Costo: (vacío → 0)',
-    '     Precio: 50000',
-    '     Margen: (vacío → 30%)',
-    '     Cantidad: (vacío → 0)',
+    '6️⃣ INVENTARIO',
+    '   • Cantidad: stock inicial. Entra a la bodega principal con su',
+    '     movimiento de kardex y asiento contable, valorizado al Costo.',
+    '   • Stock mínimo / Stock máximo: opcionales (el máximo no puede ser',
+    '     menor que el mínimo).',
+    '   • Permitir stock negativo: Sí / No (por defecto No).',
     '',
-    '5️⃣ IMPORTANTE',
-    '   • Los números NO deben llevar símbolos ($, %, comas)',
-    '   • Ejemplo CORRECTO: 15000',
-    '   • Ejemplo INCORRECTO: $15.000 o 15,000',
-    '   • El margen se escribe solo el número (ej: 30 para 30%)',
+    '7️⃣ OTROS CAMPOS OPCIONALES',
+    '   • Marca, Descripción.',
+    '   • Código de barras: único; si ya lo tiene otro producto, la fila falla.',
+    '   • Unidad: Unidad (por defecto), Kilogramo, Gramo, Libra, Onza, Litro,',
+    '     Mililitro, Galón, Metro, Centímetro, Pie, Caja, Paquete, Docena.',
+    '   • Equivalente(s): código(s) de producto(s) sustitutos, separados por "|"',
+    '     (ej. "PROD010|PROD011"). Puede ser un código de otra fila de este',
+    '     mismo archivo o el de un producto que ya existe. Basta con declararlo',
+    '     en UNA de las dos filas; los grupos se arman solos.',
     '',
-    '6️⃣ RESUMEN AL FINALIZAR',
-    '   Al importar verás un resumen con:',
-    '   • ✅ Productos importados exitosamente',
-    '   • ⚠️ Productos omitidos (códigos duplicados)',
-    '   • ❌ Productos con errores',
+    '8️⃣ IMPORTANTE',
+    '   • Si el código ya existe → la fila se omite (no se modifica el producto).',
+    '   • Los números sin símbolos ni separadores de miles: 15000, no $15.000.',
+    '   • El margen se escribe solo el número (ej: 30 para 30 %).',
+    '   • Una fila con un dato inválido no se importa; las demás sí.',
+    '   • Columnas con otros nombres se ignoran (la validación te las muestra).',
+    '   • Las filas de ejemplo de la hoja "Productos" se importan si no las borras.',
     '',
-    '7️⃣ PASOS',
-    '   1. Ve a la hoja "Productos"',
-    '   2. Completa mínimo Código y Nombre',
-    '   3. Los demás campos son opcionales',
-    '   4. Guarda el archivo (mantén formato .xlsx)',
-    '   5. Importa el archivo en el sistema',
-    '',
-    '✅ ¡Listo para importar!'
+    '9️⃣ PASOS',
+    '   1. Completa la hoja "Productos" (mínimo Código y Nombre).',
+    '   2. Guarda el archivo en formato .xlsx.',
+    '   3. Súbelo, revisa la validación y confirma la importación.',
   ];
 
   const wsInstructions = wb.addWorksheet('Instrucciones');
   instructions.forEach((line) => wsInstructions.addRow([line]));
-  wsInstructions.getColumn(1).width = 80;
+  wsInstructions.getColumn(1).width = 85;
 
-  // Descargar
+  // Hoja 3: categorías existentes (referencia)
+  const wsCategories = wb.addWorksheet('Categorías');
+  wsCategories.columns = [
+    { header: 'Categoría', key: 'name', width: 32 },
+    { header: 'Categoría padre', key: 'parent', width: 32 },
+  ];
+  wsCategories.getRow(1).font = { bold: true };
+  const nameById = new Map(categories.map((c) => [c.id, c.name]));
+  [...categories]
+    .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'es'))
+    .forEach((c) => wsCategories.addRow({ name: c.name, parent: (c.parent_id && nameById.get(c.parent_id)) || c.parent?.name || '' }));
+
   await downloadWorkbook(wb, 'plantilla_productos_importar.xlsx');
 };
 
