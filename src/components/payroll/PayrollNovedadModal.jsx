@@ -22,8 +22,10 @@ import {
   HORAS_PERCENTAGE_SETTING_KEY,
   HORAS_EXTRA_CATEGORIES,
   HORAS_RECARGO_CATEGORIES,
+  NOVEDAD_AUTO_FIELDS,
   monthlyHoursFor,
 } from '../../constants/payroll';
+import { payrollNovedadesAPI } from '../../api/payroll';
 import { formatCurrency } from '../../utils/formatters';
 
 const emptyForm = {
@@ -41,6 +43,23 @@ const emptyForm = {
 // simpleValueListXml() en el backend), así que no necesitan más que esto.
 const SINGLE_VALUE_FIELD = { name: 'valor', label: 'Valor', type: 'money', required: true };
 
+// Vacaciones disfrutadas: días hábiles y fecha de fin se calculan uno desde el
+// otro — el que el operador edita manda (no queda "manual"), el otro se ajusta.
+const DRIVER_FIELDS = { 'Vacaciones:comunes': ['cantidad', 'fechaFin'] };
+
+const AUTO_HINTS = {
+  'Vacaciones:comunes': 'Escribe el primer día y los días hábiles (o el último día): el sistema calcula el resto, sin domingos ni festivos.',
+  'Vacaciones:compensadas': 'Escribe los días: el sistema calcula el valor.',
+  Incapacidades: 'Escribe las fechas y el tipo: el sistema cuenta los días y calcula el valor.',
+  'Licencias:maternidadPaternidad': 'Escribe las fechas: el sistema cuenta los días y calcula el valor.',
+  'Licencias:remunerada': 'Escribe las fechas: el sistema cuenta los días y calcula el valor.',
+  'Licencias:noRemunerada': 'Escribe las fechas: el sistema cuenta los días.',
+  HuelgasLegales: 'Escribe las fechas: el sistema cuenta los días.',
+  Primas: 'El sistema propone los días del semestre y calcula el valor.',
+  Cesantias: 'Escribe el valor de las cesantías: el sistema calcula los intereses.',
+  Sindicatos: 'Escribe el porcentaje: el sistema calcula la cuota.',
+};
+
 const PayrollNovedadModal = ({ isOpen, employees, defaultEmployeeId, payrollPeriodId, periodDate, onClose, onSuccess }) => {
   const { createNovedad, isLoading } = usePayrollNovedadesStore();
   const { concepts, fetchConcepts } = usePayrollConceptsStore();
@@ -52,6 +71,11 @@ const PayrollNovedadModal = ({ isOpen, employees, defaultEmployeeId, payrollPeri
   // El valor de horas extra/recargos se calcula solo (horas x valor hora x
   // porcentaje) hasta que el usuario lo escribe a mano.
   const [pagoManual, setPagoManual] = useState(false);
+  // Resto de novedades con cálculo (vacaciones, incapacidades, licencias,
+  // primas...): campos que el operador escribió a mano y ya no se recalculan.
+  const [manualFields, setManualFields] = useState(() => new Set());
+  const [suggestInfo, setSuggestInfo] = useState(null); // { detail, warnings }
+  const [lastSource, setLastSource] = useState(null);
 
   useEffect(() => {
     if (isOpen && !concepts.length) fetchConcepts();
@@ -64,6 +88,9 @@ const PayrollNovedadModal = ({ isOpen, employees, defaultEmployeeId, payrollPeri
       setFieldValues({});
       setErrors({});
       setPagoManual(false);
+      setManualFields(new Set());
+      setSuggestInfo(null);
+      setLastSource(null);
     }
   }, [isOpen, defaultEmployeeId]);
 
@@ -98,6 +125,51 @@ const PayrollNovedadModal = ({ isOpen, employees, defaultEmployeeId, payrollPeri
     });
   }, [esHoras, pagoManual, pagoCalculado]);
 
+  // ── Resto de novedades: días y valor sugeridos por el backend ──
+  const autoKey = NOVEDAD_AUTO_FIELDS[`${formData.dian_category}:${formData.subtype}`]
+    ? `${formData.dian_category}:${formData.subtype}`
+    : (NOVEDAD_AUTO_FIELDS[formData.dian_category] ? formData.dian_category : null);
+  const autoFields = autoKey ? NOVEDAD_AUTO_FIELDS[autoKey] : [];
+  const driverFields = (autoKey && DRIVER_FIELDS[autoKey]) || [];
+  const suggestKey = autoKey && formData.employee_id
+    ? JSON.stringify([formData.employee_id, autoKey, fieldValues, lastSource])
+    : null;
+
+  useEffect(() => {
+    if (!suggestKey || formData.mode !== 'category') { setSuggestInfo(null); return undefined; }
+    let cancelled = false;
+    const t = setTimeout(async () => {
+      try {
+        const r = await payrollNovedadesAPI.suggest({
+          employee_id: formData.employee_id,
+          payroll_period_id: payrollPeriodId,
+          dian_category: formData.dian_category,
+          subtype: formData.subtype || undefined,
+          values: fieldValues,
+          source: lastSource,
+        });
+        if (cancelled) return;
+        const { values = {}, detail = null, warnings = [] } = r.data || {};
+        setSuggestInfo({ detail, warnings });
+        setFieldValues((prev) => {
+          let changed = false;
+          const next = { ...prev };
+          for (const [k, val] of Object.entries(values)) {
+            if (!autoFields.includes(k) || manualFields.has(k)) continue;
+            const str = val === null || val === undefined ? '' : String(val);
+            if (next[k] !== str) { next[k] = str; changed = true; }
+          }
+          return changed ? next : prev;
+        });
+      } catch {
+        if (!cancelled) setSuggestInfo(null);
+      }
+    }, 350);
+    return () => { cancelled = true; clearTimeout(t); };
+  }, [suggestKey]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const resetManual = () => { setManualFields(new Set()); setLastSource(null); };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -115,15 +187,26 @@ const PayrollNovedadModal = ({ isOpen, employees, defaultEmployeeId, payrollPeri
       const configuredPct = settingKey && payrollSettings?.[settingKey];
       setFieldValues(configuredPct !== undefined && configuredPct !== null ? { porcentaje: String(configuredPct) } : {});
       setPagoManual(false);
+      resetManual();
       return;
     }
-    if (name === 'subtype') setFieldValues({});
-    if (name === 'employee_id') setPagoManual(false);
+    if (name === 'subtype') { setFieldValues({}); resetManual(); }
+    if (name === 'employee_id') { setPagoManual(false); setManualFields((prev) => { const n = new Set(prev); n.delete('pago'); return n; }); }
     if (errors[name]) setErrors((prev) => ({ ...prev, [name]: '' }));
   };
 
   const handleFieldChange = (fieldName, value) => {
     if (fieldName === 'pago' && esHoras) setPagoManual(value !== '');
+    if (driverFields.includes(fieldName)) {
+      setLastSource(fieldName);
+    } else if (autoFields.includes(fieldName)) {
+      // Escrito a mano: no se recalcula (vacío = vuelve al calculado).
+      setManualFields((prev) => {
+        const n = new Set(prev);
+        if (value === '' || value === null) n.delete(fieldName); else n.add(fieldName);
+        return n;
+      });
+    }
     setFieldValues((prev) => ({ ...prev, [fieldName]: value }));
     if (errors[fieldName]) setErrors((prev) => ({ ...prev, [fieldName]: '' }));
   };
@@ -428,7 +511,7 @@ const PayrollNovedadModal = ({ isOpen, employees, defaultEmployeeId, payrollPeri
             )}
 
             {formData.dian_category && activeFields.length > 0 && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-gray-50 dark:bg-graphite-2 rounded-lg">
+              <div key={`${formData.dian_category}:${formData.subtype}`} className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-gray-50 dark:bg-graphite-2 rounded-lg">
                 {activeFields.map(renderField)}
               </div>
             )}
@@ -454,6 +537,27 @@ const PayrollNovedadModal = ({ isOpen, employees, defaultEmployeeId, payrollPeri
                       </>
                     : 'El empleado no tiene salario registrado: escribe el valor a pagar.'}
               </p>
+            )}
+            {autoKey && (
+              <div className="text-xs -mt-2 space-y-1">
+                {!formData.employee_id ? (
+                  <p className="text-gray-500 dark:text-gray-400">Selecciona el empleado para calcular los días y el valor automáticamente.</p>
+                ) : suggestInfo?.detail ? (
+                  <p className="text-gray-600 dark:text-gray-300">
+                    {suggestInfo.detail}
+                    {manualFields.size > 0 && (
+                      <button type="button" onClick={resetManual} className="ml-2 text-blue-600 hover:underline">
+                        Usar los valores calculados
+                      </button>
+                    )}
+                  </p>
+                ) : (
+                  <p className="text-gray-500 dark:text-gray-400">{AUTO_HINTS[autoKey] || 'El valor se calcula al completar los datos.'}</p>
+                )}
+                {suggestInfo?.warnings?.map((w) => (
+                  <p key={w} className="text-amber-700 dark:text-amber-300">{w}</p>
+                ))}
+              </div>
             )}
             {errors.fields && <p className="text-red-500 dark:text-red-400 text-sm -mt-2">{errors.fields}</p>}
           </>

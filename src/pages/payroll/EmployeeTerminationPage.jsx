@@ -115,7 +115,7 @@ const TerminationDetailPanel = ({ item, onEmitted }) => {
             <div className="flex justify-between"><dt className="text-gray-500">Cesantías ({breakdown.cesantias.dias} días)</dt><dd className="text-gray-800 dark:text-gray-200">{formatCurrencyCOP(breakdown.cesantias.cesantias)}</dd></div>
             <div className="flex justify-between"><dt className="text-gray-500">Intereses a las cesantías</dt><dd className="text-gray-800 dark:text-gray-200">{formatCurrencyCOP(breakdown.cesantias.intereses)}</dd></div>
             <div className="flex justify-between"><dt className="text-gray-500">Prima proporcional ({breakdown.prima.dias} días, sem. {breakdown.prima.semestre})</dt><dd className="text-gray-800 dark:text-gray-200">{formatCurrencyCOP(breakdown.prima.prima)}</dd></div>
-            <div className="flex justify-between"><dt className="text-gray-500">Vacaciones pendientes ({breakdown.vacaciones.diasPendientes} de {breakdown.vacaciones.diasCausados} días causados)</dt><dd className="text-gray-800 dark:text-gray-200">{formatCurrencyCOP(breakdown.vacaciones.valor)}</dd></div>
+            <div className="flex justify-between"><dt className="text-gray-500">Vacaciones pendientes ({breakdown.vacaciones.diasPendientes} días: {breakdown.vacaciones.fechaSaldoInicial ? `saldo inicial ${breakdown.vacaciones.saldoInicial} + ` : ''}{breakdown.vacaciones.diasCausados} causados − {breakdown.vacaciones.diasYaTomados} tomados)</dt><dd className="text-gray-800 dark:text-gray-200">{formatCurrencyCOP(breakdown.vacaciones.valor)}</dd></div>
           </dl>
         </div>
         <div>

@@ -72,6 +72,15 @@ const ACCOUNTING_OPTIONS = [
     ],
   },
   {
+    key: 'vacation_business_days',
+    label: 'Días hábiles para vacaciones',
+    note: 'Con qué días se cuentan los 15 días hábiles al registrar vacaciones. Domingos y festivos nunca cuentan.',
+    options: [
+      { value: 'mon_sat', label: 'Lunes a sábado', hint: 'Regla general del Código Sustantivo del Trabajo: el sábado es día hábil.' },
+      { value: 'mon_fri', label: 'Lunes a viernes', hint: 'Si la empresa no trabaja los sábados (jornada de lunes a viernes).' },
+    ],
+  },
+  {
     key: 'commission_payroll_mode',
     label: 'Comisiones de mano de obra (taller)',
     note: 'Cómo llega a nómina la liquidación de comisiones de los técnicos. Es el valor por defecto: cada empleado puede tener su propia excepción en su ficha.',

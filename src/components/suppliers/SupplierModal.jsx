@@ -6,15 +6,9 @@ import DivipolaCitySelect from '../common/DivipolaCitySelect';
 import SupplierRetentionsEditor from './SupplierRetentionsEditor';
 import useRetentionCatalog from '../../hooks/useRetentionCatalog';
 import { FUND_TYPE_LABELS, resetFundSuppliersCache } from '../payroll/FundSupplierSelect';
+import { COLOMBIAN_BANKS } from '../../constants/colombianBanks';
+import { DOCUMENT_TYPE_OPTIONS } from '../../constants/documentTypes';
 
-const DOCUMENT_TYPE_OPTIONS = [
-  { value: '13', label: 'Cédula de ciudadanía' },
-  { value: '31', label: 'NIT' },
-  { value: '22', label: 'Cédula de extranjería' },
-  { value: '41', label: 'Pasaporte' },
-  { value: '12', label: 'Tarjeta de identidad' },
-  { value: '91', label: 'NUIP' },
-];
 
 const SupplierModal = ({ supplier, onClose }) => {
   const { createSupplier, updateSupplier, isLoading } = useSuppliersStore();
@@ -49,6 +43,10 @@ const SupplierModal = ({ supplier, onClose }) => {
     document_type: '',
     payroll_fund_types: [],
     pila_code: '',
+    // Datos bancarios: para pagarle con el archivo plano de pagos masivos
+    bank_name: '',
+    account_type: '',
+    account_number: '',
   });
 
   const [errors, setErrors] = useState({});
@@ -89,6 +87,9 @@ const SupplierModal = ({ supplier, onClose }) => {
         document_type: supplier.document_type || '',
         payroll_fund_types: Array.isArray(supplier.payroll_fund_types) ? supplier.payroll_fund_types : [],
         pila_code: supplier.pila_code || '',
+        bank_name: supplier.bank_name || '',
+        account_type: supplier.account_type || '',
+        account_number: supplier.account_number || '',
       });
     }
   }, [supplier]);
@@ -557,6 +558,55 @@ const SupplierModal = ({ supplier, onClose }) => {
                   <p className="text-xs text-gray-500 mt-1">Código de la administradora en la planilla de seguridad social (distinto del NIT).</p>
                 </div>
               )}
+            </div>
+          </div>
+
+          {/* Datos bancarios */}
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-1">Datos bancarios</h3>
+            <p className="text-xs text-gray-500 mb-4">Para pagarle desde un lote de pagos con el archivo plano del banco.</p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Banco</label>
+                <select
+                  name="bank_name"
+                  value={COLOMBIAN_BANKS.some((b) => b.name === formData.bank_name) || !formData.bank_name ? formData.bank_name : '__other'}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, bank_name: e.target.value === '__other' ? prev.bank_name : e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="">Sin datos bancarios</option>
+                  {COLOMBIAN_BANKS.map((b) => <option key={b.code} value={b.name}>{b.name}</option>)}
+                  {formData.bank_name && !COLOMBIAN_BANKS.some((b) => b.name === formData.bank_name) && (
+                    <option value="__other">{formData.bank_name}</option>
+                  )}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de cuenta</label>
+                <select
+                  name="account_type"
+                  value={formData.account_type}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="">—</option>
+                  {/* La BD solo acepta savings | checking | other (CHECK de suppliers.account_type). */}
+                  <option value="savings">Ahorros</option>
+                  <option value="checking">Corriente</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Número de cuenta</label>
+                <input
+                  type="text"
+                  name="account_number"
+                  value={formData.account_number}
+                  onChange={handleChange}
+                  inputMode="numeric"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Solo números"
+                />
+              </div>
             </div>
           </div>
 

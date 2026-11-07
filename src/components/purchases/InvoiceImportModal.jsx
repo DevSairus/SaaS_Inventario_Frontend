@@ -6,7 +6,7 @@ import { productsAPI } from '../../api/products';
 import NumericInput from '../inputs/NumericInput';
 import useCategoriesStore from '../../store/categoriesStore';
 import useTenantStore from '../../store/tenantStore';
-import { maxMarginFor } from '../../utils/salePricing';
+import { maxMarginFor, suggestedSalePrice, impliedMargin } from '../../utils/salePricing';
 
 const fmt = (val) => parseFloat(val || 0).toLocaleString('es-CO');
 
@@ -106,7 +106,7 @@ const ProductLinkPicker = ({ value, productName, onChange }) => {
 
   const pick = (product) => {
     setSelectedLabel(product.name);
-    onChange(product.id);
+    onChange(product.id, product);
     setOpen(false);
     setQuery('');
   };
@@ -207,6 +207,11 @@ const InvoiceImportModal = ({ isOpen, onClose, onSuccess, dianDocumentId = null 
   // Margen por línea: { idx: pct }. Vacío = el general de abajo (productos
   // nuevos) o el que ya tiene el producto. Al recibir la compra pasa al producto.
   const [itemMargins, setItemMargins] = useState({});
+  // Precio de venta escrito a mano por línea: { idx: precio }. Manda sobre el
+  // margen; sin escribirlo, el precio se calcula con el margen como siempre.
+  const [itemSalePrices, setItemSalePrices] = useState({});
+  // Producto elegido a mano en el selector (para leer su IVA y su precio).
+  const [pickedProducts, setPickedProducts] = useState({});
   // Vínculo producto por ítem: { índice: product_id | 'CREATE_NEW' }.
   // Se pre-carga con la sugerencia del backend (sku_internal / name_fuzzy),
   // editable por el usuario — es lo único que confirma y guarda un mapeo
@@ -239,7 +244,7 @@ const InvoiceImportModal = ({ isOpen, onClose, onSuccess, dianDocumentId = null 
   };
 
   const handlePreview = async (selectedFile) => {
-    setLoading(true); setError(null); setPreview(null); setRemovedItems([]); setShippingCost(''); setItemTaxOverrides({}); setItemMargins({}); setManualLinks({}); setNewProductData({});
+    setLoading(true); setError(null); setPreview(null); setRemovedItems([]); setShippingCost(''); setItemTaxOverrides({}); setItemMargins({}); setItemSalePrices({}); setPickedProducts({}); setManualLinks({}); setNewProductData({});
     try {
       const fd = new FormData();
       if (dianDocumentId) fd.append('dian_document_id', dianDocumentId);
@@ -308,6 +313,41 @@ const InvoiceImportModal = ({ isOpen, onClose, onSuccess, dianDocumentId = null 
     return { subtotal, tax, inc, freight, discount, total: subtotal + tax + inc + freight - discount };
   };
 
+  // Precio de venta que saldría con el margen de la línea: mismo cálculo que
+  // al recibir la compra (utils/salePricing), sobre el costo unitario con el
+  // INC y el flete/descuento global prorrateados. Devuelve { price, margin,
+  // product, cost, current } o null si no hay con qué estimarlo.
+  const estimateSale = (item, idx, totals) => {
+    const qty = parseFloat(item.quantity) || 0;
+    const subtotal = parseFloat(item.subtotal) || 0;
+    if (qty <= 0 || subtotal <= 0) return null;
+    const share = totals.subtotal > 0 ? subtotal / totals.subtotal : 0;
+    const cost = (subtotal + (parseFloat(item.inc_amount) || 0) - totals.discount * share + totals.freight * share) / qty;
+    const createsNew = manualLinks[idx] === 'CREATE_NEW' || (!item.suggestion && !manualLinks[idx]);
+    const lineMargin = itemMargins[idx] !== undefined && itemMargins[idx] !== '' ? Number(itemMargins[idx]) : null;
+    let product;
+    let margin;
+    let current = null;
+    if (createsNew) {
+      const taxPct = getItemTaxPct(idx);
+      const data = newProductData[idx];
+      product = { price_includes_tax: !!data?.price_includes_tax, has_tax: taxPct > 0, tax_percentage: taxPct, tax_config: { iva_status: item.iva_status } };
+      const inherited = preview?.new_product_margins
+        ? (preview.new_product_margins.by_category?.[data?.category_id] ?? preview.new_product_margins.global)
+        : null;
+      margin = lineMargin ?? (profitMargin !== '' ? Number(profitMargin) : (inherited ?? 30));
+    } else {
+      const linkedId = item.suggestion?.match_type === 'code_exact' ? item.suggestion.product_id : manualLinks[idx];
+      product = pickedProducts[idx]?.id === linkedId ? pickedProducts[idx]
+        : item.suggestion?.product_id === linkedId ? item.suggestion : null;
+      if (!product) return null;
+      margin = lineMargin ?? (product.margin_pct ?? product.profit_margin_percentage ?? null);
+      current = parseFloat(product.base_price) || 0;
+    }
+    const price = margin !== null && Number(margin) > 0 ? suggestedSalePrice(cost, margin, product, marginMethod) : null;
+    return { price, margin, product, cost, current };
+  };
+
   const marginsInvalid = Object.entries(itemMargins).some(([idx, v]) => v !== '' && !removedItems.includes(Number(idx))
     && !(Number(v) >= 0 && Number(v) <= maxMargin));
 
@@ -327,6 +367,9 @@ const InvoiceImportModal = ({ isOpen, onClose, onSuccess, dianDocumentId = null 
       fd.append('items_margins', JSON.stringify(Object.fromEntries(
         Object.entries(itemMargins).filter(([idx, v]) => v !== '' && !removedItems.includes(Number(idx)))
       )));
+      fd.append('items_sale_prices', JSON.stringify(Object.fromEntries(
+        Object.entries(itemSalePrices).filter(([idx, v]) => Number(v) > 0 && !removedItems.includes(Number(idx)))
+      )));
       fd.append('manual_links', JSON.stringify(manualLinks));
       fd.append('new_product_data', JSON.stringify(newProductData));
       const res = await api.post('/invoice-import/import', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
@@ -342,7 +385,7 @@ const InvoiceImportModal = ({ isOpen, onClose, onSuccess, dianDocumentId = null 
   const handleClose = () => {
     setFile(null); setPreview(null); setError(null); setResult(null);
     setIsDragging(false); setProfitMargin(''); setSupplierName('');
-    setRemovedItems([]); setShippingCost(''); setDiscountAmount(''); setItemTaxOverrides({}); setItemMargins({}); setManualLinks({}); setNewProductData({});
+    setRemovedItems([]); setShippingCost(''); setDiscountAmount(''); setItemTaxOverrides({}); setItemMargins({}); setItemSalePrices({}); setPickedProducts({}); setManualLinks({}); setNewProductData({});
     setFileInputKey(k => k + 1);
     onClose();
   };
@@ -352,7 +395,7 @@ const InvoiceImportModal = ({ isOpen, onClose, onSuccess, dianDocumentId = null 
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-graphite rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+      <div className="bg-white dark:bg-graphite rounded-xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto">
 
         <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-4 flex items-center justify-between rounded-t-xl z-10">
           <h2 className="text-2xl font-bold flex items-center gap-2">
@@ -502,6 +545,10 @@ const InvoiceImportModal = ({ isOpen, onClose, onSuccess, dianDocumentId = null 
                           Margen %
                           <span className="block text-[10px] text-gray-400 dark:text-gray-500 font-normal leading-none">opcional</span>
                         </th>
+                        <th className="px-3 py-2 text-center font-medium text-gray-600 dark:text-gray-400">
+                          P. venta
+                          <span className="block text-[10px] text-gray-400 dark:text-gray-500 font-normal leading-none">editable</span>
+                        </th>
                         <th className="px-3 py-2 text-right font-medium text-gray-600 dark:text-gray-400">Subtotal</th>
                         <th className="px-3 py-2 w-10"></th>
                       </tr>
@@ -525,6 +572,12 @@ const InvoiceImportModal = ({ isOpen, onClose, onSuccess, dianDocumentId = null 
                           : (currentMargin !== null && currentMargin !== undefined ? String(currentMargin) : 'Actual');
                         const marginValue = itemMargins[idx] ?? '';
                         const marginBad = marginValue !== '' && !(Number(marginValue) >= 0 && Number(marginValue) <= maxMargin);
+                        const sale = removed ? null : estimateSale(item, idx, totals);
+                        const typedPrice = itemSalePrices[idx];
+                        const priceOverridden = typedPrice !== undefined && typedPrice !== '';
+                        const typedMargin = priceOverridden && sale ? impliedMargin(sale.cost, typedPrice, sale.product, marginMethod) : null;
+                        // El precio de un producto existente no baja solo al recibir: se mantiene el actual.
+                        const priceHeld = !priceOverridden && sale?.price && sale.current > 0 && sale.price < sale.current - 0.005;
                         return (
                           <tr key={idx} className={removed ? 'bg-red-50 dark:bg-red-900/20' : 'hover:bg-gray-50 dark:hover:bg-white/5'}>
                             <td className={`px-3 py-2.5 ${removed ? 'line-through text-gray-400 dark:text-gray-500' : 'text-gray-900 dark:text-gray-100'}`}>
@@ -547,8 +600,9 @@ const InvoiceImportModal = ({ isOpen, onClose, onSuccess, dianDocumentId = null 
                                       <ProductLinkPicker
                                         value={manualLinks[idx]}
                                         productName={item.suggestion?.product_name}
-                                        onChange={(val) => {
+                                        onChange={(val, product) => {
                                           setManualLinks(prev => ({ ...prev, [idx]: val }));
+                                          if (product) setPickedProducts(prev => ({ ...prev, [idx]: product }));
                                           if (val === 'CREATE_NEW') {
                                             setNewProductData(prev => ({ ...prev, [idx]: prev[idx] || getNewProductData(idx, item) }));
                                           }
@@ -613,10 +667,15 @@ const InvoiceImportModal = ({ isOpen, onClose, onSuccess, dianDocumentId = null 
                                   <input
                                     type="number" min="0" max={maxMargin} step="0.01"
                                     value={marginValue}
-                                    placeholder={marginPlaceholder}
-                                    title={createsNew ? 'Vacío = margen general (o el de la categoría)' : 'Vacío = el producto conserva su margen'}
+                                    placeholder={priceOverridden ? (typedMargin !== null ? `≈${typedMargin}` : '—') : marginPlaceholder}
+                                    title={priceOverridden
+                                      ? 'Sale del precio de venta escrito; si cambias el margen se vuelve a calcular el precio'
+                                      : createsNew ? 'Vacío = margen general (o el de la categoría)' : 'Vacío = el producto conserva su margen'}
                                     onWheel={e => e.target.blur()}
-                                    onChange={e => setItemMargins(prev => ({ ...prev, [idx]: e.target.value }))}
+                                    onChange={e => {
+                                      setItemMargins(prev => ({ ...prev, [idx]: e.target.value }));
+                                      setItemSalePrices(prev => { const next = { ...prev }; delete next[idx]; return next; });
+                                    }}
                                     className={`w-20 px-1.5 py-1 text-center border rounded text-sm font-medium focus:ring-2 focus:ring-amber-400 focus:border-transparent ${
                                       marginBad
                                         ? 'border-red-400 bg-red-50 text-red-700'
@@ -626,6 +685,49 @@ const InvoiceImportModal = ({ isOpen, onClose, onSuccess, dianDocumentId = null 
                                     }`}
                                   />
                                   {marginBad && <div className="text-[10px] text-red-600 mt-0.5">0 a {maxMargin}</div>}
+                                </div>
+                              )}
+                            </td>
+                            <td className="px-3 py-2.5 text-center">
+                              {removed ? (
+                                <span className="text-gray-300 dark:text-gray-600 text-xs">—</span>
+                              ) : (
+                                <div>
+                                  <div className="flex items-center justify-center gap-1">
+                                    <NumericInput
+                                      value={priceOverridden ? typedPrice : (priceHeld ? Math.round(sale.current) : (sale?.price ? Math.round(sale.price) : ''))}
+                                      placeholder="—"
+                                      title={sale?.product?.price_includes_tax ? 'Precio con IVA incluido' : 'Precio antes de IVA'}
+                                      onChange={e => {
+                                        setItemSalePrices(prev => ({ ...prev, [idx]: e.target.value }));
+                                        setItemMargins(prev => { const next = { ...prev }; delete next[idx]; return next; });
+                                      }}
+                                      className={`w-28 px-1.5 py-1 text-right border rounded text-sm font-medium focus:ring-2 focus:ring-blue-400 focus:border-transparent ${
+                                        priceOverridden
+                                          ? 'border-blue-400 bg-blue-50 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300'
+                                          : 'border-gray-200 dark:border-white/10 dark:bg-graphite-2 text-gray-700 dark:text-gray-300'
+                                      }`}
+                                    />
+                                    {priceOverridden && (
+                                      <button
+                                        type="button"
+                                        onClick={() => setItemSalePrices(prev => { const next = { ...prev }; delete next[idx]; return next; })}
+                                        title="Volver al precio calculado con el margen"
+                                        className="text-blue-400 hover:text-blue-600 dark:hover:text-blue-300 text-xs leading-none"
+                                      >↩</button>
+                                    )}
+                                  </div>
+                                  {priceHeld && (
+                                    <div className="text-[10px] text-amber-600 dark:text-amber-400 mt-0.5" title={`Con el margen daría $${fmt(Math.round(sale.price))}; el precio no baja solo. Escríbelo si quieres bajarlo.`}>
+                                      se mantiene el actual
+                                    </div>
+                                  )}
+                                  {priceOverridden && sale && typedMargin === null && (
+                                    <div className="text-[10px] text-red-600 mt-0.5">por debajo del costo</div>
+                                  )}
+                                  {!priceOverridden && sale?.price && sale.product?.price_includes_tax && (
+                                    <div className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">IVA incluido</div>
+                                  )}
                                 </div>
                               )}
                             </td>
@@ -764,7 +866,7 @@ const InvoiceImportModal = ({ isOpen, onClose, onSuccess, dianDocumentId = null 
               {/* Botones */}
               <div className="flex gap-3 pt-1">
                 <button
-                  onClick={() => { setFile(null); setPreview(null); setRemovedItems([]); setShippingCost(''); setDiscountAmount(''); setItemTaxOverrides({}); setItemMargins({}); setManualLinks({}); setNewProductData({}); setFileInputKey(k => k + 1); }}
+                  onClick={() => { setFile(null); setPreview(null); setRemovedItems([]); setShippingCost(''); setDiscountAmount(''); setItemTaxOverrides({}); setItemMargins({}); setItemSalePrices({}); setPickedProducts({}); setManualLinks({}); setNewProductData({}); setFileInputKey(k => k + 1); }}
                   className="flex-1 px-6 py-3 border border-gray-300 dark:border-white/10 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-white/5 transition-colors font-medium">
                   Cancelar
                 </button>

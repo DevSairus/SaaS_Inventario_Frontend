@@ -12,6 +12,7 @@ export const MANUAL_MODULE = {
   taller: 'workshop',
   crm: 'crm',
   ensambladora: 'ensambladora',
+  proyectos: 'projects',
 };
 
 // Color de acento por manual (clases completas para que Tailwind las detecte).
@@ -25,6 +26,7 @@ export const MANUAL_STYLE = {
   taller:       { chip: 'bg-red-50 text-red-700 dark:bg-red-500/15 dark:text-red-300', bar: 'bg-red-500' },
   crm:          { chip: 'bg-pink-50 text-pink-700 dark:bg-pink-500/15 dark:text-pink-300', bar: 'bg-pink-500' },
   ensambladora: { chip: 'bg-slate-100 text-slate-700 dark:bg-slate-500/20 dark:text-slate-300', bar: 'bg-slate-500' },
+  proyectos:    { chip: 'bg-yellow-50 text-yellow-800 dark:bg-yellow-500/15 dark:text-yellow-300', bar: 'bg-yellow-500' },
   guia:         { chip: 'bg-gray-100 text-gray-700 dark:bg-gray-500/20 dark:text-gray-300', bar: 'bg-gray-500' },
 };
 
@@ -39,6 +41,7 @@ export const ROLE_STARTS = [
   { role: 'Técnico', to: '/support/manuals/taller#s-4-2', hint: 'Taller · órdenes de trabajo' },
   { role: 'Asesor de servicio', to: '/support/manuals/taller#s-4-9', hint: 'Taller · vehículos y citas' },
   { role: 'Centro de servicio', to: '/support/manuals/ensambladora#s-3', hint: 'Ensambladora · puesta en marcha' },
+  { role: 'Director de obra', to: '/support/manuals/proyectos#s-3', hint: 'Proyectos · puesta en marcha' },
 ];
 
 const loaders = import.meta.glob('../../../content/manuals/*.json');

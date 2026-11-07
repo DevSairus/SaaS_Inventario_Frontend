@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Send, CheckCircle, XCircle, Package, Calendar, Warehouse } from 'lucide-react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
+import { ArrowLeft, Send, CheckCircle, XCircle, Package, Calendar, Warehouse, Lock } from 'lucide-react';
+import { usePermissions } from '../../store/tenantPermissionsStore';
+import AttachmentsPanel from '../../components/attachments/AttachmentsPanel';
 import Layout from '../../components/layout/Layout';
 import axios from 'axios';
 import toast from 'react-hot-toast';
@@ -18,6 +20,10 @@ const TransferDetailPage = () => {
   const [shippingNotes, setShippingNotes] = useState('');
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelNotes, setCancelNotes] = useState('');
+  const [showCloseModal, setShowCloseModal] = useState(false);
+  const [closeNotes, setCloseNotes] = useState('');
+  const can = usePermissions();
+  const userName = (u) => (u ? [u.first_name, u.last_name].filter(Boolean).join(' ') || u.email : null);
 
   useEffect(() => {
     loadTransfer();
@@ -75,17 +81,32 @@ const TransferDetailPage = () => {
     navigate(`/inventory/transfers/${id}/receive`);
   };
 
+  const handleClose = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.put(`${API_BASE}/inventory/transfers/${id}/close`, { notes: closeNotes || undefined }, { headers: { Authorization: `Bearer ${token}` } });
+      toast.success('Transferencia cerrada');
+      setShowCloseModal(false);
+      setCloseNotes('');
+      loadTransfer();
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Error al cerrar');
+    }
+  };
+
   const getStatusBadge = (status) => {
     const badges = {
       draft: 'bg-gray-100 text-gray-800',
       sent: 'bg-blue-100 text-blue-800',
       received: 'bg-green-100 text-green-800',
+      closed: 'bg-slate-200 text-slate-800',
       cancelled: 'bg-red-100 text-red-800'
     };
     const labels = {
       draft: 'Borrador',
-      sent: 'Enviado',
+      sent: 'En tránsito',
       received: 'Recibido',
+      closed: 'Cerrado',
       cancelled: 'Cancelado'
     };
     return (
@@ -139,7 +160,10 @@ const TransferDetailPage = () => {
           <div className="flex justify-between items-start">
             <div>
               <h1 className="text-3xl font-bold text-gray-900">{transfer.transfer_number}</h1>
-              <p className="text-gray-600 mt-1">Detalle de transferencia</p>
+              <p className="text-gray-600 mt-1">
+                Detalle de transferencia
+                {transfer.project && <> · Proyecto <Link to={`/projects/${transfer.project.id}`} className="text-blue-600 hover:underline">{transfer.project.code} · {transfer.project.name}</Link></>}
+              </p>
             </div>
             <div className="flex items-center gap-3">
               {getStatusBadge(transfer.status)}
@@ -159,6 +183,15 @@ const TransferDetailPage = () => {
                 >
                   <CheckCircle className="w-5 h-5" />
                   Recibir
+                </button>
+              )}
+              {transfer.status === 'received' && can('inventory.transfers.close') && (
+                <button
+                  onClick={() => setShowCloseModal(true)}
+                  className="flex items-center gap-2 bg-slate-700 text-white px-4 py-2 rounded-lg hover:bg-slate-800"
+                >
+                  <Lock className="w-5 h-5" />
+                  Cerrar
                 </button>
               )}
               {(transfer.status === 'draft' || transfer.status === 'sent') && (
@@ -182,7 +215,7 @@ const TransferDetailPage = () => {
               <Warehouse className="w-6 h-6 text-red-600" />
               <h2 className="text-lg font-semibold">Bodega Origen</h2>
             </div>
-            <p className="font-medium text-lg">{transfer.from_warehouse?.name || 'N/A'}</p>
+            <p className="font-medium text-lg">{transfer.fromWarehouse?.name || transfer.from_warehouse?.name || 'N/A'}</p>
           </div>
 
           {/* To Warehouse */}
@@ -191,7 +224,7 @@ const TransferDetailPage = () => {
               <Warehouse className="w-6 h-6 text-green-600" />
               <h2 className="text-lg font-semibold">Bodega Destino</h2>
             </div>
-            <p className="font-medium text-lg">{transfer.to_warehouse?.name || 'N/A'}</p>
+            <p className="font-medium text-lg">{transfer.toWarehouse?.name || transfer.to_warehouse?.name || 'N/A'}</p>
           </div>
 
           {/* Dates */}
@@ -207,22 +240,12 @@ const TransferDetailPage = () => {
                   {new Date(transfer.transfer_date).toLocaleDateString()}
                 </p>
               </div>
-              {transfer.shipped_at && (
-                <div>
-                  <p className="text-sm text-gray-600">Enviada</p>
-                  <p className="font-medium">
-                    {new Date(transfer.shipped_at).toLocaleDateString()}
-                  </p>
+              {[['Enviada', transfer.sent_date], ['Recibida', transfer.received_date], ['Cerrada', transfer.closed_at]].filter(([, d]) => d).map(([label, d]) => (
+                <div key={label}>
+                  <p className="text-sm text-gray-600">{label}</p>
+                  <p className="font-medium">{new Date(d).toLocaleDateString()}</p>
                 </div>
-              )}
-              {transfer.received_at && (
-                <div>
-                  <p className="text-sm text-gray-600">Recibida</p>
-                  <p className="font-medium">
-                    {new Date(transfer.received_at).toLocaleDateString()}
-                  </p>
-                </div>
-              )}
+              ))}
             </div>
           </div>
         </div>
@@ -240,6 +263,13 @@ const TransferDetailPage = () => {
           <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
             <h2 className="text-lg font-semibold mb-3">Notas de Envío</h2>
             <p className="text-gray-700">{transfer.shipping_notes}</p>
+          </div>
+        )}
+
+        {(transfer.receiving_notes || transfer.closing_notes) && (
+          <div className="bg-white rounded-lg shadow-sm p-6 mb-6 space-y-3">
+            {transfer.receiving_notes && (<div><h2 className="text-lg font-semibold mb-1">Notas de recepción</h2><p className="text-gray-700">{transfer.receiving_notes}</p></div>)}
+            {transfer.closing_notes && (<div><h2 className="text-lg font-semibold mb-1">Notas de cierre</h2><p className="text-gray-700">{transfer.closing_notes}</p></div>)}
           </div>
         )}
 
@@ -274,8 +304,11 @@ const TransferDetailPage = () => {
                   <td className="px-6 py-4 text-right text-sm text-gray-900">
                     {item.quantity_sent}
                   </td>
-                  <td className="px-6 py-4 text-right text-sm text-gray-900">
-                    {item.quantity_received || '-'}
+                  <td className={`px-6 py-4 text-right text-sm ${item.quantity_received !== null && item.quantity_received !== undefined && parseFloat(item.quantity_received) !== parseFloat(item.quantity_sent) ? 'text-red-600 font-semibold' : 'text-gray-900'}`}>
+                    {item.quantity_received !== null && item.quantity_received !== undefined ? item.quantity_received : '-'}
+                    {item.quantity_received !== null && item.quantity_received !== undefined && parseFloat(item.quantity_received) < parseFloat(item.quantity_sent) && (
+                      <span className="block text-xs">faltan {formatNumber(parseFloat(item.quantity_sent) - parseFloat(item.quantity_received), 2)}</span>
+                    )}
                   </td>
                   <td className="px-6 py-4 text-right text-sm text-gray-900">
                     ${formatNumber(parseFloat(item.unit_cost), 2)}
@@ -308,23 +341,49 @@ const TransferDetailPage = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <p className="text-sm text-gray-600">Creado por</p>
-              <p className="font-medium">{transfer.created_by_user?.name || 'N/A'}</p>
+              <p className="font-medium">{userName(transfer.creator) || 'N/A'}</p>
             </div>
-            {transfer.shipped_by_user && (
+            {transfer.sender && (
               <div>
                 <p className="text-sm text-gray-600">Enviado por</p>
-                <p className="font-medium">{transfer.shipped_by_user.name}</p>
+                <p className="font-medium">{userName(transfer.sender)}</p>
               </div>
             )}
-            {transfer.received_by_user && (
+            {transfer.receiver && (
               <div>
                 <p className="text-sm text-gray-600">Recibido por</p>
-                <p className="font-medium">{transfer.received_by_user.name}</p>
+                <p className="font-medium">{userName(transfer.receiver)}</p>
+              </div>
+            )}
+            {transfer.closer && (
+              <div>
+                <p className="text-sm text-gray-600">Cerrado por</p>
+                <p className="font-medium">{userName(transfer.closer)}</p>
               </div>
             )}
           </div>
         </div>
       </div>
+
+      {/* Close Modal */}
+      {showCloseModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+            <h3 className="text-lg font-bold mb-2">Cerrar {transfer.transfer_number}</h3>
+            <p className="text-gray-600 mb-3 text-sm">
+              Queda conciliada y bloqueada: no se podrá editar, anular ni cambiar sus soportes.
+              {transfer.items?.some((i) => parseFloat(i.quantity_received ?? i.quantity_sent) !== parseFloat(i.quantity_sent)) &&
+                ' Llegó distinto de lo enviado: explica la diferencia (ajuste registrado, reclamo al transportador...).'}
+            </p>
+            <textarea value={closeNotes} onChange={(e) => setCloseNotes(e.target.value)} rows={3} placeholder="Notas de cierre"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg mb-4" />
+            <div className="flex gap-2 justify-end">
+              <button onClick={() => setShowCloseModal(false)} className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Volver</button>
+              <button onClick={handleClose} className="px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-800">Cerrar traslado</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Send Modal */}
       {showSendModal && (
@@ -398,6 +457,9 @@ const TransferDetailPage = () => {
           </div>
         </div>
       )}
+      <div className="max-w-7xl mx-auto mt-6">
+        <AttachmentsPanel entityType="transfer" entityId={transfer.id} title="Soportes del traslado (remisión firmada, fotos)" defaultKind="delivery_note" />
+      </div>
     </Layout>
   );
 };

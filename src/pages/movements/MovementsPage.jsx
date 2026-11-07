@@ -8,6 +8,8 @@ import { formatCurrency } from '../../utils/formatters';
 import { MOVEMENT_REASONS, getMovementReasonLabel } from '../../constants/movementReasons';
 import Pagination from '../../components/common/Pagination';
 import useUrlPageSync from '../../hooks/useUrlPageSync';
+import KardexRecalcModal from '../../components/inventory/KardexRecalcModal';
+import useAuthStore from '../../store/authStore';
 
 // Mismo tamaño de página que la lista principal (movementsStore: limit 50).
 const KARDEX_PAGE_SIZE = 50;
@@ -25,6 +27,10 @@ const MovementsPage = () => {
     setPage,
     clearKardex
   } = useMovementsStore();
+  // Recalcular costos: mismos roles que la ruta del backend.
+  const role = useAuthStore((st) => st.user?.role);
+  const canRecalc = ['admin', 'super_admin', 'accountant', 'manager'].includes(role);
+  const [showRecalc, setShowRecalc] = useState(false);
 
   const { products, fetchProducts } = useProductsStore();
   const { branches, fetchBranches } = useBranchStore();
@@ -105,9 +111,16 @@ const MovementsPage = () => {
     <Layout>
       <div className="space-y-5">
         {/* Header */}
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Movimientos de Inventario</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Historial completo de entradas y salidas</p>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Movimientos de Inventario</h1>
+            <p className="text-sm text-gray-500 mt-0.5">Historial completo de entradas y salidas</p>
+          </div>
+          {canRecalc && (
+            <button onClick={() => setShowRecalc(true)} className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 self-start sm:self-auto">
+              Recalcular costos
+            </button>
+          )}
         </div>
 
         {/* Filtros */}
@@ -394,6 +407,7 @@ const MovementsPage = () => {
           document.body
         )}
       </div>
+      <KardexRecalcModal isOpen={showRecalc} onClose={() => setShowRecalc(false)} onApplied={() => fetchMovements?.()} />
     </Layout>
   );
 };

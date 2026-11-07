@@ -310,7 +310,7 @@ export const NOVEDAD_FIELD_SCHEMAS = {
   Incapacidades: [
     { name: 'fechaInicio', label: 'Fecha inicio', type: 'date', required: true },
     { name: 'fechaFin', label: 'Fecha fin', type: 'date', required: true },
-    { name: 'cantidad', label: 'Días', type: 'number', required: true, step: '1' },
+    { name: 'cantidad', label: 'Días (calendario)', type: 'number', required: true, step: '1' },
     { name: 'tipo', label: 'Tipo', type: 'select', required: true, options: [
       { value: '1', label: 'Común (EPS)' },
       { value: '2', label: 'Laboral (ARL)' },
@@ -329,7 +329,7 @@ export const NOVEDAD_FIELD_SCHEMAS = {
   HuelgasLegales: [
     { name: 'fechaInicio', label: 'Fecha inicio', type: 'date', required: true },
     { name: 'fechaFin', label: 'Fecha fin', type: 'date', required: true },
-    { name: 'cantidad', label: 'Días', type: 'number', required: true, step: '1' },
+    { name: 'cantidad', label: 'Días (calendario)', type: 'number', required: true, step: '1' },
   ],
   OtrosConceptos: [
     { name: 'descripcion', label: 'Descripción del concepto', type: 'text', required: true },
@@ -365,7 +365,7 @@ export const NOVEDAD_FIELD_SCHEMAS = {
   // hace aplicarNovedades() en el backend), a diferencia de Vacaciones/
   // Licencias que sí acumulan. Se avisa en el modal.
   Primas: [
-    { name: 'cantidad', label: 'Días', type: 'number', required: true, step: '1' },
+    { name: 'cantidad', label: 'Días trabajados en el semestre', type: 'number', required: true, step: '1' },
     { name: 'pago', label: 'Valor', type: 'money', required: true },
     { name: 'pagoNS', label: 'Valor no salarial', type: 'money', required: false },
   ],
@@ -389,13 +389,13 @@ export const NOVEDAD_REPLACES_PREVIOUS = new Set(['Primas', 'Cesantias']);
 export const VACACIONES_LICENCIAS_SCHEMAS = {
   Vacaciones: {
     subtypes: [
-      { value: 'comunes', label: 'Vacaciones comunes', fields: [
-        { name: 'fechaInicio', label: 'Fecha inicio', type: 'date', required: true },
-        { name: 'fechaFin', label: 'Fecha fin', type: 'date', required: true },
-        { name: 'cantidad', label: 'Días', type: 'number', required: true, step: '1' },
+      { value: 'comunes', label: 'Vacaciones disfrutadas (en tiempo)', fields: [
+        { name: 'fechaInicio', label: 'Primer día de vacaciones', type: 'date', required: true },
+        { name: 'cantidad', label: 'Días hábiles', type: 'number', required: true, step: '1' },
+        { name: 'fechaFin', label: 'Último día de vacaciones', type: 'date', required: true },
         { name: 'pago', label: 'Valor a pagar', type: 'money', required: true },
       ] },
-      { value: 'compensadas', label: 'Vacaciones compensadas', fields: [
+      { value: 'compensadas', label: 'Vacaciones compensadas (en dinero)', fields: [
         { name: 'cantidad', label: 'Días', type: 'number', required: true, step: '1' },
         { name: 'pago', label: 'Valor a pagar', type: 'money', required: true },
       ] },
@@ -423,4 +423,21 @@ export const VACACIONES_LICENCIAS_SCHEMAS = {
       ] },
     ],
   },
+};
+
+// Novedades cuyo valor (y días/fechas) se calcula en el backend mientras se
+// captura — POST /payroll/novedades/suggest (novedadSuggest.service.js).
+// Clave: categoría o "categoría:subtipo"; valor: campos que se llenan solos
+// (el operador puede escribir encima y vuelven al calculado con un clic).
+export const NOVEDAD_AUTO_FIELDS = {
+  'Vacaciones:comunes': ['fechaFin', 'cantidad', 'pago'],
+  'Vacaciones:compensadas': ['pago'],
+  Incapacidades: ['cantidad', 'tipo', 'pago'],
+  'Licencias:maternidadPaternidad': ['cantidad', 'pago'],
+  'Licencias:remunerada': ['cantidad', 'pago'],
+  'Licencias:noRemunerada': ['cantidad'],
+  HuelgasLegales: ['cantidad'],
+  Primas: ['cantidad', 'pago'],
+  Cesantias: ['porcentaje', 'pagoIntereses'],
+  Sindicatos: ['deduccion'],
 };

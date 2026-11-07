@@ -10,10 +10,13 @@ import customersApi from '../../api/customers';
 import { customerAdvancesAPI } from '../../api/customerAdvances';
 import NumericInput from '../inputs/NumericInput';
 import BankAccountSelect from '../accounting/BankAccountSelect';
+import ProjectSelect from '../projects/ProjectSelect';
 
 const METHODS = ['Efectivo', 'Transferencia', 'Tarjeta de Crédito', 'Tarjeta de Débito', 'Cheque'];
 
-const RegisterAdvanceModal = ({ isOpen, onClose, onSuccess, presetCustomer = null }) => {
+const RegisterAdvanceModal = ({ isOpen, onClose, onSuccess, presetCustomer = null, presetProject = null }) => {
+  // Anticipo de un proyecto: las facturas parciales lo amortizan (módulo Proyectos).
+  const [projectId, setProjectId] = useState(presetProject?.id || null);
   const [customer, setCustomer] = useState(presetCustomer);
   const [customerSearch, setCustomerSearch] = useState('');
   const [customerResults, setCustomerResults] = useState([]);
@@ -37,6 +40,7 @@ const RegisterAdvanceModal = ({ isOpen, onClose, onSuccess, presetCustomer = nul
       setReceivedDate(new Date().toISOString().slice(0, 10));
       setReferenceNote('');
       setTriggersIva(false);
+      setProjectId(presetProject?.id || null);
     }
   }, [isOpen, presetCustomer]);
 
@@ -79,6 +83,7 @@ const RegisterAdvanceModal = ({ isOpen, onClose, onSuccess, presetCustomer = nul
         received_date: receivedDate,
         reference_note: referenceNote || undefined,
         triggers_iva: triggersIva,
+        project_id: projectId || undefined,
       });
       toast.success('Anticipo registrado exitosamente');
       onSuccess?.();
@@ -150,6 +155,14 @@ const RegisterAdvanceModal = ({ isOpen, onClose, onSuccess, presetCustomer = nul
                     </>
                   )}
                 </div>
+
+                <ProjectSelect
+                  value={projectId}
+                  onChange={(id) => setProjectId(id)}
+                  currentProject={presetProject}
+                  label="Proyecto (opcional)"
+                  hint="Las facturas parciales del proyecto amortizan este anticipo."
+                />
 
                 {/* Monto */}
                 <div>

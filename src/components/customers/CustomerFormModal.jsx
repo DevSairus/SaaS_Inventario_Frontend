@@ -13,17 +13,10 @@ import DianLookupButton, { useDianLookupAvailability } from '../common/DianLooku
 import DivipolaCitySelect from '../common/DivipolaCitySelect';
 import PhoneCountryCodeSelect, { DEFAULT_COUNTRY_CODE } from '../common/PhoneCountryCodeSelect';
 import NumericInput from '../inputs/NumericInput';
+import { DOCUMENT_TYPE_OPTIONS } from '../../constants/documentTypes';
 
 // schemeID DIAN — mismos códigos que usa dianKitAdapter.js. El default por
 // tipo de cliente se aplica al cambiar "Tipo de Cliente" (ver setCustomerType).
-export const DOCUMENT_TYPE_OPTIONS = [
-  { value: '13', label: 'Cédula de ciudadanía' },
-  { value: '31', label: 'NIT' },
-  { value: '22', label: 'Cédula de extranjería' },
-  { value: '41', label: 'Pasaporte' },
-  { value: '12', label: 'Tarjeta de identidad' },
-  { value: '91', label: 'NUIP' },
-];
 
 const FORM_EMPTY = {
   customer_type: 'individual', full_name: '', business_name: '', tax_id: '',

@@ -20,12 +20,23 @@ import {
 import toast from 'react-hot-toast';
 import { purchasesAPI } from '../../api/purchases';
 import useTenantStore from '../../store/tenantStore';
-import { maxMarginFor } from '../../utils/salePricing';
+import { maxMarginFor, suggestedSalePrice, impliedMargin } from '../../utils/salePricing';
 import { downloadPurchaseLinesTemplate, parsePurchaseLinesFile } from '../../utils/excelExport';
+import ProjectSelect from '../../components/projects/ProjectSelect';
 
 // Margen opcional de una línea: vacío = el producto conserva el suyo. Al
 // recibir la compra pasa al producto (backend: purchaseCost.service.js).
 const marginOrNull = (v) => (v === '' || v === null || v === undefined ? null : Number(v));
+// Precio de venta opcional de una línea: vacío = se calcula con el margen.
+const priceOrNull = (v) => (Number(v) > 0 ? Number(v) : null);
+// IVA y precio actual del producto, para estimar su precio de venta.
+const pricingOf = (p) => (p ? {
+  price_includes_tax: !!p.price_includes_tax,
+  has_tax: p.has_tax,
+  tax_percentage: p.tax_percentage,
+  tax_config: p.tax_config,
+  base_price: Number(p.base_price) || 0,
+} : null);
 
 const PurchaseFormPage = () => {
   const navigate = useNavigate();
@@ -57,8 +68,11 @@ const PurchaseFormPage = () => {
     notes: '',
     internal_notes: '',
     discount_amount: 0,
-    shipping_cost: 0
+    shipping_cost: 0,
+    project_id: null
   });
+  // Proyecto de la compra que se edita (para mostrarlo aunque ya esté cerrado)
+  const [currentProject, setCurrentProject] = useState(null);
 
   const [items, setItems] = useState([]);
   const [currentItem, setCurrentItem] = useState({
@@ -157,6 +171,11 @@ const PurchaseFormPage = () => {
         if (prefilledData.order_list_id) {
           setOrderListLink({ id: prefilledData.order_list_id, number: prefilledData.list_number });
         }
+        // Pedido de una obra: la compra queda del proyecto (se recibe en su bodega).
+        if (prefilledData.project_id) {
+          setFormData(prev => ({ ...prev, project_id: prefilledData.project_id }));
+          if (prefilledData.project) setCurrentProject(prefilledData.project);
+        }
         if (prefilledData.notes) {
           setFormData(prev => ({ ...prev, internal_notes: `Pedido ${prefilledData.list_number}: ${prefilledData.notes}` }));
         }
@@ -225,8 +244,10 @@ const PurchaseFormPage = () => {
         notes: purchase.notes || '',
         internal_notes: purchase.internal_notes || '',
         discount_amount: toNumber(purchase.discount_amount, 0),
-        shipping_cost: toNumber(purchase.shipping_cost, 0)
+        shipping_cost: toNumber(purchase.shipping_cost, 0),
+        project_id: purchase.project_id || null
       });
+      setCurrentProject(purchase.project || null);
 
       // Retenciones: si se habían ajustado a mano se restauran tal cual; si
       // no, se deja el cálculo automático (sigue a los ítems).
@@ -261,7 +282,9 @@ const PurchaseFormPage = () => {
             inc_rate: toNumber(item.inc_rate, 0),
             discount_percentage: toNumber(item.discount_percentage, 0),
             profit_margin_pct: item.profit_margin_pct ?? '',
+            sale_price: item.sale_price ?? '',
             current_margin: item.product?.profit_margin_percentage ?? null,
+            pricing: pricingOf(item.product),
             product_name: item.product?.name || 'Producto desconocido',
             product_sku: item.product?.sku || '',
             ...totals
@@ -319,6 +342,7 @@ const PurchaseFormPage = () => {
       _product_name: product.name,
       _product_sku: product.sku,
       _current_margin: product.profit_margin_percentage ?? null,
+      _pricing: pricingOf(product),
       // IVA por defecto: el del producto (0 si es exento o excluido); el de
       // la factura del proveedor manda y se puede cambiar.
       tax_rate: product.tax_config?.iva_status === 'excluido' || product.has_tax === false
@@ -352,7 +376,9 @@ const PurchaseFormPage = () => {
       product_name: currentItem._product_name || '',
       product_sku: currentItem._product_sku || '',
       current_margin: currentItem._current_margin ?? null,
+      pricing: currentItem._pricing ?? null,
       profit_margin_pct: '',
+      sale_price: '',
       ...totals
     };
 
@@ -409,6 +435,7 @@ const PurchaseFormPage = () => {
           product_name: p.name,
           product_sku: p.sku,
           current_margin: p.profit_margin_percentage ?? null,
+          pricing: pricingOf(p),
           quantity: r.quantity,
           unit_cost: r.unit_cost,
           tax_rate: r.tax_rate ?? taxDefault,
@@ -490,6 +517,21 @@ const PurchaseFormPage = () => {
   };
   const removeRetentionLine = (key) => setRetentionLines(effectiveRetentionLines.filter(l => l.key !== key));
 
+  // Precio de venta con el margen de la línea (o el del producto): mismo
+  // cálculo que al recibir la compra, sobre el costo con INC y el descuento
+  // global / envío prorrateados. null si no hay margen o datos del producto.
+  const estimateSale = (item) => {
+    const qty = toNumber(item.quantity, 0);
+    const subtotal = toNumber(item.subtotal, 0);
+    if (!item.pricing || qty <= 0 || subtotal <= 0) return null;
+    const share = currentTotals.subtotal > 0 ? subtotal / currentTotals.subtotal : 0;
+    const cost = (subtotal + toNumber(item.incAmount, 0)
+      - toInteger(formData.discount_amount, 0) * share + toInteger(formData.shipping_cost, 0) * share) / qty;
+    const margin = marginOrNull(item.profit_margin_pct) ?? marginOrNull(item.current_margin);
+    const price = margin > 0 ? suggestedSalePrice(cost, margin, item.pricing, marginMethod) : null;
+    return { cost, price, current: item.pricing.base_price };
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -533,6 +575,7 @@ const PurchaseFormPage = () => {
         inc_rate: toNumber(item.inc_rate, 0),
         discount_percentage: toInteger(item.discount_percentage),
         profit_margin_pct: marginOrNull(item.profit_margin_pct),
+        sale_price: priceOrNull(item.sale_price),
       }))
     };
 
@@ -648,6 +691,14 @@ const PurchaseFormPage = () => {
               />
             </div>
           </div>
+
+          <ProjectSelect
+            className="mt-4 max-w-md"
+            value={formData.project_id}
+            currentProject={currentProject}
+            onChange={(projectId) => setFormData(prev => ({ ...prev, project_id: projectId }))}
+            hint="Compra de una obra: se recibe en la bodega del proyecto y cuenta como material de la obra."
+          />
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
             <div>
@@ -906,13 +957,20 @@ const PurchaseFormPage = () => {
                     <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">IVA</th>
                     <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Desc.</th>
                     <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase" title="Opcional. Vacío = el producto conserva su margen. Se aplica al recibir la compra.">Margen %</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase" title="Sale del margen; puedes escribir otro. Se aplica al producto al recibir la compra.">P. venta</th>
                     <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Subtotal</th>
                     <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
                     <th className="px-4 py-3"></th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {items.map((item, index) => (
+                  {items.map((item, index) => {
+                    const sale = estimateSale(item);
+                    const priceOverridden = priceOrNull(item.sale_price) !== null;
+                    const typedMargin = priceOverridden && sale ? impliedMargin(sale.cost, item.sale_price, item.pricing, marginMethod) : null;
+                    // El precio no baja solo al recibir: se mantiene el actual.
+                    const priceHeld = !priceOverridden && sale?.price && sale.current > 0 && sale.price < sale.current - 0.005;
+                    return (
                     <tr key={index}>
                       <td className="px-4 py-3">
                         <div className="text-sm font-medium text-gray-900">{item.product_name}</div>
@@ -944,14 +1002,45 @@ const PurchaseFormPage = () => {
                         <input
                           type="number" min="0" max={maxMargin} step="0.01"
                           value={item.profit_margin_pct ?? ''}
-                          placeholder={item.current_margin !== null && item.current_margin !== undefined ? String(Number(item.current_margin)) : '—'}
+                          placeholder={priceOverridden
+                            ? (typedMargin !== null ? `≈${typedMargin}` : '—')
+                            : item.current_margin !== null && item.current_margin !== undefined ? String(Number(item.current_margin)) : '—'}
                           title="Vacío = el producto conserva su margen. Se aplica al recibir la compra."
                           onWheel={(e) => e.target.blur()}
-                          onChange={(e) => updateItem(index, 'profit_margin_pct', e.target.value)}
+                          onChange={(e) => setItems(prev => prev.map((it, i) => (i === index
+                            ? { ...it, profit_margin_pct: e.target.value, sale_price: '' } : it)))}
                           className={`w-20 px-2 py-1 border rounded text-right focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
                             item.profit_margin_pct !== '' && item.profit_margin_pct !== null && item.profit_margin_pct !== undefined
                               ? 'border-amber-400 bg-amber-50' : 'border-gray-300'}`}
                         />
+                      </td>
+                      <td className="px-4 py-3 text-right text-sm text-gray-900">
+                        <div className="flex items-center justify-end gap-1">
+                          <NumericInput
+                            value={priceOverridden ? item.sale_price : (priceHeld ? Math.round(sale.current) : (sale?.price ? Math.round(sale.price) : ''))}
+                            placeholder="—"
+                            title={item.pricing?.price_includes_tax ? 'Precio con IVA incluido' : 'Precio antes de IVA'}
+                            onChange={(e) => setItems(prev => prev.map((it, i) => (i === index ? { ...it, sale_price: e.target.value, profit_margin_pct: '' } : it)))}
+                            className={`w-28 px-2 py-1 border rounded text-right focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                              priceOverridden ? 'border-blue-400 bg-blue-50' : 'border-gray-300'}`}
+                          />
+                          {priceOverridden && (
+                            <button
+                              type="button"
+                              onClick={() => updateItem(index, 'sale_price', '')}
+                              title="Volver al precio calculado con el margen"
+                              className="text-blue-400 hover:text-blue-600 text-xs"
+                            >↩</button>
+                          )}
+                        </div>
+                        {priceHeld && (
+                          <div className="text-[10px] text-amber-600 mt-0.5" title={`Con el margen daría ${formatCurrency(sale.price)}; el precio no baja solo. Escríbelo si quieres bajarlo.`}>
+                            se mantiene el actual
+                          </div>
+                        )}
+                        {priceOverridden && sale && typedMargin === null && (
+                          <div className="text-[10px] text-red-600 mt-0.5">por debajo del costo</div>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-right text-sm font-medium text-gray-900">
                         {formatCurrency(item.subtotal)}
@@ -971,7 +1060,8 @@ const PurchaseFormPage = () => {
                         </button>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

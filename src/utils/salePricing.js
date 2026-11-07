@@ -42,6 +42,17 @@ export function suggestedSalePrice(cost, margin, product = {}, method = DEFAULT_
   return round2(net * (1 + includedTaxRate(product) / 100));
 }
 
+// Inverso de suggestedSalePrice: el margen que da un precio escrito a mano.
+// null si no cabe en el rango del método (p. ej. precio por debajo del costo).
+export function impliedMargin(cost, price, product = {}, method = DEFAULT_MARGIN_METHOD) {
+  const c = parseFloat(cost);
+  const p = parseFloat(price);
+  if (!Number.isFinite(c) || c <= 0 || !Number.isFinite(p) || p <= 0) return null;
+  const net = p / (1 + includedTaxRate(product) / 100);
+  const m = round2(normalizeMarginMethod(method) === 'markup' ? (net / c - 1) * 100 : (1 - c / net) * 100);
+  return m >= 0 && m <= maxMarginFor(method) ? m : null;
+}
+
 // Precio de venta real del producto (gemela de backend/src/utils/salePricing.js):
 // el que se cobra y se edita en el formulario es base_price; sale_price es un
 // campo heredado que casi nunca se llena (queda en 0).

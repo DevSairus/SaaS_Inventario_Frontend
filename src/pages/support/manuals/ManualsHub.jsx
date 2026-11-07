@@ -139,7 +139,7 @@ export default function ManualsHub() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={onKeyDown}
-            placeholder='Busca en los 9 manuales… (ej. "anular venta", "cesantías", "conteo físico")'
+            placeholder='Busca en los 10 manuales… (ej. "anular venta", "cesantías", "conteo físico")'
             aria-label="Buscar en los manuales"
             className="w-full pl-11 pr-14 py-3.5 text-sm border border-gray-300 dark:border-white/15 dark:bg-graphite-2 dark:text-gray-100 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 shadow-sm"
           />

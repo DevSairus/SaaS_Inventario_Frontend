@@ -3,6 +3,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useSuppliersStore } from '../../store/suppliersStore';
 import SupplierModal from '../../components/suppliers/SupplierModal';
 import LibroAuxiliarModal from '../../components/accounting/LibroAuxiliarModal';
+import ImportThirdPartiesModal from '../../components/common/ImportThirdPartiesModal';
 import useCanReadAccounting from '../../hooks/useCanReadAccounting';
 import Layout from '../../components/layout/Layout';
 import {
@@ -19,6 +20,7 @@ import {
   PhoneIcon,
   EnvelopeIcon,
   BookOpenIcon,
+  ArrowUpTrayIcon,
 } from '@heroicons/react/24/outline';
 import Pagination from '../../components/common/Pagination';
 import useUrlPageSync from '../../hooks/useUrlPageSync';
@@ -38,6 +40,7 @@ const SuppliersPage = () => {
   const [showFilters, setShowFilters]     = useState(false);
   const [filterActive, setFilterActive]   = useState('');
   const [ledgerSupplier, setLedgerSupplier] = useState(null);
+  const [showImport, setShowImport] = useState(false);
 
   // La búsqueda va al servidor (antes filtraba solo los 10 proveedores de la
   // página cargada: uno de otra página nunca aparecía), con una pausa corta
@@ -106,13 +109,22 @@ const SuppliersPage = () => {
             <h1 className="text-2xl font-bold text-gray-900">Proveedores</h1>
             <p className="text-sm text-gray-500 mt-0.5">Gestión de proveedores y datos de contacto</p>
           </div>
-          <button
-            onClick={handleNew}
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-semibold shadow-sm transition-colors self-start sm:self-auto"
-          >
-            <PlusIcon className="h-4 w-4" />
-            Nuevo Proveedor
-          </button>
+          <div className="flex gap-2 self-start sm:self-auto">
+            <button
+              onClick={() => setShowImport(true)}
+              className="inline-flex items-center gap-2 px-4 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              <ArrowUpTrayIcon className="h-4 w-4" />
+              Importar
+            </button>
+            <button
+              onClick={handleNew}
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-semibold shadow-sm transition-colors"
+            >
+              <PlusIcon className="h-4 w-4" />
+              Nuevo Proveedor
+            </button>
+          </div>
         </div>
 
         {/* ── Stats ── */}
@@ -345,6 +357,7 @@ const SuppliersPage = () => {
       )}
 
       {ledgerSupplier && <LibroAuxiliarModal thirdParty={ledgerSupplier} onClose={() => setLedgerSupplier(null)} />}
+      <ImportThirdPartiesModal entity="suppliers" isOpen={showImport} onClose={() => setShowImport(false)} onImported={() => { fetchSuppliers(); fetchStats?.(); }} />
     </Layout>
   );
 };

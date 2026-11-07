@@ -8,7 +8,7 @@ import NexaIcon from "../common/NexaIcon";
 
 const ROLE_LABELS = {
   super_admin: "Super Admin", admin: "Administrador", manager: "Gerente", accountant: "Contador",
-  seller: "Vendedor", warehouse_keeper: "Bodeguero", technician: "Técnico", user: "Usuario", viewer: "Visualizador",
+  seller: "Vendedor", warehouse_keeper: "Bodeguero", inventory_lead: "Líder de inventarios", technician: "Técnico", user: "Usuario", viewer: "Visualizador",
 };
 
 const I = {
@@ -29,6 +29,7 @@ const I = {
   headset:   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="w-[17px] h-[17px] shrink-0"><path d="M3 18v-6a9 9 0 0118 0v6"/><path d="M21 19a2 2 0 01-2 2h-1a2 2 0 01-2-2v-3a2 2 0 012-2h3zM3 19a2 2 0 002 2h1a2 2 0 002-2v-3a2 2 0 00-2-2H3z"/></svg>,
   nexa:      <NexaIcon size={17} className="rounded-[4px] shrink-0" />,
   target:    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="w-[17px] h-[17px] shrink-0"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.3" fill="currentColor" stroke="none"/></svg>,
+  briefcase: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="w-[17px] h-[17px] shrink-0"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/></svg>,
   car:       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="w-[17px] h-[17px] shrink-0"><path d="M5 11l1.5-4.5A2 2 0 018.4 5h7.2a2 2 0 011.9 1.5L19 11"/><rect x="3" y="11" width="18" height="6" rx="1.5"/><circle cx="7.5" cy="17.5" r="1.5"/><circle cx="16.5" cy="17.5" r="1.5"/></svg>,
 };
 
@@ -74,6 +75,15 @@ const NAV = [
       { label: "Técnicos y asesores", path: "/ensambladora/tecnicos" },
       { label: "Sincronización", path: "/ensambladora/sync" },
       { label: "Auditoría", path: "/ensambladora/auditoria" },
+    ],
+  },
+  {
+    id: "projects", label: "Proyectos", icon: "briefcase", module: "projects",
+    children: [
+      { label: "Proyectos", path: "/projects" },
+      { label: "Cotizador solar", path: "/solar" },
+      { label: "Interesados (simulador)", path: "/solar/leads" },
+      { label: "Herramientas", path: "/tools" },
     ],
   },
   {
@@ -124,6 +134,8 @@ const NAV = [
       // el backend -- "seller" no debe ver estas opciones (era el origen de
       // los 403 al cargar el dashboard/menú).
       { label: "Cuentas por Pagar",   path: "/accounts-payable", roles: ["admin", "super_admin", "manager", "accountant"] },
+      // Lotes de pago con archivo plano (permisos payments.schedule / payments.approve).
+      { label: "Pagos programados",   path: "/payment-batches", roles: ["admin", "super_admin", "manager", "accountant"] },
       { label: "Gastos Operativos",   path: "/expenses", roles: ["admin", "super_admin", "manager", "accountant"] },
       { label: "Documentos Soporte DIAN", path: "/support-documents", roles: ["admin", "super_admin", "manager", "accountant"] },
       { label: "Flujo de Caja",       path: "/cashflow", roles: ["admin", "super_admin", "manager", "accountant"] },
@@ -162,6 +174,7 @@ const NAV = [
     children: [
       { label: "Empleados",           path: "/payroll/employees" },
       { label: "Alertas de contrato", path: "/payroll/contract-alerts" },
+      { label: "Libro de vacaciones", path: "/payroll/vacations" },
       { label: "Conceptos",           path: "/payroll/concepts" },
       { label: "Periodos",            path: "/payroll/periods" },
       { label: "Documentos",          path: "/payroll/documents" },
@@ -193,6 +206,8 @@ const NAV = [
     ],
   },
   { id: "reports",  label: "Informes", icon: "chart", path: "/reports" },
+  // Órdenes de compra que esperan visto bueno (services/approvals en el backend).
+  { id: "approvals", label: "Aprobaciones", icon: "file", path: "/approvals" },
   // aiProposals.controller.js: solo admin/manager/accountant (y super_admin).
   { id: "nexa", label: "Aprobaciones NEXA", icon: "nexa", path: "/nexa/aprobaciones", module: "ai_assistant", roles: ["admin", "super_admin", "manager", "accountant"] },
   {
@@ -211,6 +226,8 @@ export default function Sidebar({ isCollapsed, setIsCollapsed, isMobileOpen, set
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
+  // El Líder de inventarios hereda de bodeguero en las listas fijas de roles.
+  const hasRole = (roles) => roles.includes(user?.role) || (user?.role === 'inventory_lead' && roles.includes('warehouse_keeper'));
   const enabledModules = useTenantStore((s) => s.enabledModules);
   const currentPath = location.pathname;
 
@@ -223,7 +240,7 @@ export default function Sidebar({ isCollapsed, setIsCollapsed, isMobileOpen, set
 
   // enabledModules === null: config del tenant aún no cargó, no ocultar nada todavía.
   const visibleNav = NAV.filter(
-    (item) => hasModule(item.module) && (!item.roles || item.roles.includes(user?.role))
+    (item) => hasModule(item.module) && (!item.roles || hasRole(item.roles))
   );
 
   // Un child con `module` propio (ej. "Integración Meta" bajo CRM) se
@@ -235,7 +252,7 @@ export default function Sidebar({ isCollapsed, setIsCollapsed, isMobileOpen, set
   // filtra por hijo, no solo a nivel de grupo.
   const visibleChildren = (item) =>
     (item.children || []).filter(
-      (child) => hasModule(child.module) && (!child.roles || child.roles.includes(user?.role))
+      (child) => hasModule(child.module) && (!child.roles || hasRole(child.roles))
     );
 
   const childIsActive = (child) => {

@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import useCustomersStore from '../../store/customersStore';
-import { PlusIcon, MagnifyingGlassIcon, PencilIcon, TrashIcon, EyeIcon, BookOpenIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, MagnifyingGlassIcon, PencilIcon, TrashIcon, EyeIcon, BookOpenIcon, ArrowUpTrayIcon } from '@heroicons/react/24/outline';
 import Badge from '../../components/common/Badge';
 import Loading from '../../components/common/Loading';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
@@ -10,6 +10,7 @@ import Layout from '../../components/layout/Layout';
 import CustomerFormModal from '../../components/customers/CustomerFormModal';
 import { HabeasStatusBadge } from '../../components/consents/HabeasDataPanel';
 import LibroAuxiliarModal from '../../components/accounting/LibroAuxiliarModal';
+import ImportThirdPartiesModal from '../../components/common/ImportThirdPartiesModal';
 import useCanReadAccounting from '../../hooks/useCanReadAccounting';
 import toast from 'react-hot-toast';
 import Pagination from '../../components/common/Pagination';
@@ -26,6 +27,7 @@ export default function CustomersPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [page, setPage] = useState(1);
   const [ledgerCustomer, setLedgerCustomer] = useState(null);
+  const [showImport, setShowImport] = useState(false);
 
   // La búsqueda va al backend (no solo sobre lo ya cargado) para que un
   // cliente creado por fuera de este formulario (p. ej. desde el formato
@@ -66,9 +68,14 @@ export default function CustomersPage() {
             <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">Clientes</h1>
             <p className="text-sm text-gray-500 mt-0.5 dark:text-gray-500">Gestiona tu base de clientes</p>
           </div>
-          <button onClick={() => handleOpenModal()} className="inline-flex items-center gap-2 px-4 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-semibold shadow-sm transition-colors">
-            <PlusIcon className="h-5 w-5" /> Nuevo Cliente
-          </button>
+          <div className="flex gap-2">
+            <button onClick={() => setShowImport(true)} className="inline-flex items-center gap-2 px-4 py-2.5 border border-gray-300 dark:border-white/10 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5">
+              <ArrowUpTrayIcon className="h-5 w-5" /> Importar
+            </button>
+            <button onClick={() => handleOpenModal()} className="inline-flex items-center gap-2 px-4 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-semibold shadow-sm transition-colors">
+              <PlusIcon className="h-5 w-5" /> Nuevo Cliente
+            </button>
+          </div>
         </div>
 
         <div className="bg-white rounded-lg shadow p-4 mb-6 dark:bg-graphite">
@@ -156,6 +163,7 @@ export default function CustomersPage() {
           confirmText="Eliminar" confirmVariant="danger" />
 
         {ledgerCustomer && <LibroAuxiliarModal thirdParty={ledgerCustomer} onClose={() => setLedgerCustomer(null)} />}
+        <ImportThirdPartiesModal entity="customers" isOpen={showImport} onClose={() => setShowImport(false)} onImported={reload} />
       </div>
     </Layout>
   );

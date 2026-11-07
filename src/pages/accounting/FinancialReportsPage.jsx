@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { financialReportsAPI, SOURCE_TYPE_LABELS } from '../../api/accounting';
 import useBranchStore from '../../store/branchStore';
+import useTenantStore from '../../store/tenantStore';
 import Layout from '../../components/layout/Layout';
 import toast from 'react-hot-toast';
 import { DocumentArrowDownIcon, TableCellsIcon, InformationCircleIcon } from '@heroicons/react/24/outline';
@@ -29,6 +30,10 @@ const TABS = [
 
 const FinancialReportsPage = () => {
   const [tab, setTab] = useState('trial-balance');
+  // Resultado por proyecto: solo con el módulo Proyectos.
+  const hasProjects = useTenantStore((s) => s.enabledModules?.includes('projects'));
+  const tabs = hasProjects ? [...TABS, { id: 'proyectos', label: 'Por proyecto' }] : TABS;
+  const [includeDrafts, setIncludeDrafts] = useState(true);
   const [auxThirdParty, setAuxThirdParty] = useState(null);
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState(null);
@@ -45,7 +50,7 @@ const FinancialReportsPage = () => {
   const [agingType, setAgingType] = useState('customer'); // 'customer' | 'supplier'
 
   useEffect(() => { fetchBranches(); }, []);
-  useEffect(() => { load(); }, [tab, agingType]);
+  useEffect(() => { load(); }, [tab, agingType, includeDrafts]);
 
   // Cada tab exporta con su propio endpoint y sus propios filtros —
   // trial-balance/income-statement usan from/to, balance-general usa as_of.
@@ -109,6 +114,7 @@ const FinancialReportsPage = () => {
       else if (currentTab === 'retenciones-practicadas') res = await financialReportsAPI.retencionesPracticadas({ from: range.from, to: range.to, branch_id });
       else if (currentTab === 'libro-diario') res = await financialReportsAPI.libroDiario({ from: range.from, to: range.to, branch_id });
       else if (currentTab === 'libro-iva') res = await financialReportsAPI.libroIva({ from: range.from, to: range.to, branch_id });
+      else if (currentTab === 'proyectos') res = await financialReportsAPI.projects({ from: range.from, to: range.to, include_drafts: includeDrafts });
       else res = await financialReportsAPI.incomeStatement({ from: range.from, to: range.to, branch_id });
       if (requestIdRef.current === requestId) setData(res.data);
     } catch (error) {
@@ -134,7 +140,7 @@ const FinancialReportsPage = () => {
         {auxThirdParty && <LibroAuxiliarModal thirdParty={auxThirdParty} onClose={() => setAuxThirdParty(null)} />}
 
         <div className="border-b border-gray-200 dark:border-white/10 flex gap-4">
-          {TABS.map((t) => (
+          {tabs.map((t) => (
             <button
               key={t.id}
               onClick={() => { setData(null); setTab(t.id); }}
@@ -173,8 +179,16 @@ const FinancialReportsPage = () => {
             </select>
           )}
 
+          {tab === 'proyectos' && (
+            <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+              <input type="checkbox" checked={includeDrafts} onChange={(e) => setIncludeDrafts(e.target.checked)} />
+              Incluir asientos en borrador
+            </label>
+          )}
+
           <div className="flex-1" />
 
+          {EXPORTERS[tab] && (<>
           <button
             onClick={() => handleExport('excel')}
             disabled={downloading !== null}
@@ -191,6 +205,7 @@ const FinancialReportsPage = () => {
             <DocumentArrowDownIcon className="w-4 h-4" />
             {downloading === 'pdf' ? 'Generando...' : 'Descargar PDF'}
           </button>
+          </>)}
         </div>
 
         {loading && <div className="text-center py-12 text-gray-400 dark:text-gray-500">Generando...</div>}
@@ -294,6 +309,50 @@ const FinancialReportsPage = () => {
             <div className={`flex justify-between text-base font-bold border-t-2 border-gray-300 dark:border-white/10 pt-3 ${data.totales.utilidad_neta >= 0 ? 'text-green-700' : 'text-red-700'}`}>
               <span>Utilidad Neta</span><span>{formatCurrency(data.totales.utilidad_neta)}</span>
             </div>
+          </div>
+        )}
+        {!loading && data && tab === 'proyectos' && (
+          <div className="bg-white dark:bg-graphite rounded-xl border border-gray-200 dark:border-white/10 overflow-hidden">
+            <p className="px-4 pt-4 text-xs text-gray-500">
+              Líneas de ingreso, costo y gasto marcadas con proyecto: ventas, compras, gastos y notas del proyecto, materiales consumidos en la obra (710505) y nómina reclasificada (720505).
+              {data.include_drafts ? ' Incluye asientos en borrador.' : ' Solo asientos contabilizados.'}
+            </p>
+            {data.projects.length === 0 ? (
+              <p className="p-8 text-center text-sm text-gray-500">No hay movimientos con proyecto en el periodo.</p>
+            ) : (
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-white/10 text-sm mt-2">
+                <thead className="bg-gray-50 dark:bg-white/5">
+                  <tr className="text-left text-xs font-medium text-gray-500 uppercase">
+                    <th className="px-4 py-2">Proyecto</th>
+                    <th className="px-4 py-2 text-right">Ingresos</th>
+                    <th className="px-4 py-2 text-right">Costos</th>
+                    <th className="px-4 py-2 text-right">Gastos</th>
+                    <th className="px-4 py-2 text-right">Utilidad</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 dark:divide-white/10">
+                  {data.projects.map((p) => (
+                    <tr key={p.project_id} className="align-top">
+                      <td className="px-4 py-2">
+                        <p className="font-medium text-gray-900 dark:text-gray-100">{p.code} · {p.name}</p>
+                        <p className="text-xs text-gray-500">{p.accounts.map((a) => `${a.code} ${formatCurrency(a.amount)}`).join(' · ')}</p>
+                      </td>
+                      <td className="px-4 py-2 text-right tabular-nums">{formatCurrency(p.ingresos)}</td>
+                      <td className="px-4 py-2 text-right tabular-nums">{formatCurrency(p.costos)}</td>
+                      <td className="px-4 py-2 text-right tabular-nums">{formatCurrency(p.gastos)}</td>
+                      <td className={`px-4 py-2 text-right tabular-nums font-semibold ${p.utilidad >= 0 ? 'text-green-700' : 'text-red-700'}`}>{formatCurrency(p.utilidad)}</td>
+                    </tr>
+                  ))}
+                  <tr className="bg-gray-50 dark:bg-white/5 font-semibold">
+                    <td className="px-4 py-2">Total</td>
+                    <td className="px-4 py-2 text-right tabular-nums">{formatCurrency(data.totals.ingresos)}</td>
+                    <td className="px-4 py-2 text-right tabular-nums">{formatCurrency(data.totals.costos)}</td>
+                    <td className="px-4 py-2 text-right tabular-nums">{formatCurrency(data.totals.gastos)}</td>
+                    <td className="px-4 py-2 text-right tabular-nums">{formatCurrency(data.totals.utilidad)}</td>
+                  </tr>
+                </tbody>
+              </table>
+            )}
           </div>
         )}
         {!loading && data && tab === 'comparativo' && (

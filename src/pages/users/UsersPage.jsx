@@ -116,6 +116,7 @@ const UsersPage = () => {
     manager: 'blue',
     seller: 'green',
     warehouse_keeper: 'yellow',
+    inventory_lead: 'yellow',
     technician: 'orange',
     user: 'gray',
     viewer: 'indigo',
@@ -127,6 +128,7 @@ const UsersPage = () => {
     manager: 'Gerente',
     seller: 'Vendedor',
     warehouse_keeper: 'Bodeguero',
+    inventory_lead: 'Líder de inventarios',
     technician: 'Técnico',
     user: 'Usuario',
     viewer: 'Visualizador',
@@ -147,11 +149,18 @@ const UsersPage = () => {
             Administra los usuarios de tu organización y sus roles
           </p>
         </div>
-        <Link to="/users/new">
-          <Button variant="primary" icon={Plus}>
-            Nuevo Usuario
-          </Button>
-        </Link>
+        <div className="flex gap-2">
+          {currentUser?.role === 'admin' && (
+            <Link to="/settings/permissions" className="inline-flex items-center px-4 py-2 text-sm border border-gray-300 rounded-lg bg-white hover:bg-gray-50">
+              Roles y permisos
+            </Link>
+          )}
+          <Link to="/users/new">
+            <Button variant="primary" icon={Plus}>
+              Nuevo Usuario
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Filtros */}
@@ -191,6 +200,7 @@ const UsersPage = () => {
                   <option value="manager">Gerente</option>
                   <option value="seller">Vendedor</option>
                   <option value="warehouse_keeper">Bodeguero</option>
+                  <option value="inventory_lead">Líder de inventarios</option>
                   <option value="technician">Técnico</option>
                   <option value="user">Usuario</option>
                   <option value="viewer">Visualizador</option>

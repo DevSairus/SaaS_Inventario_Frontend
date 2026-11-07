@@ -350,6 +350,9 @@ export default function OrderListDetailPage() {
               {list.purchase && (
                 <span>· Compra <Link to={`/purchases/${list.purchase.id}`} className="text-orange-600 hover:underline">{list.purchase.purchase_number}</Link></span>
               )}
+              {list.project && (
+                <span>· Proyecto <Link to={`/projects/${list.project.id}`} className="text-orange-600 hover:underline">{list.project.code} · {list.project.name}</Link></span>
+              )}
             </div>
             <p className="text-xs text-gray-500 mt-1">
               {[supplier.contact_name, supplier.mobile || supplier.phone, supplier.email].filter(Boolean).join(' · ')}

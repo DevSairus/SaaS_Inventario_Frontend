@@ -1,0 +1,32 @@
+// Bancos y billeteras de Colombia (código ACH). Copia de
+// backend/src/services/payments/colombianBanks.js para el selector del
+// proveedor; el backend reconoce también nombres libres.
+export const COLOMBIAN_BANKS = [
+  { code: '1001', name: 'Banco de Bogotá' },
+  { code: '1002', name: 'Banco Popular' },
+  { code: '1006', name: 'Itaú' },
+  { code: '1007', name: 'Bancolombia' },
+  { code: '1009', name: 'Citibank' },
+  { code: '1012', name: 'Banco GNB Sudameris' },
+  { code: '1013', name: 'BBVA Colombia' },
+  { code: '1019', name: 'Scotiabank Colpatria' },
+  { code: '1023', name: 'Banco de Occidente' },
+  { code: '1032', name: 'Banco Caja Social' },
+  { code: '1040', name: 'Banco Agrario' },
+  { code: '1047', name: 'Banco Mundo Mujer' },
+  { code: '1051', name: 'Davivienda' },
+  { code: '1052', name: 'Banco AV Villas' },
+  { code: '1053', name: 'Banco W' },
+  { code: '1059', name: 'Bancamía' },
+  { code: '1060', name: 'Banco Pichincha' },
+  { code: '1061', name: 'Bancoomeva' },
+  { code: '1062', name: 'Banco Falabella' },
+  { code: '1063', name: 'Banco Finandina' },
+  { code: '1066', name: 'Banco Cooperativo Coopcentral' },
+  { code: '1069', name: 'Banco Serfinanza' },
+  { code: '1070', name: 'Lulo Bank' },
+  { code: '1283', name: 'Confiar' },
+  { code: '1507', name: 'Nequi' },
+  { code: '1551', name: 'Daviplata' },
+  { code: '1801', name: 'Movii' },
+];

@@ -20,6 +20,7 @@ import Loading from '../../components/common/Loading';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
 import Dropdown from '../../components/common/Dropdown';
 import { formatCurrency, formatDate, formatDateTime, toLocalDateString } from '../../utils/formatters';
+import AttachmentsPanel from '../../components/attachments/AttachmentsPanel';
 import Layout from '../../components/layout/Layout';
 import salesApi from '../../api/sales';
 import { movementsAPI } from '../../api/movements';
@@ -1532,6 +1533,7 @@ export default function SaleDetailPage() {
               else if (retryInvoicing) handleConvertToInvoice();
             }}
           />
+          <AttachmentsPanel entityType="sale" entityId={currentSale.id} title="Adjuntos de la venta" />
         </div>
       </div>
     </Layout>

@@ -326,6 +326,7 @@ const UserForm = () => {
                   <option value="accountant">Contador</option>
                   <option value="seller">Vendedor</option>
                   <option value="warehouse_keeper">Bodeguero</option>
+                  <option value="inventory_lead">Líder de inventarios</option>
                   <option value="technician">Técnico</option>
                   <option value="user">Usuario</option>
                   <option value="viewer">Visualizador</option>
@@ -361,6 +362,7 @@ const UserForm = () => {
                     {formData.role === 'accountant'      && 'Contador - Contabilidad y Tesorería'}
                     {formData.role === 'seller'          && 'Vendedor - Ventas y Clientes'}
                     {formData.role === 'warehouse_keeper'&& 'Bodeguero - Inventario'}
+                    {formData.role === 'inventory_lead'  && 'Líder de inventarios - Traslados, conteos y despachos a obra'}
                     {formData.role === 'technician'      && 'Técnico - Órdenes de Trabajo'}
                     {formData.role === 'user'            && 'Usuario - Acceso Estándar'}
                     {formData.role === 'viewer'          && 'Visualizador - Solo Lectura'}

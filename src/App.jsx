@@ -8,6 +8,7 @@ import SeguimientoPublicoPage from './pages/ensambladora/SeguimientoPublicoPage'
 import QuotePublicPage from './pages/sales/QuotePublicPage';
 import ConsentPublicPage from './pages/legal/ConsentPublicPage';
 import OrderListPublicPage from './pages/order-lists/OrderListPublicPage';
+import ApprovalPublicPage from './pages/approvals/ApprovalPublicPage';
 import Loading from './components/common/Loading';
 const DashboardPage = lazy(() => import('./pages/dashboard/DashboardPage'));
 const ProductsPage = lazy(() => import('./pages/products/ProductsPage'));
@@ -29,6 +30,20 @@ const MovementsPage = lazy(() => import('./pages/movements/MovementsPage'));
 const StockAlertsPage = lazy(() => import('./pages/stock-alerts/StockAlertsPage'));
 const OrderListsPage = lazy(() => import('./pages/order-lists/OrderListsPage'));
 const OrderListDetailPage = lazy(() => import('./pages/order-lists/OrderListDetailPage'));
+const ProjectsPage = lazy(() => import('./pages/projects/ProjectsPage'));
+const TenantRolePermissionsPage = lazy(() => import('./pages/settings/TenantRolePermissionsPage'));
+const ApprovalsPage = lazy(() => import('./pages/approvals/ApprovalsPage'));
+const ApprovalRulesPage = lazy(() => import('./pages/settings/ApprovalRulesPage'));
+const PaymentBatchesPage = lazy(() => import('./pages/finance/PaymentBatchesPage'));
+const PaymentBatchDetailPage = lazy(() => import('./pages/finance/PaymentBatchDetailPage'));
+const ProjectDetailPage = lazy(() => import('./pages/projects/ProjectDetailPage'));
+const ToolsPage = lazy(() => import('./pages/tools/ToolsPage'));
+const ToolDetailPage = lazy(() => import('./pages/tools/ToolDetailPage'));
+const SolarStudiesPage = lazy(() => import('./pages/solar/SolarStudiesPage'));
+const SolarStudyPage = lazy(() => import('./pages/solar/SolarStudyPage'));
+const SolarSettingsPage = lazy(() => import('./pages/solar/SolarSettingsPage'));
+const SolarLeadsPage = lazy(() => import('./pages/solar/SolarLeadsPage'));
+const SolarSimulatorPage = lazy(() => import('./pages/solar/SolarSimulatorPage'));
 const PriceAdjustmentsPage = lazy(() => import('./pages/price-adjustments/PriceAdjustmentsPage'));
 const PayableAlertsPage = lazy(() => import('./pages/payable-alerts/PayableAlertsPage'));
 const UsersPage = lazy(() => import('./pages/users/UsersPage'));
@@ -132,6 +147,7 @@ const NexaApprovalsPage = lazy(() => import('./pages/nexa/NexaApprovalsPage'));
 // Módulo Nómina Electrónica
 const EmployeesPage = lazy(() => import('./pages/payroll/EmployeesPage'));
 const ContractAlertsPage = lazy(() => import('./pages/payroll/ContractAlertsPage'));
+const VacationBookPage = lazy(() => import('./pages/payroll/VacationBookPage'));
 const PayrollConceptsPage = lazy(() => import('./pages/payroll/PayrollConceptsPage'));
 const PayrollPeriodsPage = lazy(() => import('./pages/payroll/PayrollPeriodsPage'));
 const PayrollPeriodDetailPage = lazy(() => import('./pages/payroll/PayrollPeriodDetailPage'));
@@ -268,7 +284,9 @@ function TenantRoute({ children, module, roles }) {
       return <Navigate to={ROUTES.DASHBOARD} replace />;
     }
   }
-  if (roles && !roles.includes(user?.role)) {
+  // El Líder de inventarios hereda de bodeguero en las listas fijas de roles
+  // (igual que middleware/auth.js#checkRole en el backend).
+  if (roles && !roles.includes(user?.role) && !(user?.role === 'inventory_lead' && roles.includes('warehouse_keeper'))) {
     return <Navigate to={ROUTES.DASHBOARD} replace />;
   }
   return children;
@@ -325,10 +343,13 @@ function App() {
         <Route path="/documento/:token"    element={<QuotePublicPage />} />
         <Route path="/public/quote/:token" element={<QuotePublicPage />} />
         <Route path="/agendar/:slug"       element={<PublicAppointmentPage />} />
+        <Route path="/simulador/:slug"     element={<Suspense fallback={<Loading fullScreen />}><SolarSimulatorPage /></Suspense>} />
         {/* Habeas data / acta de ingreso: el cliente acepta con un código OTP */}
         <Route path="/autorizacion/:token" element={<ConsentPublicPage />} />
         {/* Pedido a proveedor compartido por WhatsApp (enlace al PDF) */}
         <Route path="/pedido/:token" element={<OrderListPublicPage />} />
+        {/* Aprobación desde el correo (enlace de un solo uso, sin sesión) */}
+        <Route path="/aprobar/:token" element={<ApprovalPublicPage />} />
         <Route path="/portal/vehiculo/:token" element={<VehiclePortalPage />} />
         <Route path="/blog"           element={<Suspense fallback={<Loading fullScreen />}><BlogListPage /></Suspense>} />
         <Route path="/blog/:slug"     element={<Suspense fallback={<Loading fullScreen />}><BlogPostPage /></Suspense>} />
@@ -406,6 +427,15 @@ function App() {
         <Route path="stock-alerts" element={<TenantRoute module="inventory"><Suspense fallback={<Loading fullScreen />}><StockAlertsPage /></Suspense></TenantRoute>} />
         <Route path="order-lists"     element={<TenantRoute module="inventory"><Suspense fallback={<Loading fullScreen />}><OrderListsPage /></Suspense></TenantRoute>} />
         <Route path="order-lists/:id" element={<TenantRoute module="inventory"><Suspense fallback={<Loading fullScreen />}><OrderListDetailPage /></Suspense></TenantRoute>} />
+        <Route path="projects"     element={<TenantRoute module="projects"><Suspense fallback={<Loading fullScreen />}><ProjectsPage /></Suspense></TenantRoute>} />
+        <Route path="projects/:id" element={<TenantRoute module="projects"><Suspense fallback={<Loading fullScreen />}><ProjectDetailPage /></Suspense></TenantRoute>} />
+        <Route path="tools"        element={<TenantRoute module="projects"><Suspense fallback={<Loading fullScreen />}><ToolsPage /></Suspense></TenantRoute>} />
+        <Route path="tools/:id"    element={<TenantRoute module="projects"><Suspense fallback={<Loading fullScreen />}><ToolDetailPage /></Suspense></TenantRoute>} />
+        <Route path="solar"          element={<TenantRoute module="projects"><Suspense fallback={<Loading fullScreen />}><SolarStudiesPage /></Suspense></TenantRoute>} />
+        <Route path="solar/leads"    element={<TenantRoute module="projects"><Suspense fallback={<Loading fullScreen />}><SolarLeadsPage /></Suspense></TenantRoute>} />
+        <Route path="solar/settings" element={<TenantRoute module="projects"><Suspense fallback={<Loading fullScreen />}><SolarSettingsPage /></Suspense></TenantRoute>} />
+        <Route path="solar/new"      element={<TenantRoute module="projects"><Suspense fallback={<Loading fullScreen />}><SolarStudyPage /></Suspense></TenantRoute>} />
+        <Route path="solar/:id"      element={<TenantRoute module="projects"><Suspense fallback={<Loading fullScreen />}><SolarStudyPage /></Suspense></TenantRoute>} />
         <Route path="price-adjustments" element={<TenantRoute module="inventory"><Suspense fallback={<Loading fullScreen />}><PriceAdjustmentsPage /></Suspense></TenantRoute>} />
 
         {/* ── Ventas ─────────────────────────────────── */}
@@ -453,6 +483,7 @@ function App() {
         {/* ── Nómina Electrónica ─────────────────────── */}
         <Route path="payroll/employees"      element={<TenantRoute module="payroll"><Suspense fallback={<Loading fullScreen />}><EmployeesPage /></Suspense></TenantRoute>} />
         <Route path="payroll/contract-alerts" element={<TenantRoute module="payroll"><Suspense fallback={<Loading fullScreen />}><ContractAlertsPage /></Suspense></TenantRoute>} />
+        <Route path="payroll/vacations"      element={<TenantRoute module="payroll"><Suspense fallback={<Loading fullScreen />}><VacationBookPage /></Suspense></TenantRoute>} />
         <Route path="payroll/concepts"       element={<TenantRoute module="payroll"><Suspense fallback={<Loading fullScreen />}><PayrollConceptsPage /></Suspense></TenantRoute>} />
         <Route path="payroll/periods"        element={<TenantRoute module="payroll"><Suspense fallback={<Loading fullScreen />}><PayrollPeriodsPage /></Suspense></TenantRoute>} />
         <Route path="payroll/periods/:id"    element={<TenantRoute module="payroll"><Suspense fallback={<Loading fullScreen />}><PayrollPeriodDetailPage /></Suspense></TenantRoute>} />
@@ -547,6 +578,11 @@ function App() {
         {/* Perfiles de impresión de etiquetas: editar solo admin/gerente (lo controla la página y el backend). */}
         <Route path="settings/label-printing" element={<TenantRoute><Suspense fallback={<Loading fullScreen />}><LabelPrintingSettingsPage /></Suspense></TenantRoute>} />
         <Route path="settings/pos-printing" element={<TenantRoute><Suspense fallback={<Loading fullScreen />}><PosPrintingSettingsPage /></Suspense></TenantRoute>} />
+        <Route path="payment-batches" element={<TenantRoute module="treasury"><Suspense fallback={<Loading fullScreen />}><PaymentBatchesPage /></Suspense></TenantRoute>} />
+        <Route path="payment-batches/:id" element={<TenantRoute module="treasury"><Suspense fallback={<Loading fullScreen />}><PaymentBatchDetailPage /></Suspense></TenantRoute>} />
+        <Route path="approvals" element={<TenantRoute><Suspense fallback={<Loading fullScreen />}><ApprovalsPage /></Suspense></TenantRoute>} />
+        <Route path="settings/approvals" element={<TenantRoute><Suspense fallback={<Loading fullScreen />}><ApprovalRulesPage /></Suspense></TenantRoute>} />
+        <Route path="settings/permissions" element={<TenantRoute roles={['admin']}><Suspense fallback={<Loading fullScreen />}><TenantRolePermissionsPage /></Suspense></TenantRoute>} />
         <Route path="settings/whatsapp" element={<TenantRoute roles={['admin']}><Suspense fallback={<Loading fullScreen />}><WhatsAppSettingsPage /></Suspense></TenantRoute>} />
 
         <Route path="reports"  element={<TenantRoute><Suspense fallback={<Loading fullScreen />}><ReportsPage /></Suspense></TenantRoute>} />

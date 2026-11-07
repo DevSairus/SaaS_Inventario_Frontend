@@ -21,6 +21,12 @@ export const movementsAPI = {
     return response.data;
   },
 
+  // Recalcular el kardex en orden de fecha ({ product_id? , from?, dry_run })
+  recalculateKardex: async (payload) => {
+    const response = await api.post('/inventory/movements/kardex/recalculate', payload, { timeout: 600000 });
+    return response.data;
+  },
+
   // Obtener estadísticas
   getStats: async () => {
     const response = await api.get('/inventory/movements/stats');

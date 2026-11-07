@@ -75,14 +75,16 @@ const TransferReceivePage = () => {
     try {
       await receiveTransfer(id, {
         receiving_notes: receivingNotes,
+        // Todas las líneas, también las que llegaron en 0 (el backend registra el faltante).
         items: items.map(item => ({
+          item_id: item.id,
           product_id: item.product_id,
-          quantity_received: parseFloat(item.quantity_received),
+          quantity_received: parseFloat(item.quantity_received) || 0,
           condition: item.condition
         }))
       });
 
-      toast.success('Transferencia recibida exitosamente');
+      toast.success(hasDiscrepancies ? 'Recibida con diferencias: quedan anotadas en el traslado' : 'Transferencia recibida exitosamente');
       navigate('/inventory/transfers');
     } catch (error) {
       toast.error(error.response?.data?.message || 'Error al recibir transferencia');

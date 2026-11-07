@@ -1,6 +1,7 @@
 // frontend/src/pages/finance/ExpensesPage.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import { expensesAPI, EXPENSE_CATEGORIES } from '../../api/expenses';
+import ProjectSelect from '../../components/projects/ProjectSelect';
 import { suppliersAPI } from '../../api/suppliers';
 import { retentionsAPI } from '../../api/retentions';
 import Layout from '../../components/layout/Layout';
@@ -16,6 +17,8 @@ import {
 import { formatCurrency } from '../../utils/formatters';
 import NumericInput from '../../components/inputs/NumericInput';
 import SupportDocumentPanel from '../../components/dian/SupportDocumentPanel';
+import AttachmentsPanel from '../../components/attachments/AttachmentsPanel';
+import Modal from '../../components/common/Modal';
 import BankAccountSelect from '../../components/accounting/BankAccountSelect';
 import useAuthStore from '../../store/authStore';
 import Pagination from '../../components/common/Pagination';
@@ -47,6 +50,8 @@ const emptyForm = {
   is_recurring: false,
   notes: '',
   paid_now: true,
+  // Módulo Proyectos: gasto de una obra (subcontrato, transporte, alquiler...)
+  project_id: null,
   // Documento Soporte DIAN — solo se envían al backend cuando
   // showFiscalDetail está activo (ver handleCreate); si no, el gasto se
   // registra exactamente igual que antes (compatibilidad, ver LEEME Fase 2).
@@ -83,6 +88,8 @@ const ExpensesPage = () => {
   const [paymentMethod, setPaymentMethod] = useState('Efectivo');
   const [paymentBankAccountId, setPaymentBankAccountId] = useState(null);
   const [supportDocExpense, setSupportDocExpense] = useState(null);
+  // Gasto cuyos soportes (factura, soporte de pago) se están viendo
+  const [attachmentsExpense, setAttachmentsExpense] = useState(null);
   // Paginación y búsqueda en el backend (antes: 100 más recientes y la
   // búsqueda solo filtraba esos 100).
   const [page, setPage] = useState(1);
@@ -376,6 +383,7 @@ const ExpensesPage = () => {
                       <td className="px-4 py-3 text-sm text-gray-600">
                         {e.description}
                         {e.supplier?.name && <div className="text-xs text-gray-400">{e.supplier.name}</div>}
+                        {e.project && <div className="text-xs text-indigo-600">Proyecto {e.project.code} · {e.project.name}</div>}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-600">{categoryLabel(e.category)}</td>
                       <td className="px-4 py-3 text-sm text-gray-600">{formatDate(e.expense_date)}</td>
@@ -405,6 +413,13 @@ const ExpensesPage = () => {
                             <DocumentCheckIcon className="w-4 h-4" /> Doc. Soporte
                           </button>
                         )}
+                        <button
+                          onClick={() => setAttachmentsExpense(e)}
+                          className="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 mr-2"
+                          title="Factura, soporte de pago y otros archivos"
+                        >
+                          Soportes
+                        </button>
                         {e.payment_status !== 'paid' && (
                           <button
                             onClick={() => { setSelectedExpense(e); setPaymentAmount(String(balance)); setShowPaymentModal(true); }}
@@ -460,6 +475,12 @@ const ExpensesPage = () => {
                 placeholder="Ej. Arriendo local julio 2026"
               />
             </div>
+
+            <ProjectSelect
+              value={form.project_id}
+              onChange={(projectId) => setForm(f => ({ ...f, project_id: projectId }))}
+              hint="Subcontratos, transporte, alquileres o viáticos de una obra: cuentan como costo del proyecto."
+            />
 
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -739,6 +760,15 @@ const ExpensesPage = () => {
       )}
 
       {/* Modal Documento Soporte DIAN */}
+      <Modal isOpen={!!attachmentsExpense} onClose={() => setAttachmentsExpense(null)} title={`Soportes · ${attachmentsExpense?.expense_number || ''}`} size="md">
+        {attachmentsExpense && (
+          <>
+            <p className="text-sm text-gray-500 mb-3">{attachmentsExpense.description}</p>
+            <AttachmentsPanel entityType="expense" entityId={attachmentsExpense.id} title="Archivos" defaultKind="invoice_pdf" compact />
+          </>
+        )}
+      </Modal>
+
       {supportDocExpense && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl w-full max-w-lg p-5 space-y-4 max-h-[90vh] overflow-y-auto">

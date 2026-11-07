@@ -27,15 +27,8 @@ import Modal from '../common/Modal';
 import DivipolaCitySelect from '../common/DivipolaCitySelect';
 import { suppliersAPI } from '../../api/suppliers';
 import { expensesAPI } from '../../api/expenses';
+import { DOCUMENT_TYPE_OPTIONS } from '../../constants/documentTypes';
 
-const DOCUMENT_TYPE_OPTIONS = [
-  { value: '13', label: 'Cédula de ciudadanía' },
-  { value: '31', label: 'NIT' },
-  { value: '22', label: 'Cédula de extranjería' },
-  { value: '41', label: 'Pasaporte' },
-  { value: '12', label: 'Tarjeta de identidad' },
-  { value: '91', label: 'NUIP' },
-];
 
 export default function AdHocSellerModal({
   open,

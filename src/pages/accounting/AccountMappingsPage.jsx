@@ -50,6 +50,14 @@ const EVENT_GROUPS = [
     ],
   },
   {
+    title: 'Proyectos (obras)',
+    events: [
+      { key: 'project_material_cost', label: 'Materiales consumidos en la obra (entran a la bodega del proyecto)' },
+      { key: 'project_labor_cost', label: 'Mano de obra reclasificada a la obra (reparto de nómina por horas)' },
+      { key: 'sale_retention_guarantee', label: 'Retención de garantía por cobrar (facturas parciales de obra)' },
+    ],
+  },
+  {
     title: 'Cajas y anticipos',
     events: [
       { key: 'cash_session_surplus', label: 'Sobrante de caja (al cerrar sesión)' },
@@ -161,8 +169,15 @@ const EVENT_GROUPS = [
     ],
   },
   {
-    title: 'Activos Fijos — Depreciación',
+    title: 'Activos Fijos — Depreciación y baja',
     events: [
+      { key: 'fixed_asset_disposal_gain', label: 'Utilidad en venta de activos fijos' },
+      { key: 'fixed_asset_disposal_loss', label: 'Pérdida en venta o retiro de activos fijos' },
+      { key: 'fixed_asset_impairment_expense', label: 'Gasto por deterioro de activos fijos' },
+      { key: 'fixed_asset_impairment_accumulated', label: 'Deterioro acumulado de activos fijos (CR)' },
+      { key: 'fixed_asset_impairment_recovery', label: 'Recuperación (reversión) de deterioro de activos fijos' },
+      { key: 'fixed_asset_depreciation_expense:construcciones', label: 'Gasto depreciación — Construcciones' },
+      { key: 'fixed_asset_depreciation_expense:equipo_comunicacion', label: 'Gasto depreciación — Equipo de Comunicación' },
       { key: 'fixed_asset_depreciation_expense:vehiculo', label: 'Gasto depreciación — Vehículos' },
       { key: 'fixed_asset_depreciation_expense:maquinaria', label: 'Gasto depreciación — Maquinaria' },
       { key: 'fixed_asset_depreciation_expense:equipo_computo', label: 'Gasto depreciación — Equipo de Cómputo' },

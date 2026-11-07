@@ -13,7 +13,6 @@ import { warehousesService } from '../../api/warehouses';
 import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
 import NumericInput from '../../components/inputs/NumericInput';
-import Card from '../../components/common/Card';
 import Modal from '../../components/common/Modal';
 import Combobox, { HighlightMatch } from '../../components/common/Combobox';
 import { useListNavigation } from '../../components/common/searchDropdown';
@@ -26,16 +25,15 @@ import {
   Trash2, 
   Search, 
   User, 
-  FileText,
   Calendar,
-  CreditCard,
   Package,
   ShoppingCart,
   X,
   Save,
   ArrowLeft,
   Target,
-  Layers
+  Layers,
+  ChevronDown
 } from 'lucide-react';
 import BarcodeScanner from '../../components/common/BarcodeScanner';
 import { productsAPI } from '../../api/products';
@@ -52,6 +50,7 @@ import toast from 'react-hot-toast';
 import ProductImageViewer from '../../components/products/ProductImageViewer';
 import ComboPickerModal from '../../components/combos/ComboPickerModal';
 import { groupDocumentItems, newComboGroupId } from '../../components/combos/comboUtils';
+import ProjectSelect from '../../components/projects/ProjectSelect';
 import {
   ClipboardDocumentListIcon,
   DocumentTextIcon,
@@ -75,16 +74,17 @@ function GlobalDiscountInput({ formData, setFormData, canDiscount }) {
           <select
             value={formData.global_discount_type}
             onChange={e => setFormData(f => ({ ...f, global_discount_type: e.target.value }))}
-            className="border border-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="border border-gray-200 rounded-lg px-1.5 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+            title="Monto fijo o porcentaje"
           >
-            <option value="fixed">$ Monto</option>
-            <option value="percentage">% Porcentaje</option>
+            <option value="fixed">$</option>
+            <option value="percentage">%</option>
           </select>
           <NumericInput
             value={formData.global_discount_value}
             onChange={e => setFormData(f => ({ ...f, global_discount_value: e.target.value }))}
             placeholder={formData.global_discount_type === 'percentage' ? '%' : '$'}
-            className="border border-gray-200 rounded-lg px-2 py-1 text-xs w-24 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="border border-gray-200 rounded-lg px-2 py-1 text-xs flex-1 min-w-0 text-right focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </>
       ) : (
@@ -185,9 +185,14 @@ function SaleFormPage() {
     aiu_profit_pct: '',
     aiu_object: '',
     quote_valid_until: '',
+    // Módulo Proyectos: ?project_id= al crear desde la ficha del proyecto.
+    project_id: searchParams.get('project_id') || null,
   });
+  const [currentProject, setCurrentProject] = useState(null);
 
   const [showBrandDropdown, setShowBrandDropdown] = useState(false);
+  // null = según haya datos del vehículo (ver vehicleOpen)
+  const [showVehicle, setShowVehicle] = useState(null);
   const brandSuggestions = useMemo(() => {
     const options = brandsForType(formData.vehicle_type);
     const q = (formData.vehicle_brand ?? '').trim().toLowerCase();
@@ -422,7 +427,9 @@ function SaleFormPage() {
         aiu_profit_pct: currentSale.aiu_profit_pct ?? '',
         aiu_object: currentSale.aiu_object || '',
         quote_valid_until: currentSale.quote_valid_until ? String(currentSale.quote_valid_until).slice(0, 10) : '',
+        project_id: currentSale.project_id || null,
       });
+      setCurrentProject(currentSale.project || null);
 
       // Establecer el nombre del cliente en el campo de búsqueda
       if (currentSale.customer_name) {
@@ -439,6 +446,10 @@ function SaleFormPage() {
           unit_price: toInteger(item.unit_price, 0),
           discount_percentage: toInteger(item.discount_percentage, 0),
           tax_percentage: toInteger(item.tax_percentage, 19),
+          // El precio IVA incluido es del producto (la línea no lo guarda):
+          // sin esto, al editar se sumaba el IVA encima del precio.
+          price_includes_tax: !!item.product?.price_includes_tax,
+          has_tax: item.product ? item.product.has_tax !== false && item.product.tax_config?.iva_status !== 'excluido' : true,
           inc_rate: toNumber(item.inc_rate),
           inc_amount: toInteger(item.inc_amount, 0),
           discount_amount: toInteger(item.discount_amount, 0),
@@ -640,7 +651,7 @@ function SaleFormPage() {
       newItems[existingIndex] = calculateItemTotals(newItems[existingIndex]);
       setItems(newItems);
     } else {
-      const taxPct = product.has_tax === false ? 0 : (product.tax_percentage || 19);
+      const taxPct = ivaRateOf(product);
 
       const newItem = {
         item_type: product.product_type === 'service' ? 'service' : 'product',
@@ -653,7 +664,7 @@ function SaleFormPage() {
         tax_percentage: taxPct,
         inc_rate: incRateOf(product),
         price_includes_tax: product.price_includes_tax || false,
-        has_tax: product.has_tax !== false,
+        has_tax: product.has_tax !== false && product.tax_config?.iva_status !== 'excluido',
         technician_id: '',
       };
       setItems([...items, calculateItemTotals(newItem)]);
@@ -680,6 +691,30 @@ function SaleFormPage() {
     } catch (e) {
       toast('Producto no encontrado para el código: ' + code);
     }
+  };
+
+  // Tarifa de IVA del producto -- mismo criterio que taxService.calculateItemTaxes:
+  // excluido o has_tax=false sin IVA, exento al 0 %, sin tarifa 19 %. Antes un
+  // producto con tarifa 0 entraba con 19 % (`|| 19`).
+  const ivaRateOf = (product) => {
+    const status = product?.tax_config?.iva_status;
+    if (product?.has_tax === false || status === 'excluido' || status === 'exento') return 0;
+    const rate = Number(product?.tax_percentage ?? 19);
+    return Number.isFinite(rate) ? rate : 19;
+  };
+
+  // Equivalente con stock: se lee el producto completo (la equivalencia no
+  // trae su IVA ni si el precio lo incluye).
+  const handleAddAlternative = async (alt) => {
+    try {
+      const res = await productsAPI.getById(alt.product_id);
+      const product = res?.data;
+      if (!product) throw new Error('not found');
+      await handleAddItem({ ...product, current_stock: product.current_stock ?? alt.available_stock });
+    } catch {
+      toast.error(`No se pudo cargar ${alt.name}`);
+    }
+    setStockAlternatives([]);
   };
 
   // Impoconsumo (INC) del producto -- mismo criterio que taxService.calculateItemTaxes
@@ -768,10 +803,10 @@ function SaleFormPage() {
       quantity: qty,
       unit_price: toInteger(unit_price, 0),
       discount_percentage: 0,
-      tax_percentage: product.has_tax === false ? 0 : (product.tax_percentage || 19),
+      tax_percentage: ivaRateOf(product),
       inc_rate: incRateOf(product),
       price_includes_tax: product.price_includes_tax || false,
-      has_tax: product.has_tax !== false,
+      has_tax: product.has_tax !== false && product.tax_config?.iva_status !== 'excluido',
       technician_id: '',
       combo_id: combo.id,
       combo_group_id: groupId,
@@ -915,7 +950,7 @@ function SaleFormPage() {
   // edita igual que cualquier línea; el combo solo agrupa).
   const renderItemRow = (item, index, inCombo = false) => (
     <tr key={index} className={`hover:bg-gray-50 transition-colors ${inCombo ? 'bg-emerald-50/30' : ''}`}>
-      <td className={`py-4 px-4 ${inCombo ? 'pl-8 border-l-4 border-emerald-300' : ''}`}>
+      <td className={`py-1.5 px-2 ${inCombo ? 'pl-6 border-l-4 border-emerald-300' : ''}`}>
         {item.item_type === 'free_line' ? (
           <input
             type="text"
@@ -926,62 +961,62 @@ function SaleFormPage() {
               setItems(updated);
             }}
             placeholder="Descripción del ítem..."
-            className="w-full px-2 py-1 border border-indigo-300 rounded text-sm font-medium text-gray-900 focus:ring-2 focus:ring-indigo-400"
+            className="w-full px-2 py-0.5 border border-indigo-300 rounded text-sm font-medium text-gray-900 focus:ring-2 focus:ring-indigo-400"
           />
         ) : (
-          <div className="font-medium text-gray-900">{item.product_name}</div>
+          <div className="text-sm font-medium text-gray-900 leading-tight">{item.product_name}</div>
         )}
-        <div className="flex items-center gap-2 mt-1">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5 text-xs">
           {item.item_type === 'service' && (
-            <span className="inline-flex items-center gap-1 text-xs font-semibold text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full"><WrenchScrewdriverIcon className="w-3 h-3" /> Servicio</span>
+            <span className="inline-flex items-center gap-1 font-semibold text-purple-600 bg-purple-50 px-1.5 rounded-full"><WrenchScrewdriverIcon className="w-3 h-3" /> Servicio</span>
           )}
           {item.item_type === 'free_line' && (
-            <span className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full"><PencilSquareIcon className="w-3 h-3" /> Línea libre · No mueve inventario</span>
+            <span className="inline-flex items-center gap-1 font-semibold text-indigo-600 bg-indigo-50 px-1.5 rounded-full"><PencilSquareIcon className="w-3 h-3" /> Línea libre · No mueve inventario</span>
           )}
           {item.item_type !== 'free_line' && item.product_sku && (
-            <span className="text-sm text-gray-500">SKU: {item.product_sku}</span>
+            <span className="text-gray-500">SKU: {item.product_sku}</span>
+          )}
+          {item.price_includes_tax && (
+            <span className="inline-flex items-center gap-1 text-blue-600 font-medium"><LightBulbIcon className="w-3 h-3" /> Precio incluye IVA</span>
+          )}
+          {item.has_tax === false && (
+            <span className="text-green-600 font-medium">✓ Exento de IVA</span>
           )}
         </div>
-        {item.price_includes_tax && (
-          <div className="inline-flex items-center gap-1 text-xs text-blue-600 mt-1 font-medium"><LightBulbIcon className="w-3 h-3" /> Precio incluye IVA</div>
-        )}
-        {item.has_tax === false && (
-          <div className="text-xs text-green-600 mt-1 font-medium">✓ Exento de IVA</div>
-        )}
       </td>
-      <td className="py-4 px-4">
+      <td className="py-1.5 px-2">
         <Input
           type="number"
           {...INPUT_CONFIG.quantity}
           value={item.quantity}
           onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
-          className="text-center w-full"
+          className="text-center w-full !py-1"
         />
       </td>
-      <td className="py-4 px-4">
+      <td className="py-1.5 px-2">
         <NumericInput
           value={item.unit_price}
           onChange={(e) => handleItemChange(index, 'unit_price', e.target.value)}
-          className="text-right w-full input"
+          className="text-right w-full input !py-1"
         />
       </td>
-      <td className="py-4 px-4">
+      <td className="py-1.5 px-2">
         <Input
           type="number"
           {...INPUT_CONFIG.percentage}
           value={item.discount_percentage}
           onChange={(e) => handleItemChange(index, 'discount_percentage', e.target.value)}
-          className="text-right w-full"
+          className="text-right w-full !py-1"
         />
       </td>
       {!(hideRemisionTax && formData.document_type === 'remision') && (
-      <td className="py-4 px-4">
+      <td className="py-1.5 px-2">
         <Input
           type="number"
           {...INPUT_CONFIG.percentage}
           value={item.tax_percentage}
           onChange={(e) => handleItemChange(index, 'tax_percentage', e.target.value)}
-          className={`text-right w-full ${
+          className={`text-right w-full !py-1 ${
             item.has_tax === false || item.price_includes_tax 
               ? 'bg-gray-100 cursor-not-allowed' 
               : ''
@@ -997,13 +1032,13 @@ function SaleFormPage() {
         />
       </td>
       )}
-      <td className="py-4 px-4 text-right">
-        <span className="font-semibold text-gray-900">
+      <td className="py-1.5 px-2 text-right">
+        <span className="text-sm font-semibold text-gray-900">
           {formatCurrency(item.total)}
         </span>
       </td>
       {technicians.length > 0 && (
-        <td className="py-4 px-4">
+        <td className="py-1.5 px-2">
           <select
             value={item.technician_id || ''}
             onChange={(e) => {
@@ -1011,7 +1046,7 @@ function SaleFormPage() {
               updated[index] = { ...updated[index], technician_id: e.target.value };
               setItems(updated);
             }}
-            className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
+            className="w-full text-xs border border-gray-200 rounded-lg px-1.5 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
           >
             <option value="">— ninguno —</option>
             {technicians.map(t => (
@@ -1020,11 +1055,11 @@ function SaleFormPage() {
           </select>
         </td>
       )}
-      <td className="py-4 px-4">
+      <td className="py-1.5 px-2">
         <button
           type="button"
           onClick={() => handleRemoveItem(index)}
-          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+          className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
         >
           <Trash2 className="w-4 h-4" />
         </button>
@@ -1039,7 +1074,7 @@ function SaleFormPage() {
   // se ve el combo en el PDF / factura DIAN; aquí siempre se editan las líneas.
   const renderComboGroup = (entry) => [
     <tr key={`combo-${entry.groupId}`} className="bg-emerald-50 border-t-2 border-emerald-200">
-      <td colSpan={columnsBeforeTotal - 1} className="py-2 px-4">
+      <td colSpan={columnsBeforeTotal - 1} className="py-1.5 px-2">
         <div className="flex flex-wrap items-center gap-2">
           <Layers className="w-4 h-4 text-emerald-600" />
           <span className="font-semibold text-gray-900">{entry.name}</span>
@@ -1055,14 +1090,14 @@ function SaleFormPage() {
           </select>
         </div>
       </td>
-      <td className="py-2 px-4 text-right text-xs text-gray-500">Total combo</td>
-      <td className="py-2 px-4 text-right font-semibold text-gray-900">{formatCurrency(entry.total)}</td>
+      <td className="py-1.5 px-2 text-right text-xs text-gray-500">Total combo</td>
+      <td className="py-1.5 px-2 text-right font-semibold text-gray-900">{formatCurrency(entry.total)}</td>
       {technicians.length > 0 && <td />}
-      <td className="py-2 px-4">
+      <td className="py-1.5 px-2">
         <button
           type="button"
           onClick={() => handleRemoveCombo(entry.groupId)}
-          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+          className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
           title="Quitar combo completo"
         >
           <Trash2 className="w-4 h-4" />
@@ -1073,21 +1108,54 @@ function SaleFormPage() {
   ];
 
   const totals = calculateTotals();
+  const showTaxColumn = !(hideRemisionTax && formData.document_type === 'remision');
+  const labelCls = 'block text-xs font-medium text-gray-600 mb-1';
+  const fieldCls = 'w-full px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500';
+  const freeLineCount = items.filter(i => i.item_type === 'free_line').length;
+  // Datos del vehículo plegables: abiertos de entrada solo si ya hay alguno.
+  const hasVehicleData = Boolean(formData.vehicle_plate || formData.vehicle_type || formData.vehicle_brand
+    || formData.vehicle_model || formData.vehicle_year || formData.mileage);
+  const vehicleOpen = showVehicle ?? hasVehicleData;
+  const vehicleSummary = [formData.vehicle_plate, [formData.vehicle_brand, formData.vehicle_model, formData.vehicle_year].filter(Boolean).join(' ')]
+    .filter(Boolean).join(' · ');
+
+  const addFreeLine = () => setItems([...items, calculateItemTotals({
+    item_type: 'free_line',
+    product_id: null,
+    product_name: '',
+    product_sku: null,
+    quantity: 1,
+    unit_price: 0,
+    discount_percentage: 0,
+    tax_percentage: 19,
+    price_includes_tax: false,
+    has_tax: true,
+  })]);
+
+  const scanIcon = (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+            d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+            d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+    </svg>
+  );
 
   return (
     <Layout>
-      <div className="space-y-4 max-w-7xl mx-auto" {...draft.bind}>
+      <div className="space-y-3 max-w-7xl mx-auto" {...draft.bind}>
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <div className="flex items-center gap-3 min-w-0">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
             <button
-              onClick={() => navigate(isCrmQuoteRoute ? '/crm/pipeline' : '/sales')}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
+              type="button"
+              onClick={() => navigate(isCrmQuoteRoute ? '/crm/pipeline' : isCrmQuoteMode ? '/quotes' : '/sales')}
+              className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
             >
               <ArrowLeft className="w-5 h-5 text-gray-600" />
             </button>
             <div className="min-w-0">
-              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 truncate">
+              <h1 className="text-lg sm:text-xl font-bold text-gray-900 truncate">
                 {isEditMode
                   ? (isCrmQuoteMode ? 'Editar Cotización' : 'Editar Venta')
                   : opportunityId
@@ -1096,7 +1164,7 @@ function SaleFormPage() {
                       ? 'Nueva Cotización'
                       : 'Nueva Venta'}
               </h1>
-              <p className="text-xs sm:text-sm text-gray-500 mt-0.5">
+              <p className="text-xs text-gray-500 truncate">
                 {isEditMode
                   ? (isCrmQuoteMode
                     ? 'Si la cotización ya se envió, cambiar los ítems la deja otra vez pendiente de aprobación'
@@ -1110,7 +1178,7 @@ function SaleFormPage() {
             </div>
           </div>
           <div className="flex gap-2 flex-shrink-0">
-            <Button type="button" variant="outline" onClick={() => {
+            <Button type="button" variant="outline" size="sm" onClick={() => {
               draft.clear();
               if (isEditMode) navigate(isCrmQuoteMode ? `/quotes/${id}` : `/sales/${id}`, { state: location.state });
               else navigate(isCrmQuoteRoute ? '/crm/pipeline' : isCrmQuoteMode ? '/quotes' : '/sales');
@@ -1118,6 +1186,7 @@ function SaleFormPage() {
               Cancelar
             </Button>
             <Button
+              size="sm"
               onClick={handleSubmit}
               disabled={loading || items.length === 0}
               className="bg-blue-600 hover:bg-blue-700"
@@ -1160,345 +1229,165 @@ function SaleFormPage() {
         )}
 
         {!isEditMode && opportunityId && (
-          <div className="flex items-start gap-2.5 px-4 py-3 bg-accent/[0.05] border border-accent/15 rounded-xl text-sm text-gray-700">
-            <Target className="w-4 h-4 text-accent flex-shrink-0 mt-0.5" />
+          <div className="flex items-start gap-2.5 px-3 py-2 bg-accent/[0.05] border border-accent/15 rounded-xl text-xs text-gray-700">
+            <Target className="w-4 h-4 text-accent flex-shrink-0" />
             <p>
-              Estás generando la cotización de una oportunidad del <strong>Pipeline</strong>. Cliente y valor estimado
-              ya quedaron precargados — reemplaza la línea de estimado por los productos o servicios reales antes de
-              guardar. Al guardar, la oportunidad pasará a la etapa <strong>Cotizado</strong> automáticamente.
+              Cotización de una oportunidad del <strong>Pipeline</strong>: cliente y valor estimado precargados. Reemplaza la
+              línea de estimado por los productos o servicios reales; al guardar, la oportunidad pasa a <strong>Cotizado</strong>.
             </p>
           </div>
         )}
 
-        {/* Content */}
-        <div>
-          <form onSubmit={handleSubmit}>
-            {/* Información General */}
-            <Card className="mb-6">
-              <div className="p-6">
-                <div className="flex items-center mb-6">
-                  <FileText className="w-5 h-5 text-blue-600 mr-2" />
-                  <h2 className="text-lg font-semibold text-gray-900">Información General</h2>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {/* Tipo de Documento — solo visible al editar un borrador de
-                      venta; una cotización sigue siéndolo hasta convertirla. */}
-                  {isEditMode && !isCrmQuoteMode && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Tipo de Documento
-                    </label>
-                    <select
-                      name="document_type"
-                      value={formData.document_type}
-                      onChange={handleInputChange}
-                      required
-                      className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                    >
-                      <option value="remision">Remisión</option>
-                      <option value="factura">Factura</option>
-                    </select>
-                  </div>
-                  )}
-
-                  {/* Fecha */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      <Calendar className="w-4 h-4 inline mr-1" />
-                      Fecha *
-                    </label>
-                    <Input
-                      type="date"
-                      name="sale_date"
-                      value={formData.sale_date}
-                      onChange={handleInputChange}
-                      required
-                      className="w-full"
-                    />
-                  </div>
-
-                  {/* Vigencia -- vacía al crear, el backend usa la del tenant (15 días por defecto). */}
-                  {isCrmQuoteMode && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        <Calendar className="w-4 h-4 inline mr-1" />
-                        Válida hasta
-                      </label>
-                      <Input
-                        type="date"
-                        name="quote_valid_until"
-                        value={formData.quote_valid_until}
-                        min={formData.sale_date}
-                        onChange={handleInputChange}
-                        className="w-full"
-                      />
-                      {!isEditMode && !formData.quote_valid_until && (
-                        <p className="text-xs text-gray-500 mt-1">Si la dejas vacía se usa la vigencia por defecto.</p>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Cliente */}
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      <User className="w-4 h-4 inline mr-1" />
-                      Cliente *
-                    </label>
-                    <div className="flex gap-2">
-                      <div className="flex-1">
-                        <Combobox
-                          placeholder="Buscar cliente por nombre, NIT o teléfono..."
-                          items={customers}
-                          value={formData.customer_id || null}
-                          displayValue={customerSearchTerm}
-                          onSelect={(customer) => {
-                            setFormData(prev => ({ ...prev, customer_id: customer.id }));
-                            setCustomerSearchTerm(customerLabel(customer));
-                          }}
-                          onClear={() => {
-                            setFormData(prev => ({ ...prev, customer_id: '' }));
-                            setCustomerSearchTerm('');
-                          }}
-                          getSearchText={c => `${customerLabel(c)} ${c.business_name || ''} ${c.tax_id || ''} ${c.phone || ''} ${c.email || ''}`}
-                          remoteSearch={q => customersApi.getAll({ search: q, limit: 30 }).then(r => r.data?.data || [])}
-                          disabled={showQuickCustomer}
-                          required={!showQuickCustomer && !formData.customer_id}
-                          panelMinWidth={320}
-                          renderItem={(customer, q) => (
-                            <div className="flex items-center justify-between gap-2">
-                              <div className="min-w-0">
-                                <p className="font-medium text-gray-900 dark:text-gray-100 truncate">
-                                  <HighlightMatch text={customerLabel(customer)} query={q} />
-                                </p>
-                                {(customer.tax_id || customer.phone) && (
-                                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                                    {customer.tax_id && <HighlightMatch text={customer.tax_id} query={q} />}
-                                    {customer.tax_id && customer.phone ? ' · ' : ''}
-                                    {customer.phone && <HighlightMatch text={customer.phone} query={q} />}
-                                  </p>
-                                )}
-                              </div>
-                              {customer.customer_type === 'company' && (
-                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 flex-shrink-0">Empresa</span>
-                              )}
-                            </div>
+        <form onSubmit={handleSubmit} className="space-y-3">
+          {/* Datos generales */}
+          <div className="card !p-3">
+            <div className="grid grid-cols-2 md:grid-cols-6 lg:grid-cols-12 gap-x-3 gap-y-2 items-start">
+              {/* Cliente -- vacío = CONSUMIDOR FINAL (lo asigna el backend al guardar) */}
+              <div className="col-span-2 md:col-span-6 lg:col-span-4">
+                <label className={labelCls}>
+                  <User className="w-3.5 h-3.5 inline mr-1" />
+                  Cliente
+                </label>
+                <div className="flex gap-2">
+                  <div className="flex-1 min-w-0">
+                    <Combobox
+                      placeholder="Consumidor final (222222222222) — busca por nombre, NIT o teléfono"
+                      items={customers}
+                      value={formData.customer_id || null}
+                      displayValue={customerSearchTerm}
+                      onSelect={(customer) => {
+                        setFormData(prev => ({ ...prev, customer_id: customer.id }));
+                        setCustomerSearchTerm(customerLabel(customer));
+                      }}
+                      onClear={() => {
+                        setFormData(prev => ({ ...prev, customer_id: '' }));
+                        setCustomerSearchTerm('');
+                      }}
+                      getSearchText={c => `${customerLabel(c)} ${c.business_name || ''} ${c.tax_id || ''} ${c.phone || ''} ${c.email || ''}`}
+                      remoteSearch={q => customersApi.getAll({ search: q, limit: 30 }).then(r => r.data?.data || [])}
+                      disabled={showQuickCustomer}
+                      panelMinWidth={320}
+                      renderItem={(customer, q) => (
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="font-medium text-gray-900 dark:text-gray-100 truncate">
+                              <HighlightMatch text={customerLabel(customer)} query={q} />
+                            </p>
+                            {(customer.tax_id || customer.phone) && (
+                              <p className="text-xs text-gray-500 dark:text-gray-400">
+                                {customer.tax_id && <HighlightMatch text={customer.tax_id} query={q} />}
+                                {customer.tax_id && customer.phone ? ' · ' : ''}
+                                {customer.phone && <HighlightMatch text={customer.phone} query={q} />}
+                              </p>
+                            )}
+                          </div>
+                          {customer.customer_type === 'company' && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 flex-shrink-0">Empresa</span>
                           )}
-                        />
-                      </div>
-                      <Button
-                        type="button"
-                        variant={showQuickCustomer ? "primary" : "outline"}
-                        onClick={() => {
-                          setShowQuickCustomer(!showQuickCustomer);
-                          if (!showQuickCustomer) {
-                            setCustomerSearchTerm('');
-                            setFormData(prev => ({ ...prev, customer_id: '' }));
-                          }
-                        }}
-                        className="px-4"
-                        title="Agregar cliente rápido"
-                      >
-                        <Plus className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
-
-                  {/* Bodega */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      <Package className="w-4 h-4 inline mr-1" />
-                      Bodega
-                    </label>
-                    <select
-                      name="warehouse_id"
-                      value={formData.warehouse_id}
-                      onChange={handleInputChange}
-                      className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                    >
-                      <option value="">Sin bodega específica</option>
-                      {warehouses.map(warehouse => (
-                        <option key={warehouse.id} value={warehouse.id}>
-                          {warehouse.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                {/* Placa del Vehículo y Kilometraje — controlado por configuración del tenant */}
-                {vehiclePlateEnabled && (
-                <>
-                {/* Placa del Vehículo */}
-                <div className="mt-6">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Placa del Vehículo
-                    <span className="text-gray-400 text-xs ml-2">(Opcional)</span>
-                  </label>
-                  <input
-                    type="text"
-                    name="vehicle_plate"
-                    value={formData.vehicle_plate}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all uppercase"
-                    placeholder="ABC-123 o ABC123"
-                    maxLength="20"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Ingrese la placa del vehículo si aplica
-                  </p>
-                </div>
-
-                {/* Tipo de vehículo — mismo gate que la placa. NO se puede
-                    condicionar a document_type==='cotizacion' porque una
-                    venta nueva siempre nace con document_type=null (se
-                    decide hasta "Confirmar"); mostrarlo aquí es gratis si
-                    luego no se usa. */}
-                {vehiclePlateEnabled && (
-                  <div className="mt-3">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Tipo de vehículo
-                      <span className="text-gray-400 text-xs ml-2">(para poder agregar diagrama de intervención si es cotización)</span>
-                    </label>
-                    <select
-                      name="vehicle_type"
-                      value={formData.vehicle_type}
-                      onChange={handleInputChange}
-                      className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                    >
-                      <option value="">Sin especificar</option>
-                      <option value="automovil">Automóvil</option>
-                      <option value="camioneta">Camioneta</option>
-                      <option value="motocicleta">Motocicleta</option>
-                      <option value="camion">Camión</option>
-                      <option value="otro">Otro</option>
-                    </select>
-
-                    {/* El diagrama solo puede vivir en una cotización que YA
-                        existe (las marcas se guardan contra /sales/:id/...),
-                        así que en "Nueva Venta" solo se puede avisar; en
-                        "Editar Venta" (currentSale.id ya existe) se embebe
-                        directo aquí, igual que pidió el usuario. */}
-                    {formData.vehicle_type && enabledModules?.includes('workshop') && (
-                      isEditMode && currentSale ? (
-                        <div className="mt-3">
-                          <DiagramMapEditor
-                            entityType="sale"
-                            entityId={currentSale.id}
-                            vehicleType={formData.vehicle_type}
-                            disabled={currentSale.status !== 'draft'}
-                          />
                         </div>
-                      ) : (
-                        <p className="text-xs text-amber-600 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2 mt-2">
-                          Guarda la cotización primero — el diagrama de intervención aparecerá en la página de la cotización justo después de guardarla.
-                        </p>
-                      )
-                    )}
-                  </div>
-                )}
-
-                {/* Marca / Línea / Año del vehículo */}
-                <div className="grid grid-cols-3 gap-3 mt-3">
-                  <div className="relative">
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Marca</label>
-                    <input
-                      type="text"
-                      name="vehicle_brand"
-                      value={formData.vehicle_brand}
-                      onChange={handleInputChange}
-                      onFocus={() => setShowBrandDropdown(true)}
-                      onBlur={() => setTimeout(() => setShowBrandDropdown(false), 200)}
-                      autoComplete="off"
-                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-sm"
-                      placeholder="Chevrolet"
-                    />
-                    {showBrandDropdown && brandSuggestions.length > 0 && (
-                      <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-40 overflow-y-auto">
-                        {brandSuggestions.map(b => (
-                          <button
-                            key={b}
-                            type="button"
-                            onMouseDown={(e) => {
-                              e.preventDefault();
-                              setFormData(prev => ({ ...prev, vehicle_brand: b }));
-                              setShowBrandDropdown(false);
-                            }}
-                            className="w-full text-left px-3 py-1.5 text-sm hover:bg-blue-50"
-                          >
-                            {b}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                    {showBrandDropdown && formData.vehicle_brand?.trim() && brandSuggestions.length === 0 && (
-                      <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg px-3 py-2">
-                        <p className="text-xs text-gray-400">
-                          Sin sugerencias — puedes escribir la marca directamente
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Línea</label>
-                    <input
-                      type="text"
-                      name="vehicle_model"
-                      value={formData.vehicle_model}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-sm"
-                      placeholder="Aveo"
+                      )}
                     />
                   </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Año</label>
-                    <input
-                      type="number"
-                      name="vehicle_year"
-                      value={formData.vehicle_year}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-sm"
-                      placeholder="2015"
-                    />
-                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={showQuickCustomer ? "primary" : "outline"}
+                    onClick={() => {
+                      setShowQuickCustomer(!showQuickCustomer);
+                      if (!showQuickCustomer) {
+                        setCustomerSearchTerm('');
+                        setFormData(prev => ({ ...prev, customer_id: '' }));
+                      }
+                    }}
+                    title="Agregar cliente rápido"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </Button>
                 </div>
-                <p className="text-xs text-gray-500 mt-1">
-                  Marca y línea se usan para filtrar productos compatibles al buscar
-                </p>
+              </div>
 
-                {/* Kilometraje */}
-                <div className="mt-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Kilometraje
-                    <span className="text-gray-400 text-xs ml-2">(Opcional)</span>
-                  </label>
-                  <NumericInput
-                    name="mileage"
-                    value={formData.mileage}
+              {/* Tipo de Documento — solo visible al editar un borrador de
+                  venta; una cotización sigue siéndolo hasta convertirla. */}
+              {isEditMode && !isCrmQuoteMode && (
+                <div className="col-span-1 md:col-span-2 lg:col-span-2">
+                  <label className={labelCls}>Tipo de documento</label>
+                  <select
+                    name="document_type"
+                    value={formData.document_type}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                    placeholder="Ej: 85.000"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Kilometraje del vehículo al momento del servicio
-                  </p>
+                    required
+                    className={fieldCls}
+                  >
+                    <option value="remision">Remisión</option>
+                    <option value="factura">Factura</option>
+                  </select>
                 </div>
-                </>
-                )}
+              )}
 
-                {/* Técnico — controlado por configuración del tenant */}
-                {technicianFieldEnabled && (
-                <div className="mt-6">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    <WrenchScrewdriverIcon className="w-4 h-4 inline mr-1" />
-                    Técnico Asignado
-                    <span className="text-gray-400 text-xs ml-2">(Opcional)</span>
+              <div className="col-span-1 md:col-span-2 lg:col-span-2">
+                <label className={labelCls}>
+                  <Calendar className="w-3.5 h-3.5 inline mr-1" />
+                  Fecha *
+                </label>
+                <input
+                  type="date"
+                  name="sale_date"
+                  value={formData.sale_date}
+                  onChange={handleInputChange}
+                  required
+                  className={fieldCls}
+                />
+              </div>
+
+              {/* Vigencia -- vacía al crear, el backend usa la del tenant (15 días por defecto). */}
+              {isCrmQuoteMode && (
+                <div className="col-span-1 md:col-span-2 lg:col-span-2">
+                  <label className={labelCls}>Válida hasta</label>
+                  <input
+                    type="date"
+                    name="quote_valid_until"
+                    value={formData.quote_valid_until}
+                    min={formData.sale_date}
+                    onChange={handleInputChange}
+                    title={!isEditMode ? 'Si la dejas vacía se usa la vigencia por defecto' : undefined}
+                    className={fieldCls}
+                  />
+                </div>
+              )}
+
+              <div className={`col-span-1 md:col-span-2 ${isCrmQuoteMode ? 'lg:col-span-2' : 'lg:col-span-3'}`}>
+                <label className={labelCls}>
+                  <Package className="w-3.5 h-3.5 inline mr-1" />
+                  Bodega
+                </label>
+                <select
+                  name="warehouse_id"
+                  value={formData.warehouse_id}
+                  onChange={handleInputChange}
+                  className={fieldCls}
+                >
+                  <option value="">Sin bodega específica</option>
+                  {warehouses.map(warehouse => (
+                    <option key={warehouse.id} value={warehouse.id}>
+                      {warehouse.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Técnico — controlado por configuración del tenant */}
+              {technicianFieldEnabled && (
+                <div className="col-span-1 md:col-span-3 lg:col-span-3">
+                  <label className={labelCls}>
+                    <WrenchScrewdriverIcon className="w-3.5 h-3.5 inline mr-1" />
+                    Técnico asignado
                   </label>
                   <select
                     name="technician_id"
                     value={formData.technician_id}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                    className={fieldCls}
+                    title={Array.isArray(technicians) && technicians.length === 0 ? 'No hay técnicos activos. Crea usuarios con rol "Técnico" en el módulo de usuarios.' : undefined}
                   >
                     <option value="">Sin técnico asignado</option>
                     {Array.isArray(technicians) && technicians.map(tech => (
@@ -1507,287 +1396,337 @@ function SaleFormPage() {
                       </option>
                     ))}
                   </select>
-                  {technicianFieldEnabled && Array.isArray(technicians) && technicians.length === 0 && (
-                    <p className="text-xs text-amber-600 mt-1">
-                      No hay técnicos activos. Crea usuarios con rol &quot;Técnico&quot; en el módulo de usuarios.
-                    </p>
-                  )}
                 </div>
-                )}
+              )}
 
-                {/* Cliente Rápido */}
-                {showQuickCustomer && (
-                  <div className="mt-6 p-5 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg">
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-sm font-semibold text-blue-900 flex items-center">
-                        <User className="w-4 h-4 mr-2" />
-                        Cliente Rápido
-                      </h3>
-                      <button
-                        type="button"
-                        onClick={() => setShowQuickCustomer(false)}
-                        className="text-blue-600 hover:text-blue-800"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <Input
-                        label="Nombre Completo *"
-                        name="full_name"
-                        value={quickCustomer.full_name}
-                        onChange={handleQuickCustomerChange}
-                        required={showQuickCustomer}
-                        placeholder="Juan Pérez"
-                      />
-                      <Input
-                        label="NIT / Cédula"
-                        name="tax_id"
-                        value={quickCustomer.tax_id}
-                        onChange={handleQuickCustomerChange}
-                        placeholder="900123456-7"
-                      />
-                      <Input
-                        label="Email"
-                        type="email"
-                        name="email"
-                        value={quickCustomer.email}
-                        onChange={handleQuickCustomerChange}
-                        placeholder="cliente@ejemplo.com"
-                      />
-                      <Input
-                        label="Teléfono"
-                        name="phone"
-                        value={quickCustomer.phone}
-                        onChange={handleQuickCustomerChange}
-                        placeholder="3001234567"
-                      />
-                    </div>
-                  </div>
-                )}
+              <ProjectSelect
+                className={`col-span-2 md:col-span-3 ${isCrmQuoteMode ? 'lg:col-span-2' : 'lg:col-span-3'} [&_label]:text-xs [&_label]:text-gray-600 [&_select]:py-1.5`}
+                value={formData.project_id}
+                currentProject={currentProject}
+                onChange={(projectId) => setFormData(prev => ({ ...prev, project_id: projectId }))}
+              />
+            </div>
 
-                {/* Notas */}
-                <div className="mt-6">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Notas adicionales
-                  </label>
-                  <textarea
-                    name="notes"
-                    value={formData.notes}
-                    onChange={handleInputChange}
-                    rows={3}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none transition-all"
-                    placeholder="Observaciones, condiciones especiales, etc..."
-                  />
+            {/* Cliente Rápido */}
+            {showQuickCustomer && (
+              <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-xs font-semibold text-blue-900 flex items-center">
+                    <User className="w-3.5 h-3.5 mr-1.5" />
+                    Cliente rápido
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => setShowQuickCustomer(false)}
+                    className="text-blue-600 hover:text-blue-800"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
                 </div>
-              </div>
-            </Card>
-
-            {/* Productos */}
-            <Card className="mb-6">
-              <div className="p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center">
-                    <ShoppingCart className="w-5 h-5 text-blue-600 mr-2" />
-                    <h2 className="text-lg font-semibold text-gray-900">
-                      Productos ({items.length})
-                    </h2>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      type="button"
-                      onClick={() => setShowProductSearch(true)}
-                      className="bg-blue-600 hover:bg-blue-700"
-                    >
-                      <Plus className="w-4 h-4 mr-2" />
-                      Agregar Producto
-                    </Button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const newFreeLine = {
-                          item_type: 'free_line',
-                          product_id: null,
-                          product_name: '',
-                          product_sku: null,
-                          quantity: 1,
-                          unit_price: 0,
-                          discount_percentage: 0,
-                          tax_percentage: 19,
-                          price_includes_tax: false,
-                          has_tax: true,
-                        };
-                        setItems([...items, calculateItemTotals(newFreeLine)]);
-                      }}
-                      className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors flex items-center gap-2 text-sm font-medium shadow-sm"
-                    >
-                      <Plus className="w-4 h-4" />
-                      Línea Libre
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setShowComboPicker(true)}
-                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors flex items-center gap-2 text-sm font-medium shadow-sm"
-                      title="Agregar un combo de productos/servicios"
-                    >
-                      <Layers className="w-4 h-4" />
-                      Combo
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setShowScanner(true)}
-                      className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors flex items-center gap-2 text-sm font-medium shadow-sm"
-                      title="Escanear código de barras con cámara o pistola USB"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
-                              d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
-                              d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                      </svg>
-                      Escanear
-                    </button>
-                  </div>
-                </div>
-
-                {/* Alternativas de equivalencia cuando no hay stock */}
-                {stockAlternatives.length > 0 && (
-                  <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                    <div className="flex items-center justify-between mb-2">
-                      <p className="text-xs font-semibold text-amber-800">
-                        Equivalentes disponibles ({stockAlternatives.length})
-                      </p>
-                      <button onClick={() => setStockAlternatives([])} className="text-amber-600 hover:text-amber-800 text-xs">✕ Cerrar</button>
-                    </div>
-                    <div className="space-y-1.5">
-                      {stockAlternatives.map(alt => (
-                        <button
-                          key={alt.product_id}
-                          onClick={() => {
-                            handleAddItem({
-                              id: alt.product_id,
-                              sku: alt.sku,
-                              name: alt.name,
-                              current_stock: alt.available_stock,
-                              base_price: alt.sale_price || alt.base_price,
-                              has_tax: true,
-                              tax_percentage: 19,
-                              product_type: 'simple',
-                              track_inventory: true
-                            });
-                            setStockAlternatives([]);
-                          }}
-                          className="w-full flex items-center justify-between p-2 bg-white border border-amber-200 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition text-left"
-                        >
-                          <div>
-                            <p className="text-sm font-medium text-gray-900">{alt.name}</p>
-                            <p className="text-xs text-gray-500">{alt.sku} · Stock: <span className="text-green-600 font-medium">{alt.available_stock}</span></p>
-                          </div>
-                          <span className="text-xs font-medium text-blue-600">Agregar al carrito</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {items.length === 0 ? (
-                  <div className="text-center py-16 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
-                    <ShoppingCart className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-600 font-medium mb-2">No hay productos agregados</p>
-                    <p className="text-sm text-gray-500 mb-4">
-                      Agrega productos para crear la venta
-                    </p>
-                    <div className="flex gap-2 justify-center">
-                      <Button
-                        type="button"
-                        onClick={() => setShowProductSearch(true)}
-                        variant="outline"
-                      >
-                        <Plus className="w-4 h-4 mr-2" />
-                        Agregar Producto
-                      </Button>
-                      <button
-                        type="button"
-                        onClick={() => setShowScanner(true)}
-                        className="px-4 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors flex items-center gap-2"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
-                                d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
-                                d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                        </svg>
-                        Escanear
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead className="bg-gray-50 border-b-2 border-gray-200">
-                        <tr>
-                          <th className="text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                            Producto
-                          </th>
-                          <th className="text-center py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wider w-28">
-                            Cantidad
-                          </th>
-                          <th className="text-right py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wider w-32">
-                            Precio Unit.
-                          </th>
-                          <th className="text-right py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wider w-24">
-                            Desc. %
-                          </th>
-                          {!(hideRemisionTax && formData.document_type === 'remision') && (
-                          <th className="text-right py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wider w-24">
-                            IVA %
-                          </th>
-                          )}
-                          <th className="text-right py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wider w-32">
-                            Total
-                          </th>
-                          {technicians.length > 0 && (
-                            <th className="text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wider w-36">
-                              Técnico
-                            </th>
-                          )}
-                          <th className="w-12"></th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-200">
-                        {groupDocumentItems(items).map(entry => (entry.type === 'line'
-                          ? renderItemRow(entry.item, entry.index)
-                          : renderComboGroup(entry)))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-            </Card>
-
-            {/* Aviso líneas libres - solo formulario, no aparece en PDF */}
-            {items.some(i => i.item_type === 'free_line') && (
-              <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-4">
-                <svg className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
-                </svg>
-                <div>
-                  <p className="text-sm font-semibold text-amber-800">Las líneas libres no afectan el inventario</p>
-                  <p className="text-xs text-amber-700 mt-0.5">
-                    {items.filter(i => i.item_type === 'free_line').length === 1
-                      ? 'Tienes 1 línea libre en esta venta. '
-                      : `Tienes ${items.filter(i => i.item_type === 'free_line').length} líneas libres en esta venta. `}
-                    Si vendiste un repuesto físico, usa <strong>Agregar Producto</strong> para que el stock se descuente automáticamente.
-                  </p>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                  <input name="full_name" value={quickCustomer.full_name} onChange={handleQuickCustomerChange}
+                    required={showQuickCustomer} placeholder="Nombre completo *" className={fieldCls} />
+                  <input name="tax_id" value={quickCustomer.tax_id} onChange={handleQuickCustomerChange}
+                    placeholder="NIT / Cédula" className={fieldCls} />
+                  <input type="email" name="email" value={quickCustomer.email} onChange={handleQuickCustomerChange}
+                    placeholder="Email" className={fieldCls} />
+                  <input name="phone" value={quickCustomer.phone} onChange={handleQuickCustomerChange}
+                    placeholder="Teléfono" className={fieldCls} />
                 </div>
               </div>
             )}
 
-            {/* Factura AIU -- IVA solo sobre la Utilidad (ver backend services/sales/aiu.service.js) */}
-            {/* Solo si el tenant habilitó AIU, o si la venta ya es AIU (editarla). */}
-            {items.length > 0 && formData.document_type !== 'remision' && (aiuDefaults.enabled || formData.aiu_enabled) && (
-              <Card className="mb-6">
-                <div className="p-6 space-y-4">
+            {/* Vehículo (placa, tipo, marca/línea/año, km) — plegable; lo
+                controla la configuración del tenant. */}
+            {vehiclePlateEnabled && (
+              <div className="mt-2 border-t border-gray-100 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowVehicle(!vehicleOpen)}
+                  className="flex items-center gap-1.5 text-xs font-medium text-gray-600 hover:text-gray-900"
+                >
+                  <ChevronDown className={`w-3.5 h-3.5 transition-transform ${vehicleOpen ? '' : '-rotate-90'}`} />
+                  Vehículo <span className="font-normal text-gray-400">(opcional)</span>
+                  {!vehicleOpen && vehicleSummary && <span className="font-semibold text-gray-800 ml-1">{vehicleSummary}</span>}
+                </button>
+                {vehicleOpen && (
+                  <>
+                    <div className="grid grid-cols-2 md:grid-cols-6 gap-2 mt-2">
+                      <div>
+                        <label className={labelCls}>Placa</label>
+                        <input
+                          type="text"
+                          name="vehicle_plate"
+                          value={formData.vehicle_plate}
+                          onChange={handleInputChange}
+                          className={`${fieldCls} uppercase`}
+                          placeholder="ABC123"
+                          maxLength="20"
+                        />
+                      </div>
+                      {/* Tipo de vehículo — NO se puede condicionar a
+                          document_type==='cotizacion' porque una venta nueva
+                          nace con document_type=null (se decide al confirmar). */}
+                      <div>
+                        <label className={labelCls} title="Para poder agregar diagrama de intervención si es cotización">Tipo</label>
+                        <select
+                          name="vehicle_type"
+                          value={formData.vehicle_type}
+                          onChange={handleInputChange}
+                          className={fieldCls}
+                        >
+                          <option value="">Sin especificar</option>
+                          <option value="automovil">Automóvil</option>
+                          <option value="camioneta">Camioneta</option>
+                          <option value="motocicleta">Motocicleta</option>
+                          <option value="camion">Camión</option>
+                          <option value="otro">Otro</option>
+                        </select>
+                      </div>
+                      <div className="relative">
+                        <label className={labelCls} title="Marca y línea filtran los productos compatibles al buscar">Marca</label>
+                        <input
+                          type="text"
+                          name="vehicle_brand"
+                          value={formData.vehicle_brand}
+                          onChange={handleInputChange}
+                          onFocus={() => setShowBrandDropdown(true)}
+                          onBlur={() => setTimeout(() => setShowBrandDropdown(false), 200)}
+                          autoComplete="off"
+                          className={fieldCls}
+                          placeholder="Chevrolet"
+                        />
+                        {showBrandDropdown && brandSuggestions.length > 0 && (
+                          <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-40 overflow-y-auto">
+                            {brandSuggestions.map(b => (
+                              <button
+                                key={b}
+                                type="button"
+                                onMouseDown={(e) => {
+                                  e.preventDefault();
+                                  setFormData(prev => ({ ...prev, vehicle_brand: b }));
+                                  setShowBrandDropdown(false);
+                                }}
+                                className="w-full text-left px-3 py-1.5 text-sm hover:bg-blue-50"
+                              >
+                                {b}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <div>
+                        <label className={labelCls}>Línea</label>
+                        <input
+                          type="text"
+                          name="vehicle_model"
+                          value={formData.vehicle_model}
+                          onChange={handleInputChange}
+                          className={fieldCls}
+                          placeholder="Aveo"
+                        />
+                      </div>
+                      <div>
+                        <label className={labelCls}>Año</label>
+                        <input
+                          type="number"
+                          name="vehicle_year"
+                          value={formData.vehicle_year}
+                          onChange={handleInputChange}
+                          className={fieldCls}
+                          placeholder="2015"
+                        />
+                      </div>
+                      <div>
+                        <label className={labelCls}>Kilometraje</label>
+                        <NumericInput
+                          name="mileage"
+                          value={formData.mileage}
+                          onChange={handleInputChange}
+                          className={fieldCls}
+                          placeholder="85.000"
+                        />
+                      </div>
+                    </div>
+
+                    {/* El diagrama solo puede vivir en una cotización que YA
+                        existe (las marcas se guardan contra /sales/:id/...):
+                        al crear solo se avisa; al editar se embebe aquí. */}
+                    {formData.vehicle_type && enabledModules?.includes('workshop') && (
+                      isEditMode && currentSale ? (
+                        <div className="mt-2">
+                          <DiagramMapEditor
+                            entityType="sale"
+                            entityId={currentSale.id}
+                            vehicleType={formData.vehicle_type}
+                            disabled={currentSale.status !== 'draft'}
+                          />
+                        </div>
+                      ) : (
+                        <p className="text-xs text-amber-600 bg-amber-50 border border-amber-100 rounded-lg px-3 py-1.5 mt-2">
+                          Guarda la cotización primero — el diagrama de intervención aparecerá en la página de la cotización justo después de guardarla.
+                        </p>
+                      )
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_310px] gap-3 items-start">
+            {/* Productos */}
+            <div className="card !p-3 min-w-0">
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                <div className="flex items-center">
+                  <ShoppingCart className="w-4 h-4 text-blue-600 mr-1.5" />
+                  <h2 className="text-sm font-semibold text-gray-900">
+                    Productos ({items.length})
+                  </h2>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => setShowProductSearch(true)}
+                    className="bg-blue-600 hover:bg-blue-700"
+                  >
+                    <Plus className="w-4 h-4 mr-1" />
+                    Producto
+                  </Button>
+                  <button
+                    type="button"
+                    onClick={addFreeLine}
+                    className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors flex items-center gap-1 text-sm font-medium shadow-sm"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Línea libre
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowComboPicker(true)}
+                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors flex items-center gap-1 text-sm font-medium shadow-sm"
+                    title="Agregar un combo de productos/servicios"
+                  >
+                    <Layers className="w-4 h-4" />
+                    Combo
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowScanner(true)}
+                    className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors flex items-center gap-1 text-sm font-medium shadow-sm"
+                    title="Escanear código de barras con cámara o pistola USB"
+                  >
+                    {scanIcon}
+                    Escanear
+                  </button>
+                </div>
+              </div>
+
+              {/* Alternativas de equivalencia cuando no hay stock */}
+              {stockAlternatives.length > 0 && (
+                <div className="mb-2 p-2 bg-amber-50 border border-amber-200 rounded-lg">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <p className="text-xs font-semibold text-amber-800">
+                      Equivalentes disponibles ({stockAlternatives.length})
+                    </p>
+                    <button type="button" onClick={() => setStockAlternatives([])} className="text-amber-600 hover:text-amber-800 text-xs">✕ Cerrar</button>
+                  </div>
+                  <div className="space-y-1">
+                    {stockAlternatives.map(alt => (
+                      <button
+                        type="button"
+                        key={alt.product_id}
+                        onClick={() => handleAddAlternative(alt)}
+                        className="w-full flex items-center justify-between px-2 py-1.5 bg-white border border-amber-200 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition text-left"
+                      >
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">{alt.name}</p>
+                          <p className="text-xs text-gray-500">{alt.sku} · Stock: <span className="text-green-600 font-medium">{alt.available_stock}</span></p>
+                        </div>
+                        <span className="text-xs font-medium text-blue-600">Agregar</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {items.length === 0 ? (
+                <div className="text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                  <ShoppingCart className="w-10 h-10 text-gray-400 mx-auto mb-2" />
+                  <p className="text-sm text-gray-600 font-medium mb-3">No hay productos agregados</p>
+                  <div className="flex gap-2 justify-center">
+                    <Button type="button" size="sm" onClick={() => setShowProductSearch(true)} variant="outline">
+                      <Plus className="w-4 h-4 mr-1" />
+                      Agregar producto
+                    </Button>
+                    <button
+                      type="button"
+                      onClick={() => setShowScanner(true)}
+                      className="px-3 py-1.5 text-sm bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors flex items-center gap-1"
+                    >
+                      {scanIcon}
+                      Escanear
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-gray-50 border-b border-gray-200">
+                      <tr>
+                        <th className="text-left py-2 px-2 text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                          Producto
+                        </th>
+                        <th className="text-center py-2 px-2 text-xs font-semibold text-gray-600 uppercase tracking-wider w-16">
+                          Cant.
+                        </th>
+                        <th className="text-right py-2 px-2 text-xs font-semibold text-gray-600 uppercase tracking-wider w-28">
+                          Precio unit.
+                        </th>
+                        <th className="text-right py-2 px-2 text-xs font-semibold text-gray-600 uppercase tracking-wider w-20">
+                          Desc. %
+                        </th>
+                        {showTaxColumn && (
+                          <th className="text-right py-2 px-2 text-xs font-semibold text-gray-600 uppercase tracking-wider w-20">
+                            IVA %
+                          </th>
+                        )}
+                        <th className="text-right py-2 px-2 text-xs font-semibold text-gray-600 uppercase tracking-wider w-24">
+                          Total
+                        </th>
+                        {technicians.length > 0 && (
+                          <th className="text-left py-2 px-2 text-xs font-semibold text-gray-600 uppercase tracking-wider w-32">
+                            Técnico
+                          </th>
+                        )}
+                        <th className="w-9"></th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {groupDocumentItems(items).map(entry => (entry.type === 'line'
+                        ? renderItemRow(entry.item, entry.index)
+                        : renderComboGroup(entry)))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {/* Aviso líneas libres - solo formulario, no aparece en PDF */}
+              {freeLineCount > 0 && (
+                <p className="mt-2 text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-1.5">
+                  <strong>{freeLineCount === 1 ? '1 línea libre' : `${freeLineCount} líneas libres`}: no afectan el inventario.</strong>{' '}
+                  Si vendiste un repuesto físico, usa <strong>Producto</strong> para que el stock se descuente.
+                </p>
+              )}
+            </div>
+
+            {/* Resumen lateral */}
+            <div className="space-y-3 lg:sticky lg:top-4">
+              {/* Factura AIU -- IVA solo sobre la Utilidad (ver backend services/sales/aiu.service.js) */}
+              {/* Solo si el tenant habilitó AIU, o si la venta ya es AIU (editarla). */}
+              {items.length > 0 && formData.document_type !== 'remision' && (aiuDefaults.enabled || formData.aiu_enabled) && (
+                <div className="card !p-3 space-y-2">
                   <label className="flex items-start gap-2">
                     <input
                       type="checkbox"
@@ -1806,15 +1745,15 @@ function SaleFormPage() {
                       className="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                     />
                     <span className="text-sm text-gray-700">
-                      <span className="font-medium">Factura AIU</span> (Administración, Imprevistos, Utilidad)
+                      <span className="font-medium">Factura AIU</span>
                       <span className="block text-xs text-gray-500">Las líneas son el costo directo; el IVA se liquida solo sobre la Utilidad.</span>
                     </span>
                   </label>
                   {formData.aiu_enabled && (
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="grid grid-cols-3 gap-2">
                       {[
-                        { key: 'aiu_admin_pct', label: 'Administración %' },
-                        { key: 'aiu_unforeseen_pct', label: 'Imprevistos %' },
+                        { key: 'aiu_admin_pct', label: 'Admón. %' },
+                        { key: 'aiu_unforeseen_pct', label: 'Imprev. %' },
                         { key: 'aiu_profit_pct', label: 'Utilidad %' },
                       ].map(f => (
                         <label key={f.key} className="block">
@@ -1823,141 +1762,123 @@ function SaleFormPage() {
                             type="number" min="0" max="100" step="0.01"
                             value={formData[f.key]}
                             onChange={(e) => setFormData(d => ({ ...d, [f.key]: e.target.value }))}
-                            className="mt-1 w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            className="mt-0.5 w-full px-2 py-1 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                           />
                         </label>
                       ))}
-                      <label className="block sm:col-span-3">
+                      <label className="block col-span-3">
                         <span className="text-xs text-gray-600">Contrato de servicios AIU por concepto de</span>
                         <input
                           type="text"
                           value={formData.aiu_object}
                           onChange={(e) => setFormData(d => ({ ...d, aiu_object: e.target.value }))}
                           placeholder="Ej: mantenimiento preventivo de la flota"
-                          className="mt-1 w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          className="mt-0.5 w-full px-2 py-1 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         />
                       </label>
                     </div>
                   )}
                 </div>
-              </Card>
-            )}
+              )}
 
-            {/* Totales */}
-            {items.length > 0 && (
-              <Card className="mb-6">
-                <div className="p-6">
-                  <div className="max-w-md ml-auto">
-                    <div className="space-y-3">
-                      {(hideRemisionTax && formData.document_type === 'remision') ? (
-                        /* Remisión: mostrar solo el total (IVA incluido pero no discriminado) */
-                        <>
-                          {totals.discount > 0 && (
-                            <div className="flex justify-between text-sm text-red-600">
-                              <span>Descuento:</span>
-                              <span className="font-medium">
-                                -{formatCurrency(totals.discount)}
-                              </span>
-                            </div>
-                          )}
-                          {totals.globalDiscount > 0 && (
-                            <div className="flex justify-between text-sm text-red-600">
-                              <span>Descuento global:</span>
-                              <span className="font-medium">
-                                -{formatCurrency(totals.globalDiscount)}
-                              </span>
-                            </div>
-                          )}
-                          {!formData.aiu_enabled && <GlobalDiscountInput formData={formData} setFormData={setFormData} canDiscount={canApplyDiscount} />}
-                          <div className="border-t-2 border-gray-300 pt-3">
-                            <div className="flex justify-between items-center">
-                              <span className="text-lg font-bold text-gray-900">TOTAL:</span>
-                              <span className="text-2xl font-bold text-blue-600">
-                                {formatCurrency(totals.grandTotal)}
-                              </span>
-                            </div>
-                          </div>
-                        </>
-                      ) : (
-                        /* Factura / Cotización: mostrar subtotal + IVA + total discriminados */
-                        <>
-                          {totals.aiu && (
-                            <>
-                              <div className="flex justify-between text-sm text-gray-600">
-                                <span>Costo directo:</span>
-                                <span className="font-medium text-gray-900">{formatCurrency(totals.aiu.direct)}</span>
-                              </div>
-                              <div className="flex justify-between text-sm text-gray-600">
-                                <span>Administración ({toNumber(formData.aiu_admin_pct)}%):</span>
-                                <span className="font-medium text-gray-900">{formatCurrency(totals.aiu.admin)}</span>
-                              </div>
-                              <div className="flex justify-between text-sm text-gray-600">
-                                <span>Imprevistos ({toNumber(formData.aiu_unforeseen_pct)}%):</span>
-                                <span className="font-medium text-gray-900">{formatCurrency(totals.aiu.unforeseen)}</span>
-                              </div>
-                              <div className="flex justify-between text-sm text-gray-600">
-                                <span>Utilidad ({toNumber(formData.aiu_profit_pct)}%):</span>
-                                <span className="font-medium text-gray-900">{formatCurrency(totals.aiu.profit)}</span>
-                              </div>
-                            </>
-                          )}
-                          <div className="flex justify-between text-sm text-gray-600">
-                            <span>Subtotal:</span>
-                            <span className="font-medium text-gray-900">
-                              {formatCurrency(totals.aiu ? totals.aiu.subtotal : totals.subtotal)}
-                            </span>
-                          </div>
-
-                          {!totals.aiu && totals.discount > 0 && (
-                            <div className="flex justify-between text-sm text-red-600">
-                              <span>Descuento:</span>
-                              <span className="font-medium">
-                                -{formatCurrency(totals.discount)}
-                              </span>
-                            </div>
-                          )}
-
-                          <div className="flex justify-between text-sm text-gray-600">
-                            <span>{totals.aiu ? 'IVA sobre la Utilidad:' : 'IVA:'}</span>
-                            <span className="font-medium text-gray-900">
-                              {formatCurrency(totals.tax)}
-                            </span>
-                          </div>
-
-                          {!totals.aiu && totals.inc > 0 && (
-                            <div className="flex justify-between text-sm text-gray-600">
-                              <span>INC (impoconsumo):</span>
-                              <span className="font-medium text-gray-900">{formatCurrency(totals.inc)}</span>
-                            </div>
-                          )}
-
-                          {totals.globalDiscount > 0 && (
-                            <div className="flex justify-between text-sm text-red-600">
-                              <span>Descuento global:</span>
-                              <span className="font-medium">
-                                -{formatCurrency(totals.globalDiscount)}
-                              </span>
-                            </div>
-                          )}
-                          {!formData.aiu_enabled && <GlobalDiscountInput formData={formData} setFormData={setFormData} canDiscount={canApplyDiscount} />}
-
-                          <div className="border-t-2 border-gray-300 pt-3">
-                            <div className="flex justify-between items-center">
-                              <span className="text-lg font-bold text-gray-900">TOTAL:</span>
-                              <span className="text-2xl font-bold text-blue-600">
-                                {formatCurrency(totals.grandTotal)}
-                              </span>
-                            </div>
-                          </div>
-                        </>
-                      )}
+              {/* Totales */}
+              <div className="card !p-3 space-y-1.5">
+                {!showTaxColumn ? (
+                  /* Remisión: mostrar solo el total (IVA incluido pero no discriminado) */
+                  <>
+                    {totals.discount > 0 && (
+                      <div className="flex justify-between text-sm text-red-600">
+                        <span>Descuento:</span>
+                        <span className="font-medium">-{formatCurrency(totals.discount)}</span>
+                      </div>
+                    )}
+                    {totals.globalDiscount > 0 && (
+                      <div className="flex justify-between text-sm text-red-600">
+                        <span>Descuento global:</span>
+                        <span className="font-medium">-{formatCurrency(totals.globalDiscount)}</span>
+                      </div>
+                    )}
+                    {!formData.aiu_enabled && <GlobalDiscountInput formData={formData} setFormData={setFormData} canDiscount={canApplyDiscount} />}
+                  </>
+                ) : (
+                  /* Factura / Cotización: mostrar subtotal + IVA + total discriminados */
+                  <>
+                    {totals.aiu && (
+                      <>
+                        <div className="flex justify-between text-sm text-gray-600">
+                          <span>Costo directo:</span>
+                          <span className="font-medium text-gray-900">{formatCurrency(totals.aiu.direct)}</span>
+                        </div>
+                        <div className="flex justify-between text-sm text-gray-600">
+                          <span>Administración ({toNumber(formData.aiu_admin_pct)}%):</span>
+                          <span className="font-medium text-gray-900">{formatCurrency(totals.aiu.admin)}</span>
+                        </div>
+                        <div className="flex justify-between text-sm text-gray-600">
+                          <span>Imprevistos ({toNumber(formData.aiu_unforeseen_pct)}%):</span>
+                          <span className="font-medium text-gray-900">{formatCurrency(totals.aiu.unforeseen)}</span>
+                        </div>
+                        <div className="flex justify-between text-sm text-gray-600">
+                          <span>Utilidad ({toNumber(formData.aiu_profit_pct)}%):</span>
+                          <span className="font-medium text-gray-900">{formatCurrency(totals.aiu.profit)}</span>
+                        </div>
+                      </>
+                    )}
+                    <div className="flex justify-between text-sm text-gray-600">
+                      <span>Subtotal:</span>
+                      <span className="font-medium text-gray-900">
+                        {formatCurrency(totals.aiu ? totals.aiu.subtotal : totals.subtotal)}
+                      </span>
                     </div>
-                  </div>
+
+                    {!totals.aiu && totals.discount > 0 && (
+                      <div className="flex justify-between text-sm text-red-600">
+                        <span>Descuento:</span>
+                        <span className="font-medium">-{formatCurrency(totals.discount)}</span>
+                      </div>
+                    )}
+
+                    <div className="flex justify-between text-sm text-gray-600">
+                      <span>{totals.aiu ? 'IVA sobre la Utilidad:' : 'IVA:'}</span>
+                      <span className="font-medium text-gray-900">{formatCurrency(totals.tax)}</span>
+                    </div>
+
+                    {!totals.aiu && totals.inc > 0 && (
+                      <div className="flex justify-between text-sm text-gray-600">
+                        <span>INC (impoconsumo):</span>
+                        <span className="font-medium text-gray-900">{formatCurrency(totals.inc)}</span>
+                      </div>
+                    )}
+
+                    {totals.globalDiscount > 0 && (
+                      <div className="flex justify-between text-sm text-red-600">
+                        <span>Descuento global:</span>
+                        <span className="font-medium">-{formatCurrency(totals.globalDiscount)}</span>
+                      </div>
+                    )}
+                    {!formData.aiu_enabled && <GlobalDiscountInput formData={formData} setFormData={setFormData} canDiscount={canApplyDiscount} />}
+                  </>
+                )}
+                <div className="border-t-2 border-gray-300 pt-2 flex justify-between items-center">
+                  <span className="text-base font-bold text-gray-900">TOTAL:</span>
+                  <span className="text-xl font-bold text-blue-600">{formatCurrency(totals.grandTotal)}</span>
                 </div>
-              </Card>
-            )}
-          </form>
-        </div>
+              </div>
+
+              {/* Notas */}
+              <div className="card !p-3">
+                <label className={labelCls}>Notas adicionales</label>
+                <textarea
+                  name="notes"
+                  value={formData.notes}
+                  onChange={handleInputChange}
+                  rows={2}
+                  className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-y"
+                  placeholder="Observaciones, condiciones especiales..."
+                />
+              </div>
+            </div>
+          </div>
+        </form>
 
         <ComboPickerModal
           isOpen={showComboPicker}

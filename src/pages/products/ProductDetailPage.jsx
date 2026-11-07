@@ -328,14 +328,16 @@ export default function ProductDetailPage() {
                                   onClick={() => navigate(
                                     doc.tipo === 'venta'
                                       ? `/sales/${doc.id}`
-                                      : `/workshop/work-orders/${doc.id}`
+                                      : doc.tipo === 'proyecto'
+                                        ? `/projects/${doc.id}`
+                                        : `/workshop/work-orders/${doc.id}`
                                   )}
                                   className="text-blue-600 hover:underline font-medium"
                                 >
                                   {doc.numero || doc.id}
                                 </button>
                                 <span className="ml-1 text-xs text-gray-400">
-                                  ({doc.tipo === 'venta' ? 'Venta' : 'OT'})
+                                  ({doc.tipo === 'venta' ? 'Venta' : doc.tipo === 'proyecto' ? 'Proyecto' : 'OT'})
                                 </span>
                               </td>
                               <td className="py-1.5 pr-4 text-gray-700">{doc.cliente || '—'}</td>

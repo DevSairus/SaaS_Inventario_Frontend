@@ -76,6 +76,11 @@ export const fixedAssetsAPI = {
   create: async (payload) => (await api.post('/accounting/fixed-assets', payload)).data,
   update: async (id, payload) => (await api.put(`/accounting/fixed-assets/${id}`, payload)).data,
   dispose: async (id, payload) => (await api.post(`/accounting/fixed-assets/${id}/dispose`, payload)).data,
+  changeEstimate: async (id, payload) => (await api.post(`/accounting/fixed-assets/${id}/change-estimate`, payload)).data,
+  impair: async (id, payload) => (await api.post(`/accounting/fixed-assets/${id}/impairments`, payload)).data,
+  recordUsage: async (id, payload) => (await api.post(`/accounting/fixed-assets/${id}/usage`, payload)).data,
+  getConfig: async () => (await api.get('/accounting/fixed-assets/config')).data,
+  getFiscalReport: async (year) => (await api.get('/accounting/fixed-assets/fiscal-report', { params: { year } })).data,
   runDepreciation: async (period) => (await api.post('/accounting/fixed-assets/run-depreciation', period ? { period } : {})).data,
 };
 
@@ -83,8 +88,19 @@ export const FIXED_ASSET_CATEGORY_LABELS = {
   vehiculo: 'Vehículo',
   maquinaria: 'Maquinaria',
   equipo_computo: 'Equipo de Cómputo',
+  equipo_comunicacion: 'Equipo de Comunicación',
   muebles_enseres: 'Muebles y Enseres',
+  construcciones: 'Construcciones y Edificaciones',
+  terrenos: 'Terrenos (no se deprecian)',
   otro: 'Otro',
+};
+
+export const DEPRECIATION_METHOD_LABELS = {
+  linea_recta: 'Línea recta',
+  saldos_decrecientes: 'Saldos decrecientes (doble saldo)',
+  unidades_produccion: 'Unidades de producción (horas, km, unidades)',
+  menor_cuantia: 'Menor cuantía (hasta 50 UVT, todo en el mes de compra)',
+  no_deprecia: 'No se deprecia',
 };
 
 export const loansAPI = {
@@ -182,6 +198,8 @@ export const financialReportsAPI = {
   trialBalance: async (params) => (await api.get('/accounting/reports/trial-balance', { params })).data,
   balanceGeneral: async (params) => (await api.get('/accounting/reports/balance-general', { params })).data,
   incomeStatement: async (params) => (await api.get('/accounting/reports/income-statement', { params })).data,
+  // Resultado por proyecto (dimensión de proyecto; params: from, to, project_id, include_drafts)
+  projects: async (params) => (await api.get('/accounting/reports/projects', { params })).data,
   libroDiario: async (params) => (await api.get('/accounting/reports/libro-diario', { params })).data,
   libroMayor: async (accountId, params) => (await api.get(`/accounting/reports/libro-mayor/${accountId}`, { params })).data,
   libroAuxiliar: async (params) => (await api.get('/accounting/reports/libro-auxiliar', { params })).data,
@@ -252,6 +270,9 @@ export const SOURCE_TYPE_LABELS = {
   payroll_payment: 'Pago de nómina',
   payroll_cesantias_year_end: 'Causación anual de cesantías',
   payroll_provision_adjustment: 'Ajuste anual de provisiones de nómina',
+  project_material: 'Materiales a obra (proyecto)',
+  project_labor: 'Nómina reclasificada a obras',
+  project_retention: 'Retención de garantía (obra)',
   payment: 'Recaudo de cartera',
   purchase_payment: 'Pago a proveedor',
   expense_payment: 'Pago de gasto',
@@ -265,6 +286,8 @@ export const SOURCE_TYPE_LABELS = {
   customer_advance_refund: 'Devolución de anticipo',
   customer_advance_reassignment: 'Traslado de anticipo',
   fixed_asset_depreciation: 'Depreciación',
+  fixed_asset_disposal: 'Baja de activo fijo',
+  fixed_asset_impairment: 'Deterioro de activo fijo',
   loan_payment: 'Pago de préstamo',
   reclassification: 'Reclasificación',
   ica_settlement: 'Liquidación ICA',

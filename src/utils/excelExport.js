@@ -869,6 +869,50 @@ export const downloadPurchaseLinesTemplate = buildOpeningBalanceTemplate(
   ]
 );
 
+/**
+ * Plantilla de la lista de materiales (BOM) de un proyecto. La hoja de datos
+ * va solo con encabezados: una fila de ejemplo se importaría como material
+ * real. Los encabezados son los que reconoce backend/src/services/projects/bomParser.js.
+ */
+export const downloadProjectBomTemplate = async (projectCode = '') => {
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet('Materiales');
+  ws.columns = [
+    { header: 'Código', key: 'code', width: 18 },
+    { header: 'Descripción', key: 'description', width: 48 },
+    { header: 'Cantidad', key: 'quantity', width: 12 },
+    { header: 'Unidad', key: 'unit', width: 10 },
+    { header: 'Costo unitario', key: 'unit_cost', width: 16 },
+  ];
+  ws.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+  ws.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEA580C' } };
+  ws.getColumn('quantity').numFmt = '#,##0.####';
+  ws.getColumn('unit_cost').numFmt = CURRENCY_FORMAT;
+  ws.views = [{ state: 'frozen', ySplit: 1 }];
+
+  const wsInstructions = wb.addWorksheet('Instrucciones');
+  [
+    '📋 INSTRUCCIONES — LISTA DE MATERIALES DEL PROYECTO',
+    '',
+    '1️⃣ Una fila por material, empezando en la fila 2 de la hoja "Materiales". No cambies los encabezados.',
+    '2️⃣ Código: SKU, código de barras o código del proveedor. Si no lo tienes, deja solo la Descripción:',
+    '   se busca el producto por nombre parecido y lo confirmas al cargar.',
+    '3️⃣ Obligatorio: Cantidad (mayor que cero) y Código o Descripción.',
+    '4️⃣ Unidad y Costo unitario son opcionales. Sin costo se usa el costo promedio del producto',
+    '   para el presupuesto de materiales.',
+    '5️⃣ Números sin símbolos ($, puntos de miles); decimales con coma o punto.',
+    '6️⃣ En el proyecto: Materiales → Cargar desde Excel → Subir archivo .xlsx (o copia y pega las filas).',
+    '',
+    'Ejemplo:',
+    'Código | Descripción | Cantidad | Unidad | Costo unitario',
+    'PAN-550 | Panel solar monocristalino 550 W | 24 | UND | 650000',
+    ' | Cable solar 6 mm rojo | 120 | MT | 3200',
+  ].forEach((line) => wsInstructions.addRow([line]));
+  wsInstructions.getColumn(1).width = 100;
+
+  await downloadWorkbook(wb, `plantilla_materiales${projectCode ? `_${projectCode}` : ''}.xlsx`);
+};
+
 // Número de una celda del Excel: acepta 12000, "12000", "12.000,5" o "12,000.5".
 const excelNumber = (v) => {
   if (v === null || v === undefined || v === '') return null;

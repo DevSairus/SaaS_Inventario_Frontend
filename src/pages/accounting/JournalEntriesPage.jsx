@@ -11,6 +11,8 @@ import Combobox, { HighlightMatch } from '../../components/common/Combobox';
 import ThirdPartyPicker, { ThirdPartyBadge } from '../../components/accounting/ThirdPartyPicker';
 import Pagination from '../../components/common/Pagination';
 import usePaginatedList from '../../hooks/usePaginatedList';
+import useTenantStore from '../../store/tenantStore';
+import { getProjectOptions } from '../../api/projects';
 
 const STATUS_STYLES = {
   draft: 'bg-yellow-100 text-yellow-800',
@@ -24,7 +26,7 @@ const toLocalDateString = (date) => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
 
-const emptyLine = () => ({ account_id: '', debit: '', credit: '', description: '', third_party: null });
+const emptyLine = () => ({ account_id: '', debit: '', credit: '', description: '', third_party: null, project_id: '' });
 
 // "Cliente: Juan Pérez · 123" para mostrar el tercero en una celda
 const ThirdPartyCell = ({ tp, muted = false, extra = 0 }) => {
@@ -54,6 +56,12 @@ const JournalEntriesPage = () => {
   const [showCreate, setShowCreate] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [accounts, setAccounts] = useState([]);
+  // Dimensión de proyecto por línea (solo con el módulo Proyectos).
+  const hasProjects = useTenantStore((s) => s.enabledModules?.includes('projects'));
+  const [projectOptions, setProjectOptions] = useState([]);
+  useEffect(() => {
+    if (hasProjects) getProjectOptions().then((r) => setProjectOptions(r.data || [])).catch(() => {});
+  }, [hasProjects]);
   const [entryForm, setEntryForm] = useState({ entry_date: toLocalDateString(new Date()), description: '', lines: [emptyLine(), emptyLine()] });
   const [saving, setSaving] = useState(false);
 
@@ -146,6 +154,7 @@ const JournalEntriesPage = () => {
           credit: Number(l.credit) > 0 ? l.credit : '',
           description: l.description || '',
           third_party: l.third_party || (l.third_party_id ? { id: l.third_party_id, name: 'Tercero', tax_id: '' } : null),
+          project_id: l.project_id || '',
         })),
       });
       setSelected(null);
@@ -190,6 +199,7 @@ const JournalEntriesPage = () => {
             credit: Number(l.credit || 0),
             description: l.description,
             third_party_id: l.third_party?.id || null,
+            project_id: l.project_id || null,
           })),
       };
       if (editingId) {
@@ -338,6 +348,7 @@ const JournalEntriesPage = () => {
                       <td className="py-2">
                         <div className="text-gray-900">{l.account?.code} - {l.account?.name}</div>
                         {l.description && <div className="text-xs text-gray-400">{l.description}</div>}
+                        {l.project && <div className="text-xs text-orange-700">Proyecto {l.project.code} · {l.project.name}</div>}
                       </td>
                       <td className="py-2 pl-3 max-w-[14rem]"><ThirdPartyCell tp={l.third_party} /></td>
                       <td className="py-2 text-right">{Number(l.debit) > 0 ? formatCurrency(l.debit) : '—'}</td>
@@ -412,6 +423,7 @@ const JournalEntriesPage = () => {
                     const acc = accounts.find((a) => a.id === line.account_id);
                     return (
                       <div key={idx} className="grid grid-cols-1 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_7rem_7rem_1.5rem] gap-2 items-center pb-2 md:pb-0 border-b md:border-0 border-gray-100">
+                        <div className="space-y-1 min-w-0">
                         <Combobox
                           placeholder="Buscar cuenta por código o nombre..."
                           items={accounts}
@@ -429,6 +441,14 @@ const JournalEntriesPage = () => {
                             </div>
                           )}
                         />
+                        {hasProjects && (
+                          <select value={line.project_id || ''} onChange={(e) => updateLine(idx, 'project_id', e.target.value)} className="w-full px-2 py-1 border border-gray-200 rounded-lg text-xs text-gray-600 bg-white">
+                            <option value="">Sin proyecto</option>
+                            {line.project_id && !projectOptions.some((p) => p.id === line.project_id) && <option value={line.project_id}>Proyecto actual</option>}
+                            {projectOptions.map((p) => <option key={p.id} value={p.id}>{p.code} · {p.name}</option>)}
+                          </select>
+                        )}
+                        </div>
                         <ThirdPartyPicker value={line.third_party} onChange={(tp) => updateLine(idx, 'third_party', tp)} />
                         <NumericInput placeholder="Débito" value={line.debit} onChange={(e) => updateLine(idx, 'debit', e.target.value)} className="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm" />
                         <NumericInput placeholder="Crédito" value={line.credit} onChange={(e) => updateLine(idx, 'credit', e.target.value)} className="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm" />

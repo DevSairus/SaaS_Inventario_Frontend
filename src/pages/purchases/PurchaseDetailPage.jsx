@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { usePurchasesStore } from '../../store/purchasesStore';
 import useProductsStore from '../../store/productsStore';
+import AttachmentsPanel from '../../components/attachments/AttachmentsPanel';
+import ApprovalStatusPanel from '../../components/approvals/ApprovalStatusPanel';
 import Layout from '../../components/layout/Layout';
 import ConfirmPurchaseWithPaymentModal from '../../components/purchases/ConfirmPurchaseWithPaymentModal';
 import SupportDocumentPanel from '../../components/dian/SupportDocumentPanel';
@@ -28,6 +30,17 @@ const PurchaseDetailPage = () => {
 
   const [showReceiveModal, setShowReceiveModal] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
+  // Sube cuando un intento de confirmar/recibir pidió aprobación: recarga el panel.
+  const [approvalKey, setApprovalKey] = useState(0);
+
+  // Confirmar o recibir una compra que necesita aprobación responde 409
+  // APPROVAL_REQUIRED: el backend ya pidió la aprobación; se muestra el aviso.
+  const afterBlockedAction = ({ notify = true } = {}) => {
+    const message = usePurchasesStore.getState().error;
+    if (notify && message) toast.error(message, { duration: 7000 });
+    setApprovalKey((k) => k + 1);
+    fetchPurchaseById(id);
+  };
   const [showSendModal, setShowSendModal] = useState(false);
   const [invoiceForm, setInvoiceForm] = useState({ invoice_number: '', due_date: '' });
   const [savingInvoice, setSavingInvoice] = useState(false);
@@ -97,6 +110,9 @@ const PurchaseDetailPage = () => {
     if (success) {
       setShowConfirmModal(false);
       toast.success('Compra confirmada exitosamente');
+    } else {
+      setShowConfirmModal(false);
+      afterBlockedAction();
     }
   };
 
@@ -120,6 +136,9 @@ const PurchaseDetailPage = () => {
         ? 'Recepción parcial registrada. La compra queda abierta para lo pendiente.'
         : 'Compra recibida completamente. Stock y precios actualizados.');
       setShowReceiveModal(false);
+    } else if (purchase.status === 'draft') {
+      setShowReceiveModal(false);
+      afterBlockedAction({ notify: false }); // el store ya mostró el mensaje
     }
   };
 
@@ -215,6 +234,9 @@ const PurchaseDetailPage = () => {
               </h1>
               <p className="text-gray-600 mt-1">
                 {formatDate(purchase.purchase_date)}
+                {purchase.project && (
+                  <> · Proyecto <Link to={`/projects/${purchase.project.id}`} className="text-blue-600 hover:underline">{purchase.project.code} · {purchase.project.name}</Link></>
+                )}
               </p>
             </div>
           </div>
@@ -222,6 +244,13 @@ const PurchaseDetailPage = () => {
             {getStatusBadge(purchase.status)}
           </div>
         </div>
+
+        <ApprovalStatusPanel
+          documentType="purchase"
+          documentId={purchase.id}
+          refreshKey={approvalKey}
+          onDecided={() => fetchPurchaseById(id)}
+        />
 
         {/* Orden confirmada sin factura ni mercancía: todavía es un pedido. */}
         {['confirmed', 'partially_received', 'received'].includes(purchase.status) && !purchase.invoice_number && (
@@ -818,6 +847,7 @@ const PurchaseDetailPage = () => {
           </div>
         </div>
       )}
+      <AttachmentsPanel entityType="purchase" entityId={purchase.id} title="Soportes de la compra" defaultKind="invoice_pdf" />
       </div>
     </Layout>
   );

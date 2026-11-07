@@ -51,6 +51,19 @@ export const employeesAPI = {
     const response = await api.get('/payroll/employees/contracts/expiring', { params: { days } });
     return response.data;
   },
+  // Libro de vacaciones: resumen de todos, detalle de uno y saldo inicial.
+  getVacationBooks: async (params = {}) => {
+    const response = await api.get('/payroll/employees/vacations', { params });
+    return response.data;
+  },
+  getVacationBook: async (id, params = {}) => {
+    const response = await api.get(`/payroll/employees/${id}/vacations`, { params });
+    return response.data;
+  },
+  setVacationOpening: async (id, data) => {
+    const response = await api.put(`/payroll/employees/${id}/vacations/opening`, data);
+    return response.data;
+  },
 };
 
 // ── Conceptos de nómina — /api/payroll/concepts ─────────────────────
@@ -162,6 +175,11 @@ export const payrollNovedadesAPI = {
   // o unpaid_days > 0 — el backend rechaza si no viene ninguno de los dos.
   create: async (novedadData) => {
     const response = await api.post('/payroll/novedades', novedadData);
+    return response.data;
+  },
+  // Días y valor sugeridos mientras se captura (fechas/cantidad → pesos).
+  suggest: async (data) => {
+    const response = await api.post('/payroll/novedades/suggest', data);
     return response.data;
   },
   delete: async (id) => {
