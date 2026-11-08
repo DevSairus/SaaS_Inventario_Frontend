@@ -8,6 +8,7 @@ import useRetentionCatalog from '../../hooks/useRetentionCatalog';
 import { FUND_TYPE_LABELS, resetFundSuppliersCache } from '../payroll/FundSupplierSelect';
 import { COLOMBIAN_BANKS } from '../../constants/colombianBanks';
 import { DOCUMENT_TYPE_OPTIONS } from '../../constants/documentTypes';
+import { COUNTRIES, countryName } from '../../constants/countries';
 
 
 const SupplierModal = ({ supplier, onClose }) => {
@@ -24,6 +25,7 @@ const SupplierModal = ({ supplier, onClose }) => {
     city: '',
     state: '',
     country: 'Colombia',
+    country_code: 'CO',
     postal_code: '',
     contact_name: '',
     contact_phone: '',
@@ -65,6 +67,7 @@ const SupplierModal = ({ supplier, onClose }) => {
         city: supplier.city || '',
         state: supplier.state || '',
         country: supplier.country || 'Colombia',
+        country_code: supplier.country_code || 'CO',
         postal_code: supplier.postal_code || '',
         contact_name: supplier.contact_name || '',
         contact_phone: supplier.contact_phone || '',
@@ -319,14 +322,18 @@ const SupplierModal = ({ supplier, onClose }) => {
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   País
                 </label>
-                <input
-                  type="text"
-                  name="country"
-                  value={formData.country}
-                  onChange={handleChange}
+                <select
+                  name="country_code"
+                  value={formData.country_code}
+                  onChange={(e) => {
+                    const code = e.target.value;
+                    // Del exterior: sin ciudad DIVIPOLA (la ciudad va en texto libre).
+                    setFormData(prev => ({ ...prev, country_code: code, country: countryName(code), ...(code !== 'CO' && { city_code: '' }) }));
+                  }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="País"
-                />
+                >
+                  {COUNTRIES.map(c => <option key={c.code} value={c.code}>{c.name}</option>)}
+                </select>
               </div>
 
               <div>
@@ -484,6 +491,13 @@ const SupplierModal = ({ supplier, onClose }) => {
             {/* Ciudad DIVIPOLA — sin esto el Documento Soporte cae en el
                 fallback hardcodeado de Bogotá D.C./Cundinamarca (ver
                 LEEME.md Fase 2, mismo bug ya corregido para Customer). */}
+            {formData.country_code !== 'CO' ? (
+              <p className="mt-4 text-sm text-blue-800 bg-blue-50 border border-blue-200 rounded-lg p-3">
+                Proveedor del exterior ({countryName(formData.country_code)}): el Documento Soporte sale como
+                vendedor <strong>no residente</strong>, con la <strong>Ciudad</strong> escrita en Dirección y el país.
+                Como tipo de identificación usa <strong>NIT de otro país</strong> (empresa) o <strong>Documento de identificación extranjero</strong>.
+              </p>
+            ) : (
             <div className="mt-4">
               <DivipolaCitySelect
                 departmentCode={formData.city_code ? formData.city_code.substring(0, 2) : ''}
@@ -502,6 +516,7 @@ const SupplierModal = ({ supplier, onClose }) => {
                 "Ciudad" de texto libre en Dirección.
               </p>
             </div>
+            )}
 
             <label className="flex items-start mt-4 bg-amber-50 border border-amber-200 rounded-lg p-3">
               <input

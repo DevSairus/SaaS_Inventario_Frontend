@@ -28,6 +28,7 @@ import DivipolaCitySelect from '../common/DivipolaCitySelect';
 import { suppliersAPI } from '../../api/suppliers';
 import { expensesAPI } from '../../api/expenses';
 import { DOCUMENT_TYPE_OPTIONS } from '../../constants/documentTypes';
+import { COUNTRIES, countryName } from '../../constants/countries';
 
 
 export default function AdHocSellerModal({
@@ -42,6 +43,7 @@ export default function AdHocSellerModal({
   const [taxId, setTaxId] = useState('');
   const [personType, setPersonType] = useState('natural');
   const [documentType, setDocumentType] = useState('13');
+  const [countryCode, setCountryCode] = useState('CO');
   const [cityCode, setCityCode] = useState('');
   const [city, setCity] = useState('');
   const [state, setState] = useState('');
@@ -51,11 +53,25 @@ export default function AdHocSellerModal({
   const [saving, setSaving] = useState(false);
 
   const busy = submitting || saving;
+  const foreign = countryCode !== 'CO';
+
+  // Del exterior: ciudad en texto libre y tipo de identificación extranjero.
+  const changeCountry = (code) => {
+    setCountryCode(code);
+    setCityCode('');
+    setCity('');
+    setState('');
+    if (code !== 'CO') {
+      setDocumentType(personType === 'natural' ? '42' : '50');
+    } else if (['42', '50'].includes(documentType)) {
+      setDocumentType(personType === 'natural' ? '13' : '31');
+    }
+  };
 
   const validate = () => {
     if (!name.trim()) return 'El nombre del vendedor es obligatorio';
     if (!taxId.trim()) return 'El número de identificación es obligatorio';
-    if (!cityCode) return 'Selecciona la ciudad del vendedor';
+    if (foreign ? !city.trim() : !cityCode) return foreign ? 'Escribe la ciudad del vendedor' : 'Selecciona la ciudad del vendedor';
     return null;
   };
 
@@ -68,8 +84,9 @@ export default function AdHocSellerModal({
       tax_id: taxId.trim(),
       person_type: personType,
       document_type: documentType,
-      city_code: cityCode,
-      city,
+      country_code: countryCode,
+      city_code: foreign ? undefined : cityCode,
+      city: city.trim(),
       state,
       address: address || undefined,
       email: email || undefined,
@@ -92,7 +109,8 @@ export default function AdHocSellerModal({
         state: seller.state,
         address: seller.address || '',
         email: seller.email || '',
-        country: 'Colombia',
+        country: countryName(seller.country_code),
+        country_code: seller.country_code,
         is_obligated_to_invoice: false,
       });
       const supplier = supplierRes.data;
@@ -137,7 +155,7 @@ export default function AdHocSellerModal({
               value={taxId}
               onChange={e => setTaxId(e.target.value)}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-              placeholder="Cédula o NIT"
+              placeholder={foreign ? 'Tax ID / EIN / VAT' : 'Cédula o NIT'}
             />
           </div>
           <div>
@@ -166,14 +184,41 @@ export default function AdHocSellerModal({
           </select>
         </div>
 
-        <DivipolaCitySelect
-          required
-          departmentCode={cityCode ? cityCode.substring(0, 2) : ''}
-          cityCode={cityCode}
-          onChange={({ cityCode: cc, cityName, departmentName }) => {
-            setCityCode(cc); setCity(cityName); setState(departmentName);
-          }}
-        />
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">País</label>
+          <select
+            value={countryCode}
+            onChange={e => changeCountry(e.target.value)}
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+          >
+            {COUNTRIES.map(c => <option key={c.code} value={c.code}>{c.name}</option>)}
+          </select>
+        </div>
+
+        {foreign ? (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Ciudad<span className="text-red-500 ml-0.5">*</span>
+            </label>
+            <input
+              type="text"
+              value={city}
+              onChange={e => setCity(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+              placeholder="Ej. San Francisco"
+            />
+            <p className="text-xs text-gray-500 mt-1">Vendedor no residente: el documento sale con esta ciudad y el país, sin departamento ni código postal.</p>
+          </div>
+        ) : (
+          <DivipolaCitySelect
+            required
+            departmentCode={cityCode ? cityCode.substring(0, 2) : ''}
+            cityCode={cityCode}
+            onChange={({ cityCode: cc, cityName, departmentName }) => {
+              setCityCode(cc); setCity(cityName); setState(departmentName);
+            }}
+          />
+        )}
 
         <div className="grid grid-cols-2 gap-3">
           <div>

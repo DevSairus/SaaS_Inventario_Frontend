@@ -35,6 +35,13 @@ import SupportDocumentAdjustmentModal from './SupportDocumentAdjustmentModal';
 import { getPrimaryDianReason } from './DianStatusBadge';
 import useAuthStore from '../../store/authStore';
 
+const SUPPLIER_FIELD_LABELS = {
+  tax_id: 'identificación',
+  person_type: 'tipo de persona',
+  city_code: 'ciudad (DIVIPOLA)',
+  city: 'ciudad',
+};
+
 // Mismo criterio que checkRole en backend/src/routes/dian.routes.js: el resto
 // de roles (p. ej. bodega viendo una compra) solo ve el estado.
 const ACTION_ROLES = ['admin', 'manager', 'accountant'];
@@ -266,7 +273,7 @@ export default function SupportDocumentPanel({
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800">
                 Faltan datos del proveedor para generar el documento
                 {sourceType === 'purchase' || hasSupplier
-                  ? ': completa su ficha en Proveedores (' + missingSupplierFields.join(', ') + ').'
+                  ? ': completa su ficha en Proveedores (' + missingSupplierFields.map((f) => SUPPLIER_FIELD_LABELS[f] || f).join(', ') + ').'
                   : '.'}
               </div>
             )}
