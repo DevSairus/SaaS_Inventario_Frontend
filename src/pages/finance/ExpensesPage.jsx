@@ -152,7 +152,9 @@ const ExpensesPage = () => {
     }
     try {
       const payload = { ...form, total_amount: parseFloat(form.total_amount) };
-      if (showFiscalDetail) {
+      // Con "Requiere Documento Soporte" marcado se envía el bloque fiscal aunque
+      // la sección esté oculta: antes "− Ocultar" descartaba la casilla al guardar.
+      if (showFiscalDetail || form.requires_support_document) {
         const subtotal = parseFloat(form.subtotal || form.total_amount) || 0;
         const taxRate = parseFloat(form.tax_rate) || 0;
         const taxAmount = round2(subtotal * taxRate / 100);
@@ -188,14 +190,34 @@ const ExpensesPage = () => {
         delete payload.reteiva_rate;
         delete payload.reteica_rate;
       }
-      await expensesAPI.create(payload);
-      toast.success('Gasto registrado');
+      const created = (await expensesAPI.create(payload))?.data;
       setShowFormModal(false);
       setShowFiscalDetail(false);
       setForm(emptyForm);
       loadData();
+      // Marcar "Requiere Documento Soporte" no lo genera solo: se abre el
+      // panel para generarlo de una vez (antes había que ir a "Doc. Soporte").
+      if (created?.requires_support_document) {
+        toast.success('Gasto registrado. Genera ahora su Documento Soporte.');
+        setSupportDocExpense(created);
+      } else {
+        toast.success('Gasto registrado');
+      }
     } catch (error) {
       toast.error(error?.response?.data?.message || 'Error registrando el gasto');
+    }
+  };
+
+  // Gasto ya registrado sin la marca: se marca y se abre su panel, sin
+  // registrar otro gasto (Documentos Soporte DIAN → Nuevo crea uno nuevo).
+  const enableSupportDocument = async (expense) => {
+    if (!window.confirm(`¿El gasto "${expense.description}" requiere Documento Soporte (el vendedor no está obligado a facturar)?`)) return;
+    try {
+      const updated = (await expensesAPI.update(expense.id, { requires_support_document: true }))?.data;
+      loadData();
+      setSupportDocExpense({ ...expense, ...(updated || {}), requires_support_document: true });
+    } catch (error) {
+      toast.error(error?.response?.data?.message || 'No se pudo marcar el gasto');
     }
   };
 
@@ -275,7 +297,9 @@ const ExpensesPage = () => {
       // Precarga el flag igual que ya hace purchases.controller.js para
       // compras — el usuario lo puede destildar si al final sí llega
       // factura del proveedor.
-      requires_support_document: supplier ? supplier.is_obligated_to_invoice === false : f.requires_support_document,
+      // Solo marca, nunca desmarca: un proveedor "obligado a facturar" (el valor
+      // por defecto) borraba en silencio la casilla que el usuario ya había marcado.
+      requires_support_document: supplier?.is_obligated_to_invoice === false ? true : f.requires_support_document,
     }));
   };
 
@@ -404,13 +428,21 @@ const ExpensesPage = () => {
                         </span>
                       </td>
                       <td className="px-4 py-3 text-right whitespace-nowrap">
-                        {e.requires_support_document && (
+                        {e.requires_support_document ? (
                           <button
                             onClick={() => setSupportDocExpense(e)}
                             className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 mr-2"
                             title="Documento Soporte DIAN"
                           >
                             <DocumentCheckIcon className="w-4 h-4" /> Doc. Soporte
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => enableSupportDocument(e)}
+                            className="inline-flex items-center gap-1 px-2 py-1.5 text-xs text-gray-500 border border-gray-200 rounded-lg hover:bg-gray-50 mr-2"
+                            title="Este gasto requiere Documento Soporte (el vendedor no factura)"
+                          >
+                            <DocumentCheckIcon className="w-4 h-4" /> + Doc. Soporte
                           </button>
                         )}
                         <button
