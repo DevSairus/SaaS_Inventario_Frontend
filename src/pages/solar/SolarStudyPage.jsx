@@ -138,6 +138,7 @@ export default function SolarStudyPage() {
         monthly_kwh: fields.monthly_kwh || f.monthly_kwh,
         tariff_kwh: fields.tariff_kwh || f.tariff_kwh,
         city: f.city || fields.city || '',
+        address: f.address || fields.address || '',
         bill_data: fields,
       }));
       const found = ['monthly_kwh', 'tariff_kwh', 'city'].filter((k) => fields[k]).length;
