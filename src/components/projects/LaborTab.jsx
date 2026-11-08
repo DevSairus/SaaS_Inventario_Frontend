@@ -72,6 +72,12 @@ export default function LaborTab({ project, canSeeCosts, onChanged }) {
     try {
       const res = await allocateLaborPeriod(periodId);
       const d = res.data;
+      // Sin horas con fecha dentro del periodo no hay nada que repartir: decir qué fechas se buscaron.
+      if (!d.employees) {
+        toast.error(`No hay horas registradas entre el ${formatDate(d.period.start_date)} y el ${formatDate(d.period.end_date)} en ningún proyecto. Elige el periodo de nómina que cubre las fechas de las horas.`, { duration: 9000 });
+        getLaborPeriods().then((r) => setPeriods(r.data || [])).catch(() => {});
+        return;
+      }
       toast.success(`${res.message}. Repartido ${formatCurrency(d.allocated)}; queda como gasto general ${formatCurrency(d.overhead)}.`, { duration: 6000 });
       // Contabilidad: asiento de reclasificación a las obras (o por qué no se hizo).
       if (d.accounting?.status === 'posted') toast.success(`Contabilidad: ${d.accounting.message}`, { duration: 7000 });

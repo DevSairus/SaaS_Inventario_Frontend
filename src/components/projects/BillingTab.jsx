@@ -343,6 +343,16 @@ export default function BillingTab({ project, onChanged }) {
   const contractSt = CONTRACT_STATUS[data.contract.quote_status];
   const contractOpen = CONTRACT_OPEN.includes(data.contract.quote_status);
   const pendingAmount = Math.max(data.contract.total - data.invoiced_total, 0);
+  const projectBillable = ['approved', 'in_progress', 'on_hold', 'completed'].includes(project.status);
+  // Por qué no aparece «Nuevo corte» (mismas reglas que el backend al guardar un corte).
+  let noCutReason = null;
+  if (!canBill) noCutReason = 'Tu rol no tiene el permiso de cortes de obra y facturación.';
+  else if (closed) noCutReason = 'El proyecto está cerrado o cancelado.';
+  else if (open) noCutReason = `Termina primero el corte ${open.cut_no} (${STATUS[open.status]?.label.toLowerCase() || open.status}): factúralo o elimínalo para hacer el siguiente.`;
+  else if (['facturada', 'cerrada'].includes(data.contract.quote_status)) noCutReason = null; // el estado del contrato ya lo explica
+  else if (!contractOpen) noCutReason = `La cotización ${data.contract.quote_number} no está aprobada por el cliente: apruébala en Ventas → Cotizaciones para facturar por cortes.`;
+  else if (!projectBillable) noCutReason = 'Los cortes se hacen con el proyecto aprobado o en ejecución: cambia su estado arriba.';
+  else if (data.progress_pct >= 100) noCutReason = 'El contrato ya está facturado al 100 %.';
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center gap-2 text-sm">
@@ -365,9 +375,14 @@ export default function BillingTab({ project, onChanged }) {
         <Stat label={`Retención de garantía (${data.retention_pct} %)`} value={formatCurrency(data.retention_held)} sub={data.retention_released_at ? `liberada el ${formatDate(data.retention_released_at)}` : 'retenida hasta la entrega'} />
       </div>
 
+      {noCutReason && (
+        <p className="text-sm text-amber-800 bg-amber-50 dark:bg-amber-900/20 dark:text-amber-200 border border-amber-200 dark:border-amber-800/40 rounded-lg px-4 py-2">
+          No se puede hacer un corte nuevo: {noCutReason}
+        </p>
+      )}
       {canBill && !closed && (
         <div className="flex flex-wrap gap-2">
-          {!open && contractOpen && data.progress_pct < 100 && (
+          {!open && contractOpen && projectBillable && data.progress_pct < 100 && (
             <button onClick={() => setEditing({ cut: null })} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm bg-orange-600 text-white hover:bg-orange-700"><Plus className="w-4 h-4" /> Nuevo corte</button>
           )}
           <button onClick={() => setShowAdvance(true)} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm border border-gray-300 hover:bg-gray-50">Registrar anticipo del proyecto</button>
