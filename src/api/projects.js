@@ -150,6 +150,7 @@ export const getCutInvoicePayload = async (id, cutId) => (await axios.get(`/proj
 export const linkCutDraft = async (id, cutId, saleId) => (await axios.post(`/projects/${id}/cuts/${cutId}/link-draft`, { sale_id: saleId })).data;
 export const finalizeCutInvoice = async (id, cutId) => (await axios.post(`/projects/${id}/cuts/${cutId}/finalize`)).data;
 export const releaseProjectRetention = async (id) => (await axios.post(`/projects/${id}/retention/release`)).data;
+export const closeProjectContract = async (id, reason) => (await axios.post(`/projects/${id}/contract/close`, { reason })).data;
 export const openCutActa = async (id, cutId) => {
   const res = await axios.get(`/projects/${id}/cuts/${cutId}/acta`, { responseType: 'blob' });
   const url = URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));

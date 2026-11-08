@@ -54,6 +54,9 @@ const QUOTE_STATUS_BADGES = {
   parcial:   { label: 'Aprobada parcialmente', variant: 'info' },
   rechazada: { label: 'Rechazada', variant: 'danger' },
   vencida:   { label: 'Vencida',   variant: 'warning' },
+  contratada: { label: 'Contrato en ejecución', variant: 'warning' },
+  facturada: { label: 'Contrato facturado', variant: 'success' },
+  cerrada:   { label: 'Contrato cerrado', variant: 'secondary' },
 };
 
 // quote_valid_until es solo fecha: al mediodía para que no cambie de día por zona horaria.
@@ -487,7 +490,9 @@ export default function SaleDetailPage() {
   const grossSubtotal = sale.aiu_enabled
     ? parseFloat(sale.subtotal) || 0
     : sumOf('total') - sumOf('tax_amount') - incTotal + lineDiscounts;
-  const quoteOpen = isQuote && sale.status === 'draft';
+  // Contrato de un proyecto facturado por cortes: se gestiona desde el proyecto.
+  const isContract = isQuote && ['contratada', 'facturada', 'cerrada'].includes(sale.quote_status);
+  const quoteOpen = isQuote && sale.status === 'draft' && !isContract;
   // Volver: a donde se vino (lista con su búsqueda, cliente, OT...) o, si se
   // abrió directo, al listado que corresponde.
   const backTo = location.state?.from || (isQuote ? '/quotes' : '/sales');
@@ -639,7 +644,12 @@ export default function SaleDetailPage() {
             </div>
 
             <div className="flex flex-wrap gap-2 justify-end">
-              {sale.status === 'draft' && (
+              {isContract && sale.project_id && (
+                <Button variant="secondary" onClick={() => navigate(`/projects/${sale.project_id}?tab=billing`)}>
+                  Ver cortes del proyecto
+                </Button>
+              )}
+              {sale.status === 'draft' && !isContract && (
                 <>
                   <Button variant="secondary" icon={PencilIcon} onClick={() => navigate(isQuote ? `/quotes/${id}/edit` : `/sales/${id}/edit`, { state: location.state })}>
                     Editar

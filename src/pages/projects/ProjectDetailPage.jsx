@@ -14,7 +14,7 @@ import LaborTab from '../../components/projects/LaborTab';
 import ToolsTab from '../../components/projects/ToolsTab';
 import BillingTab from '../../components/projects/BillingTab';
 import { invalidateProjectOptions } from '../../components/projects/ProjectSelect';
-import { getProject, changeProjectStatus, createProjectWarehouse } from '../../api/projects';
+import { getProject, changeProjectStatus, createProjectWarehouse, closeProjectContract } from '../../api/projects';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import {
   PROJECT_STATUS, STATUS_ACTION, PROJECT_TYPES, customerName, userName,
@@ -144,9 +144,20 @@ export default function ProjectDetailPage() {
   const changeStatus = async (status) => {
     if (['closed', 'cancelled'].includes(status)
       && !window.confirm(`¿${STATUS_ACTION[status]} ${project.code}? Se liberan las reservas, la bodega queda inactiva y no admite documentos nuevos.`)) return;
+    // Contrato facturado por cortes y todavía abierto: se ofrece cerrarlo con su saldo.
+    let contractReason = null;
+    if (['closed', 'cancelled'].includes(status) && project.quote?.quote_status === 'contratada') {
+      const r = window.prompt(`El contrato ${project.quote.sale_number} tiene saldo sin facturar. Para cerrarlo también, escribe el motivo (vacío = dejarlo abierto):`, '');
+      if (r === null) return;
+      contractReason = r.trim() || null;
+    }
     setBusy(true);
     setBlocker(null);
     try {
+      if (contractReason) {
+        const c = await closeProjectContract(project.id, contractReason);
+        toast.success(c.message);
+      }
       const res = await changeProjectStatus(project.id, status);
       toast.success(res.message);
       invalidateProjectOptions();

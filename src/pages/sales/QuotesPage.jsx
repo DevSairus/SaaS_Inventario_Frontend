@@ -23,6 +23,9 @@ const QUOTE_STATUS_LABELS = {
   parcial:  { label: 'Parcial',  cls: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300' },
   rechazada:{ label: 'Rechazada', cls: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' },
   vencida:  { label: 'Vencida',  cls: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300' },
+  contratada: { label: 'Contrato en ejecución', cls: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300' },
+  facturada: { label: 'Contrato facturado', cls: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300' },
+  cerrada:  { label: 'Contrato cerrado', cls: 'bg-slate-200 text-slate-700 dark:bg-white/10 dark:text-gray-300' },
   convertida: { label: 'Convertida en venta', cls: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300' },
 };
 
@@ -193,6 +196,9 @@ export default function QuotesPage() {
                 <option value="rechazada">Rechazada</option>
                 <option value="vencida">Vencida</option>
                 <option value="convertida">Convertida en venta</option>
+                <option value="contratada">Contrato en ejecución</option>
+                <option value="facturada">Contrato facturado</option>
+                <option value="cerrada">Contrato cerrado</option>
               </select>
               <input
                 type="date"

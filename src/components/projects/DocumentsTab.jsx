@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import { getProjectDocuments } from '../../api/projects';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import AttachmentsPanel from '../attachments/AttachmentsPanel';
+import { CONTRACT_STATUS } from './projectConstants';
 
 const SALE_TYPE = { factura: 'Factura', remision: 'Remisión', cotizacion: 'Cotización', nota_credito: 'Nota crédito', nota_debito: 'Nota débito' };
 const SALE_STATUS = { draft: 'Borrador', pending: 'Pendiente', completed: 'Confirmada', cancelled: 'Anulada' };
@@ -11,6 +12,20 @@ const PURCHASE_STATUS = { draft: 'Borrador', confirmed: 'Confirmada', partially_
 const TRANSFER_STATUS = { draft: 'Borrador', sent: 'En tránsito', received: 'Recibido', closed: 'Cerrado', cancelled: 'Cancelado' };
 const LIST_STATUS = { open: 'Abierto', ordered: 'Pedido', cancelled: 'Descartado' };
 const PAYMENT = { pending: 'Pendiente', partial: 'Abonado', paid: 'Pagado' };
+const QUOTE_STATUS = { borrador: 'Borrador', enviada: 'Enviada', aprobada: 'Aprobada', parcial: 'Aprobada parcial', rechazada: 'Rechazada', vencida: 'Vencida' };
+
+// Estado que se muestra: la cotización-contrato con su avance, las demás
+// cotizaciones por su respuesta y las ventas por estado y pago.
+function saleStatusText(s, contract) {
+  if (s.document_type === 'cotizacion') {
+    if (contract && contract.quote_id === s.id && contract.invoiced_cuts > 0) {
+      const st = CONTRACT_STATUS[s.quote_status]?.label || QUOTE_STATUS[s.quote_status] || s.quote_status;
+      return s.quote_status === 'facturada' ? `Contrato · ${st}` : `Contrato · ${st} · ${contract.progress_pct} % facturado`;
+    }
+    return QUOTE_STATUS[s.quote_status] || SALE_STATUS[s.status] || s.status;
+  }
+  return `${SALE_STATUS[s.status] || s.status}${s.payment_status && s.status === 'completed' ? ` · ${PAYMENT[s.payment_status] || s.payment_status}` : ''}`;
+}
 
 function Section({ title, count, action, children }) {
   return (
@@ -54,9 +69,15 @@ export default function DocumentsTab({ project, canManage }) {
           <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
             {docs.sales.map((s) => (
               <tr key={s.id}>
-                <td className={td}><Link to={`/sales/${s.id}`} className="text-orange-600 hover:underline">{s.sale_number}</Link> <span className="text-xs text-gray-500">{SALE_TYPE[s.document_type] || 'Borrador'}</span></td>
+                <td className={td}>
+                  <Link to={`/sales/${s.id}`} className="text-orange-600 hover:underline">{s.sale_number}</Link> <span className="text-xs text-gray-500">{SALE_TYPE[s.document_type] || 'Borrador'}</span>
+                  {s.project_cut_id && <span className="ml-2 text-xs text-gray-500">· corte de obra</span>}
+                  {docs.contract?.invoiced_cuts > 0 && ['factura', 'remision'].includes(s.document_type) && !s.project_cut_id && (
+                    <span className="ml-2 px-1.5 py-0.5 rounded text-xs bg-sky-50 text-sky-700" title="Venta del proyecto que no sale de un corte: adicional o venta aparte">Fuera del contrato</span>
+                  )}
+                </td>
                 <td className={td}>{formatDate(s.sale_date)}</td>
-                <td className={td}>{SALE_STATUS[s.status] || s.status}{s.payment_status && s.status === 'completed' ? ` · ${PAYMENT[s.payment_status] || s.payment_status}` : ''}</td>
+                <td className={td}>{saleStatusText(s, docs.contract)}</td>
                 <td className={`${td} text-right tabular-nums`}>{money(s.total_amount)}</td>
               </tr>
             ))}

@@ -11,6 +11,17 @@ export const PROJECT_STATUS = {
   cancelled: { label: 'Cancelado', cls: 'bg-red-100 text-red-700' },
 };
 
+// Cotización que es el contrato de un proyecto facturado por cortes
+// (sales.quote_status; ver backend projectCuts.service).
+export const CONTRACT_STATUS = {
+  aprobada: { label: 'Aprobado', cls: 'bg-indigo-100 text-indigo-800' },
+  parcial: { label: 'Aprobado parcial', cls: 'bg-indigo-100 text-indigo-800' },
+  contratada: { label: 'En ejecución', cls: 'bg-amber-100 text-amber-800' },
+  facturada: { label: 'Facturado completo', cls: 'bg-green-100 text-green-800' },
+  cerrada: { label: 'Cerrado con saldo', cls: 'bg-slate-200 text-slate-700' },
+};
+export const CONTRACT_OPEN = ['aprobada', 'parcial', 'contratada'];
+
 // Texto del botón para pasar a cada estado
 export const STATUS_ACTION = {
   prospect: 'Volver a prospecto',

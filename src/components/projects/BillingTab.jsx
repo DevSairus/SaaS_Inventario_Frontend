@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { CheckCircle2, FileText, Loader2, Plus, Receipt, Trash2, Unlock } from 'lucide-react';
+import { CheckCircle2, FileText, Loader2, Lock, Plus, Receipt, Trash2, Unlock } from 'lucide-react';
 import Modal from '../common/Modal';
 import SignaturePad from '../tools/SignaturePad';
 import RegisterAdvanceModal from '../finance/RegisterAdvanceModal';
@@ -9,10 +9,11 @@ import { usePermissions } from '../../store/tenantPermissionsStore';
 import salesApi from '../../api/sales';
 import api from '../../api/axios';
 import {
-  approveProjectCut, createProjectCut, deleteProjectCut, finalizeCutInvoice, getCutInvoicePayload, getProjectBilling,
+  approveProjectCut, closeProjectContract, createProjectCut, deleteProjectCut, finalizeCutInvoice, getCutInvoicePayload, getProjectBilling,
   linkCutDraft, openCutActa, previewProjectCut, releaseProjectRetention, updateProjectCut,
 } from '../../api/projects';
 import { formatCurrency, formatDate } from '../../utils/formatters';
+import { CONTRACT_OPEN, CONTRACT_STATUS } from './projectConstants';
 
 const inputCls = 'w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-800';
 const STATUS = {
@@ -211,6 +212,47 @@ function ApproveModal({ isOpen, onClose, project, cut, onDone }) {
   );
 }
 
+/** Cierre manual del contrato con saldo sin ejecutar. */
+function CloseContractModal({ isOpen, onClose, project, billing, onDone }) {
+  const [reason, setReason] = useState('');
+  const [saving, setSaving] = useState(false);
+  useEffect(() => { if (isOpen) setReason(''); }, [isOpen]);
+  if (!billing?.contract) return null;
+  const pending = Math.max(billing.contract.total - billing.invoiced_total, 0);
+  const submit = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      const r = await closeProjectContract(project.id, reason);
+      toast.success(r.message, { duration: 7000 });
+      onDone();
+      onClose();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'No se pudo cerrar el contrato');
+    } finally {
+      setSaving(false);
+    }
+  };
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title={`Cerrar contrato ${billing.contract.quote_number}`} size="md">
+      <form onSubmit={submit} className="space-y-4">
+        <p className="text-sm text-gray-600">
+          Se facturó el {billing.progress_pct} % del contrato. Al cerrarlo quedan <strong>{formatCurrency(pending)}</strong> sin ejecutar
+          y no se pueden hacer más cortes. Las facturas emitidas no cambian; la retención de garantía y los anticipos se manejan igual.
+        </p>
+        <div>
+          <label className="block text-sm font-medium mb-1">Motivo *</label>
+          <textarea rows={3} required value={reason} onChange={(e) => setReason(e.target.value)} className={inputCls} placeholder="Ej. el cliente redujo el alcance; obra entregada sin el ítem X" />
+        </div>
+        <div className="flex justify-end gap-2">
+          <button type="button" onClick={onClose} className="px-4 py-2 text-sm rounded-lg border border-gray-300">Cancelar</button>
+          <button type="submit" disabled={saving || !reason.trim()} className="px-4 py-2 text-sm rounded-lg bg-orange-600 text-white disabled:opacity-50">{saving ? 'Cerrando…' : 'Cerrar contrato'}</button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
 /**
  * Cortes de obra y facturas parciales del proyecto: contrato (la cotización),
  * avance acumulado, anticipo amortizado y retención de garantía.
@@ -224,6 +266,7 @@ export default function BillingTab({ project, onChanged }) {
   const [approving, setApproving] = useState(null);
   const [busy, setBusy] = useState('');
   const [showAdvance, setShowAdvance] = useState(false);
+  const [closingContract, setClosingContract] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -297,25 +340,48 @@ export default function BillingTab({ project, onChanged }) {
   }
 
   const open = data.open_cut;
+  const contractSt = CONTRACT_STATUS[data.contract.quote_status];
+  const contractOpen = CONTRACT_OPEN.includes(data.contract.quote_status);
+  const pendingAmount = Math.max(data.contract.total - data.invoiced_total, 0);
   return (
     <div className="space-y-5">
+      <div className="flex flex-wrap items-center gap-2 text-sm">
+        <span className="text-gray-600">Contrato {data.contract.quote_number}:</span>
+        {contractSt && <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${contractSt.cls}`}>{contractSt.label}</span>}
+        {data.contract.quote_status === 'facturada' && data.contract.closed_at && <span className="text-xs text-gray-500">desde el {formatDate(data.contract.closed_at)}</span>}
+      </div>
+      {data.contract.quote_status === 'cerrada' && (
+        <p className="text-sm text-slate-700 bg-slate-100 dark:bg-slate-800 dark:text-slate-300 rounded-lg px-4 py-2">
+          Cerrado el {formatDate(data.contract.closed_at)} con {formatCurrency(data.contract.unexecuted_amount)} sin ejecutar. Motivo: {data.contract.close_reason}
+        </p>
+      )}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
         <Stat label="Contrato" value={formatCurrency(data.contract.total)} sub={`Cotización ${data.contract.quote_number}${data.contract.aiu ? ' · AIU' : ''}`} />
         <Stat label="Avance facturado" value={`${data.progress_pct} %`} sub={`${formatCurrency(data.invoiced_total)} en ${data.cuts.filter((c) => c.status === 'invoiced').length} factura(s)`} />
-        <Stat label="Por facturar" value={formatCurrency(Math.max(data.contract.total - data.invoiced_total, 0))} />
+        {data.contract.quote_status === 'cerrada'
+          ? <Stat label="Sin ejecutar" value={formatCurrency(data.contract.unexecuted_amount)} sub="contrato cerrado" />
+          : <Stat label="Por facturar" value={formatCurrency(pendingAmount)} />}
         <Stat label="Anticipo" value={formatCurrency(data.advances.received)} sub={`amortizado ${formatCurrency(data.advance_amortized)} · disponible ${formatCurrency(data.advances.available)}`} />
         <Stat label={`Retención de garantía (${data.retention_pct} %)`} value={formatCurrency(data.retention_held)} sub={data.retention_released_at ? `liberada el ${formatDate(data.retention_released_at)}` : 'retenida hasta la entrega'} />
       </div>
 
       {canBill && !closed && (
         <div className="flex flex-wrap gap-2">
-          {!open && data.progress_pct < 100 && (
+          {!open && contractOpen && data.progress_pct < 100 && (
             <button onClick={() => setEditing({ cut: null })} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm bg-orange-600 text-white hover:bg-orange-700"><Plus className="w-4 h-4" /> Nuevo corte</button>
           )}
           <button onClick={() => setShowAdvance(true)} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm border border-gray-300 hover:bg-gray-50">Registrar anticipo del proyecto</button>
           {data.retention_held > 0 && (
             <button onClick={release} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm border border-gray-300 hover:bg-gray-50"><Unlock className="w-4 h-4" /> Liberar retención (entrega de obra)</button>
           )}
+        </div>
+      )}
+      {/* También con el proyecto cerrado: uno cerrado antes de existir esta opción deja su contrato abierto. */}
+      {canBill && contractOpen && !open && data.progress_pct < 100 && data.cuts.some((c) => c.status === 'invoiced') && (
+        <div>
+          <button onClick={() => setClosingContract(true)} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm border border-gray-300 hover:bg-gray-50">
+            <Lock className="w-4 h-4" /> Cerrar contrato con saldo
+          </button>
         </div>
       )}
       {data.retention_pct === 0 && <p className="text-xs text-gray-500">Este proyecto no tiene retención de garantía (se configura en Editar proyecto).</p>}
@@ -396,6 +462,7 @@ export default function BillingTab({ project, onChanged }) {
       </div>
 
       <CutEditor isOpen={Boolean(editing)} onClose={() => setEditing(null)} project={project} billing={data} cut={editing?.cut || null} onSaved={load} />
+      <CloseContractModal isOpen={closingContract} onClose={() => setClosingContract(false)} project={project} billing={data} onDone={() => { load(); onChanged?.(); }} />
       <ApproveModal isOpen={Boolean(approving)} onClose={() => setApproving(null)} project={project} cut={approving} onDone={load} />
       <RegisterAdvanceModal
         isOpen={showAdvance}
