@@ -2,9 +2,19 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   buildDayCarousel,
+  formatSlotTime,
   sortBranchesPrincipalFirst,
   toDateKey,
 } from '../publicBooking.js';
+
+describe('formatSlotTime', () => {
+  it('shows the slot in 12-hour format', () => {
+    assert.equal(formatSlotTime('08:00'), '8:00 a. m.');
+    assert.equal(formatSlotTime('12:30'), '12:30 p. m.');
+    assert.equal(formatSlotTime('13:00'), '1:00 p. m.');
+    assert.equal(formatSlotTime('00:15'), '12:15 a. m.');
+  });
+});
 
 describe('toDateKey', () => {
   it('formats a local date as YYYY-MM-DD', () => {

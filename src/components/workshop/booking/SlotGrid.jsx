@@ -6,6 +6,8 @@
 //  - Staff: todas, con ocupación "1/2", las llenas deshabilitadas, la franja
 //    actual de la cita marcada y la elegida resaltada.
 // `dark`: variantes dark: solo para vistas internas (ver DayCarousel).
+import { formatSlotTime } from '../../../utils/publicBooking';
+
 export default function SlotGrid({
   slots,
   onSelect,
@@ -43,7 +45,7 @@ export default function SlotGrid({
             onClick={() => onSelect(slot)}
             className={`text-sm py-2.5 rounded-xl border font-medium transition ${cls}`}
           >
-            <span className={`block leading-tight ${!slot.available && !isCurrent ? 'line-through' : ''}`}>{slot.time}</span>
+            <span className={`block leading-tight ${!slot.available && !isCurrent ? 'line-through' : ''}`}>{formatSlotTime(slot.time)}</span>
             {showUnavailable && (
               <span className={`block text-[10px] font-normal leading-tight mt-0.5 ${isSelected ? 'text-sky-100' : 'opacity-70'}`}>
                 {isCurrent ? 'Actual' : `${slot.booked}/${slot.capacity}`}

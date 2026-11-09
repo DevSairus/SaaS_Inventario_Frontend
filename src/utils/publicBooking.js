@@ -34,6 +34,17 @@ export function buildDayCarousel(from, count = 14) {
 }
 
 /**
+ * Franja 'HH:mm' (hora del taller, 24 h) en formato de 12 h: '13:00' -> '1:00 p. m.'.
+ * Se formatea el texto, no un Date: la hora no debe moverse con la zona del navegador.
+ * @param {string} hhmm
+ */
+export function formatSlotTime(hhmm) {
+  const [h, m] = String(hhmm).split(':').map(Number);
+  if (!Number.isFinite(h) || !Number.isFinite(m)) return hhmm;
+  return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${h < 12 ? 'a. m.' : 'p. m.'}`;
+}
+
+/**
  * Sede principal (`is_main`) primero; el resto conserva orden relativo.
  * No muta el array de entrada.
  * @template {{ is_main?: boolean }} T
