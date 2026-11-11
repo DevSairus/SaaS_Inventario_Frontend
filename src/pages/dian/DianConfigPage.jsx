@@ -11,7 +11,6 @@ import {
 } from '../../api/dian';
 import { branchesService } from '../../api/branches';
 import Layout from '../../components/layout/Layout';
-import useAuthStore from '../../store/authStore';
 import DivipolaCitySelect from '../../components/common/DivipolaCitySelect';
 import {
   Cog6ToothIcon,
@@ -76,8 +75,6 @@ const selectCls = inputCls;
  * ════════════════════════════════════════════════════════════════════ */
 export default function DianConfigPage() {
   const navigate = useNavigate();
-  // El modo simulación (demo sin envío a la DIAN) solo lo activa un super admin.
-  const isSuperAdmin = useAuthStore((st) => st.user?.role === 'super_admin');
   const [tab, setTab] = useState('config');
   const [cfg, setCfg] = useState({});
   const [resolutions, setResolutions] = useState([]);
@@ -505,9 +502,7 @@ export default function DianConfigPage() {
                 onChange={e => setCfg(p => ({ ...p, environment: e.target.value }))}>
                 <option value="test">Habilitación / Pruebas</option>
                 <option value="production">Producción</option>
-                {(isSuperAdmin || cfg.environment === 'simulation') && (
-                  <option value="simulation">Simulación (demo — no envía a la DIAN)</option>
-                )}
+                <option value="simulation">Simulación (demo — no envía a la DIAN)</option>
               </select>
               {cfg.environment === 'simulation' && (
                 <p className="mt-1.5 text-xs text-purple-700 bg-purple-50 border border-purple-200 rounded px-2 py-1.5">
