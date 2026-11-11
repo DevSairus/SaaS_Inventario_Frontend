@@ -11,6 +11,7 @@ import {
 } from '../../api/dian';
 import { branchesService } from '../../api/branches';
 import Layout from '../../components/layout/Layout';
+import useAuthStore from '../../store/authStore';
 import DivipolaCitySelect from '../../components/common/DivipolaCitySelect';
 import {
   Cog6ToothIcon,
@@ -75,6 +76,8 @@ const selectCls = inputCls;
  * ════════════════════════════════════════════════════════════════════ */
 export default function DianConfigPage() {
   const navigate = useNavigate();
+  // El modo simulación (demo sin envío a la DIAN) solo lo activa un super admin.
+  const isSuperAdmin = useAuthStore((st) => st.user?.role === 'super_admin');
   const [tab, setTab] = useState('config');
   const [cfg, setCfg] = useState({});
   const [resolutions, setResolutions] = useState([]);
@@ -390,8 +393,11 @@ export default function DianConfigPage() {
           <span className={`px-3 py-1 rounded-full text-sm font-medium
             ${habilitacion.current_environment === 'production'
               ? 'bg-green-100 text-green-800'
-              : 'bg-yellow-100 text-yellow-800'}`}>
-            {habilitacion.current_environment === 'production' ? 'Producción' : 'Habilitación/Pruebas'}
+              : habilitacion.current_environment === 'simulation'
+                ? 'bg-purple-100 text-purple-800'
+                : 'bg-yellow-100 text-yellow-800'}`}>
+            {habilitacion.current_environment === 'production' ? 'Producción'
+              : habilitacion.current_environment === 'simulation' ? 'Simulación (demo)' : 'Habilitación/Pruebas'}
           </span>
         )}
       </div>
@@ -499,7 +505,17 @@ export default function DianConfigPage() {
                 onChange={e => setCfg(p => ({ ...p, environment: e.target.value }))}>
                 <option value="test">Habilitación / Pruebas</option>
                 <option value="production">Producción</option>
+                {(isSuperAdmin || cfg.environment === 'simulation') && (
+                  <option value="simulation">Simulación (demo — no envía a la DIAN)</option>
+                )}
               </select>
+              {cfg.environment === 'simulation' && (
+                <p className="mt-1.5 text-xs text-purple-700 bg-purple-50 border border-purple-200 rounded px-2 py-1.5">
+                  Los documentos se generan y quedan aceptados al instante, pero <strong>no se envían a la DIAN</strong>: no tienen validez fiscal,
+                  su PDF lleva marca de agua de demostración y no se envía correo al cliente. Los datos y el certificado que falten se completan
+                  con valores de demo, y se crean resoluciones de simulación (prefijos SIM*) por sede.
+                </p>
+              )}
             </Field>
             <Field label="TestSetId" hint="ID del set de pruebas — se obtiene en el portal DIAN de habilitación">
               <input className={inputCls} value={cfg.test_set_id || ''}
