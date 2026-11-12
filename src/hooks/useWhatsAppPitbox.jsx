@@ -178,13 +178,15 @@ export default function useWhatsAppPitbox() {
       return { channel: 'pitbox', conversationId };
     } catch (e) {
       if (e.response?.status === 409) {
-        notifyWindowClosed(digits);
+        // Ventana de 24 h cerrada: como en el resto de envíos, se ofrece el
+        // chat (para una plantilla) y wa.me con el mensaje listo.
+        notifyWaMeFallback({ phone: digits, waLink: buildWaLink(digits, text), reason: 'window_closed' });
         return { channel: 'pitbox', windowClosed: true };
       }
       toast.error(e.response?.data?.message || 'No se pudo enviar por WhatsApp Pitbox');
       return { channel: 'pitbox', error: true };
     }
-  }, [navigate, notifyWindowClosed]);
+  }, [navigate, notifyWaMeFallback]);
 
   return { operational, sendViaWhatsApp, sendFromBackend, resolveWaResult, notifyWindowClosed };
 }
