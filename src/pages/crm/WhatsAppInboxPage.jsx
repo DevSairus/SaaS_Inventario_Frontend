@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import Layout from '../../components/layout/Layout';
 import CrmSubNav from '../../components/crm/CrmSubNav';
 import DealModal from '../../components/crm/DealModal';
 import NewDealModal from '../../components/crm/NewDealModal';
+import WaTemplatePickerModal from '../../components/crm/WaTemplatePickerModal';
+import { groupMessagesByDay, phoneKey } from '../../utils/waChat';
+import { formatColombianPhone } from '../../utils/whatsapp';
 import crmApi from '../../api/crm';
 import { usersAPI } from '../../api/users';
 import useAuthStore from '../../store/authStore';
@@ -81,9 +84,6 @@ function avatarColor(name) {
   return AVATAR_COLORS[sum % AVATAR_COLORS.length];
 }
 
-// Últimos 10 dígitos: iguala "573166876163" con "3166876163".
-const phoneKey = (p) => String(p || '').replace(/\D/g, '').slice(-10);
-
 const compactCOP = (v) => {
   const n = parseFloat(v || 0);
   if (!n) return null;
@@ -133,6 +133,14 @@ function formatTime(iso) {
   }
   return d.toLocaleDateString('es-CO', { day: '2-digit', month: 'short' });
 }
+
+const clockTime = (iso) => (iso ? new Date(iso).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' }) : '');
+
+const lastInboundLabel = (iso) =>
+  new Date(iso).toLocaleString('es-CO', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
+
+// Mismo tamaño de página que el backend (listMessages, limit 50 por defecto).
+const MSG_PAGE = 50;
 
 function StatusTicks({ status }) {
   if (status === 'read') return <CheckCheck size={14} className="text-sky-500 inline" />;
@@ -252,8 +260,18 @@ export default function WhatsAppInboxPage() {
   const [loadingMore, setLoadingMore] = useState(false);
   const loadedCountRef = useRef(WA_PAGE);
   const [selectedId, setSelectedId] = useState(null);
+  const selectedIdRef = useRef(null);
   const [messages, setMessages] = useState([]);
   const [loadingMsgs, setLoadingMsgs] = useState(false);
+  const [hasOlder, setHasOlder] = useState(false);
+  const [loadingOlder, setLoadingOlder] = useState(false);
+  const msgListRef = useRef(null);
+  // Al cargar mensajes anteriores se conserva la posición en vez de saltar al final.
+  const keepScrollRef = useRef(null);
+  const [templateOpen, setTemplateOpen] = useState(false);
+  // Chat pedido por URL (?phone=) que todavía no existe: solo se inicia con plantilla.
+  const [newChatPhone, setNewChatPhone] = useState(null);
+  const [searchParams, setSearchParams] = useSearchParams();
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
   const [aiBusy, setAiBusy] = useState(false);
@@ -284,6 +302,8 @@ export default function WhatsAppInboxPage() {
 
   const demoMode = !!waStatus?.demo_mode;
   const operational = !!waStatus?.operational;
+  const windowClosed = !!selected?.window && !selected.window.open && !demoMode && operational;
+  const messageGroups = useMemo(() => groupMessagesByDay(messages), [messages]);
 
   // Celular/tablet: lista y chat son dos pantallas, como en WhatsApp.
   const isNarrow = useMediaQuery('(max-width: 1023px)');
@@ -361,7 +381,11 @@ export default function WhatsAppInboxPage() {
       const res = await crmApi.listWaConversations({ ...listParams(), limit, offset: 0 });
       const list = res.data.data || [];
       loadedCountRef.current = Math.max(WA_PAGE, list.length);
-      setConversations(list);
+      // El chat abierto (p. ej. por ?c=) puede no estar en la primera página.
+      setConversations((prev) => {
+        const open = prev.find((x) => x.id === selectedIdRef.current);
+        return open && !list.some((x) => x.id === open.id) ? [open, ...list] : list;
+      });
       setHasMore(!!res.data.has_more);
     } catch {
       toast.error('No se pudieron cargar las conversaciones');
@@ -393,8 +417,10 @@ export default function WhatsAppInboxPage() {
     if (!id) return;
     setLoadingMsgs(true);
     try {
-      const res = await crmApi.listWaMessages(id);
-      setMessages(res.data.data || []);
+      const res = await crmApi.listWaMessages(id, { limit: MSG_PAGE });
+      const list = res.data.data || [];
+      setMessages(list);
+      setHasOlder(list.length >= MSG_PAGE);
       await crmApi.markWaConversationRead(id);
       setConversations((prev) => prev.map((c) => (c.id === id ? { ...c, unread_count: 0 } : c)));
     } catch {
@@ -403,6 +429,89 @@ export default function WhatsAppInboxPage() {
       setLoadingMsgs(false);
     }
   }, []);
+
+  const loadOlderMessages = async () => {
+    const oldest = messages[0]?.created_at;
+    if (!selectedId || !oldest || loadingOlder) return;
+    setLoadingOlder(true);
+    try {
+      const res = await crmApi.listWaMessages(selectedId, { before: oldest, limit: MSG_PAGE });
+      const older = res.data.data || [];
+      if (selectedIdRef.current !== selectedId) return;
+      const el = msgListRef.current;
+      keepScrollRef.current = el ? { height: el.scrollHeight, top: el.scrollTop } : null;
+      setMessages((prev) => {
+        const ids = new Set(prev.map((m) => m.id));
+        return older.filter((m) => !ids.has(m.id)).concat(prev);
+      });
+      setHasOlder(older.length >= MSG_PAGE);
+    } catch {
+      toast.error('No se pudieron cargar los mensajes anteriores');
+    } finally {
+      setLoadingOlder(false);
+    }
+  };
+
+  useEffect(() => {
+    const el = msgListRef.current;
+    if (!el || loadingMsgs) return;
+    const keep = keepScrollRef.current;
+    keepScrollRef.current = null;
+    el.scrollTop = keep ? el.scrollHeight - keep.height + keep.top : el.scrollHeight;
+  }, [messages, loadingMsgs]);
+
+  // ?c=<id> abre ese chat; ?phone=<número> abre el chat de ese número o, si
+  // aún no existe, ofrece iniciarlo con plantilla. Así todo cae en un solo chat.
+  useEffect(() => {
+    const c = searchParams.get('c');
+    const phone = searchParams.get('phone');
+    if (!c && !phone) return undefined;
+    let alive = true;
+    (async () => {
+      try {
+        let conv = null;
+        if (c) {
+          conv = (await crmApi.getWaConversation(c)).data.data;
+        } else {
+          const key = phoneKey(phone);
+          const res = await crmApi.listWaConversations({ q: key, limit: 20, offset: 0 });
+          // Chats viejos guardados sin el 57 pueden repetir el número: gana el más reciente.
+          const lastAt = (x) => new Date(x.last_message_at || 0).getTime();
+          conv = (res.data.data || [])
+            .filter((x) => phoneKey(x.wa_contact_phone) === key)
+            .sort((a, b) => lastAt(b) - lastAt(a))[0] || null;
+        }
+        if (!alive) return;
+        if (conv) {
+          setConversations((prev) => (prev.some((x) => x.id === conv.id) ? prev : [conv, ...prev]));
+          setSelectedId(conv.id);
+        } else {
+          setSelectedId(null);
+          setNewChatPhone(formatColombianPhone(phone));
+        }
+      } catch {
+        if (alive) toast.error('No se pudo abrir el chat');
+      } finally {
+        if (alive) setSearchParams({}, { replace: true });
+      }
+    })();
+    return () => { alive = false; };
+  }, [searchParams, setSearchParams]);
+
+  useEffect(() => {
+    selectedIdRef.current = selectedId;
+    if (selectedId) setNewChatPhone(null);
+  }, [selectedId]);
+
+  const newChatName = newChatPhone ? nameOf(null, dealIndex.byPhone.get(phoneKey(newChatPhone))) : null;
+
+  const handleTemplateSent = async (conversationId) => {
+    setTemplateOpen(false);
+    if (!conversationId) return;
+    if (conversationId === selectedId) await loadMessages(conversationId);
+    else setSearchParams({ c: conversationId }, { replace: true });
+    loadConversations();
+  };
 
   // Búsqueda o vista nuevas: vuelve a la primera página.
   useEffect(() => { loadedCountRef.current = WA_PAGE; }, [q, filter]);
@@ -450,7 +559,10 @@ export default function WhatsAppInboxPage() {
       if (!cid) return;
       setConversations((prev) => {
         const idx = prev.findIndex((c) => c.id === cid);
-        const base = payload.conversation || {};
+        // El evento no trae el estado de la ventana: un mensaje del cliente la abre.
+        const base = payload.message?.direction === 'in'
+          ? { ...payload.conversation, last_inbound_at: payload.message.created_at || new Date().toISOString(), window: { open: true } }
+          : payload.conversation || {};
         if (idx >= 0) {
           const next = [...prev];
           next[idx] = { ...next[idx], ...base };
@@ -518,9 +630,6 @@ export default function WhatsAppInboxPage() {
     }
 
     if (!draft.trim()) return;
-    if (selected?.window && !selected.window.open && !demoMode) {
-      toast.error('Ventana 24h cerrada. En producción usa una plantilla Meta.');
-    }
     setSending(true);
     try {
       const res = await crmApi.sendWaConversationText(selectedId, { body: draft.trim() });
@@ -530,7 +639,9 @@ export default function WhatsAppInboxPage() {
       setDraft('');
       loadConversations();
     } catch (err) {
-      toast.error(err.response?.data?.message || 'No se pudo enviar');
+      // El servidor es quien valida la ventana de 24 h; si está cerrada, toca plantilla.
+      if (err.response?.status === 409) setTemplateOpen(true);
+      else toast.error(err.response?.data?.message || 'No se pudo enviar');
     } finally {
       setSending(false);
     }
@@ -948,14 +1059,40 @@ export default function WhatsAppInboxPage() {
           </div>
 
           {/* Chat */}
-          <section className={`${isNarrow && !selected ? 'hidden' : 'flex'} flex-1 flex-col min-w-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgdmlld0JveD0iMCAwIDYwIDYwIj48ZyBmaWxsPSIjZTVlNWUwIiBmaWxsLW9wYWNpdHk9IjAuMzUiPjxwYXRoIGQ9Ik0zNiAxOGMwIDAtNiA2LTEyIDZTMTIgMTggMTIgMThzNi02IDEyLTYgMTIgNiAxMiA2eiIvPjwvZz48L3N2Zz4=')] bg-[#e5ddd5]`}>
-            {!selected && (
+          <section className={`${isNarrow && !selected && !newChatPhone ? 'hidden' : 'flex'} flex-1 flex-col min-w-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgdmlld0JveD0iMCAwIDYwIDYwIj48ZyBmaWxsPSIjZTVlNWUwIiBmaWxsLW9wYWNpdHk9IjAuMzUiPjxwYXRoIGQ9Ik0zNiAxOGMwIDAtNiA2LTEyIDZTMTIgMTggMTIgMThzNi02IDEyLTYgMTIgNiAxMiA2eiIvPjwvZz48L3N2Zz4=')] bg-[#e5ddd5]`}>
+            {!selected && !newChatPhone && (
               <div className="flex-1 flex flex-col items-center justify-center text-gray-500 gap-2 px-6 bg-[#f0f2f5]">
                 <MessageCircle size={48} className="opacity-30" />
                 <p className="text-sm font-medium">WhatsApp Pitbox</p>
                 <p className="text-xs text-center max-w-sm text-gray-400">
                   Selecciona un chat. El asesor trabaja aquí; el admin ve y asigna todo el equipo.
                 </p>
+              </div>
+            )}
+
+            {!selected && newChatPhone && (
+              <div className="flex-1 flex flex-col items-center justify-center text-gray-600 gap-3 px-6 bg-[#f0f2f5] text-center">
+                {isNarrow && (
+                  <button type="button" onClick={() => setNewChatPhone(null)} aria-label="Volver a los chats"
+                    className="self-start h-8 w-8 !p-0 flex items-center justify-center rounded-full text-gray-600 hover:bg-gray-200 transition">
+                    <ArrowLeft size={18} />
+                  </button>
+                )}
+                <MessageCircle size={40} className="opacity-30" />
+                <p className="text-sm font-medium">Aún no hay chat con {newChatName || `+${newChatPhone}`}</p>
+                {demoMode ? (
+                  <p className="text-xs text-gray-500">En modo demo escríbele desde el negocio o la ficha del cliente para iniciar el chat.</p>
+                ) : operational ? (
+                  <>
+                    <p className="text-xs text-gray-500">Para escribirle primero, WhatsApp exige una plantilla aprobada.</p>
+                    <button type="button" onClick={() => setTemplateOpen(true)}
+                      className={`!px-4 !py-2 rounded-lg !text-sm font-semibold text-white ${GRADIENT_BG} shadow-sm shadow-rose-500/30`}>
+                      Enviar plantilla
+                    </button>
+                  </>
+                ) : (
+                  <p className="text-xs text-gray-500">WhatsApp Pitbox no está conectado.</p>
+                )}
               </div>
             )}
 
@@ -1009,37 +1146,68 @@ export default function WhatsAppInboxPage() {
 
                 <div className="flex-1 flex min-h-0">
                   <div className={`${isNarrow && showPlus ? 'hidden' : 'flex'} flex-1 flex-col min-w-0`}>
-                    <div className="flex-1 overflow-y-auto px-3 py-4 space-y-2">
+                    <div ref={msgListRef} className="flex-1 overflow-y-auto px-3 py-4 space-y-2">
                       {loadingMsgs && (
                         <div className="flex justify-center py-8 text-gray-400"><Loader2 className="animate-spin" size={22} /></div>
                       )}
-                      {!loadingMsgs && messages.map((m) => {
-                        const outbound = m.direction === 'out';
-                        return (
-                          <div key={m.id} className={`flex ${outbound ? 'justify-end' : 'justify-start'}`}>
-                            <div className={`max-w-[78%] rounded-lg px-3 py-2 text-sm shadow-sm ${
-                              outbound ? 'bg-[#d9fdd3] text-gray-900 rounded-br-none' : 'bg-white text-gray-900 rounded-bl-none'
-                            }`}>
-                              <MessageMedia message={m} />
-                              {m.body && !(m.type === 'audio' && m.media_url) && (
-                                <p className="whitespace-pre-wrap break-words">{m.body}</p>
-                              )}
-                              {!m.body && !m.media_url && (
-                                <p className="whitespace-pre-wrap break-words">[{m.type}]</p>
-                              )}
-                              <div className="mt-1 flex items-center gap-1 justify-end text-[10px] text-gray-500">
-                                {m.source === 'demo' && <span className="mr-1 opacity-70">demo</span>}
-                                {m.source === 'app_echo' && <span className="mr-1">App</span>}
-                                <span>{formatTime(m.created_at)}</span>
-                                {outbound && <StatusTicks status={m.status} />}
-                              </div>
-                            </div>
+                      {!loadingMsgs && hasOlder && (
+                        <div className="flex justify-center">
+                          <button type="button" onClick={loadOlderMessages} disabled={loadingOlder}
+                            className="inline-flex items-center gap-1.5 !px-3 !py-1 rounded-full !text-xs font-medium bg-white/90 text-gray-600 shadow-sm hover:bg-white disabled:opacity-50">
+                            {loadingOlder && <Loader2 className="animate-spin" size={12} />}
+                            Ver mensajes anteriores
+                          </button>
+                        </div>
+                      )}
+                      {!loadingMsgs && messageGroups.map((group) => (
+                        <div key={group.key} className="space-y-2">
+                          <div className="flex justify-center pt-1">
+                            <span className="px-3 py-1 rounded-lg bg-white/90 text-[11px] font-medium text-gray-600 shadow-sm first-letter:uppercase">
+                              {group.label}
+                            </span>
                           </div>
-                        );
-                      })}
+                          {group.messages.map((m) => {
+                            const outbound = m.direction === 'out';
+                            return (
+                              <div key={m.id} className={`flex ${outbound ? 'justify-end' : 'justify-start'}`}>
+                                <div className={`max-w-[78%] rounded-lg px-3 py-2 text-sm shadow-sm ${
+                                  outbound ? 'bg-[#d9fdd3] text-gray-900 rounded-br-none' : 'bg-white text-gray-900 rounded-bl-none'
+                                }`}>
+                                  <MessageMedia message={m} />
+                                  {m.body && !(m.type === 'audio' && m.media_url) && (
+                                    <p className="whitespace-pre-wrap break-words">{m.body}</p>
+                                  )}
+                                  {!m.body && !m.media_url && (
+                                    <p className="whitespace-pre-wrap break-words">[{m.type}]</p>
+                                  )}
+                                  <div className="mt-1 flex items-center gap-1 justify-end text-[10px] text-gray-500">
+                                    {m.source === 'demo' && <span className="mr-1 opacity-70">demo</span>}
+                                    {m.source === 'app_echo' && <span className="mr-1">App</span>}
+                                    <span>{clockTime(m.created_at)}</span>
+                                    {outbound && <StatusTicks status={m.status} />}
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ))}
                     </div>
 
                     <div className="p-2.5 bg-[#f0f2f5] border-t border-gray-200 space-y-2">
+                      {windowClosed && (
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 px-3 py-2 rounded-lg bg-orange-50 border border-orange-200 text-xs text-orange-900">
+                          <span className="flex-1">
+                            {selected.last_inbound_at
+                              ? `Pasaron más de 24 h desde el último mensaje del cliente (${lastInboundLabel(selected.last_inbound_at)}). Envía una plantilla para retomar la conversación.`
+                              : 'El cliente aún no te ha escrito. Envía una plantilla para iniciar la conversación.'}
+                          </span>
+                          <button type="button" onClick={() => setTemplateOpen(true)}
+                            className={`shrink-0 !px-3 !py-1.5 rounded-lg !text-xs font-semibold text-white ${GRADIENT_BG}`}>
+                            Enviar plantilla
+                          </button>
+                        </div>
+                      )}
                       {pendingFile && (
                         <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white border border-gray-200 text-xs">
                           <FileText size={14} className="text-emerald-700 shrink-0" />
@@ -1331,6 +1499,15 @@ export default function WhatsAppInboxPage() {
         initialCustomer={selected?.customer || null}
         initialPhone={selected?.customer ? '' : selected?.wa_contact_phone || ''}
         initialSource="whatsapp"
+      />
+
+      <WaTemplatePickerModal
+        isOpen={templateOpen}
+        onClose={() => setTemplateOpen(false)}
+        phone={selected?.wa_contact_phone || newChatPhone}
+        customerName={selected ? selectedName : newChatName}
+        companyName={user?.company_name}
+        onSent={handleTemplateSent}
       />
     </Layout>
   );

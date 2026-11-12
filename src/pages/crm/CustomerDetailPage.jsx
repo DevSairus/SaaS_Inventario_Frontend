@@ -8,7 +8,8 @@ import { accountsReceivableAPI } from '../../api/accountsReceivable';
 import { usersAPI } from '../../api/users';
 import useTenantStore from '../../store/tenantStore';
 import useAuthStore from '../../store/authStore';
-import { buildWaLink, bestPhone, trackWhatsAppInteraction } from '../../utils/whatsapp';
+import { bestPhone } from '../../utils/whatsapp';
+import useWhatsAppPitbox from '../../hooks/useWhatsAppPitbox';
 import {
   ArrowLeft, Phone, Mail, MapPin, FileText, Car, Wrench, ChevronRight,
   MessageCircle, PhoneCall, Users as VisitIcon, StickyNote, Video,
@@ -75,6 +76,7 @@ export default function CustomerDetailPage() {
   const { user } = useAuthStore();
   const enabledModules = useTenantStore((s) => s.enabledModules) || [];
   const hasCrm         = enabledModules.includes('crm');
+  const { sendViaWhatsApp } = useWhatsAppPitbox();
   const hasWorkshop    = enabledModules.includes('workshop');
   const hasReceivables = enabledModules.includes('receivables');
   const canAssign      = ['admin', 'manager', 'super_admin'].includes(user?.role);
@@ -371,12 +373,11 @@ export default function CustomerDetailPage() {
               </div>
             ))}
             {hasCrm && bestPhone(customer) && (
-              <a href={buildWaLink(bestPhone(customer), `Hola ${displayName.split(' ')[0]}, te escribo desde Pitbox.`)}
-                target="_blank" rel="noreferrer"
-                onClick={() => trackWhatsAppInteraction(customer.id, `Hola ${displayName.split(' ')[0]}, te escribo desde Pitbox.`, hasCrm)}
-                className="flex items-center gap-2 justify-center w-full text-sm font-medium text-green-700 bg-green-50 border border-green-200 rounded-lg py-2 hover:bg-green-100 transition">
+              <button type="button"
+                onClick={() => sendViaWhatsApp({ phone: bestPhone(customer), customerId: customer.id, text: `Hola ${displayName.split(' ')[0]}, te escribo desde Pitbox.`, hasCrm })}
+                className="flex items-center gap-2 justify-center w-full !text-sm font-medium text-green-700 bg-green-50 border border-green-200 rounded-lg !py-2 hover:bg-green-100 transition">
                 <MessageCircle size={14} /> Escribir por WhatsApp
-              </a>
+              </button>
             )}
             {customer.notes && (
               <div className="pt-2 border-t border-gray-100">

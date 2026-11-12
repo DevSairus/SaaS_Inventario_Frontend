@@ -103,7 +103,6 @@ const NAV = [
       { label: "Resultados",         path: "/crm/dashboard" },
       { label: "Recompensas",        path: "/crm/rewards" },
       { label: "Configuración",      path: "/crm/settings", roles: ["admin", "manager", "super_admin"], excludePaths: ["/crm/settings/meta"] },
-      { label: "Integración Meta",   path: "/crm/settings/meta", module: "crm_meta_leads" },
     ],
   },
   {

@@ -6,7 +6,8 @@ import crmApi from '../../api/crm';
 import { usersAPI } from '../../api/users';
 import useAuthStore from '../../store/authStore';
 import useTenantStore from '../../store/tenantStore';
-import { buildWaLink, bestPhone, trackWhatsAppInteraction } from '../../utils/whatsapp';
+import { buildWaLink, bestPhone } from '../../utils/whatsapp';
+import useWhatsAppPitbox from '../../hooks/useWhatsAppPitbox';
 import {
   Target, Plus, LayoutGrid, List, Clock, MessageCircle, Phone,
   Store, Users, Share2, Globe, RefreshCw, Megaphone, Inbox, Flame, FileText, Wrench,
@@ -159,7 +160,7 @@ function urgencyInfo(opp, stageTypeByKey, firstStageKey) {
 // dnd-kit, que sí soporta puntero táctil vía TouchSensor (ver sensors más
 // abajo). `overlay` indica que esta instancia es la que se pinta dentro de
 // <DragOverlay> mientras se arrastra — no necesita listeners propios.
-function OpportunityCard({ opp, accentColor, onOpen, onQuote, onWorkOrder, hasWorkshop, hasCrm, stageTypeByKey, firstStageKey, waTemplates, onSendWa, overlay }) {
+function OpportunityCard({ opp, accentColor, onOpen, onQuote, onWorkOrder, hasWorkshop, stageTypeByKey, firstStageKey, waTemplates, onSendWa, onWhatsApp, overlay }) {
   const name = customerName(opp.customer);
   const urgency = urgencyInfo(opp, stageTypeByKey, firstStageKey);
   const phone = bestPhone(opp.customer);
@@ -274,9 +275,9 @@ function OpportunityCard({ opp, accentColor, onOpen, onQuote, onWorkOrder, hasWo
                 {waMenuOpen && (
                   <div onClick={e => e.stopPropagation()}
                     className="absolute right-0 top-7 z-10 w-44 bg-white border border-gray-100 rounded-lg shadow-lg py-1">
-                    <a href={waLink} target="_blank" rel="noreferrer"
-                      onClick={() => { setWaMenuOpen(false); trackWhatsAppInteraction(opp.customer_id, defaultWaText, hasCrm); }}
-                      className="block px-3 py-1.5 text-xs text-gray-500 hover:bg-gray-50">Mensaje por defecto</a>
+                    <button type="button"
+                      onClick={() => { setWaMenuOpen(false); onWhatsApp(opp, defaultWaText); }}
+                      className="block w-full text-left px-3 py-1.5 text-xs text-gray-500 hover:bg-gray-50">Mensaje por defecto</button>
                     {waTemplates.map(t => (
                       <button key={t.id} type="button" onClick={() => { setWaMenuOpen(false); onSendWa(opp, t); }}
                         className="block w-full text-left px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50 truncate">{t.name}</button>
@@ -285,12 +286,12 @@ function OpportunityCard({ opp, accentColor, onOpen, onQuote, onWorkOrder, hasWo
                 )}
               </div>
             ) : (
-              <a href={waLink} target="_blank" rel="noreferrer" draggable={false}
-                onClick={e => { e.stopPropagation(); trackWhatsAppInteraction(opp.customer_id, defaultWaText, hasCrm); }}
+              <button type="button" draggable={false}
+                onClick={e => { e.stopPropagation(); onWhatsApp(opp, defaultWaText); }}
                 title="Escribir por WhatsApp"
-                className="p-1.5 bg-green-50 text-green-600 rounded-full hover:bg-green-100">
+                className="!p-1.5 bg-green-50 text-green-600 rounded-full hover:bg-green-100">
                 <MessageCircle size={12} />
-              </a>
+              </button>
             )
           )}
           {phone && (
@@ -353,7 +354,7 @@ function StageBar({ stages, byStage, activeKey, overStage, onSelect }) {
 // PipelinePage con onDragOver/onDragLeave/onDrop nativos; ahora usa
 // useDroppable, que sí participa del ciclo de eventos de dnd-kit (mouse y
 // touch por igual) y nos da `isOver` gratis para el resaltado visual.
-function KanbanColumn({ stage, items, collapsed, limit, onFocus, isOver, navigate, onOpenDeal, hasWorkshop, hasCrm, stageTypeByKey, firstStageKey, waTemplates, onSendWa }) {
+function KanbanColumn({ stage, items, collapsed, limit, onFocus, isOver, navigate, onOpenDeal, hasWorkshop, stageTypeByKey, firstStageKey, waTemplates, onSendWa, onWhatsApp }) {
   const { setNodeRef } = useDroppable({ id: stage.key });
   const total = items.reduce((s, o) => s + parseFloat(o.expected_value || 0), 0);
   const visibleItems = limit ? items.slice(0, limit) : items;
@@ -409,11 +410,11 @@ function KanbanColumn({ stage, items, collapsed, limit, onFocus, isOver, navigat
             onQuote={() => onOpenDeal(opp, true)}
             onWorkOrder={() => navigate(buildWorkOrderUrl(opp))}
             hasWorkshop={hasWorkshop}
-            hasCrm={hasCrm}
             stageTypeByKey={stageTypeByKey}
             firstStageKey={firstStageKey}
             waTemplates={waTemplates}
             onSendWa={onSendWa}
+            onWhatsApp={onWhatsApp}
           />
         ))}
         {items.length === 0 && (
@@ -433,6 +434,7 @@ function KanbanColumn({ stage, items, collapsed, limit, onFocus, isOver, navigat
 export default function PipelinePage() {
   const navigate = useNavigate();
   const { user } = useAuthStore();
+  const { sendViaWhatsApp } = useWhatsAppPitbox();
   const canFilterTeam = ['admin', 'manager', 'super_admin'].includes(user?.role);
   const enabledModules = useTenantStore((s) => s.enabledModules) || [];
   const hasWorkshop = enabledModules.includes('workshop');
@@ -616,17 +618,14 @@ export default function PipelinePage() {
   const handleSendWaTemplate = async (opp, template) => {
     try {
       const res = await crmApi.renderMessageTemplate(template.id, { customer_id: opp.customer_id, opportunity_id: opp.id });
-      const phone = bestPhone(opp.customer);
-      const text = res.data.data.text;
-      const link = buildWaLink(phone, text);
-      if (link) {
-        window.open(link, '_blank', 'noreferrer');
-        trackWhatsAppInteraction(opp.customer_id, text, hasCrm);
-      }
+      await handleWhatsApp(opp, res.data.data.text);
     } catch (err) {
       toast.error(err.response?.data?.message || 'No se pudo generar el mensaje');
     }
   };
+
+  const handleWhatsApp = (opp, text) =>
+    sendViaWhatsApp({ phone: bestPhone(opp.customer), customerId: opp.customer_id, text, hasCrm });
 
   const openCreate = () => setCreateModal(true);
 
@@ -888,7 +887,7 @@ export default function PipelinePage() {
                 className="flex items-center gap-2 px-4 py-2 bg-gradient-to-br from-accent to-accent-soft text-white rounded-xl text-sm font-medium shadow-sm shadow-accent/30 hover:shadow-md transition-all">
                 <Plus className="h-4 w-4" /> Nuevo negocio
               </button>
-              <button onClick={() => navigate('/crm/settings/meta')}
+              <button onClick={() => navigate(user?.role === 'admin' ? '/settings/whatsapp' : '/crm/settings/meta')}
                 className="flex items-center gap-2 px-4 py-2 border border-gray-200 text-gray-600 rounded-xl text-sm font-medium hover:bg-gray-50 transition">
                 Conectar Meta Ads
               </button>
@@ -976,11 +975,11 @@ export default function PipelinePage() {
                         onQuote={() => openDeal(opp, true)}
                         onWorkOrder={() => navigate(buildWorkOrderUrl(opp))}
                         hasWorkshop={hasWorkshop}
-                        hasCrm={hasCrm}
                         stageTypeByKey={stageTypeByKey}
                         firstStageKey={firstStageKey}
                         waTemplates={waTemplates}
                         onSendWa={handleSendWaTemplate}
+                        onWhatsApp={handleWhatsApp}
                       />
                     ))}
                   </div>
@@ -1000,11 +999,11 @@ export default function PipelinePage() {
                     navigate={navigate}
                     onOpenDeal={openDeal}
                     hasWorkshop={hasWorkshop}
-                    hasCrm={hasCrm}
                     stageTypeByKey={stageTypeByKey}
                     firstStageKey={firstStageKey}
                     waTemplates={waTemplates}
                     onSendWa={handleSendWaTemplate}
+                    onWhatsApp={handleWhatsApp}
                   />
                 ))}
               </div>
@@ -1015,7 +1014,6 @@ export default function PipelinePage() {
                   opp={activeDragOpp}
                   accentColor={stages.find(s => s.key === activeDragOpp.stage)?.color}
                   hasWorkshop={hasWorkshop}
-                  hasCrm={hasCrm}
                   stageTypeByKey={stageTypeByKey}
                   firstStageKey={firstStageKey}
                   waTemplates={waTemplates}
@@ -1125,13 +1123,12 @@ export default function PipelinePage() {
                             </button>
                           )}
                           {phone && (
-                            <a href={buildWaLink(phone, `Hola ${name.split(' ')[0]}, te escribo sobre tu solicitud.`)}
-                              target="_blank" rel="noreferrer"
-                              onClick={e => { e.stopPropagation(); trackWhatsAppInteraction(opp.customer_id, `Hola ${name.split(' ')[0]}, te escribo sobre tu solicitud.`, hasCrm); }}
+                            <button type="button"
+                              onClick={e => { e.stopPropagation(); handleWhatsApp(opp, `Hola ${name.split(' ')[0]}, te escribo sobre tu solicitud.`); }}
                               title="Escribir por WhatsApp"
-                              className="p-1.5 bg-green-50 text-green-600 rounded-full hover:bg-green-100 inline-flex">
+                              className="!p-1.5 bg-green-50 text-green-600 rounded-full hover:bg-green-100 inline-flex">
                               <MessageCircle size={12} />
-                            </a>
+                            </button>
                           )}
                         </div>
                       </td>

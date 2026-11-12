@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build && node scripts/prerender-blog.js",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "node --test src/utils/waChat.test.js"
   },
   "dependencies": {
     "@ericblade/quagga2": "^1.12.1",

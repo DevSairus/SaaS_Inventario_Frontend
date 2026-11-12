@@ -17,7 +17,9 @@ export const formatColombianPhone = (phone) => {
   const digits = String(phone || '').replace(/\D/g, '');
   if (!digits) return '';
   if (digits.length >= 11) return digits;
-  if (digits.length === 10) return `57${digits}`;
+  // Solo números colombianos (celular 3XX o fijo 60X), igual que el backend
+  // (utils/customerWhatsappPhone.js): un extranjero de 10 dígitos queda igual.
+  if (/^(3\d{9}|60\d{8})$/.test(digits)) return `57${digits}`;
   return digits;
 };
 
