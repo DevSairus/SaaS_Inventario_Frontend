@@ -17,7 +17,7 @@ import useFormDraft from '../../hooks/useFormDraft';
 import useReceptionNotice from '../../components/workshop/receptionNotice';
 import VehicleBrandLineInputs from '../../components/workshop/VehicleBrandLineInputs';
 import useTenantStore from '../../store/tenantStore';
-import { vehicleTypeOptionsFor, enabledVehicleTypes, defaultVehicleType } from '../../constants/vehicleTypes';
+import { vehicleTypeOptionsFor, enabledVehicleTypes, defaultVehicleType, meterUnitOf, defaultMeterUnit, meterName } from '../../constants/vehicleTypes';
 
 const inputCls = "w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white";
 
@@ -64,6 +64,8 @@ export default function WorkOrderFormPage() {
   // Tipos de vehículo que atiende la empresa (Configuración → Taller): el
   // vehículo nuevo arranca en el primero si 'automovil' no está entre ellos.
   const configuredTypes = useTenantStore(s => s.vehicleTypes);
+  // km u horas (horómetro) del vehículo elegido, o del nuevo según su tipo.
+  const intakeUnit = selVehicle ? meterUnitOf(selVehicle) : defaultMeterUnit(newVehicle.vehicle_type);
   useEffect(() => {
     setNewVehicle(p => (enabledVehicleTypes(configuredTypes).includes(p.vehicle_type) || p.plate
       ? p : { ...p, vehicle_type: defaultVehicleType(configuredTypes) }));
@@ -535,8 +537,8 @@ export default function WorkOrderFormPage() {
             )}
 
             <div className="grid grid-cols-2 gap-3 mt-3">
-              <Field label="Kilometraje de ingreso *">
-                <NumericInput value={form.mileage_in} placeholder="85000" className={`${inputCls} ${!form.mileage_in ? 'border-amber-300' : ''}`}
+              <Field label={`${meterName(intakeUnit)} de ingreso * (${intakeUnit === 'h' ? 'h' : 'km'})`}>
+                <NumericInput value={form.mileage_in} placeholder={intakeUnit === 'h' ? '350' : '85000'} className={`${inputCls} ${!form.mileage_in ? 'border-amber-300' : ''}`}
                   onChange={e => setForm(f => ({ ...f, mileage_in: e.target.value }))} />
               </Field>
             </div>

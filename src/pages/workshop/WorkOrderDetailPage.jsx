@@ -24,6 +24,7 @@ import DiagramMapEditor from '../../components/workshop/DiagramMapEditor';
 import NumericInput from '../../components/inputs/NumericInput';
 import CompleteCustomerDianModal from '../../components/dian/CompleteCustomerDianModal';
 import CustomerQuickViewModal from '../../components/customers/CustomerQuickViewModal';
+import { meterUnitOf, fmtMeter } from '../../constants/vehicleTypes';
 import ComboPickerModal from '../../components/combos/ComboPickerModal';
 import WorkOrderPaymentsPanel from '../../components/workshop/WorkOrderPaymentsPanel';
 import IntakeAuthorizationCard from '../../components/consents/IntakeAuthorizationCard';
@@ -529,17 +530,18 @@ export default function WorkOrderDetailPage() {
   };
 
   const saveMileageOut = async () => {
-    if (!mileageOutVal && mileageOutVal !== 0) return toast.error('Ingresa el kilometraje de entrega');
+    const meterWord = meterUnitOf(order?.vehicle) === 'h' ? 'horómetro' : 'kilometraje';
+    if (!mileageOutVal && mileageOutVal !== 0) return toast.error(`Ingresa el ${meterWord} de entrega`);
     const km = parseInt(mileageOutVal);
-    if (isNaN(km) || km < 0) return toast.error('El kilometraje debe ser un número válido');
+    if (isNaN(km) || km < 0) return toast.error(`El ${meterWord} debe ser un número válido`);
     setSavingMileageOut(true);
     try {
       const res = await workOrdersApiOffline.update(id, { mileage_out: km }, order?.updated_at);
       patchCurrentOrder({ mileage_out: km });
       setEditingMileageOut(false);
-      toast.success(res.data.data._pendingSync ? 'Km de entrega guardado sin conexión — se sincronizará automáticamente' : 'Km de entrega guardado');
+      toast.success(res.data.data._pendingSync ? 'Lectura de entrega guardada sin conexión — se sincronizará automáticamente' : 'Lectura de entrega guardada');
     } catch {
-      toast.error('No se pudo guardar el kilometraje de entrega');
+      toast.error('No se pudo guardar la lectura de entrega');
     } finally {
       setSavingMileageOut(false);
     }
@@ -1047,16 +1049,16 @@ export default function WorkOrderDetailPage() {
                   <p className="font-medium">{order.vehicle?.year || '—'}</p></div>
                 <div><span className="text-gray-400 dark:text-gray-500 text-xs block">Color</span>
                   <p className="font-medium">{order.vehicle?.color || '—'}</p></div>
-                <div><span className="text-gray-400 dark:text-gray-500 text-xs block">Km entrada</span>
-                  <p className="font-medium">{order.mileage_in?.toLocaleString() || '—'}</p></div>
+                <div><span className="text-gray-400 dark:text-gray-500 text-xs block">{meterUnitOf(order.vehicle) === 'h' ? 'Horas entrada' : 'Km entrada'}</span>
+                  <p className="font-medium">{fmtMeter(order.mileage_in, meterUnitOf(order.vehicle)) || '—'}</p></div>
                 <div>
-                  <span className="text-gray-400 dark:text-gray-500 text-xs block">Km salida</span>
+                  <span className="text-gray-400 dark:text-gray-500 text-xs block">{meterUnitOf(order.vehicle) === 'h' ? 'Horas salida' : 'Km salida'}</span>
                   {editingMileageOut ? (
                     <div className="flex items-center gap-1.5 mt-0.5">
                       <NumericInput
                         value={mileageOutVal}
                         onChange={e => setMileageOutVal(e.target.value)}
-                        placeholder="Ej: 87500"
+                        placeholder={meterUnitOf(order.vehicle) === 'h' ? 'Ej: 360' : 'Ej: 87500'}
                         autoFocus
                         className="w-24 border border-gray-300 rounded px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
@@ -1069,7 +1071,7 @@ export default function WorkOrderDetailPage() {
                     </div>
                   ) : (
                     <div className="flex items-center gap-2">
-                      <p className="font-medium">{order.mileage_out ? order.mileage_out.toLocaleString() : '—'}</p>
+                      <p className="font-medium">{order.mileage_out ? fmtMeter(order.mileage_out, meterUnitOf(order.vehicle)) : '—'}</p>
                       {!isClosed && (
                         <button
                           onClick={() => { setMileageOutVal(order.mileage_out || ''); setEditingMileageOut(true); }}

@@ -11,6 +11,7 @@ import { publicAppointmentsApi } from '../../api/workshopAppointments';
 import {
   MAINTENANCE_STATUS, VEHICLE_TYPE_LABELS, fmtKm, fmtDateOnly, describeRemaining, fmtKmPerDay,
 } from '../../components/workshop/maintenanceStatus';
+import { meterUnitOf } from '../../constants/vehicleTypes';
 
 const fmtDate = (d) =>
   d ? new Date(d).toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' }) : '—';
@@ -41,7 +42,7 @@ function Card({ title, children, right }) {
 
 function UpcomingCard({ item }) {
   const st = MAINTENANCE_STATUS[item.status] || MAINTENANCE_STATUS.sin_historial;
-  const next = [fmtKm(item.next_due_mileage), fmtDateOnly(item.next_due_date)].filter(Boolean);
+  const next = [fmtKm(item.next_due_mileage, item.interval_unit), fmtDateOnly(item.next_due_date)].filter(Boolean);
   return (
     <div className="rounded-xl border p-4" style={{ borderColor: `${st.color}33`, backgroundColor: st.bg }}>
       <div className="flex items-start justify-between gap-2">
@@ -60,12 +61,12 @@ function UpcomingCard({ item }) {
           <p className="text-xs mt-0.5" style={{ color: st.color }}>{describeRemaining(item)}</p>
           {item.estimated_km_due_date && (
             <p className="text-xs text-gray-600 mt-0.5">
-              A tu ritmo de uso llegarías a los {fmtKm(item.next_due_mileage)} hacia el <b>{fmtDateOnly(item.estimated_km_due_date)}</b>
+              A tu ritmo de uso llegarías a los {fmtKm(item.next_due_mileage, item.interval_unit)} hacia el <b>{fmtDateOnly(item.estimated_km_due_date)}</b>
             </p>
           )}
           {item.last && (
             <p className="text-xs text-gray-500 mt-1">
-              Último: {fmtDateOnly(item.last.performed_at)}{item.last.mileage_at_service ? ` · ${fmtKm(item.last.mileage_at_service)}` : ''}
+              Último: {fmtDateOnly(item.last.performed_at)}{item.last.mileage_at_service ? ` · ${fmtKm(item.last.mileage_at_service, item.interval_unit)}` : ''}
             </p>
           )}
         </>
@@ -74,7 +75,7 @@ function UpcomingCard({ item }) {
   );
 }
 
-function HistoryEntry({ entry }) {
+function HistoryEntry({ entry, unit }) {
   const [open, setOpen] = useState(false);
   const items = entry.items || [];
   return (
@@ -83,7 +84,7 @@ function HistoryEntry({ entry }) {
       <span className="absolute left-[4.5px] top-4 bottom-0 w-px bg-gray-200" />
       <div className="flex items-baseline justify-between gap-2">
         <p className="text-sm font-semibold text-gray-900">{fmtDate(entry.date)}</p>
-        {entry.mileage && <p className="text-xs text-gray-500 shrink-0">{fmtKm(entry.mileage)}</p>}
+        {entry.mileage && <p className="text-xs text-gray-500 shrink-0">{fmtKm(entry.mileage, unit)}</p>}
       </div>
       {entry.maintenance?.length > 0 && (
         <div className="flex flex-wrap gap-1 mt-1">
@@ -203,16 +204,16 @@ export default function VehiclePortalPage() {
             <div className="mt-3 grid grid-cols-2 gap-2">
               {vehicle.current_mileage != null && (
                 <div className="px-3 py-2 rounded-lg bg-gray-50 dark:bg-white/5">
-                  <p className="text-[11px] text-gray-500">Último km registrado</p>
-                  <p className="text-sm font-bold text-gray-900 dark:text-gray-100">{fmtKm(vehicle.current_mileage)}</p>
+                  <p className="text-[11px] text-gray-500">{meterUnitOf(vehicle) === 'h' ? 'Último horómetro registrado' : 'Último km registrado'}</p>
+                  <p className="text-sm font-bold text-gray-900 dark:text-gray-100">{fmtKm(vehicle.current_mileage, meterUnitOf(vehicle))}</p>
                   {usage?.last_reading && <p className="text-[11px] text-gray-400">{fmtDateOnly(usage.last_reading.date)}</p>}
                 </div>
               )}
               {usage && (
                 <div className="px-3 py-2 rounded-lg" style={{ backgroundColor: `${primaryColor}12` }}>
-                  <p className="text-[11px] text-gray-500">Km estimado hoy</p>
-                  <p className="text-sm font-bold" style={{ color: primaryColor }}>≈ {fmtKm(usage.estimated_km)}</p>
-                  <p className="text-[11px] text-gray-400">Según tu uso: {fmtKmPerDay(usage)}</p>
+                  <p className="text-[11px] text-gray-500">{meterUnitOf(vehicle) === 'h' ? 'Horas estimadas hoy' : 'Km estimado hoy'}</p>
+                  <p className="text-sm font-bold" style={{ color: primaryColor }}>≈ {fmtKm(usage.estimated_km, meterUnitOf(vehicle))}</p>
+                  <p className="text-[11px] text-gray-400">Según tu uso: {fmtKmPerDay(usage, meterUnitOf(vehicle))}</p>
                 </div>
               )}
             </div>
@@ -227,7 +228,7 @@ export default function VehiclePortalPage() {
               {upcoming.map(u => <UpcomingCard key={u.name} item={u} />)}
             </div>
             <p className="text-[11px] text-gray-400 mt-3">
-              Lo que ocurra primero: kilometraje o fecha. Calculado según tu último servicio en {workshop?.name || 'el taller'}.
+              Lo que ocurra primero: {meterUnitOf(vehicle) === 'h' ? 'horas de uso' : 'kilometraje'} o fecha. Calculado según tu último servicio en {workshop?.name || 'el taller'}.
             </p>
           </Card>
         )}
@@ -271,7 +272,7 @@ export default function VehiclePortalPage() {
           {history.length === 0 ? (
             <p className="text-sm text-gray-400 text-center py-4">Aún no hay servicios registrados.</p>
           ) : (
-            <div>{history.map(h => <HistoryEntry key={h.order_number} entry={h} />)}</div>
+            <div>{history.map(h => <HistoryEntry key={h.order_number} entry={h} unit={meterUnitOf(vehicle)} />)}</div>
           )}
         </Card>
 

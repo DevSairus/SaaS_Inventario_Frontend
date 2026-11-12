@@ -14,7 +14,7 @@ import NumericInput from '../../components/inputs/NumericInput';
 import VehicleLabelPrintModal from '../../components/workshop/VehicleLabelPrintModal';
 import VehicleBrandLineInputs from '../../components/workshop/VehicleBrandLineInputs';
 import useTenantStore from '../../store/tenantStore';
-import { vehicleTypeOptionsFor } from '../../constants/vehicleTypes';
+import { vehicleTypeOptionsFor, meterUnitOf, defaultMeterUnit, meterName, METER_UNIT_OPTIONS } from '../../constants/vehicleTypes';
 import useRemoteOptions from '../../hooks/useRemoteOptions';
 import useWhatsAppPitbox from '../../hooks/useWhatsAppPitbox';
 import {
@@ -140,6 +140,7 @@ export default function VehicleDetailPage() {
       year:                   v.year || '',
       color:                  v.color || '',
       vehicle_type:           v.vehicle_type || 'automovil',
+      meter_unit:             meterUnitOf(v),
       fuel_type:              v.fuel_type || 'gasolina',
       current_mileage:        v.current_mileage || '',
       // Identificación técnica
@@ -275,7 +276,7 @@ export default function VehicleDetailPage() {
                 { icon: Car,      label: 'Tipo',         val: VEHICLE_TYPE_LABELS[vehicle.vehicle_type] },
                 { icon: Palette,  label: 'Color',       val: vehicle.color },
                 { icon: Fuel,     label: 'Combustible', val: FUEL_LABELS[vehicle.fuel_type] },
-                { icon: Gauge,    label: 'Kilometraje', val: vehicle.current_mileage ? `${vehicle.current_mileage.toLocaleString()} km` : null },
+                { icon: Gauge,    label: meterName(meterUnitOf(vehicle)), val: vehicle.current_mileage ? fmtKm(vehicle.current_mileage, meterUnitOf(vehicle)) : null },
               ].filter(x => x.val).map(({ icon: Icon, label, val }) => (
                 <div key={label} className="flex items-center gap-2 text-sm">
                   <Icon size={13} className="text-gray-400 flex-shrink-0"/>
@@ -466,7 +467,7 @@ export default function VehicleDetailPage() {
                 </div>
                 <div>
                   <label className="block text-xs text-gray-500 mb-1">Tipo de vehículo</label>
-                  <select value={form.vehicle_type} onChange={e => setF('vehicle_type', e.target.value)} className={inputCls}>
+                  <select value={form.vehicle_type} onChange={e => { setF('vehicle_type', e.target.value); setF('meter_unit', defaultMeterUnit(e.target.value)); }} className={inputCls}>
                     {vehicleTypeOptionsFor(configuredTypes, form.vehicle_type).map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                   </select>
                 </div>
@@ -493,9 +494,15 @@ export default function VehicleDetailPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-500 mb-1">Kilometraje actual</label>
-                  <NumericInput value={form.current_mileage} placeholder="85000" className={inputCls}
+                  <label className="block text-xs text-gray-500 mb-1">{form.meter_unit === 'h' ? 'Horómetro actual (h)' : 'Kilometraje actual'}</label>
+                  <NumericInput value={form.current_mileage} placeholder={form.meter_unit === 'h' ? '350' : '85000'} className={inputCls}
                     onChange={e => setF('current_mileage', e.target.value)} />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1" title="Las cuatrimotos y los UTV suelen medir el uso en horas">Medidor de uso</label>
+                  <select value={form.meter_unit} onChange={e => setF('meter_unit', e.target.value)} className={inputCls}>
+                    {METER_UNIT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                  </select>
                 </div>
               </div>
             </div>
@@ -645,8 +652,8 @@ function MaintenanceSection({ vehicle, maintenance, busy, onCopy, onWhatsApp, on
           <CalendarClock size={14} className="text-emerald-500"/> Mantenimientos
           {usage && (
             <span className="text-xs font-normal text-gray-500"
-              title={`Promedio con ${usage.readings} lecturas de km en ${usage.span_days} días. Última: ${fmtKm(usage.last_reading.km)} el ${fmtDateOnly(usage.last_reading.date)}`}>
-              · Uso {fmtKmPerDay(usage)} · km estimado hoy ≈ {fmtKm(usage.estimated_km)}
+              title={`Promedio con ${usage.readings} lecturas en ${usage.span_days} días. Última: ${fmtKm(usage.last_reading.km, meterUnitOf(vehicle))} el ${fmtDateOnly(usage.last_reading.date)}`}>
+              · Uso {fmtKmPerDay(usage, meterUnitOf(vehicle))} · {meterUnitOf(vehicle) === 'h' ? 'horas estimadas' : 'km estimado'} hoy ≈ {fmtKm(usage.estimated_km, meterUnitOf(vehicle))}
             </span>
           )}
         </h2>
@@ -687,8 +694,8 @@ function MaintenanceSection({ vehicle, maintenance, busy, onCopy, onWhatsApp, on
             <tbody className="divide-y divide-gray-50">
               {upcoming.map(u => {
                 const st = MAINTENANCE_STATUS[u.status] || MAINTENANCE_STATUS.sin_historial;
-                const next = [fmtKm(u.next_due_mileage), fmtDateOnly(u.next_due_date)].filter(Boolean).join(' o ');
-                const every = [fmtKm(u.interval_km), u.interval_months ? `${u.interval_months} mes${u.interval_months === 1 ? '' : 'es'}` : null].filter(Boolean).join(' o ');
+                const next = [fmtKm(u.next_due_mileage, u.interval_unit), fmtDateOnly(u.next_due_date)].filter(Boolean).join(' o ');
+                const every = [fmtKm(u.interval_km, u.interval_unit), u.interval_months ? `${u.interval_months} mes${u.interval_months === 1 ? '' : 'es'}` : null].filter(Boolean).join(' o ');
                 return (
                   <tr key={u.maintenance_type_id}>
                     <td className="px-1 py-2.5">
@@ -698,7 +705,7 @@ function MaintenanceSection({ vehicle, maintenance, busy, onCopy, onWhatsApp, on
                     <td className="px-1 py-2.5 text-xs text-gray-600">
                       {u.last ? (
                         <>
-                          <p>{fmtDateOnly(u.last.performed_at)}{u.last.mileage_at_service ? ` · ${fmtKm(u.last.mileage_at_service)}` : ''}</p>
+                          <p>{fmtDateOnly(u.last.performed_at)}{u.last.mileage_at_service ? ` · ${fmtKm(u.last.mileage_at_service, u.interval_unit)}` : ''}</p>
                           {u.last.work_order_id && (
                             <button onClick={() => onOpenOrder(u.last.work_order_id)} className="font-mono text-blue-500 hover:underline">
                               {u.last.order_number}
@@ -712,7 +719,7 @@ function MaintenanceSection({ vehicle, maintenance, busy, onCopy, onWhatsApp, on
                       <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${st.cls}`}>{st.label}</span>
                       <p className="text-[11px] text-gray-400 mt-0.5">{describeRemaining(u)}</p>
                       {u.estimated_km_due_date && (
-                        <p className="text-[11px] text-gray-400">Llega al km ≈ {fmtDateOnly(u.estimated_km_due_date)}</p>
+                        <p className="text-[11px] text-gray-400">Llega {u.interval_unit === 'h' ? 'a esas horas' : 'al km'} ≈ {fmtDateOnly(u.estimated_km_due_date)}</p>
                       )}
                     </td>
                   </tr>

@@ -8,6 +8,8 @@ import NumericInput from '../inputs/NumericInput';
 import axios from '../../api/axios';
 import { vehiclesApi, workOrdersApi } from '../../api/workshop';
 import useReceptionNotice from './receptionNotice';
+import useTenantStore from '../../store/tenantStore';
+import { meterUnitOf, defaultMeterUnit, defaultVehicleType, meterName } from '../../constants/vehicleTypes';
 
 /**
  * OT rápida: recibir un vehículo con lo mínimo (placa, cliente, km y el
@@ -48,6 +50,7 @@ export default function QuickWorkOrderModal({ isOpen, onClose }) {
   const [showNewCustomer, setShowNewCustomer] = useState(false);
   const [newCustomer, setNewCustomer] = useState(EMPTY_CUSTOMER);
 
+  const configuredTypes = useTenantStore(s => s.vehicleTypes);
   const [mileage, setMileage] = useState('');
   const [motive, setMotive] = useState('');
   const [saving, setSaving] = useState(false);
@@ -124,6 +127,10 @@ export default function QuickWorkOrderModal({ isOpen, onClose }) {
   };
 
   const currentMileage = Number(foundVehicle?.current_mileage) || 0;
+  // km u horas (horómetro): la del vehículo; placa nueva = según el tipo con
+  // que se registrará (el primero que atiende la empresa).
+  const meterUnit = foundVehicle ? meterUnitOf(foundVehicle) : defaultMeterUnit(defaultVehicleType(configuredTypes));
+  const unitSuffix = meterUnit === 'h' ? 'h' : 'km';
   const mileageLower = mileage !== '' && currentMileage > 0 && Number(mileage) < currentMileage;
 
   const hasCustomer = showNewCustomer
@@ -141,7 +148,7 @@ export default function QuickWorkOrderModal({ isOpen, onClose }) {
       return toast.error('Selecciona un cliente o registra uno nuevo');
     }
     if (mileage === '' || isNaN(Number(mileage)) || Number(mileage) < 0) {
-      return toast.error('El kilometraje de ingreso es requerido');
+      return toast.error(`El ${meterUnit === 'h' ? 'horómetro' : 'kilometraje'} de ingreso es requerido`);
     }
 
     setSaving(true);
@@ -203,7 +210,7 @@ export default function QuickWorkOrderModal({ isOpen, onClose }) {
               <span className="font-semibold">Vehículo registrado:</span>{' '}
               {[foundVehicle.plate, foundVehicle.brand, foundVehicle.model, foundVehicle.year].filter(Boolean).join(' ')}
               {!foundVehicle.brand && !foundVehicle.model && <span className="text-blue-500"> (sin marca/modelo)</span>}
-              {currentMileage > 0 && <span className="block text-blue-500 mt-0.5">Último km registrado: {currentMileage.toLocaleString('es-CO')}</span>}
+              {currentMileage > 0 && <span className="block text-blue-500 mt-0.5">Último {meterUnit === 'h' ? 'horómetro' : 'km'} registrado: {currentMileage.toLocaleString('es-CO')} {unitSuffix}</span>}
             </div>
           )}
           {lookup.status === 'notfound' && (
@@ -289,19 +296,19 @@ export default function QuickWorkOrderModal({ isOpen, onClose }) {
 
         {/* Kilometraje */}
         <div>
-          <label className={labelCls} htmlFor="quick-ot-km">Kilometraje *</label>
+          <label className={labelCls} htmlFor="quick-ot-km">{meterName(meterUnit)} * ({unitSuffix})</label>
           <NumericInput
             id="quick-ot-km"
             value={mileage}
             onChange={e => setMileage(e.target.value)}
-            placeholder="Ej: 45.000"
+            placeholder={meterUnit === 'h' ? 'Ej: 350' : 'Ej: 45.000'}
             inputMode="numeric"
             className={inputCls}
           />
           {mileageLower && (
             <p className="flex items-start gap-1.5 text-xs text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800/40 rounded-lg px-3 py-2 mt-1.5">
               <AlertTriangle size={13} className="flex-shrink-0 mt-0.5" />
-              El kilometraje es menor al último registrado ({currentMileage.toLocaleString('es-CO')}). Verifícalo; igual puedes crear la OT.
+              La lectura es menor a la última registrada ({currentMileage.toLocaleString('es-CO')} {unitSuffix}). Verifícalo; igual puedes crear la OT.
             </p>
           )}
         </div>

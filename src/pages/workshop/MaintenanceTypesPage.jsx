@@ -8,11 +8,12 @@ import { useState, useEffect, useCallback } from 'react';
 import Layout from '../../components/layout/Layout';
 import { maintenanceTypesApi } from '../../api/workshop';
 import { VEHICLE_TYPE_LABELS, fmtKm } from '../../components/workshop/maintenanceStatus';
+import { defaultMeterUnit } from '../../constants/vehicleTypes';
 import { CalendarClock, Plus, Pencil, Trash2, Loader2, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const inputCls = 'w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white';
-const EMPTY_FORM = { name: '', vehicle_type: 'automovil', interval_km: '', interval_months: '', match_keywords: '' };
+const EMPTY_FORM = { name: '', vehicle_type: 'automovil', interval_km: '', interval_unit: 'km', interval_months: '', match_keywords: '' };
 
 export default function MaintenanceTypesPage() {
   const [types, setTypes] = useState([]);
@@ -49,6 +50,7 @@ export default function MaintenanceTypesPage() {
       name: t.name,
       vehicle_type: t.vehicle_type,
       interval_km: t.interval_km || '',
+      interval_unit: t.interval_unit || defaultMeterUnit(t.vehicle_type),
       interval_months: t.interval_months || '',
       match_keywords: (t.match_keywords || []).join(', '),
     });
@@ -57,7 +59,7 @@ export default function MaintenanceTypesPage() {
 
   const handleSave = async () => {
     if (!form.name.trim()) return toast.error('El nombre es requerido');
-    if (!form.interval_km && !form.interval_months) return toast.error('Indica un intervalo en km, en meses o ambos');
+    if (!form.interval_km && !form.interval_months) return toast.error('Indica un intervalo de uso (km u horas), en meses o ambos');
     if (!form.match_keywords.trim()) return toast.error('Indica al menos una palabra clave');
     setSaving(true);
     try {
@@ -65,6 +67,7 @@ export default function MaintenanceTypesPage() {
         name: form.name.trim(),
         vehicle_type: form.vehicle_type,
         interval_km: form.interval_km || null,
+        interval_unit: form.interval_unit,
         interval_months: form.interval_months || null,
         match_keywords: form.match_keywords,
       };
@@ -142,7 +145,7 @@ export default function MaintenanceTypesPage() {
                   <div className="min-w-0">
                     <p className="font-medium text-gray-800">{t.name}</p>
                     <p className="text-xs text-gray-500">
-                      Cada {[fmtKm(t.interval_km), t.interval_months ? `${t.interval_months} mes${t.interval_months === 1 ? '' : 'es'}` : null].filter(Boolean).join(' o ')}
+                      Cada {[fmtKm(t.interval_km, t.interval_unit), t.interval_months ? `${t.interval_months} mes${t.interval_months === 1 ? '' : 'es'}` : null].filter(Boolean).join(' o ')}
                     </p>
                     <div className="flex flex-wrap gap-1 mt-1">
                       {(t.match_keywords || []).map(k => (
@@ -181,15 +184,22 @@ export default function MaintenanceTypesPage() {
             <div>
               <label className="block text-xs text-gray-500 mb-1">Tipo de vehículo</label>
               <select value={form.vehicle_type} className={inputCls}
-                onChange={e => setForm(f => ({ ...f, vehicle_type: e.target.value }))}>
+                onChange={e => setForm(f => ({ ...f, vehicle_type: e.target.value, interval_unit: defaultMeterUnit(e.target.value) }))}>
                 {Object.entries(VEHICLE_TYPE_LABELS).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
               </select>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs text-gray-500 mb-1">Cada (km)</label>
-                <input type="number" min="1" value={form.interval_km} placeholder="5000" className={inputCls}
-                  onChange={e => setForm(f => ({ ...f, interval_km: e.target.value }))} />
+                <label className="block text-xs text-gray-500 mb-1">Cada ({form.interval_unit === 'h' ? 'horas de uso' : 'km'})</label>
+                <div className="flex gap-1">
+                  <input type="number" min="1" value={form.interval_km} placeholder={form.interval_unit === 'h' ? '50' : '5000'} className={inputCls}
+                    onChange={e => setForm(f => ({ ...f, interval_km: e.target.value }))} />
+                  <select value={form.interval_unit} title="Kilómetros u horas de uso (horómetro)" className="border border-gray-200 rounded-lg px-1 text-sm"
+                    onChange={e => setForm(f => ({ ...f, interval_unit: e.target.value }))}>
+                    <option value="km">km</option>
+                    <option value="h">h</option>
+                  </select>
+                </div>
               </div>
               <div>
                 <label className="block text-xs text-gray-500 mb-1">Cada (meses)</label>
@@ -197,7 +207,7 @@ export default function MaintenanceTypesPage() {
                   onChange={e => setForm(f => ({ ...f, interval_months: e.target.value }))} />
               </div>
             </div>
-            <p className="text-[11px] text-gray-400 -mt-2">Puedes dejar uno vacío. Si pones ambos, vence lo que ocurra primero.</p>
+            <p className="text-[11px] text-gray-400 -mt-2">Puedes dejar uno vacío. Si pones ambos, vence lo que ocurra primero. El intervalo en horas solo aplica a vehículos con horómetro (y el de km, a los de odómetro).</p>
             <div>
               <label className="block text-xs text-gray-500 mb-1">Palabras clave (separadas por coma)</label>
               <input value={form.match_keywords} placeholder="aceite, lubricante" className={inputCls}

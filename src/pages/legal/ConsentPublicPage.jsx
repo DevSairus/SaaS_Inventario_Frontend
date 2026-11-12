@@ -80,8 +80,8 @@ function IntakeSummary({ snapshot }) {
       </div>
       <div className="grid grid-cols-2 gap-3 text-sm">
         <div>
-          <p className="text-xs text-stone-400">Kilometraje</p>
-          <p className="text-stone-800">{snapshot.mileage_in != null ? `${Number(snapshot.mileage_in).toLocaleString('es-CO')} km` : '—'}</p>
+          <p className="text-xs text-stone-400">{snapshot.meter_unit === 'h' ? 'Horómetro' : 'Kilometraje'}</p>
+          <p className="text-stone-800">{snapshot.mileage_in != null ? `${Number(snapshot.mileage_in).toLocaleString('es-CO')} ${snapshot.meter_unit === 'h' ? 'h' : 'km'}` : '—'}</p>
         </div>
         <div>
           <p className="text-xs text-stone-400">Combustible</p>

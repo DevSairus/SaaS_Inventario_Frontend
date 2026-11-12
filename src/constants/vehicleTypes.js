@@ -43,3 +43,21 @@ export function vehicleTypeOptionsFor(configured, currentValue) {
 export function defaultVehicleType(configured) {
   return enabledVehicleTypes(configured)[0] || 'automovil';
 }
+
+// Medidor de uso: km (odómetro) u horas (horómetro). Cuatrimotos y UTV usan
+// horas por defecto; cada vehículo puede cambiarlo (vehicle.meter_unit). Igual
+// que backend/src/constants/vehicleTypes.js.
+export const METER_UNIT_OPTIONS = [
+  { value: 'km', label: 'Kilómetros (odómetro)' },
+  { value: 'h', label: 'Horas (horómetro)' },
+];
+export const HOURS_DEFAULT_TYPES = ['cuatrimoto', 'utv'];
+export const defaultMeterUnit = (vehicleType) => (HOURS_DEFAULT_TYPES.includes(vehicleType) ? 'h' : 'km');
+export const meterUnitOf = (vehicle) =>
+  (vehicle?.meter_unit === 'h' || vehicle?.meter_unit === 'km' ? vehicle.meter_unit : defaultMeterUnit(vehicle?.vehicle_type));
+// "12.500 km" / "350 h"
+export const fmtMeter = (n, unit = 'km') =>
+  (n == null || n === '' ? null : `${Number(n).toLocaleString('es-CO')} ${unit === 'h' ? 'h' : 'km'}`);
+// Nombre del dato: "Kilometraje" / "Horómetro"; corto: "Km" / "Horas".
+export const meterName = (unit) => (unit === 'h' ? 'Horómetro' : 'Kilometraje');
+export const meterShort = (unit) => (unit === 'h' ? 'Horas' : 'Km');

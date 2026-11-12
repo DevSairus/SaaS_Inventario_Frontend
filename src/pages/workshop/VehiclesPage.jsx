@@ -17,7 +17,7 @@ import Pagination from '../../components/common/Pagination';
 import useUrlPageSync from '../../hooks/useUrlPageSync';
 import useTenantStore from '../../store/tenantStore';
 import VehicleBrandLineInputs from '../../components/workshop/VehicleBrandLineInputs';
-import { MOTO_LIKE_TYPES, vehicleTypeOptionsFor, defaultVehicleType } from '../../constants/vehicleTypes';
+import { MOTO_LIKE_TYPES, vehicleTypeOptionsFor, defaultVehicleType, defaultMeterUnit, meterUnitOf, fmtMeter, METER_UNIT_OPTIONS } from '../../constants/vehicleTypes';
 
 const VEHICLES_PAGE_SIZE = 25;
 
@@ -52,7 +52,10 @@ const EMPTY_VEHICLE = { plate: '', brand: '', model: '', year: '', color: '', ve
 /* ── Modal: Crear vehículo ─────────────────────────────────────────── */
 function CreateVehicleModal({ onClose, onCreated }) {
   const configuredTypes = useTenantStore(s => s.vehicleTypes);
-  const [form, setForm]             = useState(() => ({ ...EMPTY_VEHICLE, vehicle_type: defaultVehicleType(configuredTypes) }));
+  const [form, setForm]             = useState(() => {
+    const vehicle_type = defaultVehicleType(configuredTypes);
+    return { ...EMPTY_VEHICLE, vehicle_type, meter_unit: defaultMeterUnit(vehicle_type) };
+  });
   const [saving, setSaving]         = useState(false);
   const [showRunt, setShowRunt]     = useState(false);
   const [custSearch, setCustSearch] = useState('');
@@ -145,8 +148,14 @@ function CreateVehicleModal({ onClose, onCreated }) {
             {/* Tipo de vehículo */}
             <div>
               <label className="text-xs font-medium text-gray-600 dark:text-gray-400 block mb-1">Tipo de vehículo</label>
-              <select value={form.vehicle_type} onChange={e => setF('vehicle_type', e.target.value)} className={inputCls}>
+              <select value={form.vehicle_type} onChange={e => { setF('vehicle_type', e.target.value); setF('meter_unit', defaultMeterUnit(e.target.value)); }} className={inputCls}>
                 {vehicleTypeOptionsFor(configuredTypes, form.vehicle_type).map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-medium text-gray-600 dark:text-gray-400 block mb-1" title="Las cuatrimotos y los UTV suelen medir el uso en horas">Medidor de uso</label>
+              <select value={form.meter_unit} onChange={e => setF('meter_unit', e.target.value)} className={inputCls}>
+                {METER_UNIT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
             </div>
             {/* Marca + Línea */}
@@ -395,7 +404,7 @@ export default function VehiclesPage() {
                   <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase dark:text-gray-500">Placa</th>
                   <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase dark:text-gray-500">Vehículo</th>
                   <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase hidden sm:table-cell dark:text-gray-500">Propietario</th>
-                  <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase hidden md:table-cell dark:text-gray-500">Km</th>
+                  <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase hidden md:table-cell dark:text-gray-500">Km / h</th>
                   <th className="px-4 py-2.5 text-right text-xs font-semibold text-gray-500 uppercase dark:text-gray-500">Acciones</th>
                 </tr>
               </thead>
@@ -426,7 +435,7 @@ export default function VehiclesPage() {
                       </td>
                       <td className="px-4 py-3 hidden md:table-cell">
                         <p className="text-sm text-gray-500 dark:text-gray-500">
-                          {v.current_mileage ? `${v.current_mileage.toLocaleString()} km` : '—'}
+                          {v.current_mileage ? fmtMeter(v.current_mileage, meterUnitOf(v)) : '—'}
                         </p>
                       </td>
                       <td className="px-4 py-3 text-right">
@@ -491,7 +500,7 @@ export default function VehiclesPage() {
                     <div><p className="text-xl font-bold text-gray-900 dark:text-gray-100">{history.filter(o => o.status === 'entregado').length}</p><p className="text-xs text-gray-400 dark:text-gray-500">completadas</p></div>
                     <div><p className="text-xl font-bold text-gray-900 dark:text-gray-100">{COP(totalFacturado)}</p><p className="text-xs text-gray-400 dark:text-gray-500">facturado total</p></div>
                     {showHistory.current_mileage && (
-                      <div><p className="text-xl font-bold text-gray-900 dark:text-gray-100">{showHistory.current_mileage.toLocaleString()} km</p><p className="text-xs text-gray-400 dark:text-gray-500">km actuales</p></div>
+                      <div><p className="text-xl font-bold text-gray-900 dark:text-gray-100">{fmtMeter(showHistory.current_mileage, meterUnitOf(showHistory))}</p><p className="text-xs text-gray-400 dark:text-gray-500">{meterUnitOf(showHistory) === 'h' ? 'horas actuales' : 'km actuales'}</p></div>
                     )}
                   </div>
                 )}
@@ -542,7 +551,7 @@ export default function VehiclesPage() {
                                     <div className="flex items-center gap-3 mt-1 text-xs text-gray-400 flex-wrap">
                                       <span>{fmtDate(order.received_at)}</span>
                                       {order.delivered_at && (<><span>→</span><span>{fmtDate(order.delivered_at)}</span></>)}
-                                      {order.mileage_in && <span className="flex items-center gap-1"><Gauge size={10} /> {parseInt(order.mileage_in).toLocaleString()} km</span>}
+                                      {order.mileage_in && <span className="flex items-center gap-1"><Gauge size={10} /> {fmtMeter(parseInt(order.mileage_in), meterUnitOf(showHistory))}</span>}
                                     </div>
                                     {order.problem_description && <p className="text-xs text-gray-500 mt-1 truncate">{order.problem_description}</p>}
                                   </div>
@@ -559,8 +568,8 @@ export default function VehiclesPage() {
                                   {(order.mileage_in || order.mileage_out) && (
                                     <div className="flex items-center gap-4 text-xs text-gray-500">
                                       <Gauge size={12} className="text-gray-400" />
-                                      {order.mileage_in && <span>Entrada: <span className="font-medium text-gray-700">{parseInt(order.mileage_in).toLocaleString()} km</span></span>}
-                                      {order.mileage_out && <span>Salida: <span className="font-medium text-gray-700">{parseInt(order.mileage_out).toLocaleString()} km</span></span>}
+                                      {order.mileage_in && <span>Entrada: <span className="font-medium text-gray-700">{fmtMeter(parseInt(order.mileage_in), meterUnitOf(showHistory))}</span></span>}
+                                      {order.mileage_out && <span>Salida: <span className="font-medium text-gray-700">{fmtMeter(parseInt(order.mileage_out), meterUnitOf(showHistory))}</span></span>}
                                     </div>
                                   )}
                                   {order.work_performed && (

@@ -7,7 +7,7 @@ import useTenantStore from '../../store/tenantStore';
 import useAuthStore from '../../store/authStore';
 import DiagramMapEditor from '../../components/workshop/DiagramMapEditor';
 import { brandsForType } from '../../constants/vehicleBrands';
-import { VEHICLE_TYPE_OPTIONS } from '../../constants/vehicleTypes';
+import { VEHICLE_TYPE_OPTIONS, defaultMeterUnit } from '../../constants/vehicleTypes';
 import useCustomersStore from '../../store/customersStore';
 import useProductsStore from '../../store/productsStore';
 import { warehousesService } from '../../api/warehouses';
@@ -1535,7 +1535,7 @@ function SaleFormPage() {
                         />
                       </div>
                       <div>
-                        <label className={labelCls}>Kilometraje</label>
+                        <label className={labelCls}>{defaultMeterUnit(formData.vehicle_type) === 'h' ? 'Horómetro (h)' : 'Kilometraje'}</label>
                         <NumericInput
                           name="mileage"
                           value={formData.mileage}

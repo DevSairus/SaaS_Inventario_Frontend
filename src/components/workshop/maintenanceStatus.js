@@ -11,7 +11,8 @@ export const MAINTENANCE_STATUS = {
 
 export { VEHICLE_TYPE_LABELS } from '../../constants/vehicleTypes';
 
-export const fmtKm = (n) => (n == null ? null : `${Number(n).toLocaleString('es-CO')} km`);
+// Lectura del medidor con su unidad ('km' u 'h' de horómetro).
+export const fmtKm = (n, unit = 'km') => (n == null ? null : `${Number(n).toLocaleString('es-CO')} ${unit === 'h' ? 'h' : 'km'}`);
 
 // Fechas DATEONLY ('YYYY-MM-DD') -- se fija el mediodía para que el huso
 // horario no la corra un día hacia atrás.
@@ -22,14 +23,15 @@ export const fmtDateOnly = (d) =>
 // semáforo, a partir de km_remaining / days_remaining.
 // Con km_estimated el km sale del ritmo de uso del vehículo (no de una
 // lectura real) -- se marca con "≈" para no presentarlo como dato exacto.
-export function describeRemaining({ status, km_remaining, days_remaining, km_estimated }) {
+export function describeRemaining({ status, km_remaining, days_remaining, km_estimated, interval_unit }) {
+  const unit = interval_unit === 'h' ? 'h' : 'km';
   if (status === 'sin_historial') return 'Aún no hay registro de este servicio';
   const parts = [];
   if (km_remaining != null) {
     const approx = km_estimated ? '≈ ' : '';
     parts.push(km_remaining > 0
-      ? `faltan ${approx}${Number(km_remaining).toLocaleString('es-CO')} km`
-      : `pasado por ${approx}${Number(-km_remaining).toLocaleString('es-CO')} km`);
+      ? `faltan ${approx}${Number(km_remaining).toLocaleString('es-CO')} ${unit}`
+      : `pasado por ${approx}${Number(-km_remaining).toLocaleString('es-CO')} ${unit}`);
   }
   if (days_remaining != null) {
     if (days_remaining > 0) parts.push(`${days_remaining} día${days_remaining === 1 ? '' : 's'}`);
@@ -41,6 +43,8 @@ export function describeRemaining({ status, km_remaining, days_remaining, km_est
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
-// Ritmo de uso: "≈ 40 km/día".
-export const fmtKmPerDay = (usage) =>
-  usage?.km_per_day ? `≈ ${Number(usage.km_per_day).toLocaleString('es-CO', { maximumFractionDigits: 0 })} km/día` : null;
+// Ritmo de uso: "≈ 40 km/día" / "≈ 1,5 h/día".
+export const fmtKmPerDay = (usage, unit = 'km') =>
+  usage?.km_per_day
+    ? `≈ ${Number(usage.km_per_day).toLocaleString('es-CO', { maximumFractionDigits: unit === 'h' ? 1 : 0 })} ${unit === 'h' ? 'h' : 'km'}/día`
+    : null;
