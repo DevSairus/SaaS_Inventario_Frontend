@@ -2,13 +2,7 @@ import { useEffect, useState } from 'react';
 import useVehicleApplicationsStore from '../../store/vehicleApplicationsStore';
 import { Car, Plus, Trash2, Edit3, X, Check } from 'lucide-react';
 
-const VEHICLE_TYPES = [
-  { value: 'automovil', label: 'Automóvil' },
-  { value: 'camioneta', label: 'Camioneta' },
-  { value: 'motocicleta', label: 'Motocicleta' },
-  { value: 'camion', label: 'Camión' },
-  { value: 'otro', label: 'Otro' },
-];
+import { VEHICLE_TYPE_OPTIONS as VEHICLE_TYPES } from '../../constants/vehicleTypes';
 
 export default function VehicleApplicationsSection({ productId, readOnly = false }) {
   const { applications, isLoading, fetchApplications, addApplication, updateApplication, removeApplication, fetchBrandsAndLines, brandsAndLines } = useVehicleApplicationsStore();

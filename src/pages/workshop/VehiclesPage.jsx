@@ -15,6 +15,9 @@ import {
 } from 'lucide-react';
 import Pagination from '../../components/common/Pagination';
 import useUrlPageSync from '../../hooks/useUrlPageSync';
+import useTenantStore from '../../store/tenantStore';
+import VehicleBrandLineInputs from '../../components/workshop/VehicleBrandLineInputs';
+import { MOTO_LIKE_TYPES, vehicleTypeOptionsFor, defaultVehicleType } from '../../constants/vehicleTypes';
 
 const VEHICLES_PAGE_SIZE = 25;
 
@@ -27,14 +30,7 @@ const FUEL_OPTIONS = [
   { value: 'otro',     label: 'Otro' },
 ];
 const FUEL_LABELS = Object.fromEntries(FUEL_OPTIONS.map(o => [o.value, o.label]));
-const VEHICLE_TYPE_OPTIONS = [
-  { value: 'automovil',   label: 'Automóvil' },
-  { value: 'camioneta',   label: 'Camioneta' },
-  { value: 'motocicleta', label: 'Motocicleta' },
-  { value: 'camion',      label: 'Camión' },
-  { value: 'otro',        label: 'Otro' },
-];
-const VEHICLE_TYPE_LABELS = Object.fromEntries(VEHICLE_TYPE_OPTIONS.map(o => [o.value, o.label]));
+// Tipos de vehículo: constants/vehicleTypes.js (filtrados por los que atiende la empresa).
 const STATUS_CONFIG = {
   recibido:   { label: 'Recibido',   color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',     dot: 'bg-blue-500',   icon: Clock },
   en_proceso: { label: 'En Proceso', color: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300', dot: 'bg-yellow-500', icon: Wrench },
@@ -55,7 +51,8 @@ const EMPTY_VEHICLE = { plate: '', brand: '', model: '', year: '', color: '', ve
 
 /* ── Modal: Crear vehículo ─────────────────────────────────────────── */
 function CreateVehicleModal({ onClose, onCreated }) {
-  const [form, setForm]             = useState(EMPTY_VEHICLE);
+  const configuredTypes = useTenantStore(s => s.vehicleTypes);
+  const [form, setForm]             = useState(() => ({ ...EMPTY_VEHICLE, vehicle_type: defaultVehicleType(configuredTypes) }));
   const [saving, setSaving]         = useState(false);
   const [showRunt, setShowRunt]     = useState(false);
   const [custSearch, setCustSearch] = useState('');
@@ -149,20 +146,23 @@ function CreateVehicleModal({ onClose, onCreated }) {
             <div>
               <label className="text-xs font-medium text-gray-600 dark:text-gray-400 block mb-1">Tipo de vehículo</label>
               <select value={form.vehicle_type} onChange={e => setF('vehicle_type', e.target.value)} className={inputCls}>
-                {VEHICLE_TYPE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                {vehicleTypeOptionsFor(configuredTypes, form.vehicle_type).map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
             </div>
             {/* Marca + Línea */}
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-xs font-medium text-gray-600 dark:text-gray-400 block mb-1">Marca</label>
-                <input value={form.brand} onChange={e => setF('brand', e.target.value)} placeholder="Chevrolet" className={inputCls} />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-gray-600 dark:text-gray-400 block mb-1">Línea / Modelo</label>
-                <input value={form.model} onChange={e => setF('model', e.target.value)} placeholder="Spark" className={inputCls} />
-              </div>
-            </div>
+            <VehicleBrandLineInputs
+              layoutClassName="grid grid-cols-2 gap-3"
+              vehicleType={form.vehicle_type}
+              brand={form.brand}
+              line={form.model}
+              onBrandChange={v => setF('brand', v)}
+              onLineChange={v => setF('model', v)}
+              inputClassName={inputCls}
+              labelClassName="text-xs font-medium text-gray-600 dark:text-gray-400 block mb-1"
+              lineLabel="Línea"
+              brandPlaceholder="Escribe o elige"
+              linePlaceholder="Escribe o elige"
+            />
             {/* Color + Combustible */}
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -406,7 +406,7 @@ export default function VehiclesPage() {
                     <tr key={v.id} className="hover:bg-gray-50 dark:hover:bg-white/5 transition">
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
-                          {v.vehicle_type === 'motocicleta'
+                          {MOTO_LIKE_TYPES.includes(v.vehicle_type)
                             ? <Bike size={14} className="text-gray-400 flex-shrink-0 dark:text-gray-500" />
                             : <Car size={14} className="text-gray-400 flex-shrink-0 dark:text-gray-500" />}
                           <span className="font-mono font-bold text-gray-900 text-sm dark:text-gray-100">{v.plate}</span>

@@ -13,6 +13,7 @@ import useAuthStore from '../../store/authStore';
 import TaxConfigSection from '../../components/settings/TaxConfigSection';
 import ConsentSettingsTab from '../../components/settings/ConsentSettingsTab';
 import VehicleReminderSettings from '../../components/settings/VehicleReminderSettings';
+import VehicleTypesSettings from '../../components/settings/VehicleTypesSettings';
 import { invalidateRetentionCatalog } from '../../hooks/useRetentionCatalog';
 import { Building2, Receipt, ShoppingCart, Wrench, Landmark, MessageCircle, Printer, Package, FileText, ShieldCheck } from 'lucide-react';
 
@@ -30,7 +31,7 @@ const TenantSettingsPage = () => {
   const canEdit = ['admin', 'manager', 'super_admin'].includes(user?.role);
   // /dian/config exige estos roles (App.jsx y backend dian.routes.js).
   const canConfigureDian = ['admin', 'manager', 'accountant'].includes(user?.role);
-  const { setFeatures, setTaxConfig } = useTenantStore();
+  const { setFeatures, setTaxConfig, setVehicleTypes } = useTenantStore();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
@@ -228,6 +229,7 @@ const TenantSettingsPage = () => {
         // componentes (ej. ProductFormModal) lean las tarifas ICA al toque.
         setFeatures(config.features || {});
         setTaxConfig(config.tax_config || {});
+        setVehicleTypes(config.business_config?.vehicle_types);
         invalidateRetentionCatalog();
         // El backend ya invalidó todas las sesiones del tenant
         // (utils/sessionRevocation.js): cerrar la propia de una vez.
@@ -923,6 +925,15 @@ const TenantSettingsPage = () => {
               </div>
             </div>
           </Card>
+
+          {/* Taller — Tipos de vehículo que atiende (tipo de establecimiento) */}
+          <VehicleTypesSettings
+            businessConfig={config.business_config}
+            onChange={(types) => setConfig(prev => ({
+              ...prev,
+              business_config: { ...prev.business_config, vehicle_types: types },
+            }))}
+          />
 
           {/* Taller — Recordatorios de SOAT y técnico-mecánica */}
           <VehicleReminderSettings

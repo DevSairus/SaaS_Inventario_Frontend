@@ -23,6 +23,7 @@ import ProductImageViewer from '../../components/products/ProductImageViewer';
 import DiagramMapEditor from '../../components/workshop/DiagramMapEditor';
 import NumericInput from '../../components/inputs/NumericInput';
 import CompleteCustomerDianModal from '../../components/dian/CompleteCustomerDianModal';
+import CustomerQuickViewModal from '../../components/customers/CustomerQuickViewModal';
 import ComboPickerModal from '../../components/combos/ComboPickerModal';
 import WorkOrderPaymentsPanel from '../../components/workshop/WorkOrderPaymentsPanel';
 import IntakeAuthorizationCard from '../../components/consents/IntakeAuthorizationCard';
@@ -703,6 +704,7 @@ export default function WorkOrderDetailPage() {
   // ── Estado cliente ────────────────────────────────────────────
   const [customers,        setCustomers]         = useState([]);
   const [editingCustomer,  setEditingCustomer]   = useState(false);
+  const [viewingCustomer,  setViewingCustomer]   = useState(false); // ficha rápida del cliente
   const [selectedCustomerId, setSelectedCustomerId] = useState('');
   const [savingCustomer,   setSavingCustomer]    = useState(false);
 
@@ -1906,13 +1908,21 @@ export default function WorkOrderDetailPage() {
                   <User size={15} className="text-blue-600" />
                   <h2 className="font-semibold text-sm text-gray-800 dark:text-gray-200">Cliente</h2>
                 </div>
-                {!isClosed && !editingCustomer && (
-                  <button
-                    onClick={() => { setSelectedCustomerId(order.customer?.id || ''); setEditingCustomer(true); }}
-                    className="text-xs text-blue-600 font-medium hover:underline">
-                    {order.customer ? 'Cambiar' : 'Asignar'}
-                  </button>
-                )}
+                <div className="flex items-center gap-3">
+                  {order.customer && !editingCustomer && (
+                    <button onClick={() => setViewingCustomer(true)}
+                      className="text-xs text-blue-600 font-medium hover:underline" title="Consultar el cliente y editar sus datos de contacto">
+                      Ver ficha
+                    </button>
+                  )}
+                  {!isClosed && !editingCustomer && (
+                    <button
+                      onClick={() => { setSelectedCustomerId(order.customer?.id || ''); setEditingCustomer(true); }}
+                      className="text-xs text-blue-600 font-medium hover:underline">
+                      {order.customer ? 'Cambiar' : 'Asignar'}
+                    </button>
+                  )}
+                </div>
               </div>
               {editingCustomer ? (
                 <div className="space-y-2">
@@ -1953,11 +1963,12 @@ export default function WorkOrderDetailPage() {
                 </div>
               ) : order.customer ? (
                 <div className="text-sm">
-                  <p className="font-medium text-gray-900">
-                    {order.customer.business_name || `${order.customer.first_name} ${order.customer.last_name}`}
-                  </p>
+                  <button type="button" onClick={() => setViewingCustomer(true)}
+                    className="font-medium text-gray-900 dark:text-gray-100 text-left hover:text-blue-600 hover:underline">
+                    {order.customer.business_name || `${order.customer.first_name} ${order.customer.last_name || ''}`.trim()}
+                  </button>
                   {order.customer.tax_id && <p className="text-gray-500 text-xs mt-1">Doc: {order.customer.tax_id}</p>}
-                  {order.customer.phone && <p className="text-gray-500 text-xs">{order.customer.phone}</p>}
+                  {(order.customer.mobile || order.customer.phone) && <p className="text-gray-500 text-xs">{order.customer.mobile || order.customer.phone}</p>}
                   {order.customer.email && <p className="text-gray-500 text-xs">{order.customer.email}</p>}
                 </div>
               ) : (
@@ -2582,6 +2593,13 @@ export default function WorkOrderDetailPage() {
         </div>
       )}
 
+      <CustomerQuickViewModal
+        isOpen={viewingCustomer && !!order?.customer}
+        customerId={order?.customer?.id}
+        currentOrderId={order?.id}
+        onClose={() => setViewingCustomer(false)}
+        onUpdated={(c) => patchCurrentOrder({ customer: { ...order.customer, ...c } })}
+      />
       <CompleteCustomerDianModal
         open={!!dianIncompleteModal}
         customerId={dianIncompleteModal?.customerId}

@@ -15,6 +15,9 @@ import NumericInput from '../../components/inputs/NumericInput';
 import DraftRecoveryBanner from '../../components/common/DraftRecoveryBanner';
 import useFormDraft from '../../hooks/useFormDraft';
 import { notifyReceptionResult } from '../../components/workshop/receptionNotice';
+import VehicleBrandLineInputs from '../../components/workshop/VehicleBrandLineInputs';
+import useTenantStore from '../../store/tenantStore';
+import { vehicleTypeOptionsFor, enabledVehicleTypes, defaultVehicleType } from '../../constants/vehicleTypes';
 
 const inputCls = "w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white";
 
@@ -57,8 +60,15 @@ export default function WorkOrderFormPage() {
 
   const [showNewVehicle,  setShowNewVehicle]  = useState(false);
   const [newVehicle, setNewVehicle] = useState({ plate: '', brand: '', model: '', year: '', color: '', vehicle_type: 'automovil', fuel_type: 'gasolina', engine_number: '', vin: '', soat_number: '', soat_expiry: '', tecnomecanica_number: '', tecnomecanica_expiry: '' });
+  // Tipos de vehículo que atiende la empresa (Configuración → Taller): el
+  // vehículo nuevo arranca en el primero si 'automovil' no está entre ellos.
+  const configuredTypes = useTenantStore(s => s.vehicleTypes);
+  useEffect(() => {
+    setNewVehicle(p => (enabledVehicleTypes(configuredTypes).includes(p.vehicle_type) || p.plate
+      ? p : { ...p, vehicle_type: defaultVehicleType(configuredTypes) }));
+  }, [configuredTypes]);
   const [showNewCustomer, setShowNewCustomer] = useState(false);
-  const [newCustomer, setNewCustomer] = useState({ first_name: '', last_name: '', phone: '', tax_id: '' });
+  const [newCustomer, setNewCustomer] = useState({ first_name: '', last_name: '', phone: '', tax_id: '', email: '' });
   const [savingCust,  setSavingCust]  = useState(false);
   const [showScanModal, setShowScanModal] = useState(false);
   const prefilledRef = useRef(false);
@@ -256,7 +266,7 @@ export default function WorkOrderFormPage() {
       setVehicles(prev => [v, ...prev]);
       selectVehicle(v);
       setShowNewVehicle(false);
-      setNewVehicle({ plate: '', brand: '', model: '', year: '', color: '', vehicle_type: 'automovil', fuel_type: 'gasolina', engine_number: '', vin: '', soat_number: '', soat_expiry: '', tecnomecanica_number: '', tecnomecanica_expiry: '' });
+      setNewVehicle({ plate: '', brand: '', model: '', year: '', color: '', vehicle_type: defaultVehicleType(configuredTypes), fuel_type: 'gasolina', engine_number: '', vin: '', soat_number: '', soat_expiry: '', tecnomecanica_number: '', tecnomecanica_expiry: '' });
       toast.success(res.data.data._pendingSync ? 'Vehículo guardado sin conexión — se sincronizará automáticamente' : 'Vehículo registrado');
     } catch (e) { toast.error(e.response?.data?.message || 'Error'); }
   };
@@ -265,12 +275,12 @@ export default function WorkOrderFormPage() {
     if (!newCustomer.first_name) return toast.error('El nombre es requerido');
     setSavingCust(true);
     try {
-      const res = await axios.post('/customers', newCustomer);
+      const res = await axios.post('/customers', { ...newCustomer, email: newCustomer.email?.trim() || null });
       const c   = res.data.data;
       setCustomers(prev => [c, ...prev]);
       selectCustomer(c);
       setShowNewCustomer(false);
-      setNewCustomer({ first_name: '', last_name: '', phone: '', tax_id: '' });
+      setNewCustomer({ first_name: '', last_name: '', phone: '', tax_id: '', email: '' });
       toast.success('Cliente registrado');
     } catch (e) { toast.error(e.response?.data?.message || 'Error'); }
     finally { setSavingCust(false); }
@@ -478,13 +488,19 @@ export default function WorkOrderFormPage() {
                   <button type="button" onClick={() => setShowNewVehicle(false)}><X size={13} className="text-blue-400" /></button>
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {[['Placa *','plate'],['Marca','brand'],['Modelo','model']].map(([lbl, key]) => (
-                    <div key={key}>
-                      <label className="text-xs text-gray-500 block mb-0.5">{lbl}</label>
-                      <input value={newVehicle[key]} placeholder={lbl} className={inputCls}
-                        onChange={e => setNewVehicle(p => ({ ...p, [key]: key==='plate' ? e.target.value.toUpperCase() : e.target.value }))} />
-                    </div>
-                  ))}
+                  <div>
+                    <label className="text-xs text-gray-500 block mb-0.5">Placa *</label>
+                    <input value={newVehicle.plate} placeholder="Placa *" className={inputCls}
+                      onChange={e => setNewVehicle(p => ({ ...p, plate: e.target.value.toUpperCase() }))} />
+                  </div>
+                  <VehicleBrandLineInputs
+                    vehicleType={newVehicle.vehicle_type}
+                    brand={newVehicle.brand}
+                    line={newVehicle.model}
+                    onBrandChange={v => setNewVehicle(p => ({ ...p, brand: v }))}
+                    onLineChange={v => setNewVehicle(p => ({ ...p, model: v }))}
+                    inputClassName={inputCls}
+                  />
                   <div>
                     <label className="text-xs text-gray-500 block mb-0.5">Año</label>
                     <input type="number" value={newVehicle.year} placeholder="2020" className={inputCls}
@@ -499,11 +515,7 @@ export default function WorkOrderFormPage() {
                     <label className="text-xs text-gray-500 block mb-0.5">Tipo</label>
                     <select value={newVehicle.vehicle_type} className={inputCls}
                       onChange={e => setNewVehicle(p => ({ ...p, vehicle_type: e.target.value }))}>
-                      <option value="automovil">Automóvil</option>
-                      <option value="camioneta">Camioneta</option>
-                      <option value="motocicleta">Motocicleta</option>
-                      <option value="camion">Camión</option>
-                      <option value="otro">Otro</option>
+                      {vehicleTypeOptionsFor(configuredTypes, newVehicle.vehicle_type).map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                     </select>
                   </div>
                   <div>
@@ -545,8 +557,8 @@ export default function WorkOrderFormPage() {
                       <button type="button" onClick={() => setShowNewCustomer(false)}><X size={13} className="text-green-400"/></button>
                     </div>
                     <div className="grid grid-cols-2 gap-2">
-                      {[['Nombre *','first_name'],['Apellido','last_name'],['Teléfono','phone'],['Cédula/NIT','tax_id']].map(([lbl, k]) => (
-                        <div key={k}>
+                      {[['Nombre *','first_name'],['Apellido','last_name'],['Teléfono','phone'],['Cédula/NIT','tax_id'],['Correo (opcional)','email']].map(([lbl, k]) => (
+                        <div key={k} className={k === 'email' ? 'col-span-2' : undefined}>
                           <label className="text-xs text-gray-500 block mb-0.5">{lbl}</label>
                           <input value={newCustomer[k]} placeholder={lbl} className={inputCls}
                             onChange={e => setNewCustomer(p => ({ ...p, [k]: e.target.value }))} />

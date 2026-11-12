@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { VEHICLE_TYPE_OPTIONS } from '../../constants/vehicleTypes';
 import { X, Search } from 'lucide-react';
 import useProductsStore from '../../store/productsStore';
 import useCategoriesStore from '../../store/categoriesStore';
@@ -1045,11 +1046,7 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
                           disabled={!!product}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100 disabled:opacity-60"
                         >
-                          <option value="automovil">Automóvil</option>
-                          <option value="camioneta">Camioneta</option>
-                          <option value="motocicleta">Motocicleta</option>
-                          <option value="camion">Camión</option>
-                          <option value="otro">Otro</option>
+                          {VEHICLE_TYPE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                         </select>
                       </div>
                       <div>

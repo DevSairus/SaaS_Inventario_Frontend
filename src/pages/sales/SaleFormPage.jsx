@@ -7,6 +7,7 @@ import useTenantStore from '../../store/tenantStore';
 import useAuthStore from '../../store/authStore';
 import DiagramMapEditor from '../../components/workshop/DiagramMapEditor';
 import { brandsForType } from '../../constants/vehicleBrands';
+import { VEHICLE_TYPE_OPTIONS } from '../../constants/vehicleTypes';
 import useCustomersStore from '../../store/customersStore';
 import useProductsStore from '../../store/productsStore';
 import { warehousesService } from '../../api/warehouses';
@@ -1429,7 +1430,7 @@ function SaleFormPage() {
                   <input name="tax_id" value={quickCustomer.tax_id} onChange={handleQuickCustomerChange}
                     placeholder="NIT / Cédula" className={fieldCls} />
                   <input type="email" name="email" value={quickCustomer.email} onChange={handleQuickCustomerChange}
-                    placeholder="Email" className={fieldCls} />
+                    placeholder="Correo (opcional)" className={fieldCls} />
                   <input name="phone" value={quickCustomer.phone} onChange={handleQuickCustomerChange}
                     placeholder="Teléfono" className={fieldCls} />
                 </div>
@@ -1476,11 +1477,7 @@ function SaleFormPage() {
                           className={fieldCls}
                         >
                           <option value="">Sin especificar</option>
-                          <option value="automovil">Automóvil</option>
-                          <option value="camioneta">Camioneta</option>
-                          <option value="motocicleta">Motocicleta</option>
-                          <option value="camion">Camión</option>
-                          <option value="otro">Otro</option>
+                          {VEHICLE_TYPE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                         </select>
                       </div>
                       <div className="relative">

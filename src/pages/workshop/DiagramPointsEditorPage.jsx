@@ -19,13 +19,7 @@ import Layout from '../../components/layout/Layout';
 import { diagramTemplatesApi } from '../../api/workshop';
 import toast from 'react-hot-toast';
 
-const VEHICLE_TYPES = [
-  { value: 'automovil', label: 'Automóvil' },
-  { value: 'camioneta', label: 'Camioneta' },
-  { value: 'camion', label: 'Camión' },
-  { value: 'motocicleta', label: 'Motocicleta' },
-  { value: 'otro', label: 'Otro' },
-];
+import { VEHICLE_TYPE_OPTIONS as VEHICLE_TYPES } from '../../constants/vehicleTypes';
 
 // Offset por defecto al activar la línea guía de un punto — visible pero
 // discreto para un viewBox de 600x400 (ver nota arriba).

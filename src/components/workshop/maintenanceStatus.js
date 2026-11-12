@@ -9,10 +9,7 @@ export const MAINTENANCE_STATUS = {
   sin_historial: { label: 'Sin historial', color: '#6b7280', bg: '#f9fafb', cls: 'bg-gray-100 text-gray-600' },
 };
 
-export const VEHICLE_TYPE_LABELS = {
-  automovil: 'Automóvil', camioneta: 'Camioneta', motocicleta: 'Motocicleta',
-  camion: 'Camión', otro: 'Otro',
-};
+export { VEHICLE_TYPE_LABELS } from '../../constants/vehicleTypes';
 
 export const fmtKm = (n) => (n == null ? null : `${Number(n).toLocaleString('es-CO')} km`);
 

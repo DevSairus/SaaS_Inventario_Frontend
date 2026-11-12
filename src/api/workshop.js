@@ -6,6 +6,8 @@ export const vehiclesApi = {
   getById: (id) => axios.get(`/workshop/vehicles/${id}`),
   // Búsqueda exacta por placa (sin espacios/guiones) -- modal de OT rápida. data=null si no existe.
   getByPlate: (plate) => axios.get(`/workshop/vehicles/by-plate/${encodeURIComponent(plate)}`),
+  // Catálogo global de marcas/líneas por tipo de vehículo: [{ brand, lines }]
+  catalog: (vehicleType) => axios.get('/workshop/vehicles/catalog', { params: { vehicle_type: vehicleType } }),
   getHistory: (id) => axios.get(`/workshop/vehicles/${id}/history`),
   create: (data) => axios.post('/workshop/vehicles', data),
   update: (id, data) => axios.put(`/workshop/vehicles/${id}`, data),

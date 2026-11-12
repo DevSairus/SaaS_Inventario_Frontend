@@ -10,6 +10,9 @@ const useTenantStore = create((set, get) => ({
   // Cómo se calcula el precio desde el margen: 'on_sale' (sobre la venta) o
   // 'markup' (recargo sobre el costo). business_config.margin_method.
   marginMethod: 'on_sale',
+  // Tipos de vehículo que atiende la empresa (business_config.vehicle_types);
+  // null o [] = todos. Ver constants/vehicleTypes.js.
+  vehicleTypes: null,
   loading: false,
 
   fetchFeatures: async () => {
@@ -38,6 +41,7 @@ const useTenantStore = create((set, get) => ({
           tenantSlug: res.data.data.slug || null,
           taxConfig: res.data.data.tax_config || {},
           marginMethod: res.data.data.business_config?.margin_method === 'markup' ? 'markup' : 'on_sale',
+          vehicleTypes: res.data.data.business_config?.vehicle_types || null,
           loading: false,
         });
       }
@@ -72,9 +76,12 @@ const useTenantStore = create((set, get) => ({
   // Llamar desde ProfitMarginsModal después de cambiar el método de cálculo.
   setMarginMethod: (method) => set({ marginMethod: method === 'markup' ? 'markup' : 'on_sale' }),
 
+  // Llamar desde TenantSettingsPage después de guardar los tipos de vehículo.
+  setVehicleTypes: (types) => set({ vehicleTypes: Array.isArray(types) && types.length ? types : null }),
+
   // Llamar al cerrar sesión para no arrastrar los módulos del tenant anterior
   // a la siguiente sesión (por ejemplo si otro usuario inicia sesión en el mismo navegador).
-  reset: () => set({ features: null, enabledModules: null, tenantSlug: null, taxConfig: null, marginMethod: 'on_sale', loading: false }),
+  reset: () => set({ features: null, enabledModules: null, tenantSlug: null, taxConfig: null, marginMethod: 'on_sale', vehicleTypes: null, loading: false }),
 }));
 
 export default useTenantStore;

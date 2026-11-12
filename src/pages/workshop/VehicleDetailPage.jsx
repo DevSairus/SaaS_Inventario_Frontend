@@ -12,6 +12,9 @@ import {
 import toast from 'react-hot-toast';
 import NumericInput from '../../components/inputs/NumericInput';
 import VehicleLabelPrintModal from '../../components/workshop/VehicleLabelPrintModal';
+import VehicleBrandLineInputs from '../../components/workshop/VehicleBrandLineInputs';
+import useTenantStore from '../../store/tenantStore';
+import { vehicleTypeOptionsFor } from '../../constants/vehicleTypes';
 import useRemoteOptions from '../../hooks/useRemoteOptions';
 import {
   MAINTENANCE_STATUS, VEHICLE_TYPE_LABELS, fmtKm, fmtDateOnly, describeRemaining, fmtKmPerDay,
@@ -196,6 +199,7 @@ export default function VehicleDetailPage() {
   };
 
   const setF = useCallback((k, v) => setForm(f => ({ ...f, [k]: v })), []);
+  const configuredTypes = useTenantStore(s => s.vehicleTypes);
 
   // ?edit=1 abre la ficha directo en modo edición -- lo usa el aviso
   // "Completar datos del vehículo" de la OT (vehículos creados solo con la
@@ -468,19 +472,33 @@ export default function VehicleDetailPage() {
                 <Car size={14} className="text-blue-500"/> Datos básicos
               </h2>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {[['Placa *','plate','text'],['Marca','brand','text'],['Modelo','model','text'],['Año','year','number'],['Color','color','text']].map(([lbl, k, type]) => (
-                  <div key={k}>
-                    <label className="block text-xs text-gray-500 mb-1">{lbl}</label>
-                    <input type={type} value={form[k]} placeholder={lbl} className={inputCls}
-                      onChange={e => setF(k, k === 'plate' ? e.target.value.toUpperCase() : e.target.value)} />
-                  </div>
-                ))}
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Placa *</label>
+                  <input value={form.plate} placeholder="Placa" className={inputCls}
+                    onChange={e => setF('plate', e.target.value.toUpperCase())} />
+                </div>
                 <div>
                   <label className="block text-xs text-gray-500 mb-1">Tipo de vehículo</label>
                   <select value={form.vehicle_type} onChange={e => setF('vehicle_type', e.target.value)} className={inputCls}>
-                    {Object.entries(VEHICLE_TYPE_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                    {vehicleTypeOptionsFor(configuredTypes, form.vehicle_type).map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                   </select>
                 </div>
+                <VehicleBrandLineInputs
+                  vehicleType={form.vehicle_type}
+                  brand={form.brand}
+                  line={form.model}
+                  onBrandChange={v => setF('brand', v)}
+                  onLineChange={v => setF('model', v)}
+                  inputClassName={inputCls}
+                  labelClassName="block text-xs text-gray-500 mb-1"
+                />
+                {[['Año','year','number'],['Color','color','text']].map(([lbl, k, type]) => (
+                  <div key={k}>
+                    <label className="block text-xs text-gray-500 mb-1">{lbl}</label>
+                    <input type={type} value={form[k]} placeholder={lbl} className={inputCls}
+                      onChange={e => setF(k, e.target.value)} />
+                  </div>
+                ))}
                 <div>
                   <label className="block text-xs text-gray-500 mb-1">Combustible</label>
                   <select value={form.fuel_type} onChange={e => setF('fuel_type', e.target.value)} className={inputCls}>

@@ -29,6 +29,12 @@ import ProjectSelect from '../../components/projects/ProjectSelect';
 const marginOrNull = (v) => (v === '' || v === null || v === undefined ? null : Number(v));
 // Precio de venta opcional de una línea: vacío = se calcula con el margen.
 const priceOrNull = (v) => (Number(v) > 0 ? Number(v) : null);
+// Costos de compra con centavos: la factura del proveedor suele traerlos y
+// redondear el unitario a pesos descuadra el IVA contra la factura.
+const round2 = (v) => Math.round(Number(v) * 100) / 100;
+// Costo con IVA (e INC) incluido → costo antes de impuestos.
+const netOfTaxes = (gross, taxRate, incRate) =>
+  round2(toNumber(gross, 0) / (1 + (toNumber(taxRate, 0) + toNumber(incRate, 0)) / 100));
 // IVA y precio actual del producto, para estimar su precio de venta.
 const pricingOf = (p) => (p ? {
   price_includes_tax: !!p.price_includes_tax,
@@ -83,6 +89,9 @@ const PurchaseFormPage = () => {
     inc_rate: 0,
     discount_percentage: 0
   });
+  // El costo que se digita en "Agregar" trae IVA incluido: al agregar la línea
+  // se convierte a costo antes de impuestos (lo que guarda la compra).
+  const [costIncludesTax, setCostIncludesTax] = useState(false);
 
   // Retenciones: las calcula el motor del backend (perfil del tenant + del
   // proveedor + concepto de cada producto) vía /retentions/preview.
@@ -328,7 +337,9 @@ const PurchaseFormPage = () => {
     let numValue = value;
     if (name === 'quantity') {
       numValue = toInteger(value, 1);
-    } else if (name === 'unit_cost' || name === 'tax_rate' || name === 'inc_rate' || name === 'discount_percentage') {
+    } else if (name === 'unit_cost') {
+      numValue = round2(toNumber(value, 0));
+    } else if (name === 'tax_rate' || name === 'inc_rate' || name === 'discount_percentage') {
       numValue = toInteger(value, 0);
     }
     
@@ -369,10 +380,14 @@ const PurchaseFormPage = () => {
       return;
     }
 
-    const totals = calculateItemTotals(currentItem);
+    // Costo con IVA incluido → antes de impuestos (IVA + INC de la línea).
+    const line = costIncludesTax
+      ? { ...currentItem, unit_cost: netOfTaxes(currentItem.unit_cost, currentItem.tax_rate, currentItem.inc_rate) }
+      : currentItem;
+    const totals = calculateItemTotals(line);
 
     const newItem = {
-      ...currentItem,
+      ...line,
       product_name: currentItem._product_name || '',
       product_sku: currentItem._product_sku || '',
       current_margin: currentItem._current_margin ?? null,
@@ -570,7 +585,7 @@ const PurchaseFormPage = () => {
       items: items.map(item => ({
         product_id: item.product_id,
         quantity: toInteger(item.quantity),
-        unit_cost: toInteger(item.unit_cost),
+        unit_cost: round2(toNumber(item.unit_cost, 0)),
         tax_rate: toInteger(item.tax_rate),
         inc_rate: toNumber(item.inc_rate, 0),
         discount_percentage: toInteger(item.discount_percentage),
@@ -873,14 +888,23 @@ const PurchaseFormPage = () => {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Costo Unitario
+                {costIncludesTax ? 'Costo Unit. (con IVA)' : 'Costo Unit. (antes de IVA)'}
               </label>
               <NumericInput
                 name="unit_cost"
                 value={currentItem.unit_cost}
                 onChange={handleItemChange}
+                decimals={2}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
+              <label className="mt-1 flex items-center gap-1 text-xs text-gray-600" title="Si el valor que escribes ya trae el IVA (y el INC), se descuenta para guardar el costo antes de impuestos, igual que el precio con IVA incluido en ventas.">
+                <input
+                  type="checkbox"
+                  checked={costIncludesTax}
+                  onChange={(e) => setCostIncludesTax(e.target.checked)}
+                />
+                Incluye IVA
+              </label>
             </div>
 
             <div>
@@ -953,7 +977,7 @@ const PurchaseFormPage = () => {
                   <tr>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Producto</th>
                     <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Cantidad</th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Costo Unit.</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase" title="Costo unitario antes de IVA">Costo Unit. (sin IVA)</th>
                     <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">IVA</th>
                     <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Desc.</th>
                     <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase" title="Opcional. Vacío = el producto conserva su margen. Se aplica al recibir la compra.">Margen %</th>
@@ -989,7 +1013,8 @@ const PurchaseFormPage = () => {
                         <NumericInput
                           name="unit_cost"
                           value={item.unit_cost}
-                          onChange={(e) => updateItem(index, 'unit_cost', toInteger(e.target.value, 0))}
+                          decimals={2}
+                          onChange={(e) => updateItem(index, 'unit_cost', round2(toNumber(e.target.value, 0)))}
                           className={`w-28 px-2 py-1 border rounded text-right focus:ring-2 focus:ring-blue-500 focus:border-transparent ${toNumber(item.unit_cost, 0) > 0 ? 'border-gray-300' : 'border-amber-400 bg-amber-50'}`}
                         />
                       </td>

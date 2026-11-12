@@ -10,18 +10,15 @@ import { X, Wrench } from 'lucide-react';
 import salesApi from '../../api/sales';
 import toast from 'react-hot-toast';
 
-const VEHICLE_TYPES = [
-  { value: 'automovil', label: 'Automóvil' },
-  { value: 'camioneta', label: 'Camioneta' },
-  { value: 'motocicleta', label: 'Motocicleta' },
-  { value: 'camion', label: 'Camión' },
-  { value: 'otro', label: 'Otro' },
-];
+import VehicleBrandLineInputs from '../workshop/VehicleBrandLineInputs';
+import useTenantStore from '../../store/tenantStore';
+import { vehicleTypeOptionsFor } from '../../constants/vehicleTypes';
 
 const inputCls = 'w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400';
 
 export default function ConvertQuoteToWorkOrderModal({ isOpen, onClose, sale, onSuccess }) {
   const [plate, setPlate] = useState('');
+  const configuredTypes = useTenantStore(s => s.vehicleTypes);
   const [brand, setBrand] = useState('');
   const [model, setModel] = useState('');
   const [year, setYear] = useState('');
@@ -108,16 +105,17 @@ export default function ConvertQuoteToWorkOrderModal({ isOpen, onClose, sale, on
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Marca</label>
-              <input type="text" value={brand} onChange={e => setBrand(e.target.value)} className={inputCls} />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Modelo/Línea</label>
-              <input type="text" value={model} onChange={e => setModel(e.target.value)} className={inputCls} />
-            </div>
-          </div>
+          <VehicleBrandLineInputs
+            layoutClassName="grid grid-cols-2 gap-2"
+            vehicleType={vehicleType}
+            brand={brand}
+            line={model}
+            onBrandChange={setBrand}
+            onLineChange={setModel}
+            inputClassName={inputCls}
+            labelClassName="block text-xs font-medium text-gray-600 mb-1"
+            lineLabel="Línea"
+          />
 
           <div className="grid grid-cols-2 gap-2">
             <div>
@@ -133,7 +131,7 @@ export default function ConvertQuoteToWorkOrderModal({ isOpen, onClose, sale, on
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">Tipo de vehículo</label>
             <select value={vehicleType} onChange={e => setVehicleType(e.target.value)} className={inputCls}>
-              {VEHICLE_TYPES.map(v => <option key={v.value} value={v.value}>{v.label}</option>)}
+              {vehicleTypeOptionsFor(configuredTypes, vehicleType).map(v => <option key={v.value} value={v.value}>{v.label}</option>)}
             </select>
           </div>
 
