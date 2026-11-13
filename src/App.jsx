@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useEffect, lazy, Suspense } from 'react';
 import LoginPage from './pages/auth/LoginPage';
 import LandingPage from './pages/LandingPage';
@@ -137,7 +137,6 @@ const WarehousesPage = lazy(() => import('./pages/warehouses/WarehousesPage'));
 const BranchesPage = lazy(() => import('./pages/branches/BranchesPage'));
 import NoBranchAssignedPage from './pages/branches/NoBranchAssignedPage';
 const TenantSettingsPage = lazy(() => import('./pages/settings/TenantSettingsPage'));
-const WhatsAppSettingsPage = lazy(() => import('./pages/settings/WhatsAppSettingsPage'));
 const LabelPrintingSettingsPage = lazy(() => import('./pages/settings/LabelPrintingSettingsPage'));
 const PosPrintingSettingsPage = lazy(() => import('./pages/settings/PosPrintingSettingsPage'));
 const ReportsPage = lazy(() => import('./pages/reports/ReportsPage'));
@@ -239,6 +238,14 @@ function RoleBasedRedirect() {
   const platformHome = getPlatformHome(user);
   if (platformHome) return <Navigate to={platformHome} replace />;
   return <Navigate to={ROUTES.DASHBOARD} replace />;
+}
+
+// /settings/whatsapp ahora es la pestaña WhatsApp de Configuración; conserva
+// los parámetros (ej. ?connected=1 del callback de Meta).
+function WhatsAppSettingsRedirect() {
+  const params = new URLSearchParams(useLocation().search);
+  params.set('tab', 'whatsapp');
+  return <Navigate to={`/settings?${params}`} replace />;
 }
 
 function SuperAdminRoute({ children, roles }) {
@@ -583,7 +590,7 @@ function App() {
         <Route path="approvals" element={<TenantRoute><Suspense fallback={<Loading fullScreen />}><ApprovalsPage /></Suspense></TenantRoute>} />
         <Route path="settings/approvals" element={<TenantRoute><Suspense fallback={<Loading fullScreen />}><ApprovalRulesPage /></Suspense></TenantRoute>} />
         <Route path="settings/permissions" element={<TenantRoute roles={['admin']}><Suspense fallback={<Loading fullScreen />}><TenantRolePermissionsPage /></Suspense></TenantRoute>} />
-        <Route path="settings/whatsapp" element={<TenantRoute roles={['admin']}><Suspense fallback={<Loading fullScreen />}><WhatsAppSettingsPage /></Suspense></TenantRoute>} />
+        <Route path="settings/whatsapp" element={<TenantRoute roles={['admin']}><WhatsAppSettingsRedirect /></TenantRoute>} />
 
         <Route path="reports"  element={<TenantRoute><Suspense fallback={<Loading fullScreen />}><ReportsPage /></Suspense></TenantRoute>} />
         <Route path="nexa/aprobaciones" element={<TenantRoute module="ai_assistant"><Suspense fallback={<Loading fullScreen />}><NexaApprovalsPage /></Suspense></TenantRoute>} />

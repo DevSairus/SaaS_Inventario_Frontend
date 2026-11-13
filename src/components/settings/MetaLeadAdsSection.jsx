@@ -47,7 +47,10 @@ export default function MetaLeadAdsSection() {
     if (connected === null) return;
     if (connected === '1') toast.success('Cuenta de Meta conectada correctamente');
     else toast.error(searchParams.get('message') || 'No se pudo conectar con Meta');
-    setSearchParams({}, { replace: true });
+    const rest = new URLSearchParams(searchParams);
+    rest.delete('connected');
+    rest.delete('message');
+    setSearchParams(rest, { replace: true });
     load();
   }, [searchParams, setSearchParams, load]);
 

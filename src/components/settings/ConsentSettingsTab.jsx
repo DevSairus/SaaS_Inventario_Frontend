@@ -276,7 +276,7 @@ export default function ConsentSettingsTab({ businessConfig, onChange }) {
 
           <p className="text-xs text-gray-500">
             La plantilla de WhatsApp del aviso de recepción se elige en{' '}
-            <a href="/settings/whatsapp" className="text-blue-600 hover:underline">Meta y WhatsApp → Plantillas por mensaje</a>.
+            <a href="/settings?tab=whatsapp" className="text-blue-600 hover:underline">Configuración → WhatsApp → Plantillas por mensaje</a>.
           </p>
 
           <Field label="Condiciones del servicio">

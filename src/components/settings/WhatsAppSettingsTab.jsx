@@ -1,12 +1,13 @@
-// frontend/src/pages/settings/WhatsAppSettingsPage.jsx
+// frontend/src/components/settings/WhatsAppSettingsTab.jsx
+// Pestaña "WhatsApp" de Configuración (TenantSettingsPage). Cada sección
+// guarda con su propio botón: va fuera del <form> general de Configuración.
 import React, { useCallback, useEffect, useState } from 'react';
-import Layout from '../../components/layout/Layout';
 import api from '../../api/axios';
 import crmApi from '../../api/crm';
 import toast from 'react-hot-toast';
 import useTenantStore from '../../store/tenantStore';
-import MetaLeadAdsSection from '../../components/settings/MetaLeadAdsSection';
-import WaEventTemplatesSection from '../../components/settings/WaEventTemplatesSection';
+import MetaLeadAdsSection from './MetaLeadAdsSection';
+import WaEventTemplatesSection from './WaEventTemplatesSection';
 import { invalidateWhatsAppPitboxStatus } from '../../hooks/useWhatsAppPitbox';
 
 function WhatsAppIcon({ className }) {
@@ -57,7 +58,7 @@ function loadFacebookSdk(appId) {
   });
 }
 
-export default function WhatsAppSettingsPage() {
+export default function WhatsAppSettingsTab() {
   const hasMetaLeads = (useTenantStore((s) => s.enabledModules) || []).includes('crm_meta_leads');
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState(null);
@@ -252,11 +253,9 @@ export default function WhatsAppSettingsPage() {
   const cloudConnected = !!waStatus?.connected;
 
   return (
-    <Layout>
-      <div className="max-w-2xl mx-auto px-4 py-8 space-y-6">
+      <div className="space-y-6">
 
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-1">Meta y WhatsApp</h1>
           <p className="text-sm text-gray-500">
             WhatsApp Cloud API con coexistencia (mismo número en la app del celular y en Pitbox), fallback wa.me
             y formularios de anuncios de Facebook/Instagram.
@@ -278,6 +277,11 @@ export default function WhatsAppSettingsPage() {
                   {waStatus.own_display_phone || waStatus.own_phone_number_id}
                   {waStatus.wa_coexistence ? ' · Coexistencia activa' : ''}
                 </p>
+                {!waStatus.wa_coexistence && (
+                  <p className="text-xs text-amber-700">
+                    Sin coexistencia: el número está solo en la API de la nube y la app WhatsApp Business del celular no puede usarlo.
+                  </p>
+                )}
                 {waStatus.token_is_permanent ? (
                   <p className="text-xs text-green-700">Token permanente · no requiere reconexión</p>
                 ) : waStatus.token_expires_at && (
@@ -562,6 +566,5 @@ export default function WhatsAppSettingsPage() {
           )}
         </div>
       </div>
-    </Layout>
   );
 }
