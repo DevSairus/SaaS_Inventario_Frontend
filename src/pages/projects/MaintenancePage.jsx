@@ -16,16 +16,15 @@ const FILTERS = [
 ];
 
 /** Instalaciones (sistemas de los clientes) con su próxima visita. */
-function InstallationsList({ canManage }) {
+function InstallationsList({ reloadKey }) {
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [rows, setRows] = useState(null);
-  const [showNew, setShowNew] = useState(false);
-  const [showImport, setShowImport] = useState(false);
 
   const load = useCallback(() => {
     getMaintenanceInstallations({ search }).then((r) => setRows(r.data)).catch((e) => toast.error(e.response?.data?.message || 'No se pudieron cargar las instalaciones'));
-  }, [search]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search, reloadKey]);
   useEffect(() => { const t = setTimeout(load, 300); return () => clearTimeout(t); }, [load]);
 
   return (
@@ -35,12 +34,6 @@ function InstallationsList({ canManage }) {
           <Search className="w-4 h-4 absolute left-3 top-2.5 text-gray-400" />
           <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar por cliente, NIT, sistema o ciudad" className="w-full pl-9 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-800" />
         </div>
-        {canManage && (
-          <div className="flex gap-2">
-            <button type="button" onClick={() => setShowImport(true)} className="inline-flex items-center gap-1 px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"><FileSpreadsheet className="w-4 h-4" /> Importar desde Excel</button>
-            <button type="button" onClick={() => setShowNew(true)} className="inline-flex items-center gap-1 px-3 py-2 text-sm bg-orange-600 text-white rounded-lg hover:bg-orange-700"><Plus className="w-4 h-4" /> Nueva instalación</button>
-          </div>
-        )}
       </div>
       <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-x-auto">
         <table className="w-full text-sm">
@@ -69,8 +62,6 @@ function InstallationsList({ canManage }) {
           </tbody>
         </table>
       </div>
-      <InstallationFormModal isOpen={showNew} onClose={() => setShowNew(false)} onSaved={(inst) => (inst?.id ? navigate(`/maintenance/installations/${inst.id}`) : load())} />
-      <ImportInstallationsModal isOpen={showImport} onClose={() => setShowImport(false)} onDone={load} />
     </div>
   );
 }
@@ -81,7 +72,13 @@ function InstallationsList({ canManage }) {
  * (sistemas de los clientes), incluidas las anteriores a Pitbox.
  */
 export default function MaintenancePage() {
+  const navigate = useNavigate();
   const can = usePermissions();
+  // Alta de instalaciones (sistemas de clientes, también los anteriores a Pitbox):
+  // los botones van en el encabezado para verse desde la agenda y desde Instalaciones.
+  const [showNew, setShowNew] = useState(false);
+  const [showImport, setShowImport] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
   const canManage = can('projects.maintenance.manage');
   const canVisit = can('projects.maintenance.visit');
   const [view, setView] = useState('agenda');
@@ -104,9 +101,17 @@ export default function MaintenancePage() {
   return (
     <Layout>
       <div className="space-y-5">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2"><CalendarCheck className="w-6 h-6" /> Mantenimientos</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Visitas programadas de los sistemas de tus clientes: los de proyectos de Pitbox y los instalados antes.</p>
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2"><CalendarCheck className="w-6 h-6" /> Mantenimientos</h1>
+            <p className="text-sm text-gray-500 mt-0.5">Visitas programadas de los sistemas de tus clientes: los de proyectos de Pitbox y los instalados antes.</p>
+          </div>
+          {canManage && (
+            <div className="flex gap-2">
+              <button type="button" onClick={() => setShowImport(true)} className="inline-flex items-center gap-1 px-3 py-2.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"><FileSpreadsheet className="w-4 h-4" /> Importar desde Excel</button>
+              <button type="button" onClick={() => setShowNew(true)} className="inline-flex items-center gap-2 px-4 py-2.5 bg-orange-600 text-white rounded-lg text-sm font-medium hover:bg-orange-700"><Plus className="w-4 h-4" /> Nueva instalación</button>
+            </div>
+          )}
         </div>
 
         <div className="flex gap-1 border-b border-gray-200 dark:border-gray-700">
@@ -115,7 +120,7 @@ export default function MaintenancePage() {
           ))}
         </div>
 
-        {view === 'installations' ? <InstallationsList canManage={canManage} /> : (<>
+        {view === 'installations' ? <InstallationsList reloadKey={reloadKey} /> : (<>
 
         {s && filter !== 'done' && (
           <div className="grid grid-cols-3 gap-3">
@@ -170,6 +175,8 @@ export default function MaintenancePage() {
         </div>
         </>)}
       </div>
+      <InstallationFormModal isOpen={showNew} onClose={() => setShowNew(false)} onSaved={(inst) => (inst?.id ? navigate(`/maintenance/installations/${inst.id}`) : setReloadKey((k) => k + 1))} />
+      <ImportInstallationsModal isOpen={showImport} onClose={() => setShowImport(false)} onDone={() => { setView('installations'); setReloadKey((k) => k + 1); load(); }} />
       <CloseVisitModal visit={closing} onClose={() => setClosing(null)} onDone={load} />
       <RescheduleVisitModal visit={moving} users={users} onClose={() => setMoving(null)} onDone={load} />
     </Layout>
