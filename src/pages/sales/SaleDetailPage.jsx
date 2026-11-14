@@ -32,7 +32,6 @@ import CreditDebitNoteModal from '../../components/sales/CreditDebitNoteModal';
 import CompleteCustomerDianModal from '../../components/dian/CompleteCustomerDianModal';
 import { DianDetailPanel } from '../../components/dian/DianStatusBadge';
 import SaleRadianPanel from '../../components/sales/SaleRadianPanel';
-import SaleCirculationPanel from '../../components/sales/SaleCirculationPanel';
 import useTenantStore from '../../store/tenantStore';
 import toast from 'react-hot-toast';
 import DiagramMapEditor from '../../components/workshop/DiagramMapEditor';
@@ -847,7 +846,8 @@ export default function SaleDetailPage() {
         {sale.document_type === 'factura' && sale.cufe && (
           <div className="no-print space-y-4">
             <SaleRadianPanel sale={sale} />
-            <SaleCirculationPanel sale={sale} onUpdate={() => fetchSaleById(id)} />
+            {/* Circulación como título valor (036-046) oculta: exige participante RADIAN
+                (SARLAFT + ISO). Pitbox solo ofrece 030-034 (ver backend/src/routes/radian.routes.js). */}
           </div>
         )}
 

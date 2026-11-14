@@ -5,13 +5,17 @@ import useAuthStore from '../../store/authStore';
 import { usePermissions } from '../../store/tenantPermissionsStore';
 import {
   getProjectTimeEntries, addProjectTimeEntry, deleteProjectTimeEntry, getLaborEmployees, getLaborPeriods, allocateLaborPeriod,
+  getHoursDistribution,
 } from '../../api/projects';
+import TimeSheetCard from './TimeSheetCard';
+import HoursDistributionTable from './HoursDistributionTable';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import { qty } from './projectConstants';
 
 const inputCls = 'w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-800';
 const empName = (e) => (e ? [e.first_name, e.other_names, e.first_surname, e.second_surname].filter(Boolean).join(' ') : '');
 const today = () => new Date().toLocaleDateString('en-CA');
+const monthStart = () => `${today().slice(0, 8)}01`;
 
 /**
  * Mano de obra del proyecto: horas por empleado y, para quien ve costos, el
@@ -28,10 +32,20 @@ export default function LaborTab({ project, canSeeCosts, onChanged }) {
   const [periodId, setPeriodId] = useState('');
   const [form, setForm] = useState({ employee_id: '', work_date: today(), hours: '8', notes: '' });
   const [busy, setBusy] = useState(false);
+  // Horas clasificadas (ordinarias, extra, recargos) de este proyecto en un rango.
+  const [range, setRange] = useState({ from: monthStart(), to: today() });
+  const [dist, setDist] = useState(null);
+
+  const loadDist = useCallback(() => {
+    if (!range.from || !range.to || range.from > range.to) return;
+    getHoursDistribution({ ...range, project_id: project.id }).then((r) => setDist(r.data)).catch(() => setDist(null));
+  }, [project.id, range]);
+  useEffect(() => { loadDist(); }, [loadDist]);
 
   const load = useCallback(() => {
     getProjectTimeEntries(project.id).then((r) => setData(r.data)).catch((e) => toast.error(e.response?.data?.message || 'Error al cargar las horas'));
-  }, [project.id]);
+    loadDist();
+  }, [project.id, loadDist]);
 
   useEffect(() => {
     load();
@@ -136,9 +150,11 @@ export default function LaborTab({ project, canSeeCosts, onChanged }) {
         </div>
       )}
 
+      {canWrite && employees.length > 0 && <TimeSheetCard project={project} employees={employees} onSaved={load} />}
+
       {canWrite && (
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
-          <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2"><Clock className="w-4 h-4" /> Registrar horas</h3>
+          <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2"><Clock className="w-4 h-4" /> Registrar solo horas (sin horario)</h3>
           {employees.length === 0 ? (
             <p className="text-sm text-gray-500">No hay empleados activos. Créalos en Nómina → Empleados para registrarles horas.</p>
           ) : (
@@ -169,6 +185,20 @@ export default function LaborTab({ project, canSeeCosts, onChanged }) {
           )}
         </div>
       )}
+
+      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2">
+          <div>
+            <h3 className="font-semibold text-gray-900 dark:text-gray-100">Horas clasificadas en esta obra</h3>
+            <p className="text-xs text-gray-500">La hora extra se cuenta con todas las obras del trabajador ese día. Para todas las obras: Proyectos → Horarios.</p>
+          </div>
+          <div className="flex gap-2">
+            <input type="date" value={range.from} onChange={(e) => setRange((r) => ({ ...r, from: e.target.value }))} className={`${inputCls} sm:w-40`} />
+            <input type="date" value={range.to} onChange={(e) => setRange((r) => ({ ...r, to: e.target.value }))} className={`${inputCls} sm:w-40`} />
+          </div>
+        </div>
+        <HoursDistributionTable data={dist} showProjects={false} />
+      </div>
 
       {canAllocate && canSeeCosts && (
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
@@ -223,15 +253,18 @@ export default function LaborTab({ project, canSeeCosts, onChanged }) {
         <table className="w-full text-sm">
           <thead className="bg-gray-50 dark:bg-gray-900/40">
             <tr className="text-left text-xs font-medium text-gray-500 uppercase">
-              <th className="px-4 py-2">Fecha</th><th className="px-4 py-2">Empleado</th><th className="px-4 py-2 text-right">Horas</th><th className="px-4 py-2">Actividad</th><th className="px-4 py-2" />
+              <th className="px-4 py-2">Fecha</th><th className="px-4 py-2">Empleado</th><th className="px-4 py-2">Horario</th><th className="px-4 py-2 text-right">Horas</th><th className="px-4 py-2">Actividad</th><th className="px-4 py-2" />
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-            {data.entries.length === 0 && <tr><td colSpan={5} className="px-4 py-6 text-center text-gray-500">Sin horas registradas.</td></tr>}
+            {data.entries.length === 0 && <tr><td colSpan={6} className="px-4 py-6 text-center text-gray-500">Sin horas registradas.</td></tr>}
             {data.entries.map((e) => (
               <tr key={e.id}>
                 <td className="px-4 py-2 whitespace-nowrap">{formatDate(e.work_date)}</td>
                 <td className="px-4 py-2">{empName(e.employee)}</td>
+                <td className="px-4 py-2 whitespace-nowrap text-gray-600 dark:text-gray-300">
+                  {e.start_time ? `${e.start_time.slice(0, 5)}–${e.end_time.slice(0, 5)}${e.break_minutes ? ` (−${e.break_minutes} min)` : ''}` : '—'}
+                </td>
                 <td className="px-4 py-2 text-right">{qty(e.hours)}</td>
                 <td className="px-4 py-2 text-gray-600 dark:text-gray-300">{e.notes || '—'}</td>
                 <td className="px-4 py-2 text-right">

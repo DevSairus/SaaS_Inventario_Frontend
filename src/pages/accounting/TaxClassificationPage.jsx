@@ -26,11 +26,15 @@ export default function TaxClassificationPage() {
   const [loading, setLoading] = useState(true);
   const [catEdits, setCatEdits] = useState({});
   const [savingCats, setSavingCats] = useState(false);
-  const [detail, setDetail] = useState(null); // { concept, lines }
+  const [detail, setDetail] = useState(null); // { concept, lines, page, pages, total, limit }
+  const [catSearch, setCatSearch] = useState('');
+  const [catPage, setCatPage] = useState(1);
+  const [catPageSize, setCatPageSize] = useState(25);
 
   // Excepciones por producto
   const [filters, setFilters] = useState({ search: '', category_id: '', type: '', only_overrides: false });
   const [products, setProducts] = useState({ rows: [], total: 0, page: 1, pages: 1, limit: 50 });
+  const [pageSize, setPageSize] = useState(50);
   const [selected, setSelected] = useState(new Set());
   const [bulkConcept, setBulkConcept] = useState('');
   const [savingProducts, setSavingProducts] = useState(false);
@@ -48,15 +52,15 @@ export default function TaxClassificationPage() {
     }
   }, [year]);
 
-  const loadProducts = useCallback(async (page = 1) => {
+  const loadProducts = useCallback(async (page = 1, limit = pageSize) => {
     try {
-      const res = await taxClassificationAPI.products({ ...filters, only_overrides: filters.only_overrides ? 'true' : undefined, page });
+      const res = await taxClassificationAPI.products({ ...filters, only_overrides: filters.only_overrides ? 'true' : undefined, page, limit });
       setProducts({ rows: res.data, total: res.pagination.total, page: res.pagination.page, pages: res.pagination.pages, limit: res.pagination.limit });
       setSelected(new Set());
     } catch (e) {
       toast.error('Error cargando productos');
     }
-  }, [filters]);
+  }, [filters, pageSize]);
 
   useEffect(() => { load(); }, [load]);
   // Al cambiar filtros vuelve a la página 1. Al montar con ?page=N la carga
@@ -72,6 +76,34 @@ export default function TaxClassificationPage() {
     loadProducts(1);
   }, [filters.category_id, filters.type, filters.only_overrides]); // eslint-disable-line react-hooks/exhaustive-deps
   useUrlPageSync(products.page, (p) => loadProducts(p));
+
+  // La búsqueda por texto se aplica sola tras una pausa al escribir (Enter y
+  // el botón "Buscar" siguen funcionando para aplicarla de inmediato).
+  const lastSearch = useRef(filters.search);
+  useEffect(() => {
+    if (lastSearch.current === filters.search) return undefined;
+    const timer = setTimeout(() => {
+      lastSearch.current = filters.search;
+      loadProducts(1);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [filters.search]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const changePageSize = (size) => {
+    setPageSize(size);
+    loadProducts(1, size);
+  };
+
+  // Categorías: filtro por nombre y paginación en cliente (las ediciones
+  // pendientes viven en catEdits por id, así que sobreviven al cambio de página).
+  const filteredCategories = useMemo(() => {
+    const term = catSearch.trim().toLowerCase();
+    const list = data?.categories || [];
+    return term ? list.filter((c) => String(c.name || '').toLowerCase().includes(term)) : list;
+  }, [data, catSearch]);
+  const catPages = Math.max(Math.ceil(filteredCategories.length / catPageSize), 1);
+  const catPageSafe = Math.min(catPage, catPages);
+  const visibleCategories = filteredCategories.slice((catPageSafe - 1) * catPageSize, catPageSafe * catPageSize);
 
   const concepts = data?.concepts || [];
   const conceptName = useMemo(() => {
@@ -112,14 +144,22 @@ export default function TaxClassificationPage() {
     }
   };
 
-  const openDetail = async (c) => {
+  const loadDetail = async (c, page = 1, limit = 100) => {
     try {
-      const res = await taxClassificationAPI.lines(year, c.concept_id);
-      setDetail({ concept: c, lines: res.data });
+      const res = await taxClassificationAPI.lines(year, c.concept_id, { page, limit });
+      setDetail({
+        concept: c,
+        lines: res.data,
+        page: res.pagination.page,
+        pages: res.pagination.pages,
+        total: res.pagination.total,
+        limit: res.pagination.limit,
+      });
     } catch {
       toast.error('Error cargando el detalle');
     }
   };
+  const openDetail = (c) => loadDetail(c, 1);
 
   const allSelected = products.rows.length > 0 && products.rows.every((p) => selected.has(p.id));
   const toggle = (id) => setSelected((prev) => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
@@ -185,6 +225,12 @@ export default function TaxClassificationPage() {
               <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-200">2. Concepto por categoría</h2>
               <p className="text-xs text-gray-500">Lo heredan todos los productos de la categoría (salvo excepciones).</p>
             </div>
+            <input
+              value={catSearch}
+              onChange={(e) => { setCatSearch(e.target.value); setCatPage(1); }}
+              placeholder="Buscar categoría"
+              className="ml-auto w-48 px-3 py-1.5 border border-gray-300 dark:border-white/10 rounded-lg text-sm dark:bg-graphite-2"
+            />
             {pendingCats > 0 && (
               <button onClick={saveCategories} disabled={savingCats} className="px-3 py-1.5 text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50">
                 {savingCats ? 'Guardando...' : `Guardar ${pendingCats} cambio(s)`}
@@ -205,7 +251,10 @@ export default function TaxClassificationPage() {
                   <th className="px-4 py-2 text-left">Concepto</th>
                 </tr></thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-white/5">
-                  {data.categories.map((c) => {
+                  {visibleCategories.length === 0 && (
+                    <tr><td colSpan={4} className="px-4 py-6 text-center text-gray-400">Ninguna categoría coincide con la búsqueda.</td></tr>
+                  )}
+                  {visibleCategories.map((c) => {
                     const value = catEdits[c.id] !== undefined ? catEdits[c.id] : (c.retention_concept || '');
                     const auto = c.services > 0 && c.services === c.products ? 'Servicios generales' : (c.services > 0 ? 'Automático por tipo' : 'Compras generales');
                     return (
@@ -227,6 +276,15 @@ export default function TaxClassificationPage() {
                   })}
                 </tbody>
               </table>
+              <Pagination
+                className="px-3 py-2 border-t border-gray-100 dark:border-white/10"
+                currentPage={catPageSafe}
+                totalPages={catPages}
+                totalItems={filteredCategories.length}
+                pageSize={catPageSize}
+                onPageChange={setCatPage}
+                onPageSizeChange={(n) => { setCatPageSize(n); setCatPage(1); }}
+              />
             </div>
           )}
         </div>
@@ -307,6 +365,8 @@ export default function TaxClassificationPage() {
             totalItems={products.total}
             pageSize={products.limit}
             onPageChange={(p) => loadProducts(p)}
+            onPageSizeChange={changePageSize}
+            pageSizeOptions={[25, 50, 100, 200]}
           />
         </div>
       </div>
@@ -318,7 +378,7 @@ export default function TaxClassificationPage() {
             <div className="sticky top-0 bg-white dark:bg-graphite px-5 py-3 border-b border-gray-200 dark:border-white/10 flex items-center justify-between">
               <div>
                 <h3 className="font-semibold text-gray-900 dark:text-gray-100">{detail.concept.name} — {year}</h3>
-                <p className="text-xs text-gray-500">{detail.lines.length} línea(s) · {money(detail.concept.base)}. Para reclasificar, cambia la categoría o marca la excepción del producto.</p>
+                <p className="text-xs text-gray-500">{detail.total} línea(s) · {money(detail.concept.base)}. Para reclasificar, cambia la categoría o marca la excepción del producto.</p>
               </div>
               <button onClick={() => setDetail(null)} className="text-gray-400 hover:text-gray-600 text-xl">×</button>
             </div>
@@ -344,6 +404,16 @@ export default function TaxClassificationPage() {
                 ))}
               </tbody>
             </table>
+            <Pagination
+              className="px-4 py-3 border-t border-gray-100 dark:border-white/10"
+              currentPage={detail.page}
+              totalPages={detail.pages}
+              totalItems={detail.total}
+              pageSize={detail.limit}
+              onPageChange={(p) => loadDetail(detail.concept, p, detail.limit)}
+              onPageSizeChange={(n) => loadDetail(detail.concept, 1, n)}
+              pageSizeOptions={[50, 100, 250, 500]}
+            />
           </div>
         </div>
       )}

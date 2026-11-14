@@ -81,6 +81,8 @@ const NAV = [
     id: "projects", label: "Proyectos", icon: "briefcase", module: "projects",
     children: [
       { label: "Proyectos", path: "/projects" },
+      { label: "Horarios", path: "/work-hours" },
+      { label: "Mantenimientos", path: "/maintenance" },
       { label: "Cotizador solar", path: "/solar" },
       { label: "Interesados (simulador)", path: "/solar/leads" },
       { label: "Herramientas", path: "/tools" },
@@ -103,6 +105,7 @@ const NAV = [
       { label: "Resultados",         path: "/crm/dashboard" },
       { label: "Recompensas",        path: "/crm/rewards" },
       { label: "Configuración",      path: "/crm/settings", roles: ["admin", "manager", "super_admin"], excludePaths: ["/crm/settings/meta"] },
+      { label: "Integración Meta",   path: "/crm/settings/meta", module: "crm_meta_leads" },
     ],
   },
   {
@@ -162,6 +165,8 @@ const NAV = [
       { label: "Activos Fijos",        path: "/accounting/fixed-assets" },
       { label: "Créditos",             path: "/accounting/loans" },
       { label: "Cuentas Bancarias",    path: "/accounting/bank-accounts" },
+      { label: "Terceros por configurar", path: "/accounting/third-party-setup" },
+      { label: "Ajuste al peso",       path: "/accounting/rounding-adjustments" },
       { label: "Clasificación tributaria", path: "/accounting/tax-classification" },
       { label: "ICA",                  path: "/accounting/ica" },
       { label: "Prorrateo de IVA",     path: "/accounting/iva-prorrateo" },
@@ -174,6 +179,7 @@ const NAV = [
       { label: "Empleados",           path: "/payroll/employees" },
       { label: "Alertas de contrato", path: "/payroll/contract-alerts" },
       { label: "Libro de vacaciones", path: "/payroll/vacations" },
+      { label: "Pago de vacaciones",  path: "/payroll/vacation-payments" },
       { label: "Conceptos",           path: "/payroll/concepts" },
       { label: "Periodos",            path: "/payroll/periods" },
       { label: "Documentos",          path: "/payroll/documents" },

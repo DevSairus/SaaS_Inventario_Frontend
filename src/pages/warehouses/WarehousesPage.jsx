@@ -3,8 +3,12 @@ import Layout from '../../components/layout/Layout';
 import { warehousesService } from '../../api/warehouses';
 import useBranchStore from '../../store/branchStore';
 import toast from 'react-hot-toast';
+import { usePermissions } from '../../store/tenantPermissionsStore';
+import WarehouseLocationsModal from '../../components/warehouses/WarehouseLocationsModal';
 
 const WarehousesPage = () => {
+  const can = usePermissions();
+  const [locationsFor, setLocationsFor] = useState(null); // bodega cuyas ubicaciones se están viendo
   const [warehouses, setWarehouses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -113,7 +117,7 @@ const WarehousesPage = () => {
             <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Bodegas</h1>
             <p className="text-sm text-gray-500 mt-0.5">Gestión de almacenes y ubicaciones</p>
           </div>
-          <button
+          {can('inventory.warehouses.create') && <button
             onClick={openCreate}
             className="inline-flex items-center gap-2 px-4 py-2.5 bg-pink-600 hover:bg-pink-700 text-white rounded-lg text-sm font-semibold shadow-sm transition-colors"
           >
@@ -121,7 +125,7 @@ const WarehousesPage = () => {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
             Nueva Bodega
-          </button>
+          </button>}
         </div>
 
         {/* Búsqueda */}
@@ -209,6 +213,13 @@ const WarehousesPage = () => {
                       <td className="px-6 py-4 whitespace-nowrap text-right">
                         <div className="flex items-center justify-end gap-2">
                           <button
+                            onClick={() => setLocationsFor(w)}
+                            className="text-xs font-medium text-gray-500 hover:text-pink-600 px-2 py-1 rounded-lg hover:bg-pink-50 transition-colors"
+                            title="Pasillos, estantes y niveles de esta bodega"
+                          >
+                            Ubicaciones
+                          </button>
+                          {can('inventory.warehouses.edit') && <button
                             onClick={() => openEdit(w)}
                             className="text-gray-400 hover:text-pink-600 transition-colors p-1.5 rounded-lg hover:bg-pink-50"
                             title="Editar"
@@ -216,8 +227,8 @@ const WarehousesPage = () => {
                             <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                             </svg>
-                          </button>
-                          <button
+                          </button>}
+                          {can('inventory.warehouses.delete') && <button
                             onClick={() => setDeleteConfirm(w.id)}
                             className="text-gray-400 hover:text-red-600 transition-colors p-1.5 rounded-lg hover:bg-red-50"
                             title="Eliminar"
@@ -225,7 +236,7 @@ const WarehousesPage = () => {
                             <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                             </svg>
-                          </button>
+                          </button>}
                         </div>
                       </td>
                     </tr>
@@ -236,6 +247,8 @@ const WarehousesPage = () => {
           )}
         </div>
       </div>
+
+      {locationsFor && <WarehouseLocationsModal warehouse={locationsFor} onClose={() => setLocationsFor(null)} />}
 
       {/* Modal Crear/Editar */}
       {showModal && (

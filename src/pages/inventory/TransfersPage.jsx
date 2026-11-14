@@ -6,9 +6,11 @@ import Pagination from '../../components/common/Pagination';
 import useUrlPageSync from '../../hooks/useUrlPageSync';
 import useTransfersStore from '../../store/transfersStore';
 import toast from 'react-hot-toast';
+import { usePermissions } from '../../store/tenantPermissionsStore';
 
 const TransfersPage = () => {
   const navigate = useNavigate();
+  const can = usePermissions();
   const {
     transfers,
     loading,
@@ -101,13 +103,13 @@ const TransfersPage = () => {
             <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Transferencias entre Bodegas</h1>
             <p className="text-gray-600 mt-1 dark:text-gray-400">Gestiona el movimiento de productos entre ubicaciones</p>
           </div>
-          <button
+          {can('inventory.transfers.create') && <button
             onClick={() => navigate('/inventory/transfers/new')}
             className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
           >
             <Plus className="w-5 h-5" />
             Nueva Transferencia
-          </button>
+          </button>}
         </div>
 
         {/* Filters */}

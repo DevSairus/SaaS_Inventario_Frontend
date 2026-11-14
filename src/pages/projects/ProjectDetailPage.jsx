@@ -6,6 +6,8 @@ import Layout from '../../components/layout/Layout';
 import { usePermissions } from '../../store/tenantPermissionsStore';
 import ProjectFormModal from '../../components/projects/ProjectFormModal';
 import BomTab from '../../components/projects/BomTab';
+import StagesTab from '../../components/projects/StagesTab';
+import MaintenanceTab from '../../components/projects/MaintenanceTab';
 import BudgetTab from '../../components/projects/BudgetTab';
 import PnlTab from '../../components/projects/PnlTab';
 import DocumentsTab from '../../components/projects/DocumentsTab';
@@ -122,8 +124,10 @@ export default function ProjectDetailPage() {
   const tabs = [
     ['summary', 'Resumen'],
     ['bom', 'Materiales'],
+    ['stages', 'Etapas'],
     ['labor', 'Mano de obra'],
     ['tools', 'Herramientas'],
+    ['maintenance', 'Mantenimiento'],
     ...(project?.can_see_pnl ? [['billing', 'Cortes y facturación'], ['budget', 'Presupuesto'], ['pnl', 'Resultados']] : []),
     ['documents', 'Documentos'],
   ];
@@ -273,8 +277,10 @@ export default function ProjectDetailPage() {
 
         {tab === 'summary' && <SummaryTab project={project} canManage={canManage} canStock={canStock} onReturn={() => setShowReturn(true)} onChanged={load} />}
         {tab === 'bom' && <BomTab project={project} canManage={canManage} canStock={canStock} onChanged={load} />}
+        {tab === 'stages' && <StagesTab project={project} canManage={canManage} canStock={canStock} onChanged={load} />}
         {tab === 'labor' && <LaborTab project={project} canSeeCosts={Boolean(project.can_see_pnl)} onChanged={load} />}
         {tab === 'tools' && <ToolsTab project={project} canSeeCosts={Boolean(project.can_see_pnl)} />}
+        {tab === 'maintenance' && <MaintenanceTab project={project} />}
         {tab === 'billing' && <BillingTab project={project} onChanged={load} />}
         {tab === 'budget' && <BudgetTab project={project} canManage={canManage} onChanged={load} />}
         {tab === 'pnl' && <PnlTab project={project} />}

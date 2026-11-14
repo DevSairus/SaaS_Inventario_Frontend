@@ -7,13 +7,13 @@ import useUrlPageSync from '../../hooks/useUrlPageSync';
 import useInternalConsumptionsStore from '../../store/internalConsumptionsStore';
 import toast from 'react-hot-toast';
 import { formatNumber } from '../../utils/formatters';
-import useAuthStore from '../../store/authStore';
+import { usePermissions } from '../../store/tenantPermissionsStore';
 
 const InternalConsumptionsPage = () => {
   const navigate = useNavigate();
   // Aprobar/rechazar: mismos roles que CONSUMPTION_APPROVE_ROLES en el backend
-  const role = useAuthStore((s) => s.user?.role);
-  const canApprove = ['admin', 'manager', 'super_admin'].includes(role);
+  const can = usePermissions();
+  const canApprove = can('inventory.consumptions.approve');
   const {
     consumptions,
     loading,

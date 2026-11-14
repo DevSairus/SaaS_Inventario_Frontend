@@ -93,8 +93,18 @@ const PhysicalCountDetailPage = () => {
           </div>
           <div>
             <p className="text-xs text-gray-500 dark:text-gray-500">Categoría</p>
-            <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{count.category?.name || 'Todas'}</p>
+            <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+              {count.category?.name || 'Todas'}
+              {count.category && count.include_subcategories === false && <span className="text-xs text-gray-500"> (solo esta)</span>}
+              {count.category && count.include_subcategories !== false && <span className="text-xs text-gray-500"> (y subcategorías)</span>}
+            </p>
           </div>
+          {count.location && (
+            <div>
+              <p className="text-xs text-gray-500 dark:text-gray-500">Ubicación</p>
+              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{count.location.code}</p>
+            </div>
+          )}
           <div>
             <p className="text-xs text-gray-500 dark:text-gray-500">Sobrantes</p>
             <p className="text-sm font-medium text-green-600">{formatCurrency(count.surplus_value || 0)}</p>

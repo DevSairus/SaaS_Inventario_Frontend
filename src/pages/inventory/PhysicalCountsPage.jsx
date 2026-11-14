@@ -7,11 +7,13 @@ import { formatCurrency, formatDateTime } from '../../utils/formatters';
 import toast from 'react-hot-toast';
 import Pagination from '../../components/common/Pagination';
 import useUrlPageSync from '../../hooks/useUrlPageSync';
+import { usePermissions } from '../../store/tenantPermissionsStore';
 
 // Historial de sesiones de conteo físico.
 // Ver: 00 - Documentación/Pitbox-Tecnicos-InventarioFisico-EnTramite-Analisis-y-Plan.md, sección 2.3.
 const PhysicalCountsPage = () => {
   const navigate = useNavigate();
+  const can = usePermissions();
   const [counts, setCounts] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [pagination, setPagination] = useState({ total: 0, page: 1, limit: 10, pages: 0 });
@@ -64,13 +66,13 @@ const PhysicalCountsPage = () => {
             <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">Inventario físico</h1>
             <p className="text-sm text-gray-500 mt-0.5 dark:text-gray-500">Historial de conteos por Excel</p>
           </div>
-          <button
+          {can('inventory.physical_counts.create') && <button
             onClick={() => navigate('/inventory/physical-counts/new')}
             className="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-semibold shadow-sm transition-colors"
           >
             <Plus className="w-4 h-4" />
             Nuevo conteo
-          </button>
+          </button>}
         </div>
 
         <div className="bg-white rounded-lg shadow overflow-hidden dark:bg-graphite">

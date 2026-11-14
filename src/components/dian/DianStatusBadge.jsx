@@ -7,6 +7,7 @@ import { useState } from 'react';
 import toast from 'react-hot-toast';
 import { Clock, Minus, Send, CheckCircle2, XCircle, RefreshCw, ExternalLink } from 'lucide-react';
 import { sendInvoice, sendCreditNoteRetry, sendDebitNoteRetry, checkDianStatus } from '../../api/dian';
+import InvoiceEmailRecipients from './InvoiceEmailRecipients';
 
 const DIAN_DOCUMENT_TYPES = ['factura', 'nota_credito', 'nota_debito'];
 
@@ -71,7 +72,11 @@ const STATUS_CONFIG = {
 // Se exporta para poder reusarla donde se necesite mostrar solo el resumen.
 export function getPrimaryDianReason(msg) {
   if (!msg) return '';
-  const firstLine = msg.split(/\r?\n/).map(s => s.trim()).filter(Boolean)[0] || msg.trim();
+  const lines = msg.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+  // La primera línea suele ser el genérico "Validación contiene errores en
+  // campos mandatorios."; el motivo real es la regla marcada "Rechazo"
+  // (las "Notificación" no rechazan el documento).
+  const firstLine = lines.find(l => /\bRechazo\b/i.test(l)) || lines[0] || msg.trim();
   if (firstLine.length > 220) {
     const cut = firstLine.indexOf('. ');
     if (cut > 30) return firstLine.slice(0, cut + 1);
@@ -310,6 +315,8 @@ export function DianDetailPanel({ sale, onUpdate, onCustomerIncomplete }) {
             </a>
           )}
         </div>
+
+        {status === 'accepted' && <InvoiceEmailRecipients sale={sale} onUpdate={onUpdate} />}
       </div>
     </div>
   );

@@ -14,6 +14,7 @@ import {
 } from '../../api/projects';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import { CONTRACT_OPEN, CONTRACT_STATUS } from './projectConstants';
+import AiuFields, { aiuFormOf, aiuPayload } from './AiuFields';
 
 const inputCls = 'w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-800';
 const STATUS = {
@@ -36,6 +37,8 @@ const Stat = ({ label, value, sub }) => (
 /** Editor de un corte: acumulado por línea (cantidad o %) o % global para un hito. */
 function CutEditor({ isOpen, onClose, project, billing, cut, onSaved }) {
   const [form, setForm] = useState({ cut_date: todayLocal(), period_from: '', period_to: '', notes: '', global_pct: '' });
+  // AIU del corte (1.6): arranca con el del proyecto y se puede cambiar o poner un concepto en 0.
+  const [aiu, setAiu] = useState(aiuFormOf(null));
   const [mode, setMode] = useState('qty'); // qty | pct
   const [cum, setCum] = useState({}); // sale_item_id → valor (cantidad o %)
   const [preview, setPreview] = useState(null);
@@ -48,6 +51,7 @@ function CutEditor({ isOpen, onClose, project, billing, cut, onSaved }) {
       cut_date: cut?.cut_date || todayLocal(), period_from: cut?.period_from || '', period_to: cut?.period_to || '',
       notes: cut?.notes || '', global_pct: cut?.global_pct ?? '',
     });
+    setAiu(aiuFormOf(cut || project));
     setMode('qty');
     const initial = {};
     for (const it of cut?.items || []) initial[it.sale_item_id] = String(Number(it.qty_cumulative));
@@ -58,11 +62,12 @@ function CutEditor({ isOpen, onClose, project, billing, cut, onSaved }) {
   const body = useCallback(() => ({
     cut_id: cut?.id,
     ...form,
+    ...aiuPayload(aiu),
     global_pct: form.global_pct === '' ? null : Number(form.global_pct),
     items: Object.entries(cum).filter(([, v]) => v !== '' && v !== undefined).map(([id, v]) => (
       mode === 'pct' ? { sale_item_id: id, pct_cumulative: Number(v) } : { sale_item_id: id, qty_cumulative: Number(v) }
     )),
-  }), [cut, form, cum, mode]);
+  }), [cut, form, cum, mode, aiu]);
 
   const key = JSON.stringify(body());
   useEffect(() => {
@@ -106,6 +111,13 @@ function CutEditor({ isOpen, onClose, project, billing, cut, onSaved }) {
             <input type="number" min="0" max="100" step="1" value={form.global_pct} onChange={(e) => setForm((f) => ({ ...f, global_pct: e.target.value }))} className={inputCls} placeholder="Ej. 20" />
           </div>
         </div>
+        <AiuFields
+          value={aiu}
+          onChange={setAiu}
+          fallback={project.aiu_enabled ? { admin_pct: project.aiu_admin_pct, unforeseen_pct: project.aiu_unforeseen_pct, profit_pct: project.aiu_profit_pct } : null}
+          hint={`AIU de este corte; el del proyecto es ${billing?.project_aiu_label || 'sin AIU'}. Un concepto en 0 % no aplica en este corte.`}
+        />
+
         <p className="text-xs text-gray-500">
           Escribe lo ejecutado <strong>acumulado</strong> hasta este corte; se factura solo la diferencia con lo anterior. El % global aplica a las líneas que no tengan valor propio.
         </p>
@@ -366,7 +378,7 @@ export default function BillingTab({ project, onChanged }) {
         </p>
       )}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-        <Stat label="Contrato" value={formatCurrency(data.contract.total)} sub={`Cotización ${data.contract.quote_number}${data.contract.aiu ? ' · AIU' : ''}`} />
+        <Stat label="Contrato" value={formatCurrency(data.contract.total)} sub={`Cotización ${data.contract.quote_number}${data.project_aiu ? ` · ${data.project_aiu_label}` : ''}`} />
         <Stat label="Avance facturado" value={`${data.progress_pct} %`} sub={`${formatCurrency(data.invoiced_total)} en ${data.cuts.filter((c) => c.status === 'invoiced').length} factura(s)`} />
         {data.contract.quote_status === 'cerrada'
           ? <Stat label="Sin ejecutar" value={formatCurrency(data.contract.unexecuted_amount)} sub="contrato cerrado" />

@@ -21,7 +21,7 @@ import { DOCUMENT_TYPE_OPTIONS } from '../../constants/documentTypes';
 const FORM_EMPTY = {
   customer_type: 'individual', full_name: '', business_name: '', tax_id: '',
   document_type: '13',
-  email: '', phone: '', mobile: '', mobile_country_code: DEFAULT_COUNTRY_CODE, address: '',
+  email: '', additional_emails: '', phone: '', mobile: '', mobile_country_code: DEFAULT_COUNTRY_CODE, address: '',
   city: '', state: '', city_code: '',
   customer_category: '', notes: '', credit_limit: '',
   retention_config: {},
@@ -34,7 +34,9 @@ const customerToForm = (customer) => ({
   full_name: customer.full_name || `${customer.first_name || ''} ${customer.last_name || ''}`.trim(),
   business_name: customer.business_name || '', tax_id: customer.tax_id || '',
   document_type: customer.document_type || (customer.customer_type === 'company' ? '31' : '13'),
-  email: customer.email || '', phone: customer.phone || '', mobile: customer.mobile || '',
+  email: customer.email || '',
+  additional_emails: Array.isArray(customer.additional_emails) ? customer.additional_emails.join(', ') : '',
+  phone: customer.phone || '', mobile: customer.mobile || '',
   mobile_country_code: customer.mobile_country_code || DEFAULT_COUNTRY_CODE,
   address: customer.address || '',
   city: customer.city || '', state: customer.state || '', city_code: customer.city_code || '',
@@ -186,6 +188,11 @@ export default function CustomerFormModal({ isOpen, onClose, customer = null, on
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Input label="Email" type="email" value={formData.email} onChange={set('email')} />
           <Input label="Teléfono" type="tel" value={formData.phone} onChange={set('phone')} />
+        </div>
+
+        <div>
+          <Input label="Correos adicionales para la factura" value={formData.additional_emails} onChange={set('additional_emails')} placeholder="contabilidad@empresa.com, compras@empresa.com" />
+          <p className="text-xs text-gray-400 mt-1 dark:text-gray-500">Separados por coma (máximo 10). La factura electrónica se envía al email principal y a estos.</p>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

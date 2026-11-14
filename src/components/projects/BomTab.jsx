@@ -2,13 +2,12 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { ClipboardList, Download, PackageCheck, ShoppingCart, Trash2, Truck, Unlock, Upload } from 'lucide-react';
-import Modal from '../common/Modal';
 import ProductSearchInput from '../common/ProductSearchInput';
 import BomImportModal from './BomImportModal';
-import { warehousesService } from '../../api/warehouses';
+import DispatchModal from './DispatchModal';
 import { downloadProjectBomTemplate } from '../../utils/excelExport';
 import {
-  getProjectBom, reserveProjectBom, releaseProjectBom, orderProjectShortages, dispatchProjectBom,
+  getProjectBom, reserveProjectBom, releaseProjectBom, orderProjectShortages,
   updateBomItem, deleteBomItem,
 } from '../../api/projects';
 import { qty } from './projectConstants';
@@ -21,102 +20,6 @@ function Stat({ label, value, tone = 'text-gray-900 dark:text-gray-100' }) {
       <p className="text-xs text-gray-500">{label}</p>
       <p className={`text-xl font-bold ${tone}`}>{value}</p>
     </div>
-  );
-}
-
-function DispatchModal({ isOpen, onClose, project, lines, onDone }) {
-  const [warehouses, setWarehouses] = useState([]);
-  const [from, setFrom] = useState('');
-  const [quantities, setQuantities] = useState({});
-  const [busy, setBusy] = useState(false);
-
-  const candidates = lines.filter((l) => l.product_id && l.product?.track_inventory !== false && l.qty_required - l.qty_delivered > 0);
-
-  useEffect(() => {
-    if (!isOpen) return;
-    setQuantities(Object.fromEntries(candidates.map((l) => [l.id, l.qty_reserved > 0 ? String(Math.min(l.qty_reserved, l.qty_required - l.qty_delivered)) : ''])));
-    warehousesService.getAll().then((r) => {
-      const list = (r.data || []).filter((w) => w.id !== project.warehouse_id && !w.project_id);
-      setWarehouses(list);
-      setFrom((prev) => prev || list.find((w) => w.is_main)?.id || list[0]?.id || '');
-    }).catch(() => setWarehouses([]));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen]);
-
-  const items = candidates
-    .map((l) => ({ item_id: l.id, quantity: Number(quantities[l.id]) || 0 }))
-    .filter((i) => i.quantity > 0);
-
-  const submit = async () => {
-    if (!from) { toast('Elige la bodega de origen'); return; }
-    if (!items.length) { toast('Indica al menos una cantidad'); return; }
-    setBusy(true);
-    try {
-      const res = await dispatchProjectBom(project.id, { from_warehouse_id: from, items });
-      toast.success(res.message);
-      onDone?.(res.data);
-      onClose();
-    } catch (e) {
-      toast.error(e.response?.data?.message || 'No se pudo despachar');
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Despachar materiales a la obra" size="lg">
-      <div className="space-y-4">
-        <p className="text-sm text-gray-600 dark:text-gray-300">
-          Se crea un traslado <strong>en tránsito</strong> hacia la bodega del proyecto. Cuando el material llegue, recíbelo desde Traslados:
-          a partir de ahí cuenta como costo de materiales de la obra.
-        </p>
-        <div className="max-w-sm">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Bodega de origen</label>
-          <select value={from} onChange={(e) => setFrom(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white dark:bg-gray-800">
-            {warehouses.map((w) => <option key={w.id} value={w.id}>{w.name}{w.branch?.name ? ` · ${w.branch.name}` : ''}</option>)}
-          </select>
-        </div>
-        {candidates.length === 0 ? (
-          <p className="text-sm text-gray-500">No hay líneas pendientes de despacho.</p>
-        ) : (
-          <div className="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-lg max-h-[45vh]">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50 dark:bg-gray-900/40 sticky top-0">
-                <tr className="text-left text-xs font-medium text-gray-500 uppercase">
-                  <th className="px-3 py-2">Producto</th>
-                  <th className="px-3 py-2 text-right">Pendiente</th>
-                  <th className="px-3 py-2 text-right">Reservado</th>
-                  <th className="px-3 py-2 text-right">A despachar</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                {candidates.map((l) => (
-                  <tr key={l.id}>
-                    <td className="px-3 py-2">{l.product?.name} <span className="text-xs text-gray-500">{l.product?.sku}</span></td>
-                    <td className="px-3 py-2 text-right">{qty(l.qty_required - l.qty_delivered)}</td>
-                    <td className="px-3 py-2 text-right">{qty(l.qty_reserved)}</td>
-                    <td className="px-3 py-2 text-right">
-                      <input
-                        type="number" min="0" step="any" max={l.qty_required - l.qty_delivered}
-                        value={quantities[l.id] ?? ''}
-                        onChange={(e) => setQuantities((q) => ({ ...q, [l.id]: e.target.value }))}
-                        className="w-24 px-2 py-1 border border-gray-300 rounded text-right bg-white dark:bg-gray-800"
-                      />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-        <div className="flex justify-end gap-2">
-          <button onClick={onClose} className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">Cancelar</button>
-          <button onClick={submit} disabled={busy || !items.length} className="px-4 py-2 text-sm bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-60">
-            {busy ? 'Despachando...' : `Despachar ${items.length} línea(s)`}
-          </button>
-        </div>
-      </div>
-    </Modal>
   );
 }
 

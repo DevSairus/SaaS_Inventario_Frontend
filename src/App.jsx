@@ -37,6 +37,9 @@ const ApprovalRulesPage = lazy(() => import('./pages/settings/ApprovalRulesPage'
 const PaymentBatchesPage = lazy(() => import('./pages/finance/PaymentBatchesPage'));
 const PaymentBatchDetailPage = lazy(() => import('./pages/finance/PaymentBatchDetailPage'));
 const ProjectDetailPage = lazy(() => import('./pages/projects/ProjectDetailPage'));
+const WorkHoursPage = lazy(() => import('./pages/projects/WorkHoursPage'));
+const MaintenancePage = lazy(() => import('./pages/projects/MaintenancePage'));
+const MaintenanceInstallationPage = lazy(() => import('./pages/projects/MaintenanceInstallationPage'));
 const ToolsPage = lazy(() => import('./pages/tools/ToolsPage'));
 const ToolDetailPage = lazy(() => import('./pages/tools/ToolDetailPage'));
 const SolarStudiesPage = lazy(() => import('./pages/solar/SolarStudiesPage'));
@@ -76,6 +79,8 @@ const FixedAssetDetailPage = lazy(() => import('./pages/accounting/FixedAssetDet
 const LoansPage = lazy(() => import('./pages/accounting/LoansPage'));
 const LoanDetailPage = lazy(() => import('./pages/accounting/LoanDetailPage'));
 const BankAccountsPage = lazy(() => import('./pages/accounting/BankAccountsPage'));
+const ThirdPartySetupPage = lazy(() => import('./pages/accounting/ThirdPartySetupPage'));
+const RoundingAdjustmentsPage = lazy(() => import('./pages/accounting/RoundingAdjustmentsPage'));
 const ExogenaPage = lazy(() => import('./pages/accounting/ExogenaPage'));
 const TaxClassificationPage = lazy(() => import('./pages/accounting/TaxClassificationPage'));
 const BankReconciliationPage = lazy(() => import('./pages/accounting/BankReconciliationPage'));
@@ -147,6 +152,7 @@ const NexaApprovalsPage = lazy(() => import('./pages/nexa/NexaApprovalsPage'));
 const EmployeesPage = lazy(() => import('./pages/payroll/EmployeesPage'));
 const ContractAlertsPage = lazy(() => import('./pages/payroll/ContractAlertsPage'));
 const VacationBookPage = lazy(() => import('./pages/payroll/VacationBookPage'));
+const VacationPaymentsPage = lazy(() => import('./pages/payroll/VacationPaymentsPage'));
 const PayrollConceptsPage = lazy(() => import('./pages/payroll/PayrollConceptsPage'));
 const PayrollPeriodsPage = lazy(() => import('./pages/payroll/PayrollPeriodsPage'));
 const PayrollPeriodDetailPage = lazy(() => import('./pages/payroll/PayrollPeriodDetailPage'));
@@ -436,6 +442,9 @@ function App() {
         <Route path="order-lists/:id" element={<TenantRoute module="inventory"><Suspense fallback={<Loading fullScreen />}><OrderListDetailPage /></Suspense></TenantRoute>} />
         <Route path="projects"     element={<TenantRoute module="projects"><Suspense fallback={<Loading fullScreen />}><ProjectsPage /></Suspense></TenantRoute>} />
         <Route path="projects/:id" element={<TenantRoute module="projects"><Suspense fallback={<Loading fullScreen />}><ProjectDetailPage /></Suspense></TenantRoute>} />
+        <Route path="work-hours"   element={<TenantRoute module="projects"><Suspense fallback={<Loading fullScreen />}><WorkHoursPage /></Suspense></TenantRoute>} />
+        <Route path="maintenance"  element={<TenantRoute module="projects"><Suspense fallback={<Loading fullScreen />}><MaintenancePage /></Suspense></TenantRoute>} />
+        <Route path="maintenance/installations/:id" element={<TenantRoute module="projects"><Suspense fallback={<Loading fullScreen />}><MaintenanceInstallationPage /></Suspense></TenantRoute>} />
         <Route path="tools"        element={<TenantRoute module="projects"><Suspense fallback={<Loading fullScreen />}><ToolsPage /></Suspense></TenantRoute>} />
         <Route path="tools/:id"    element={<TenantRoute module="projects"><Suspense fallback={<Loading fullScreen />}><ToolDetailPage /></Suspense></TenantRoute>} />
         <Route path="solar"          element={<TenantRoute module="projects"><Suspense fallback={<Loading fullScreen />}><SolarStudiesPage /></Suspense></TenantRoute>} />
@@ -480,6 +489,8 @@ function App() {
         <Route path="accounting/loans"             element={<TenantRoute module="accounting" roles={['admin', 'manager', 'accountant']}><Suspense fallback={<Loading fullScreen />}><LoansPage /></Suspense></TenantRoute>} />
         <Route path="accounting/loans/:id"         element={<TenantRoute module="accounting" roles={['admin', 'manager', 'accountant']}><Suspense fallback={<Loading fullScreen />}><LoanDetailPage /></Suspense></TenantRoute>} />
         <Route path="accounting/bank-accounts"                     element={<TenantRoute module="accounting" roles={['admin', 'manager', 'accountant']}><Suspense fallback={<Loading fullScreen />}><BankAccountsPage /></Suspense></TenantRoute>} />
+        <Route path="accounting/third-party-setup"                 element={<TenantRoute module="accounting" roles={['admin', 'manager', 'accountant']}><Suspense fallback={<Loading fullScreen />}><ThirdPartySetupPage /></Suspense></TenantRoute>} />
+        <Route path="accounting/rounding-adjustments"              element={<TenantRoute module="accounting" roles={['admin', 'manager', 'accountant']}><Suspense fallback={<Loading fullScreen />}><RoundingAdjustmentsPage /></Suspense></TenantRoute>} />
         <Route path="accounting/bank-accounts/:id/reconciliation"  element={<TenantRoute module="accounting" roles={['admin', 'manager', 'accountant']}><Suspense fallback={<Loading fullScreen />}><BankReconciliationPage /></Suspense></TenantRoute>} />
         <Route path="accounting/ica"                element={<TenantRoute module="accounting" roles={['admin', 'manager', 'accountant']}><Suspense fallback={<Loading fullScreen />}><IcaPage /></Suspense></TenantRoute>} />
         <Route path="accounting/iva-prorrateo"      element={<TenantRoute module="accounting" roles={['admin', 'manager', 'accountant']}><Suspense fallback={<Loading fullScreen />}><IvaProrrateoPage /></Suspense></TenantRoute>} />
@@ -491,6 +502,7 @@ function App() {
         <Route path="payroll/employees"      element={<TenantRoute module="payroll"><Suspense fallback={<Loading fullScreen />}><EmployeesPage /></Suspense></TenantRoute>} />
         <Route path="payroll/contract-alerts" element={<TenantRoute module="payroll"><Suspense fallback={<Loading fullScreen />}><ContractAlertsPage /></Suspense></TenantRoute>} />
         <Route path="payroll/vacations"      element={<TenantRoute module="payroll"><Suspense fallback={<Loading fullScreen />}><VacationBookPage /></Suspense></TenantRoute>} />
+        <Route path="payroll/vacation-payments" element={<TenantRoute module="payroll"><Suspense fallback={<Loading fullScreen />}><VacationPaymentsPage /></Suspense></TenantRoute>} />
         <Route path="payroll/concepts"       element={<TenantRoute module="payroll"><Suspense fallback={<Loading fullScreen />}><PayrollConceptsPage /></Suspense></TenantRoute>} />
         <Route path="payroll/periods"        element={<TenantRoute module="payroll"><Suspense fallback={<Loading fullScreen />}><PayrollPeriodsPage /></Suspense></TenantRoute>} />
         <Route path="payroll/periods/:id"    element={<TenantRoute module="payroll"><Suspense fallback={<Loading fullScreen />}><PayrollPeriodDetailPage /></Suspense></TenantRoute>} />

@@ -70,7 +70,8 @@ export const useSuppliersStore = create((set, get) => ({
       await get().fetchSuppliers();
       await get().fetchStats();
       set({ isLoading: false });
-      return true;
+      // Devuelve el proveedor creado (truthy) para poder adjuntarle documentos.
+      return response?.data || true;
     } catch (error) {
       set({
         error: error.response?.data?.message || 'Error al crear proveedor',

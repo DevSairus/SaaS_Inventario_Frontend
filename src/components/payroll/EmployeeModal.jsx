@@ -11,6 +11,7 @@ import useBranchStore from '../../store/branchStore';
 import NumericInput from '../inputs/NumericInput';
 import DivipolaCitySelect from '../common/DivipolaCitySelect';
 import FundSupplierSelect from './FundSupplierSelect';
+import { TERMINATION_REASONS } from '../../constants/terminationReasons';
 import {
   DOCUMENT_TYPES,
   CONTRACT_TYPES,
@@ -48,6 +49,8 @@ const emptyForm = {
   commission_payroll_mode: '',
   hire_date: '',
   termination_date: '',
+  termination_reason: '',
+  termination_notes: '',
   contract_end_date: '',
   payment_method: 'transfer',
   payment_form: '1',
@@ -120,6 +123,8 @@ const EmployeeModal = ({ employee, onClose }) => {
           : true,
         hire_date: employee.hire_date || '',
         termination_date: employee.termination_date || '',
+        termination_reason: employee.termination_reason || '',
+        termination_notes: employee.termination_notes || '',
         contract_end_date: employee.contract_end_date || '',
         payment_method: employee.payment_method || 'transfer',
         payment_form: employee.payment_form || '1',
@@ -181,6 +186,8 @@ const EmployeeModal = ({ employee, onClose }) => {
       branch_id: formData.branch_id || null,
       account_type: formData.account_type || null,
       termination_date: formData.termination_date || null,
+      termination_reason: formData.termination_date ? (formData.termination_reason || null) : null,
+      termination_notes: formData.termination_date ? (formData.termination_notes.trim() || null) : null,
       eps_supplier_id: formData.eps_supplier_id || null,
       pension_fund_supplier_id: formData.pension_fund_supplier_id || null,
       severance_fund_supplier_id: formData.severance_fund_supplier_id || null,
@@ -531,6 +538,36 @@ const EmployeeModal = ({ employee, onClose }) => {
                 />
               </div>
             </div>
+
+            {formData.termination_date && (
+              <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Causa del retiro</label>
+                  <select
+                    name="termination_reason"
+                    value={formData.termination_reason}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-white/10 dark:bg-graphite-2 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="">Seleccione la causa</option>
+                    {Object.entries(TERMINATION_REASONS).map(([key, label]) => (
+                      <option key={key} value={key}>{label}</option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-gray-400 mt-1">Obligatoria para emitir la liquidación definitiva.</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Observaciones del retiro</label>
+                  <textarea
+                    name="termination_notes"
+                    value={formData.termination_notes}
+                    onChange={handleChange}
+                    rows={2}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-white/10 dark:bg-graphite-2 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+            )}
 
             <div className="mt-4 sm:w-1/2">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Comisiones de mano de obra</label>

@@ -32,6 +32,9 @@ const priceOrNull = (v) => (Number(v) > 0 ? Number(v) : null);
 // Costos de compra con centavos: la factura del proveedor suele traerlos y
 // redondear el unitario a pesos descuadra el IVA contra la factura.
 const round2 = (v) => Math.round(Number(v) * 100) / 100;
+// Panel "Agregar Productos": misma etiqueta y alto para todos los campos.
+const itemLabelCls = 'block text-sm font-medium text-gray-700 mb-1 whitespace-nowrap';
+const itemInputCls = 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent';
 // Costo con IVA (e INC) incluido → costo antes de impuestos.
 const netOfTaxes = (gross, taxRate, incRate) =>
   round2(toNumber(gross, 0) / (1 + (toNumber(taxRate, 0) + toNumber(incRate, 0)) / 100));
@@ -857,11 +860,12 @@ const PurchaseFormPage = () => {
             </div>
           )}
           
-          <div className="grid grid-cols-1 md:grid-cols-6 gap-4 items-end">
-            <div className="md:col-span-2 relative product-search-container">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Producto
-              </label>
+          {/* Una fila en pantallas anchas: producto amplio y campos numéricos
+              cortos; "Incluye IVA" va en la línea del título del costo para que
+              todos los campos queden alineados. */}
+          <div className="grid grid-cols-2 sm:grid-cols-6 lg:grid-cols-12 gap-3 items-end">
+            <div className="col-span-2 sm:col-span-6 lg:col-span-4 relative product-search-container">
+              <label className={itemLabelCls}>Producto</label>
               <ProductSearchInput
                 value={productSearch}
                 onChange={setProductSearch}
@@ -872,84 +876,79 @@ const PurchaseFormPage = () => {
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Cantidad
-              </label>
+            <div className="lg:col-span-1">
+              <label className={itemLabelCls}>Cantidad</label>
               <input
                 type="number"
                 name="quantity"
                 value={currentItem.quantity}
                 onChange={handleItemChange}
                 {...INPUT_CONFIG.quantity}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className={itemInputCls}
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                {costIncludesTax ? 'Costo Unit. (con IVA)' : 'Costo Unit. (antes de IVA)'}
-              </label>
+            <div className="sm:col-span-2 lg:col-span-2">
+              <div className="mb-1 flex items-center justify-between gap-2">
+                <label className="text-sm font-medium text-gray-700 whitespace-nowrap" title={costIncludesTax ? 'El valor trae IVA: al agregar se guarda antes de impuestos' : 'Costo unitario antes de IVA'}>
+                  Costo unit.
+                </label>
+                <label className="flex items-center gap-1 text-xs text-gray-500 whitespace-nowrap cursor-pointer" title="Si el valor que escribes ya trae el IVA (y el INC), se descuenta para guardar el costo antes de impuestos, igual que el precio con IVA incluido en ventas.">
+                  <input
+                    type="checkbox"
+                    className="h-3.5 w-3.5"
+                    checked={costIncludesTax}
+                    onChange={(e) => setCostIncludesTax(e.target.checked)}
+                  />
+                  Incluye IVA
+                </label>
+              </div>
               <NumericInput
                 name="unit_cost"
                 value={currentItem.unit_cost}
                 onChange={handleItemChange}
                 decimals={2}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className={`${itemInputCls} text-right ${costIncludesTax ? 'border-blue-400 bg-blue-50' : ''}`}
               />
-              <label className="mt-1 flex items-center gap-1 text-xs text-gray-600" title="Si el valor que escribes ya trae el IVA (y el INC), se descuenta para guardar el costo antes de impuestos, igual que el precio con IVA incluido en ventas.">
-                <input
-                  type="checkbox"
-                  checked={costIncludesTax}
-                  onChange={(e) => setCostIncludesTax(e.target.checked)}
-                />
-                Incluye IVA
-              </label>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                IVA (%)
-              </label>
+            <div className="lg:col-span-1">
+              <label className={itemLabelCls}>IVA %</label>
               <input
                 type="number"
                 name="tax_rate"
                 value={currentItem.tax_rate}
                 onChange={handleItemChange}
                 {...INPUT_CONFIG.percentage}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className={itemInputCls}
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1" title="Impoconsumo de la factura del proveedor: no es descontable, va al costo">
-                INC (%)
-              </label>
+            <div className="lg:col-span-1">
+              <label className={itemLabelCls} title="Impoconsumo de la factura del proveedor: no es descontable, va al costo">INC %</label>
               <input
                 type="number"
                 name="inc_rate"
                 value={currentItem.inc_rate}
                 onChange={handleItemChange}
                 {...INPUT_CONFIG.percentage}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className={itemInputCls}
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Desc. (%)
-              </label>
+            <div className="lg:col-span-1">
+              <label className={itemLabelCls}>Desc. %</label>
               <input
                 type="number"
                 name="discount_percentage"
                 value={currentItem.discount_percentage}
                 onChange={handleItemChange}
                 {...INPUT_CONFIG.percentage}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className={itemInputCls}
               />
             </div>
 
-            <div>
+            <div className="col-span-2 sm:col-span-6 lg:col-span-2">
               <button
                 type="button"
                 onClick={addItem}

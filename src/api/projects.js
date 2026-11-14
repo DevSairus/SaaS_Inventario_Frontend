@@ -136,6 +136,14 @@ export const getProjectTimeEntries = async (id) => (await axios.get(`/projects/$
 export const addProjectTimeEntry = async (id, data) => (await axios.post(`/projects/${id}/time-entries`, data)).data;
 export const deleteProjectTimeEntry = async (id, entryId) => (await axios.delete(`/projects/${id}/time-entries/${entryId}`)).data;
 export const getLaborEmployees = async () => (await axios.get('/projects/labor/employees')).data;
+// ── Horarios de obra (Fase 4, req. 1.1) ──
+export const getWorkShifts = async (params) => (await axios.get('/projects/labor/shifts', { params })).data;
+export const createWorkShift = async (data) => (await axios.post('/projects/labor/shifts', data)).data;
+export const updateWorkShift = async (shiftId, data) => (await axios.put(`/projects/labor/shifts/${shiftId}`, data)).data;
+// { from, to, project_id?, employee_id? }
+export const getHoursDistribution = async (params) => (await axios.get('/projects/labor/distribution', { params })).data;
+// { work_date, rows: [{ employee_id, start_time, end_time, break_minutes, shift_id?, notes? }] }
+export const saveProjectTimeSheet = async (id, data) => (await axios.post(`/projects/${id}/time-sheet`, data)).data;
 export const getLaborPeriods = async () => (await axios.get('/projects/labor/periods')).data;
 export const allocateLaborPeriod = async (periodId) => (await axios.post(`/projects/labor/periods/${periodId}/allocate`)).data;
 
@@ -153,6 +161,54 @@ export const releaseProjectRetention = async (id) => (await axios.post(`/project
 export const closeProjectContract = async (id, reason) => (await axios.post(`/projects/${id}/contract/close`, { reason })).data;
 export const openCutActa = async (id, cutId) => {
   const res = await axios.get(`/projects/${id}/cuts/${cutId}/acta`, { responseType: 'blob' });
+  const url = URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
+  window.open(url, '_blank', 'noopener');
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+};
+
+// ── Etapas de obra y actas de despacho ──
+export const getProjectStages = async (id) => (await axios.get(`/projects/${id}/stages`)).data;
+// { name, description?, planned_date?, items?: [{ item_id, qty_planned }] }
+export const createProjectStage = async (id, data) => (await axios.post(`/projects/${id}/stages`, data)).data;
+// { name?, description?, planned_date?, status?: 'open'|'closed', items? }  (items reemplaza todas las líneas)
+export const updateProjectStage = async (id, stageId, data) => (await axios.put(`/projects/${id}/stages/${stageId}`, data)).data;
+export const deleteProjectStage = async (id, stageId) => (await axios.delete(`/projects/${id}/stages/${stageId}`)).data;
+export const getProjectDispatches = async (id) => (await axios.get(`/projects/${id}/dispatches`)).data;
+// { role: 'almacen'|'transportador'|'encargado_obra', name, document?, signature }
+export const signProjectDispatch = async (id, dispatchId, data) => (await axios.post(`/projects/${id}/dispatches/${dispatchId}/sign`, data)).data;
+export const openDispatchActa = async (id, dispatchId) => {
+  const res = await axios.get(`/projects/${id}/dispatches/${dispatchId}/acta`, { responseType: 'blob' });
+  const url = URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
+  window.open(url, '_blank', 'noopener');
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+};
+
+// ── Mantenimientos recurrentes (Fase 4, req. 1.3) ──
+// Instalación = sistema de un cliente que se mantiene (de un proyecto o anterior a Pitbox).
+export const getMaintenanceInstallations = async (params) => (await axios.get('/projects/maintenance/installations', { params })).data;
+// { customer_id, name, system_type?, capacity?, site_address?, city?, installed_at?, notes?, plan?: {...} }
+export const createMaintenanceInstallation = async (data) => (await axios.post('/projects/maintenance/installations', data)).data;
+export const updateMaintenanceInstallation = async (installationId, data) => (await axios.put(`/projects/maintenance/installations/${installationId}`, data)).data;
+export const getMaintenanceInstallation = async (installationId) => (await axios.get(`/projects/maintenance/installations/${installationId}`)).data;
+// { rows: [...], dry_run: true|false }
+export const importMaintenanceInstallations = async (data) => (await axios.post('/projects/maintenance/installations/import', data)).data;
+export const createMaintenanceEquipment = async (installationId, data) => (await axios.post(`/projects/maintenance/installations/${installationId}/equipment`, data)).data;
+export const updateMaintenanceEquipment = async (installationId, equipmentId, data) => (await axios.put(`/projects/maintenance/installations/${installationId}/equipment/${equipmentId}`, data)).data;
+// { name, equipment_id?, frequency_months, tasks: [texto], start_date, alert_days_before, assigned_user_id?, notes? }
+export const createMaintenancePlan = async (installationId, data) => (await axios.post(`/projects/maintenance/installations/${installationId}/plans`, data)).data;
+// { ...campos, status?: 'active'|'paused'|'ended', next_date? }
+export const updateMaintenancePlan = async (planId, data) => (await axios.put(`/projects/maintenance/plans/${planId}`, data)).data;
+// Proyecto de Pitbox: su instalación (o null) y activarla
+export const getProjectMaintenance = async (id) => (await axios.get(`/projects/${id}/maintenance`)).data;
+export const activateProjectMaintenance = async (id) => (await axios.post(`/projects/${id}/maintenance`)).data;
+// { status?, from?, to?, installation_id?, technician_user_id?, alert?: 'overdue'|'due_soon' }
+export const getMaintenanceAgenda = async (params) => (await axios.get('/projects/maintenance/agenda', { params })).data;
+export const rescheduleMaintenanceVisit = async (visitId, data) => (await axios.put(`/projects/maintenance/visits/${visitId}`, data)).data;
+// { done_date?, checklist: [{ done, note }], observations?, client_name?, client_document?, client_signature? }
+export const completeMaintenanceVisit = async (visitId, data) => (await axios.post(`/projects/maintenance/visits/${visitId}/complete`, data)).data;
+export const cancelMaintenanceVisit = async (visitId, data) => (await axios.post(`/projects/maintenance/visits/${visitId}/cancel`, data)).data;
+export const openMaintenanceVisitPdf = async (visitId) => {
+  const res = await axios.get(`/projects/maintenance/visits/${visitId}/pdf`, { responseType: 'blob' });
   const url = URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
   window.open(url, '_blank', 'noopener');
   setTimeout(() => URL.revokeObjectURL(url), 60000);

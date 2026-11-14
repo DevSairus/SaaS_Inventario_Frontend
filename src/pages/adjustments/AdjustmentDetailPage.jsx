@@ -4,8 +4,10 @@ import { useAdjustmentsStore } from '../../store/adjustmentsStore';
 import Layout from '../../components/layout/Layout';
 import toast from 'react-hot-toast';
 import { formatCurrency } from '../../utils/formatters';
+import { usePermissions } from '../../store/tenantPermissionsStore';
 
 const AdjustmentDetailPage = () => {
+  const can = usePermissions();
   const { id } = useParams();
   const navigate = useNavigate();
   const {
@@ -100,24 +102,24 @@ const AdjustmentDetailPage = () => {
             <div className="flex gap-2">
               {adjustment.status === 'draft' && (
                 <>
-                  <button
+                  {can('inventory.adjustments.edit') && <button
                     onClick={() => navigate(`/adjustments/edit/${id}`)}
                     className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
                   >
                     Editar
-                  </button>
-                  <button
+                  </button>}
+                  {can('inventory.adjustments.approve') && <button
                     onClick={handleConfirm}
                     className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
                   >
                     Confirmar
-                  </button>
-                  <button
+                  </button>}
+                  {can('inventory.adjustments.delete') && <button
                     onClick={handleCancel}
                     className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
                   >
                     Cancelar
-                  </button>
+                  </button>}
                 </>
               )}
             </div>

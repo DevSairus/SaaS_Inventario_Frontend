@@ -7,10 +7,12 @@
 // liquidación a la DIAN. Sin store propio — mismo criterio que
 // PayrollCertificatesPage.jsx: es una pantalla de consulta + una acción
 // de emisión puntual por empleado, no un CRUD.
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { payrollTerminationAPI } from '../../api/payroll';
+import { downloadFile } from '../../utils/helpers';
 import Layout from '../../components/layout/Layout';
+import { terminationReasonLabel } from '../../constants/terminationReasons';
 import {
   ArrowPathIcon,
   UserMinusIcon,
@@ -19,6 +21,7 @@ import {
   CheckCircleIcon,
   ExclamationTriangleIcon,
   PaperAirplaneIcon,
+  DocumentArrowDownIcon,
 } from '@heroicons/react/24/outline';
 
 const formatCurrencyCOP = (value) =>
@@ -40,13 +43,20 @@ const TerminationDetailPanel = ({ item, onEmitted }) => {
   const [preview, setPreview] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isEmitting, setIsEmitting] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
 
-  const fetchPreview = useCallback(async () => {
+  // fetchPreview está memoizado por empleado (para no recalcular en cada tecla):
+  // lee los montos actuales desde una ref, no desde el cierre del primer render.
+  const valuesRef = useRef({ indemnizacion, bonifRetiro });
+  valuesRef.current = { indemnizacion, bonifRetiro };
+
+  const fetchPreview = useCallback(async (override = {}) => {
     setIsLoading(true);
     try {
+      const current = { ...valuesRef.current, ...override };
       const response = await payrollTerminationAPI.preview(item.employee_id, {
-        indemnizacion: Number(indemnizacion) || 0,
-        bonifRetiro: Number(bonifRetiro) || 0,
+        indemnizacion: Number(current.indemnizacion) || 0,
+        bonifRetiro: Number(current.bonifRetiro) || 0,
       });
       setPreview(response.data);
     } catch (error) {
@@ -61,6 +71,28 @@ const TerminationDetailPanel = ({ item, onEmitted }) => {
   useEffect(() => {
     fetchPreview();
   }, [fetchPreview]);
+
+  const handleDownloadPdf = async () => {
+    setIsDownloading(true);
+    try {
+      const current = valuesRef.current;
+      const res = await payrollTerminationAPI.downloadPdf(item.employee_id, {
+        indemnizacion: Number(current.indemnizacion) || 0,
+        bonifRetiro: Number(current.bonifRetiro) || 0,
+      });
+      downloadFile(new Blob([res.data], { type: 'application/pdf' }), `Liquidacion-${item.employee_name || item.employee_id}.pdf`);
+    } catch (error) {
+      // Con responseType blob el mensaje del backend llega como Blob JSON.
+      let message = 'Error al generar el PDF de la liquidación';
+      try {
+        const parsed = JSON.parse(await error.response?.data?.text?.());
+        if (parsed?.message) message = parsed.message;
+      } catch { /* se queda el mensaje genérico */ }
+      toast.error(message);
+    } finally {
+      setIsDownloading(false);
+    }
+  };
 
   const handleEmit = async () => {
     if (!window.confirm(`¿Emitir la liquidación definitiva de ${item.employee_name} a la DIAN? Esta acción genera y firma el documento — no se puede deshacer.`)) {
@@ -98,8 +130,28 @@ const TerminationDetailPanel = ({ item, onEmitted }) => {
 
   const { breakdown, resumen, netoTotal } = preview;
 
+  const sugerida = breakdown.indemnizacionSugerida;
+  const periodosPendientes = breakdown.periodosPendientes || [];
+  const bloqueada = !breakdown.motivoRetiro || periodosPendientes.length > 0;
+
   return (
     <div className="space-y-4">
+      <p className="text-xs text-gray-600 dark:text-gray-400">
+        <span className="font-semibold">Causa del retiro:</span>{' '}
+        {breakdown.motivoRetiro
+          ? terminationReasonLabel(breakdown.motivoRetiro)
+          : <span className="text-red-600 dark:text-red-400">sin registrar — edite al empleado para poder emitir</span>}
+        {breakdown.observacionesRetiro ? ` · ${breakdown.observacionesRetiro}` : ''}
+      </p>
+      <p className="text-xs text-gray-600 dark:text-gray-400">
+        <span className="font-semibold">Salario hasta el retiro:</span>{' '}
+        {periodosPendientes.length > 0
+          ? <span className="text-red-600 dark:text-red-400">falta emitir la nómina de {periodosPendientes.map((p) => `${p.start_date} a ${p.end_date}`).join(', ')}</span>
+          : breakdown.salarioCubierto
+            ? `ya pagado en la nómina hasta el ${breakdown.rangoSalarioPendiente.pagadoHasta}; esta liquidación no incluye salario`
+            : `se paga en esta liquidación (${breakdown.rangoSalarioPendiente.inicio} a ${breakdown.rangoSalarioPendiente.fin})`}
+      </p>
+
       {breakdown.notasLimitaciones?.length > 0 && (
         <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-900/40 rounded-xl p-3 text-xs text-amber-800 dark:text-amber-300 space-y-1">
           {breakdown.notasLimitaciones.map((nota, i) => (
@@ -114,7 +166,10 @@ const TerminationDetailPanel = ({ item, onEmitted }) => {
           <dl className="space-y-1">
             <div className="flex justify-between"><dt className="text-gray-500">Cesantías ({breakdown.cesantias.dias} días)</dt><dd className="text-gray-800 dark:text-gray-200">{formatCurrencyCOP(breakdown.cesantias.cesantias)}</dd></div>
             <div className="flex justify-between"><dt className="text-gray-500">Intereses a las cesantías</dt><dd className="text-gray-800 dark:text-gray-200">{formatCurrencyCOP(breakdown.cesantias.intereses)}</dd></div>
-            <div className="flex justify-between"><dt className="text-gray-500">Prima proporcional ({breakdown.prima.dias} días, sem. {breakdown.prima.semestre})</dt><dd className="text-gray-800 dark:text-gray-200">{formatCurrencyCOP(breakdown.prima.prima)}</dd></div>
+            <div className="flex justify-between"><dt className="text-gray-500">Prima proporcional ({breakdown.prima.dias} días, sem. {breakdown.prima.semestre})</dt><dd className="text-gray-800 dark:text-gray-200">{formatCurrencyCOP(breakdown.prima.primaCausada ?? breakdown.prima.prima)}</dd></div>
+            {breakdown.prima.yaPagada > 0 && (
+              <div className="flex justify-between"><dt className="text-gray-500">Menos prima ya pagada en nómina</dt><dd className="text-gray-800 dark:text-gray-200">-{formatCurrencyCOP(breakdown.prima.yaPagada)}</dd></div>
+            )}
             <div className="flex justify-between"><dt className="text-gray-500">Vacaciones pendientes ({breakdown.vacaciones.diasPendientes} días: {breakdown.vacaciones.fechaSaldoInicial ? `saldo inicial ${breakdown.vacaciones.saldoInicial} + ` : ''}{breakdown.vacaciones.diasCausados} causados − {breakdown.vacaciones.diasYaTomados} tomados)</dt><dd className="text-gray-800 dark:text-gray-200">{formatCurrencyCOP(breakdown.vacaciones.valor)}</dd></div>
           </dl>
         </div>
@@ -126,20 +181,29 @@ const TerminationDetailPanel = ({ item, onEmitted }) => {
               <input
                 type="number" min="0" value={indemnizacion}
                 onChange={(e) => setIndemnizacion(e.target.value)}
-                onBlur={fetchPreview}
+                onBlur={() => fetchPreview()}
                 className="mt-0.5 w-full px-2 py-1.5 border border-gray-300 dark:border-white/10 dark:bg-graphite-2 dark:text-gray-100 rounded-lg text-xs"
               />
             </label>
+            {sugerida?.applies && sugerida.amount > 0 && (
+              <button
+                type="button"
+                onClick={() => { setIndemnizacion(String(sugerida.amount)); fetchPreview({ indemnizacion: sugerida.amount }); }}
+                className="text-[11px] text-blue-600 hover:text-blue-800 dark:text-blue-400 underline"
+              >
+                Usar la sugerida: {formatCurrencyCOP(sugerida.amount)} ({sugerida.days} días)
+              </button>
+            )}
             <label className="block">
               <span className="text-gray-500">Bonificación por retiro</span>
               <input
                 type="number" min="0" value={bonifRetiro}
                 onChange={(e) => setBonifRetiro(e.target.value)}
-                onBlur={fetchPreview}
+                onBlur={() => fetchPreview()}
                 className="mt-0.5 w-full px-2 py-1.5 border border-gray-300 dark:border-white/10 dark:bg-graphite-2 dark:text-gray-100 rounded-lg text-xs"
               />
             </label>
-            <p className="text-[11px] text-gray-400">Depende de la causa del retiro — no se calcula automáticamente. Cambie el valor y salga del campo para recalcular.</p>
+            <p className="text-[11px] text-gray-400">Solo se suma lo que usted confirme aquí. Cambie el valor y salga del campo para recalcular.</p>
           </div>
         </div>
       </div>
@@ -166,10 +230,18 @@ const TerminationDetailPanel = ({ item, onEmitted }) => {
         </div>
       </div>
 
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-3">
+        <button
+          onClick={handleDownloadPdf}
+          disabled={isDownloading}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/5 disabled:opacity-50 transition-colors"
+        >
+          <DocumentArrowDownIcon className="h-4 w-4" />
+          {isDownloading ? 'Generando...' : item.already_settled ? 'Descargar comprobante PDF' : 'Descargar borrador PDF'}
+        </button>
         <button
           onClick={handleEmit}
-          disabled={isEmitting || item.already_settled}
+          disabled={isEmitting || item.already_settled || bloqueada}
           className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
           <PaperAirplaneIcon className={`h-4 w-4 ${isEmitting ? 'animate-pulse' : ''}`} />

@@ -116,6 +116,19 @@ export const LOAN_TYPE_LABELS = {
   tercero: 'Con Tercero',
 };
 
+// Terceros nuevos pendientes de revisión contable (3.2).
+export const thirdPartySetupAPI = {
+  listPending: async () => (await api.get('/accounting/third-parties/pending-setup')).data,
+  markConfigured: async (kind, id) => (await api.post(`/accounting/third-parties/${kind}/${id}/configured`)).data,
+};
+
+// Ajuste al peso (5.1): configuración y bitácora.
+export const roundingAdjustmentAPI = {
+  getConfig: async () => (await api.get('/accounting/rounding-adjustment/config')).data,
+  updateConfig: async (payload) => (await api.put('/accounting/rounding-adjustment/config', payload)).data,
+  list: async (params = {}) => (await api.get('/accounting/rounding-adjustments', { params })).data,
+};
+
 // Conciliación Bancaria (Fase 3 del plan de Contabilidad Pitbox).
 export const bankAccountsAPI = {
   getAll: async (params = {}) => (await api.get('/accounting/bank-accounts', { params })).data,
@@ -305,7 +318,7 @@ export const SOURCE_TYPE_LABELS = {
 // retención por categoría y excepciones por producto.
 export const taxClassificationAPI = {
   overview: async (year) => (await api.get('/accounting/tax-classification', { params: { year } })).data,
-  lines: async (year, concept_id) => (await api.get('/accounting/tax-classification/lines', { params: { year, concept_id } })).data,
+  lines: async (year, concept_id, paging = {}) => (await api.get('/accounting/tax-classification/lines', { params: { year, concept_id, ...paging } })).data,
   saveCategories: async (assignments) => (await api.put('/accounting/tax-classification/categories', { assignments })).data,
   products: async (params) => (await api.get('/accounting/tax-classification/products', { params })).data,
   saveProducts: async (product_ids, concept_id) => (await api.put('/accounting/tax-classification/products', { product_ids, concept_id })).data,

@@ -970,3 +970,81 @@ export const parsePurchaseLinesFile = async (file) => {
   });
   return { rows, errors };
 };
+
+// ============================================================================
+// MANTENIMIENTOS: IMPORTAR INSTALACIONES ANTERIORES A PITBOX (Fase 4, req. 1.3)
+// ============================================================================
+const MAINTENANCE_COLUMNS = [
+  { header: 'Documento del cliente', key: 'customer_document', width: 20 },
+  { header: 'Nombre del sistema', key: 'name', width: 38 },
+  { header: 'Tipo de sistema', key: 'system_type', width: 18 },
+  { header: 'Capacidad', key: 'capacity', width: 12 },
+  { header: 'Dirección', key: 'site_address', width: 30 },
+  { header: 'Ciudad', key: 'city', width: 16 },
+  { header: 'Fecha de instalación', key: 'installed_at', width: 18 },
+  { header: 'Plan', key: 'plan_name', width: 26 },
+  { header: 'Frecuencia (meses)', key: 'frequency_months', width: 18 },
+  { header: 'Próxima visita', key: 'next_visit', width: 16 },
+  { header: 'Tareas (separadas por ;)', key: 'tasks', width: 60 },
+  { header: 'Avisar (días antes)', key: 'alert_days_before', width: 18 },
+  { header: 'Notas', key: 'notes', width: 30 },
+];
+
+export const downloadMaintenanceTemplate = async () => {
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet('Instalaciones');
+  ws.columns = MAINTENANCE_COLUMNS;
+  ws.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+  ws.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEA580C' } };
+  ws.views = [{ state: 'frozen', ySplit: 1 }];
+  ws.addRow({
+    customer_document: '900123456', name: 'Sistema solar 10 kWp - Finca El Roble', system_type: 'Solar on-grid', capacity: '10 kWp',
+    site_address: 'Vereda El Roble km 3', city: 'Montería', installed_at: '2024-06-15', plan_name: 'Mantenimiento preventivo',
+    frequency_months: 6, next_visit: '2026-12-15', tasks: 'Limpieza de paneles; Revisión de conexiones; Lectura del inversor', alert_days_before: 15,
+  });
+  const wsInstructions = wb.addWorksheet('Instrucciones');
+  [
+    'INSTRUCCIONES — INSTALACIONES PARA MANTENIMIENTO',
+    '',
+    '1. Una fila por instalación (sistema del cliente). Borra la fila de ejemplo. No cambies los encabezados.',
+    '2. Obligatorio: Documento del cliente (NIT o cédula, con o sin dígito de verificación) y Nombre del sistema.',
+    '   El cliente debe existir en Pitbox (Ventas → Clientes).',
+    '3. Para programar el mantenimiento llena Frecuencia (meses) y Tareas; Plan y Próxima visita son opcionales',
+    '   (sin próxima visita, se programa para hoy).',
+    '4. Varios planes para el mismo sistema: repite la fila con el mismo cliente y nombre, cambiando el plan.',
+    '5. Fechas como AAAA-MM-DD o DD/MM/AAAA.',
+    '6. Al subir el archivo Pitbox revisa cada fila y muestra los errores antes de crear nada.',
+  ].forEach((line) => wsInstructions.addRow([line]));
+  wsInstructions.getColumn(1).width = 110;
+  await downloadWorkbook(wb, 'plantilla_mantenimientos.xlsx');
+};
+
+/** Lee el Excel de instalaciones y devuelve las filas como objetos (row = número de fila). */
+export const parseMaintenanceWorkbook = async (file) => {
+  const wb = new ExcelJS.Workbook();
+  await wb.xlsx.load(await file.arrayBuffer());
+  const ws = wb.getWorksheet('Instalaciones') || wb.worksheets[0];
+  if (!ws) throw new Error('El archivo no tiene hojas');
+  const norm = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+  const byHeader = new Map(MAINTENANCE_COLUMNS.map((c) => [norm(c.header), c.key]));
+  const keys = {};
+  ws.getRow(1).eachCell((cell, col) => { const k = byHeader.get(norm(cell.text)); if (k) keys[col] = k; });
+  if (!Object.values(keys).includes('customer_document') || !Object.values(keys).includes('name')) {
+    throw new Error('No se encontraron las columnas "Documento del cliente" y "Nombre del sistema". Usa la plantilla.');
+  }
+  const value = (cell) => {
+    const v = cell.value;
+    if (v === null || v === undefined) return '';
+    if (v instanceof Date) return v.toISOString().slice(0, 10);
+    if (typeof v === 'object') return v.result ?? v.text ?? (v.richText ? v.richText.map((t) => t.text).join('') : '');
+    return v;
+  };
+  const rows = [];
+  ws.eachRow((row, n) => {
+    if (n === 1) return;
+    const r = { row: n };
+    Object.entries(keys).forEach(([col, k]) => { r[k] = value(row.getCell(Number(col))); });
+    if (Object.entries(r).some(([k, v]) => k !== 'row' && String(v).trim() !== '')) rows.push(r);
+  });
+  return rows;
+};

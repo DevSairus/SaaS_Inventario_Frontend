@@ -9,6 +9,8 @@ import { FUND_TYPE_LABELS, resetFundSuppliersCache } from '../payroll/FundSuppli
 import { COLOMBIAN_BANKS } from '../../constants/colombianBanks';
 import { DOCUMENT_TYPE_OPTIONS } from '../../constants/documentTypes';
 import { COUNTRIES, countryName } from '../../constants/countries';
+import AttachmentsPanel, { SUPPLIER_KIND_KEYS } from '../attachments/AttachmentsPanel';
+import SupplierDocumentsPicker, { EMPTY_SUPPLIER_DOCS, uploadSupplierDocuments } from './SupplierDocumentsPicker';
 
 
 const SupplierModal = ({ supplier, onClose }) => {
@@ -52,6 +54,7 @@ const SupplierModal = ({ supplier, onClose }) => {
   });
 
   const [errors, setErrors] = useState({});
+  const [newDocs, setNewDocs] = useState(EMPTY_SUPPLIER_DOCS);
   const { concepts: retentionConcepts } = useRetentionCatalog();
 
   useEffect(() => {
@@ -152,6 +155,10 @@ const SupplierModal = ({ supplier, onClose }) => {
     if (success) {
       resetFundSuppliersCache();
       toast.success(supplier ? 'Proveedor actualizado exitosamente' : 'Proveedor creado exitosamente');
+      // Alta: sube el RUT y la Cámara de Comercio elegidos al proveedor recién creado.
+      if (!supplier && success.id && (newDocs.rut || newDocs.chamber)) {
+        await uploadSupplierDocuments(success.id, newDocs);
+      }
       onClose();
     }
   };
@@ -758,6 +765,23 @@ const SupplierModal = ({ supplier, onClose }) => {
                 </>
               );
             })()}
+          </div>
+
+          {/* Documentos: RUT y Cámara de Comercio */}
+          <div className="mb-6">
+            <h3 className="text-base font-semibold text-gray-800 dark:text-gray-200 mb-3">Documentos del proveedor</h3>
+            {supplier ? (
+              <AttachmentsPanel
+                entityType="supplier"
+                entityId={supplier.id}
+                title="RUT y Cámara de Comercio"
+                defaultKind="rut"
+                kinds={SUPPLIER_KIND_KEYS}
+                compact
+              />
+            ) : (
+              <SupplierDocumentsPicker value={newDocs} onChange={setNewDocs} />
+            )}
           </div>
 
           {/* Buttons */}

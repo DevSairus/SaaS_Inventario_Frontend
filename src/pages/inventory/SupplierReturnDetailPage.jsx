@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 import useIsManagement from '../../hooks/useIsManagement';
 import ApproveSupplierReturnModal from '../../components/inventory/ApproveSupplierReturnModal';
 import ReverseReturnModal from '../../components/returns/ReverseReturnModal';
+import ReturnStatusTimeline from '../../components/returns/ReturnStatusTimeline';
 import { SUPPLIER_RETURN_REASONS as REASON_LABELS } from '../../utils/returnLabels';
 
 const COP = (n) =>
@@ -364,6 +365,8 @@ const SupplierReturnDetailPage = () => {
             })()}
           </div>
         )}
+
+        <ReturnStatusTimeline history={supplierReturn.history} />
 
         {supplierReturn.status === 'reversed' && (
           <div className="bg-gray-50 border border-gray-200 rounded-lg p-5 mt-6">

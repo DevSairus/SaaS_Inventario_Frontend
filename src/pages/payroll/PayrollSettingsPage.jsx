@@ -15,6 +15,7 @@ import toast from 'react-hot-toast';
 import { usePayrollSettingsStore } from '../../store/payrollSettingsStore';
 import CesantiasAnnualPanel from '../../components/payroll/CesantiasAnnualPanel';
 import { InformationCircleIcon, ArrowPathIcon, CheckIcon } from '@heroicons/react/24/outline';
+import { legalWeeklyHours } from '../../constants/payroll';
 
 const FIELD_GROUPS = [
   {
@@ -100,7 +101,7 @@ const COMPANY_FUNDS = [
 ];
 
 // Planilla PILA y jornada -- ver backend/src/services/payroll/pila/.
-const PILA_KEYS = ['weekly_hours', 'pila_contributor_type', 'pila_presentation_form', 'pila_branch_code', 'pila_branch_name', 'arl_economic_activity'];
+const PILA_KEYS = ['weekly_hours', 'daily_hours', 'pila_contributor_type', 'pila_presentation_form', 'pila_branch_code', 'pila_branch_name', 'arl_economic_activity'];
 const ACCOUNTING_KEYS = [...ACCOUNTING_OPTIONS.map((o) => o.key), ...COMPANY_FUNDS.map((f) => f.key), 'employer_exonerated_114_1', ...PILA_KEYS];
 
 const PayrollSettingsPage = () => {
@@ -315,10 +316,18 @@ const PayrollSettingsPage = () => {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Jornada semanal (horas)
-                    <span className="block text-xs font-normal text-gray-400">Vacío = máxima legal (Ley 2101: 42 h desde el 15-jul-2026). Define el valor de la hora extra.</span>
+                    <span className="block text-xs font-normal text-gray-400">Vacío = máxima legal (Ley 2101: {legalWeeklyHours()} h vigentes hoy). Es la que se reporta en la PILA; el valor de la hora extra nunca usa más de la máxima legal.</span>
                   </label>
                   <input type="number" min="1" max="48" step="0.5" value={accountingValues.weekly_hours ?? ''}
-                    onChange={(e) => handleAccountingChange('weekly_hours', e.target.value)} placeholder="42" className="w-full px-3 py-2 border border-gray-300 dark:border-white/10 dark:bg-graphite-2 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                    onChange={(e) => handleAccountingChange('weekly_hours', e.target.value)} placeholder={String(legalWeeklyHours())} className="w-full px-3 py-2 border border-gray-300 dark:border-white/10 dark:bg-graphite-2 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Horas ordinarias por día (planilla de obra)
+                    <span className="block text-xs font-normal text-gray-400">Lo que pase de aquí en un día es hora extra. Vacío = jornada semanal / 6 ({Math.round((Number(accountingValues.weekly_hours) || legalWeeklyHours()) / 6 * 100) / 100} h). Ej. 8,4 si la semana se trabaja de lunes a viernes.</span>
+                  </label>
+                  <input type="number" min="1" max="12" step="0.1" value={accountingValues.daily_hours ?? ''}
+                    onChange={(e) => handleAccountingChange('daily_hours', e.target.value)} placeholder={String(Math.round((Number(accountingValues.weekly_hours) || legalWeeklyHours()) / 6 * 100) / 100)} className="w-full px-3 py-2 border border-gray-300 dark:border-white/10 dark:bg-graphite-2 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">

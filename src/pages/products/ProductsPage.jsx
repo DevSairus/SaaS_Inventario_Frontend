@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useProductsStore from '../../store/productsStore';
+import { usePermissions } from '../../store/tenantPermissionsStore';
 import useAuthStore from '../../store/authStore';
 import useCategoriesStore from '../../store/categoriesStore';
 import ProductFormModal from '../../components/products/ProductFormModal';
@@ -19,8 +20,11 @@ import useUrlPageSync from '../../hooks/useUrlPageSync';
 function ProductsPage() {
   const navigate = useNavigate();
   const { user } = useAuthStore();
-  // Mismos roles que PRODUCTS_WRITE_ROLES en backend/src/routes/inventory/products.routes.js
-  const canEditProducts = ['admin', 'manager', 'warehouse_keeper', 'super_admin'].includes(user?.role);
+  // Permisos por empresa (Ajustes → Roles y permisos); el backend valida igual.
+  const can = usePermissions();
+  const canCreateProducts = can('inventory.products.create');
+  const canEditProducts = can('inventory.products.edit');
+  const canDeleteProducts = can('inventory.products.delete');
   const { categories, fetchCategories } = useCategoriesStore();
   const {
     products,
@@ -194,7 +198,7 @@ function ProductsPage() {
           <p className="text-sm text-gray-500 mt-0.5 dark:text-gray-500">Gestiona el catálogo de productos y control de inventario</p>
         </div>
         <div className="flex gap-2 flex-wrap">
-          {canEditProducts && (
+          {canCreateProducts && (
           <button
             onClick={() => setIsImportModalOpen(true)}
             className="inline-flex items-center gap-2 px-4 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 shadow-sm dark:border-white/10 dark:text-gray-300 dark:bg-graphite-2 dark:hover:bg-white/10"
@@ -214,7 +218,7 @@ function ProductsPage() {
             </svg>
             Exportar
           </button>
-          {canEditProducts && (
+          {canCreateProducts && (
           <button
             onClick={handleCreate}
             className="inline-flex items-center gap-2 px-4 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-sm font-semibold shadow-sm transition-colors"
@@ -527,6 +531,9 @@ function ProductsPage() {
                           <div className="text-sm text-gray-900 dark:text-gray-100">
                             {product.category?.name || 'Sin categoría'}
                           </div>
+                          {product.location?.code && (
+                            <div className="text-xs text-gray-500 dark:text-gray-500">Ubicación: {product.location.code}</div>
+                          )}
                         </td>
                         <td className="px-6 py-4">
                           <span
@@ -592,7 +599,8 @@ function ProductsPage() {
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
                               </svg>
                             </button>
-                            {canEditProducts && (<>
+                            {(canEditProducts || canDeleteProducts) && (<>
+                            {canEditProducts && (
                             <button
                               onClick={() => handleEdit(product)}
                               className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
@@ -602,7 +610,8 @@ function ProductsPage() {
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                               </svg>
                             </button>
-                            {product.is_active ? (
+                            )}
+                            {product.is_active ? (canEditProducts && (
                               <button
                                 onClick={() => handleDeactivate(product.id, product.name)}
                                 className="text-orange-600 hover:text-orange-900 dark:text-orange-400 dark:hover:text-orange-300"
@@ -612,7 +621,7 @@ function ProductsPage() {
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
                                 </svg>
                               </button>
-                            ) : (
+                            )) : (canDeleteProducts && (
                               <button
                                 onClick={() => handleDelete(product.id, product.name)}
                                 className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
@@ -622,7 +631,7 @@ function ProductsPage() {
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                 </svg>
                               </button>
-                            )}
+                            ))}
                             </>)}
                           </div>
                         </td>

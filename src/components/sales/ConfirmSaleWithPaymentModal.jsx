@@ -483,6 +483,7 @@ const ConfirmSaleWithPaymentModal = ({
                       {row.method !== 'cash' && (
                         <BankAccountSelect
                           compact
+                          method={row.method}
                           value={row.bank_account_id}
                           onChange={(id) => updateMixedRow(index, 'bank_account_id', id)}
                         />
@@ -553,7 +554,7 @@ const ConfirmSaleWithPaymentModal = ({
 
               {/* Cuenta bancaria que recibe el pago (no efectivo) */}
               {paymentType !== 'mixed' && paymentType !== 'credit' && !isCash && (
-                <BankAccountSelect value={bankAccountId} onChange={setBankAccountId} />
+                <BankAccountSelect value={bankAccountId} onChange={setBankAccountId} method={paymentMethod} />
               )}
 
               {/* Abono parcial */}

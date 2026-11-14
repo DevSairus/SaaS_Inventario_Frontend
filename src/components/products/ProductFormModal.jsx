@@ -6,6 +6,7 @@ import useCategoriesStore from '../../store/categoriesStore';
 import useTenantStore from '../../store/tenantStore';
 import BarcodeScanner from '../common/BarcodeScanner';
 import { warehousesService } from '../../api/warehouses';
+import { warehouseLocationsService } from '../../api/warehouseLocations';
 import { formatNumber } from '../../utils/formatters';
 import { suggestedSalePrice, maxMarginFor } from '../../utils/salePricing';
 import NumericInput from '../inputs/NumericInput';
@@ -22,6 +23,7 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
 
   const [warehouses, setWarehouses] = useState([]);
   const [loadingWarehouses, setLoadingWarehouses] = useState(false);
+  const [locations, setLocations] = useState([]); // ubicaciones activas de la bodega elegida
 
   const EMPTY_VEHICLE_DATA = {
     plate: '', vehicle_type: 'automovil', brand: '', model: '', year: '',
@@ -69,6 +71,7 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
     base_price: '',
     current_stock: '',
     warehouse_id: '',
+    location_id: '',
     product_type: 'product',
     track_inventory: true,
     allow_negative_stock: false,
@@ -137,6 +140,16 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
       .finally(() => setLoadingWarehouses(false));
   }, [isOpen]);
 
+  // Ubicaciones de la bodega elegida (req. 2.2). Sin bodega no hay ubicaciones.
+  useEffect(() => {
+    if (!isOpen || !formData.warehouse_id) { setLocations([]); return undefined; }
+    let cancelled = false;
+    warehouseLocationsService.getAll({ warehouse_id: formData.warehouse_id, is_active: 'true', limit: 500 })
+      .then(res => { if (!cancelled) setLocations(res?.data ?? []); })
+      .catch(() => { if (!cancelled) setLocations([]); });
+    return () => { cancelled = true; };
+  }, [isOpen, formData.warehouse_id]);
+
   useEffect(() => {
     if (product) {
       setCurrentImageUrl(product.image_url || null);
@@ -161,6 +174,7 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
         base_price: fmtNum(product.base_price),
         current_stock: fmtNum(product.current_stock),
         warehouse_id: product.warehouse_id || '',
+        location_id: product.location_id || '',
         product_type: product.product_type || 'product',
         track_inventory: product.product_type === 'service' ? false : (product.track_inventory !== false),
         allow_negative_stock: product.allow_negative_stock || false,
@@ -208,6 +222,7 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
         base_price: '',
         current_stock: '',
         warehouse_id: prev.warehouse_id, // conservar bodega preseleccionada
+        location_id: '',
         product_type: 'product',
         track_inventory: true,
         allow_negative_stock: false,
@@ -262,7 +277,10 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setSaveError('');
-    if (name === 'has_tax') {
+    if (name === 'warehouse_id') {
+      // La ubicación pertenece a una bodega: al cambiar de bodega deja de aplicar.
+      setFormData(prev => ({ ...prev, warehouse_id: value, location_id: '' }));
+    } else if (name === 'has_tax') {
       setFormData(prev => ({
         ...prev,
         has_tax: checked,
@@ -315,6 +333,8 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
       has_tax: formData.has_tax && parseFloat(formData.tax_percentage) > 0,
       tax_percentage: parseFloat(formData.tax_percentage) || 0,
       warehouse_id: formData.warehouse_id || null,
+      // '' = sin ubicación (el backend la quita); la ubicación es de la bodega elegida.
+      location_id: formData.warehouse_id ? (formData.location_id || null) : null,
     };
 
     // El Vehicle real solo se crea junto con el producto la primera vez --
@@ -856,6 +876,29 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
                   Bodega donde se registrará el stock de este producto
                 </p>
               </div>
+
+              {/* ── UBICACIÓN EN BODEGA ── */}
+              {formData.warehouse_id && (
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Ubicación en bodega</label>
+                  <select
+                    name="location_id"
+                    value={formData.location_id}
+                    onChange={handleChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100"
+                  >
+                    <option value="">Sin ubicación</option>
+                    {locations.map(l => (
+                      <option key={l.id} value={l.id}>{l.code}{l.description ? ` — ${l.description}` : ''}</option>
+                    ))}
+                  </select>
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-500">
+                    {locations.length === 0
+                      ? 'Esta bodega aún no tiene ubicaciones. Créalas en Inventario → Bodegas → Ubicaciones.'
+                      : 'Pasillo / estante / nivel donde se guarda el producto (opcional)'}
+                  </p>
+                </div>
+              )}
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Stock Actual</label>

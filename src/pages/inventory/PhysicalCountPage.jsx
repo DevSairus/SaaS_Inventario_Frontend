@@ -5,6 +5,8 @@ import Layout from '../../components/layout/Layout';
 import api from '../../api/axios';
 import { categoriesAPI } from '../../api/categories';
 import { physicalCountsAPI, triggerBlobDownload } from '../../api/physicalCounts';
+import { warehouseLocationsService } from '../../api/warehouseLocations';
+import { usePermissions } from '../../store/tenantPermissionsStore';
 import { formatCurrency, formatNumber } from '../../utils/formatters';
 import toast from 'react-hot-toast';
 
@@ -64,6 +66,8 @@ const SummaryCard = ({ label, value, subvalue, tone = 'gray' }) => {
 
 const PhysicalCountPage = () => {
   const navigate = useNavigate();
+  const can = usePermissions();
+  const canApprove = can('inventory.physical_counts.approve');
   // Si viene :id en la ruta, es una sesión "open" ya creada (por ejemplo, horas
   // antes) que el usuario retoma para subir el Excel diligenciado -- ver
   // /inventory/physical-counts/:id/upload en App.jsx. Salta el paso 1
@@ -79,7 +83,11 @@ const PhysicalCountPage = () => {
   const [categories, setCategories] = useState([]);
   const [warehouseId, setWarehouseId] = useState('');
   const [categoryId, setCategoryId] = useState('');
+  const [includeSubcategories, setIncludeSubcategories] = useState(true); // categoría = familia
+  const [locations, setLocations] = useState([]);
+  const [locationId, setLocationId] = useState('');
   const [includeInactive, setIncludeInactive] = useState(false);
+  const [blindTemplate, setBlindTemplate] = useState(false);
 
   // Sesión creada
   const [count, setCount] = useState(null); // { id, count_number }
@@ -110,6 +118,17 @@ const PhysicalCountPage = () => {
     loadOptions();
   }, []);
 
+  // Ubicaciones de la bodega elegida (req. 2.3: contar por pasillo/estante).
+  useEffect(() => {
+    setLocationId('');
+    if (!warehouseId) { setLocations([]); return undefined; }
+    let cancelled = false;
+    warehouseLocationsService.getAll({ warehouse_id: warehouseId, is_active: 'true', limit: 500 })
+      .then((res) => { if (!cancelled) setLocations(res.data || []); })
+      .catch(() => { if (!cancelled) setLocations([]); });
+    return () => { cancelled = true; };
+  }, [warehouseId]);
+
   // Al retomar una sesión existente, trae sus datos y valida que siga abierta
   // (si ya fue aplicada/cancelada no tiene sentido seguir subiendo el Excel).
   useEffect(() => {
@@ -138,11 +157,11 @@ const PhysicalCountPage = () => {
 
   // Re-descarga la plantilla de una sesión ya creada (por si el usuario
   // perdió el Excel original entre la creación y el conteo físico).
-  const handleRedownloadTemplate = async () => {
+  const handleRedownloadTemplate = async (blind = false) => {
     if (!count) return;
     try {
-      const blob = await physicalCountsAPI.downloadTemplate(count.id);
-      triggerBlobDownload(blob, `${count.count_number || 'conteo-fisico'}.xlsx`);
+      const blob = await physicalCountsAPI.downloadTemplate(count.id, { blind });
+      triggerBlobDownload(blob, `${count.count_number || 'conteo-fisico'}${blind ? '-ciego' : ''}.xlsx`);
     } catch (error) {
       toast.error(error.response?.data?.message || 'Error al descargar la plantilla');
     }
@@ -154,15 +173,19 @@ const PhysicalCountPage = () => {
     try {
       const payload = {};
       if (warehouseId) payload.warehouse_id = warehouseId;
-      if (categoryId) payload.category_id = categoryId;
+      if (categoryId) {
+        payload.category_id = categoryId;
+        payload.include_subcategories = includeSubcategories;
+      }
+      if (locationId) payload.location_id = locationId;
       if (includeInactive) payload.include_inactive = true;
 
       const createRes = await physicalCountsAPI.create(payload);
       const created = createRes.data;
       setCount(created);
 
-      const blob = await physicalCountsAPI.downloadTemplate(created.id);
-      triggerBlobDownload(blob, `${created.count_number || 'conteo-fisico'}.xlsx`);
+      const blob = await physicalCountsAPI.downloadTemplate(created.id, { blind: blindTemplate });
+      triggerBlobDownload(blob, `${created.count_number || 'conteo-fisico'}${blindTemplate ? '-ciego' : ''}.xlsx`);
 
       toast.success(`Sesión ${created.count_number} creada. Plantilla descargada.`);
       setStep(2);
@@ -253,6 +276,7 @@ const PhysicalCountPage = () => {
     setResult(null);
     setTreatEmptyAsZero(false);
     setApplyConflicts(false);
+    setBlindTemplate(false);
   };
 
   const summary = preview?.summary || {};
@@ -304,10 +328,33 @@ const PhysicalCountPage = () => {
                 >
                   <option value="">Todas las categorías</option>
                   {categories.map((c) => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
+                    <option key={c.id} value={c.id}>{c.parent_id ? '— ' : ''}{c.name}</option>
                   ))}
                 </select>
+                {categoryId && categories.some((c) => c.parent_id === categoryId) && (
+                  <label className="mt-2 flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                    <input type="checkbox" checked={includeSubcategories} onChange={(e) => setIncludeSubcategories(e.target.checked)} />
+                    Incluir las subcategorías (toda la familia)
+                  </label>
+                )}
               </div>
+
+              {warehouseId && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Ubicación</label>
+                  <select
+                    value={locationId}
+                    onChange={(e) => setLocationId(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100"
+                  >
+                    <option value="">Todas las ubicaciones</option>
+                    {locations.map((l) => (
+                      <option key={l.id} value={l.id}>{l.code}{l.description ? ` — ${l.description}` : ''}</option>
+                    ))}
+                  </select>
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-500">La plantilla sale ordenada por ubicación para recorrer la bodega en orden.</p>
+                </div>
+              )}
 
               <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
                 <input
@@ -316,6 +363,21 @@ const PhysicalCountPage = () => {
                   onChange={(e) => setIncludeInactive(e.target.checked)}
                 />
                 Incluir productos inactivos
+              </label>
+
+              <label className="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300">
+                <input
+                  type="checkbox"
+                  className="mt-0.5"
+                  checked={blindTemplate}
+                  onChange={(e) => setBlindTemplate(e.target.checked)}
+                />
+                <span>
+                  Conteo ciego: la plantilla no muestra la cantidad en sistema
+                  <span className="block text-xs text-gray-500 dark:text-gray-500">
+                    Quien cuenta no ve lo que dice el sistema; la comparación aparece al subir el archivo.
+                  </span>
+                </span>
               </label>
 
               <button
@@ -341,12 +403,20 @@ const PhysicalCountPage = () => {
               {count && (
                 <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-3 text-sm text-indigo-800 dark:bg-indigo-900/20 dark:border-indigo-800/40 dark:text-indigo-300 flex items-center justify-between gap-3 flex-wrap">
                   <span>Sesión <strong>{count.count_number}</strong>. Diligencia la columna "Conteo físico" en el Excel descargado y súbelo aquí.</span>
-                  <button
-                    onClick={handleRedownloadTemplate}
-                    className="inline-flex items-center gap-1.5 text-indigo-700 hover:text-indigo-900 underline shrink-0 dark:text-indigo-300 dark:hover:text-indigo-100"
-                  >
-                    <Download className="w-4 h-4" /> Descargar plantilla de nuevo
-                  </button>
+                  <span className="inline-flex items-center gap-4 shrink-0 flex-wrap">
+                    <button
+                      onClick={() => handleRedownloadTemplate(false)}
+                      className="inline-flex items-center gap-1.5 text-indigo-700 hover:text-indigo-900 underline dark:text-indigo-300 dark:hover:text-indigo-100"
+                    >
+                      <Download className="w-4 h-4" /> Descargar plantilla de nuevo
+                    </button>
+                    <button
+                      onClick={() => handleRedownloadTemplate(true)}
+                      className="inline-flex items-center gap-1.5 text-indigo-700 hover:text-indigo-900 underline dark:text-indigo-300 dark:hover:text-indigo-100"
+                    >
+                      <Download className="w-4 h-4" /> Plantilla ciega
+                    </button>
+                  </span>
                 </div>
               )}
 
@@ -528,13 +598,19 @@ const PhysicalCountPage = () => {
                     >
                       Atrás
                     </button>
-                    <button
-                      onClick={handleApply}
-                      disabled={isProcessing}
-                      className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
-                    >
-                      {isProcessing ? 'Aplicando...' : 'Aplicar conteo'}
-                    </button>
+                    {canApprove ? (
+                      <button
+                        onClick={handleApply}
+                        disabled={isProcessing}
+                        className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
+                      >
+                        {isProcessing ? 'Aplicando...' : 'Aplicar conteo'}
+                      </button>
+                    ) : (
+                      <p className="text-sm text-gray-500 dark:text-gray-400 self-center">
+                        Puedes revisar la vista previa, pero aplicar el conteo requiere el permiso "Aplicar conteos físicos".
+                      </p>
+                    )}
                   </div>
                 </>
               )}

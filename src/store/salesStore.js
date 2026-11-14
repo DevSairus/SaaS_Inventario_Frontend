@@ -19,7 +19,10 @@ const useSalesStore = create((set, get) => ({
     branch_id: '',
     payment_view: '', // 'pending' = solo documentos con saldo por cobrar
     aging: '',        // dentro de 'pending': overdue | upcoming | draft
+    doc_group: 'sales', // 'sales' = sin notas crédito/débito | 'notes' = solo notas
+    dian_status: '',    // en Notas: 'rejected' = solo rechazadas por la DIAN
   },
+  notesStats: null,
   // Paginación del listado (limit/offset en el backend, máx. 200)
   page: 1,
   pageSize: 50,
@@ -209,6 +212,16 @@ const useSalesStore = create((set, get) => ({
         console.warn('[salesStore] fetchStats error:', error);
       }
       toast.error(message);
+    }
+  },
+
+  // Totales de la sección Notas crédito y débito (aparte de las ventas)
+  fetchNotesStats: async (filters = {}) => {
+    try {
+      const response = await salesApi.getStats({ ...filters, doc_group: 'notes' });
+      set({ notesStats: response.data.data });
+    } catch (error) {
+      toast.error(error?.response?.data?.message || 'No se pudieron cargar los totales de notas');
     }
   },
 

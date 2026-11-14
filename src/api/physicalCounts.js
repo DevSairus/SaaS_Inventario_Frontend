@@ -21,9 +21,11 @@ export const physicalCountsAPI = {
     return response.data;
   },
 
-  // Descargar la plantilla .xlsx de la sesión (blob)
-  downloadTemplate: async (id) => {
+  // Descargar la plantilla .xlsx de la sesión (blob).
+  // options.blind=true → plantilla ciega (sin cantidades del sistema).
+  downloadTemplate: async (id, options = {}) => {
     const response = await api.get(`/inventory/physical-counts/${id}/template`, {
+      params: options.blind ? { blind: 'true' } : undefined,
       responseType: 'blob'
     });
     return response.data;

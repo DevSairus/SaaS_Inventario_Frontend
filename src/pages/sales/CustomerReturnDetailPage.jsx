@@ -8,6 +8,7 @@ import { formatNumber } from '../../utils/formatters';
 import useIsManagement from '../../hooks/useIsManagement';
 import ApproveCustomerReturnModal from '../../components/sales/ApproveCustomerReturnModal';
 import ReverseReturnModal from '../../components/returns/ReverseReturnModal';
+import ReturnStatusTimeline from '../../components/returns/ReturnStatusTimeline';
 import { customerReturnsApi } from '../../api/customerReturns';
 import api from '../../api/axios';
 import { CUSTOMER_RETURN_REASONS, RETURN_ITEM_CONDITIONS, labelOf } from '../../utils/returnLabels';
@@ -354,6 +355,8 @@ const CustomerReturnDetailPage = () => {
             </tbody>
           </table>
         </div>
+
+        <ReturnStatusTimeline history={customerReturn.history} />
 
         {customerReturn.status === 'reversed' && (
           <div className="bg-gray-50 border border-gray-200 rounded-lg p-5 mt-6">

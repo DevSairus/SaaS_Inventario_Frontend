@@ -17,6 +17,18 @@ import { usePayrollPeriodsStore } from '../../store/payrollPeriodsStore';
 import { usePayrollNovedadesStore } from '../../store/payrollNovedadesStore';
 import { usePayrollDocumentsStore } from '../../store/payrollDocumentsStore';
 import { employeesAPI } from '../../api/payroll';
+
+// Mismo criterio de fechas que el backend (getEmployeesActiveInPeriod): quien
+// se retiró antes del inicio del periodo, o aún no ingresaba, no entra aunque
+// siga activo porque su liquidación todavía no está confirmada.
+const isoDay = (d) => String(d || '').slice(0, 10);
+const isEmployeeInPeriod = (emp, range) => {
+  const hire = isoDay(emp.hire_date);
+  const term = isoDay(emp.termination_date);
+  if (hire && range?.end_date && hire > isoDay(range.end_date)) return false;
+  if (term && range?.start_date && term < isoDay(range.start_date)) return false;
+  return true;
+};
 import useBranchStore from '../../store/branchStore';
 import useAuthStore from '../../store/authStore';
 import Layout from '../../components/layout/Layout';
@@ -24,6 +36,8 @@ import fetchAllRows from '../../utils/fetchAllRows';
 import PayrollPeriodModal from '../../components/payroll/PayrollPeriodModal';
 import PayrollNovedadModal from '../../components/payroll/PayrollNovedadModal';
 import PayrollAccountingPanel from '../../components/payroll/PayrollAccountingPanel';
+import PayrollWorkflowPanel from '../../components/payroll/PayrollWorkflowPanel';
+import ProjectHoursModal from '../../components/payroll/ProjectHoursModal';
 import {
   ArrowLeftIcon,
   PencilIcon,
@@ -41,6 +55,7 @@ import {
   ChevronDownIcon,
   ChevronUpIcon,
   DocumentDuplicateIcon,
+  ClockIcon,
 } from '@heroicons/react/24/outline';
 import {
   PERIOD_TYPES,
@@ -122,6 +137,8 @@ const PayrollPeriodDetailPage = () => {
   const [advancing, setAdvancing] = useState(false);
   const [recalculating, setRecalculating] = useState(false);
   const [copyingNovedades, setCopyingNovedades] = useState(false);
+  // Horas extra y recargos desde la planilla de las obras (Fase 4, req. 1.1).
+  const [showProjectHours, setShowProjectHours] = useState(false);
   const [expandedPreviewIds, setExpandedPreviewIds] = useState(() => new Set());
 
   // Solo trae los empleados a los que este periodo realmente les
@@ -130,7 +147,7 @@ const PayrollPeriodDetailPage = () => {
   // filtro que aplica el backend en getEmployeesActiveInPeriod() al
   // liquidar/emitir, para que la lista que ve el usuario aquí sea
   // consistente con a quién realmente se le va a liquidar.
-  const loadEmployees = useCallback(async (branchId, periodType) => {
+  const loadEmployees = useCallback(async (branchId, periodType, periodRange) => {
     setEmployeesLoading(true);
     try {
       // Todas las páginas: es la lista de a quién se le liquida, no puede
@@ -144,7 +161,7 @@ const PayrollPeriodDetailPage = () => {
         sort_by: 'first_name',
         sort_order: 'ASC',
       }).then((r) => ({ rows: r.data || [], total: r.pagination?.total })));
-      setEmployees(rows);
+      setEmployees(rows.filter((e) => isEmployeeInPeriod(e, periodRange)));
     } catch {
       setEmployees([]);
     } finally {
@@ -174,8 +191,8 @@ const PayrollPeriodDetailPage = () => {
   }, [id]);
 
   useEffect(() => {
-    if (period) loadEmployees(period.branch_id, period.period_type);
-  }, [period?.branch_id, period?.period_type, loadEmployees]);
+    if (period) loadEmployees(period.branch_id, period.period_type, { start_date: period.start_date, end_date: period.end_date });
+  }, [period?.branch_id, period?.period_type, period?.start_date, period?.end_date, loadEmployees]);
 
   const branchName = (bid) => branches.find((b) => b.id === bid)?.name;
   const novedadesByEmployee = (employeeId) => novedades.filter((n) => n.employee_id === employeeId);
@@ -484,6 +501,14 @@ const PayrollPeriodDetailPage = () => {
                   Copiar del periodo anterior
                 </button>
                 <button
+                  onClick={() => setShowProjectHours(true)}
+                  title="Horas extra y recargos de la planilla de las obras"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 dark:border-white/10 rounded-lg text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5"
+                >
+                  <ClockIcon className="h-3.5 w-3.5" />
+                  Horas de proyectos
+                </button>
+                <button
                   onClick={() => handleOpenNovedad()}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 dark:border-white/10 rounded-lg text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5"
                 >
@@ -646,6 +671,9 @@ const PayrollPeriodDetailPage = () => {
           )}
         </div>
 
+        {/* Flujograma del período: etapas, validaciones previas, responsables y bitácora (6.1) */}
+        {period.period_type !== 'liquidacion' && <PayrollWorkflowPanel periodId={period.id} status={period.status} />}
+
         {/* Contabilidad y pagos (comprobantes y desembolsos) */}
         {['emitido', 'cerrado'].includes(period.status) && (
           <PayrollAccountingPanel period={period} canRegenerate={['admin', 'super_admin'].includes(user?.role)} />
@@ -655,6 +683,13 @@ const PayrollPeriodDetailPage = () => {
       {isEditModalOpen && (
         <PayrollPeriodModal isOpen={isEditModalOpen} period={period} onClose={() => setIsEditModalOpen(false)} />
       )}
+      <ProjectHoursModal
+        isOpen={showProjectHours}
+        onClose={() => setShowProjectHours(false)}
+        periodId={id}
+        canGenerate={['abierto', 'liquidado'].includes(period?.status)}
+        onGenerated={() => { fetchNovedades({ payrollPeriodId: id }); if (period?.status === 'liquidado') recalculatePreview(id); }}
+      />
       {isNovedadModalOpen && (
         <PayrollNovedadModal
           isOpen={isNovedadModalOpen}

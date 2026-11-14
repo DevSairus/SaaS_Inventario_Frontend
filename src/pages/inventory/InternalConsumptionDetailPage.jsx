@@ -5,7 +5,7 @@ import Layout from '../../components/layout/Layout';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import { formatNumber } from '../../utils/formatters';
-import useAuthStore from '../../store/authStore';
+import { usePermissions } from '../../store/tenantPermissionsStore';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -13,8 +13,8 @@ const InternalConsumptionDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   // Aprobar/rechazar descuenta stock: el backend solo lo permite a gerencia
-  const role = useAuthStore((s) => s.user?.role);
-  const canApprove = ['admin', 'manager', 'super_admin'].includes(role);
+  const can = usePermissions();
+  const canApprove = can('inventory.consumptions.approve');
   
   const [consumption, setConsumption] = useState(null);
   const [loading, setLoading] = useState(true);

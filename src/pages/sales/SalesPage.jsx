@@ -153,7 +153,7 @@ export default function SalesPage() {
   const isImpersonating = useAuthStore(s => s.isImpersonating);
   const hideRemisiones = tenantFeatures?.hide_remisiones_for_non_admin === true && !isImpersonating();
   const navigate = useNavigate();
-  const { sales, loading, fetchSales, setFilters, filters, stats, fetchStats, page, pageSize, total } = useSalesStore();
+  const { sales, loading, fetchSales, setFilters, filters, stats, fetchStats, notesStats, fetchNotesStats, page, pageSize, total } = useSalesStore();
   const { branches, fetchBranches } = useBranchStore();
   const hasCrm = (useTenantStore(s => s.enabledModules) || []).includes('crm');
   const { sendViaWhatsApp } = useWhatsAppPitbox();
@@ -165,6 +165,9 @@ export default function SalesPage() {
   // primero) y, al final, los borradores de venta. Queda en el store para
   // que al volver del detalle de una venta se mantenga.
   const pendingView = filters.payment_view === 'pending';
+  // Sección "Notas crédito y débito": las notas no son ventas, se consultan
+  // aparte y no suman en los totales de Ventas.
+  const notesView = filters.doc_group === 'notes';
   const [payingSale, setPayingSale] = useState(null);
 
   // Cualquier cambio de filtro vuelve a la página 1.
@@ -174,9 +177,19 @@ export default function SalesPage() {
     fetchSales({ ...updated, page: 1 });
   };
 
+  // view: '' (ventas) | 'pending' (por cobrar) | 'notes' (notas crédito/débito)
+  const currentView = notesView ? 'notes' : (filters.payment_view || '');
   const setPaymentView = (view) => {
-    if (view === filters.payment_view) return;
-    applyFilters({ payment_view: view, aging: '' });
+    if (view === currentView) return;
+    const isNotes = view === 'notes';
+    applyFilters({
+      payment_view: isNotes ? '' : view,
+      doc_group: isNotes ? 'notes' : 'sales',
+      document_type: '',
+      dian_status: '',
+      aging: '',
+    });
+    if (isNotes) fetchNotesStats();
   };
 
   const handlePageChange = (newPage) => {
@@ -245,6 +258,7 @@ export default function SalesPage() {
     const urlPage = Number(searchParams.get('page')) || 1;
     if (urlPage <= 1 || urlPage === page) fetchSales();
     fetchStats();
+    if (notesView) fetchNotesStats();
     fetchBranches();
   }, []);
   useUrlPageSync(page, handlePageChange);
@@ -263,7 +277,7 @@ export default function SalesPage() {
   // Limpia los filtros pero conserva la vista (Todas / Por cobrar).
   const handleReset = () => {
     setSearchInput('');
-    applyFilters({ status: '', customer_name: '', from_date: '', to_date: '', document_type: '', vehicle_plate: '', branch_id: '' });
+    applyFilters({ status: '', customer_name: '', from_date: '', to_date: '', document_type: '', vehicle_plate: '', branch_id: '', dian_status: '' });
   };
 
   const handlePaymentSaved = () => {
@@ -272,7 +286,7 @@ export default function SalesPage() {
     fetchStats();
   };
 
-  const hasActiveFilters = filters.status || filters.from_date || filters.to_date || filters.document_type || filters.vehicle_plate || filters.branch_id;
+  const hasActiveFilters = filters.status || filters.from_date || filters.to_date || filters.document_type || filters.vehicle_plate || filters.branch_id || filters.dian_status;
 
   return (
     <Layout>
@@ -297,14 +311,15 @@ export default function SalesPage() {
 
         <div className="inline-flex p-1 bg-gray-100 dark:bg-white/5 rounded-lg">
           {[
-            { key: '',        label: 'Todas' },
+            { key: '',        label: 'Ventas' },
             { key: 'pending', label: 'Por cobrar', count: (stats?.pending_count || 0) + (stats?.draft_count || 0) },
+            { key: 'notes',   label: 'Notas crédito y débito' },
           ].map(tab => (
             <button
               key={tab.key || 'all'}
               onClick={() => setPaymentView(tab.key)}
               className={`inline-flex items-center gap-2 px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
-                (filters.payment_view || '') === tab.key
+                currentView === tab.key
                   ? 'bg-white dark:bg-graphite text-gray-900 dark:text-gray-100 shadow-sm'
                   : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
               }`}
@@ -319,19 +334,62 @@ export default function SalesPage() {
           ))}
         </div>
 
-        {stats && !pendingView && (
+        {notesView && notesStats && (
           <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
             {[
-              { label: 'Total ventas',  value: stats.sales_count ?? 0,     isCurrency: false },
-              { label: 'Monto total',   value: stats.total_amount ?? 0,    isCurrency: true  },
+              { label: 'Notas crédito', count: notesStats.credit_count, amount: notesStats.credit_amount },
+              { label: 'Notas débito',  count: notesStats.debit_count,  amount: notesStats.debit_amount },
             ].map(s => (
               <div key={s.label} className="bg-white dark:bg-graphite rounded-lg border border-gray-200 dark:border-white/10 px-4 py-3">
                 <p className="text-xs text-gray-500 dark:text-gray-500">{s.label}</p>
-                <p className="text-lg font-semibold text-gray-900 dark:text-gray-100 mt-0.5">
-                  {s.isCurrency ? formatCurrency(s.value) : s.value}
-                </p>
+                <p className="text-lg font-semibold text-gray-900 dark:text-gray-100 mt-0.5">{formatCurrency(s.amount ?? 0)}</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{s.count ?? 0} documento{s.count === 1 ? '' : 's'}</p>
               </div>
             ))}
+            <button
+              onClick={() => handleFilterChange('dian_status', filters.dian_status === 'rejected' ? '' : 'rejected')}
+              className={`col-span-2 lg:col-span-1 text-left bg-white dark:bg-graphite rounded-lg border px-4 py-3 transition-colors ${
+                filters.dian_status === 'rejected' ? 'border-red-300 dark:border-red-800/60' : 'border-gray-200 dark:border-white/10 hover:border-red-300 dark:hover:border-red-800/60'
+              }`}
+              title="Ver solo las notas rechazadas por la DIAN"
+            >
+              <p className="text-xs text-gray-500 dark:text-gray-500">Rechazadas por la DIAN</p>
+              <p className={`text-lg font-semibold mt-0.5 ${notesStats.rejected_count > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-gray-100'}`}>
+                {notesStats.rejected_count ?? 0}
+              </p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                {filters.dian_status === 'rejected' ? 'Mostrando solo rechazadas · clic para ver todas' : 'Clic para ver solo estas'}
+              </p>
+            </button>
+          </div>
+        )}
+
+        {stats && !pendingView && !notesView && (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            {/* Ventas netas = brutas − notas crédito + notas débito (aceptadas por la DIAN) */}
+            <div className="bg-white dark:bg-graphite rounded-lg border border-blue-200 dark:border-blue-800/40 px-4 py-3">
+              <p className="text-xs text-gray-500 dark:text-gray-500">Ventas netas</p>
+              <p className="text-lg font-semibold text-gray-900 dark:text-gray-100 mt-0.5">{formatCurrency(stats.net_amount ?? stats.total_amount ?? 0)}</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Brutas − notas crédito + débito</p>
+            </div>
+            <div className="bg-white dark:bg-graphite rounded-lg border border-gray-200 dark:border-white/10 px-4 py-3">
+              <p className="text-xs text-gray-500 dark:text-gray-500">Ventas brutas</p>
+              <p className="text-lg font-semibold text-gray-900 dark:text-gray-100 mt-0.5">{formatCurrency(stats.total_amount ?? 0)}</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{stats.sales_count ?? 0} venta{stats.sales_count === 1 ? '' : 's'} · sin canceladas</p>
+            </div>
+            <button
+              onClick={() => setPaymentView('notes')}
+              className="text-left bg-white dark:bg-graphite rounded-lg border border-gray-200 dark:border-white/10 px-4 py-3 hover:border-blue-300 dark:hover:border-blue-800/60 transition-colors"
+              title="Ver notas crédito y débito"
+            >
+              <p className="text-xs text-gray-500 dark:text-gray-500">Notas crédito / débito</p>
+              <p className="text-lg font-semibold text-gray-900 dark:text-gray-100 mt-0.5">
+                − {formatCurrency(stats.credit_notes_amount ?? 0)}
+              </p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                {stats.debit_notes_amount > 0 ? `+ ${formatCurrency(stats.debit_notes_amount)} débito · ` : ''}solo aceptadas DIAN
+              </p>
+            </button>
             <button
               onClick={() => setPaymentView('pending')}
               className="text-left bg-white dark:bg-graphite rounded-lg border border-gray-200 dark:border-white/10 px-4 py-3 hover:border-orange-300 dark:hover:border-orange-800/60 transition-colors"
@@ -441,11 +499,19 @@ export default function SalesPage() {
                 onChange={e => handleFilterChange('document_type', e.target.value)}
                 className="text-sm border border-gray-200 dark:border-white/10 dark:bg-graphite-2 dark:text-gray-100 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="">Todos los documentos</option>
-                {!hideRemisiones && <option value="remision">Remisión</option>}
-                <option value="factura">Factura</option>
-                <option value="nota_credito">Nota Crédito</option>
-                <option value="nota_debito">Nota Débito</option>
+                {notesView ? (
+                  <>
+                    <option value="">Notas crédito y débito</option>
+                    <option value="nota_credito">Nota Crédito</option>
+                    <option value="nota_debito">Nota Débito</option>
+                  </>
+                ) : (
+                  <>
+                    <option value="">Todos los documentos</option>
+                    {!hideRemisiones && <option value="remision">Remisión</option>}
+                    <option value="factura">Factura</option>
+                  </>
+                )}
               </select>
               <input
                 type="date"
@@ -522,12 +588,12 @@ export default function SalesPage() {
                 </svg>
               </div>
               <p className="text-gray-500 dark:text-gray-500 text-sm">
-                {pendingView ? 'No hay documentos pendientes de pago' : 'No hay ventas que mostrar'}
+                {pendingView ? 'No hay documentos pendientes de pago' : notesView ? 'No hay notas crédito ni débito' : 'No hay ventas que mostrar'}
               </p>
               <p className="text-gray-400 dark:text-gray-500 text-xs mt-1">
                 {hasActiveFilters || searchInput || filters.aging
                   ? 'Intenta con otros filtros'
-                  : pendingView ? 'Todas las ventas están al día' : 'Crea tu primera venta con el botón de arriba'}
+                  : pendingView ? 'Todas las ventas están al día' : notesView ? 'Las notas se crean desde el detalle de la factura' : 'Crea tu primera venta con el botón de arriba'}
               </p>
             </div>
           ) : (
@@ -685,7 +751,7 @@ export default function SalesPage() {
                       <div className="flex items-center gap-2 mt-2 flex-wrap">
                         <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${st.cls}`}>{st.label}</span>
                         <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${pt.cls}`}>{pt.label}</span>
-                        {sale.document_type === 'factura' && <DianStatusBadge sale={sale} />}
+                        {['factura', 'nota_credito', 'nota_debito'].includes(sale.document_type) && <DianStatusBadge sale={sale} />}
                         {sale.converted_to_work_order_id && (
                           <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-600">→ OT</span>
                         )}

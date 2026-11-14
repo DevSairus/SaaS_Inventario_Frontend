@@ -68,10 +68,8 @@ export const WORKER_SUBTYPES = [
 ];
 
 // Jornada máxima legal semanal (Ley 2101 de 2021) -- mismo cálculo que
-// backend/src/services/payroll/jornada.js. `override` = jornada de la
-// empresa (Configuración de Nómina), si es menor.
-export const weeklyHoursFor = (date, override) => {
-  if (Number(override) > 0) return Number(override);
+// backend/src/services/payroll/jornada.js.
+export const legalWeeklyHours = (date) => {
   const iso = String(date || new Date().toISOString()).slice(0, 10);
   if (iso >= '2026-07-15') return 42;
   if (iso >= '2025-07-15') return 44;
@@ -79,8 +77,16 @@ export const weeklyHoursFor = (date, override) => {
   if (iso >= '2023-07-15') return 47;
   return 48;
 };
-// Horas del mes = horas semanales x 30 / 6 (44 h -> 220, 42 h -> 210).
-export const monthlyHoursFor = (date, override) => (weeklyHoursFor(date, override) * 30) / 6;
+// `override` = jornada de la empresa (Configuración de Nómina); es la que se
+// reporta en la PILA. Vacía = la máxima legal.
+export const weeklyHoursFor = (date, override) => {
+  if (Number(override) > 0) return Number(override);
+  return legalWeeklyHours(date);
+};
+// Horas del mes para el valor de la hora = horas semanales x 30 / 6
+// (44 h -> 220, 42 h -> 210). Una jornada propia mayor a la máxima legal de
+// la fecha se limita a la legal.
+export const monthlyHoursFor = (date, override) => (Math.min(weeklyHoursFor(date, override), legalWeeklyHours(date)) * 30) / 6;
 
 // Horas extra (el pago incluye la hora ordinaria + el recargo) vs. recargos
 // (solo el porcentaje adicional: la hora ya está pagada en el salario).

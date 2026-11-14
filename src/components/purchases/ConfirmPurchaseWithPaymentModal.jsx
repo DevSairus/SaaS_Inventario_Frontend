@@ -113,7 +113,7 @@ const ConfirmPurchaseWithPaymentModal = ({
           </div>
 
           {paymentMethod !== 'cash' && paymentType !== 'credit' && (
-            <BankAccountSelect value={bankAccountId} onChange={setBankAccountId} />
+            <BankAccountSelect value={bankAccountId} onChange={setBankAccountId} method={paymentMethod} />
           )}
 
           {/* Tipo de pago */}

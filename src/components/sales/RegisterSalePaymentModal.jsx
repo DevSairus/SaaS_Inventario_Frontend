@@ -128,7 +128,7 @@ export default function RegisterSalePaymentModal({ invoice, onClose, onSuccess }
               </div>
 
               {paymentMethod !== 'Efectivo' && (
-                <BankAccountSelect value={bankAccountId} onChange={setBankAccountId} />
+                <BankAccountSelect value={bankAccountId} onChange={setBankAccountId} method={paymentMethod} />
               )}
 
               {paymentExcess > 0 && (

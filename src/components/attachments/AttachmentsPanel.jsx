@@ -14,8 +14,16 @@ export const ATTACHMENT_KINDS = {
   photo: 'Foto',
   contract: 'Contrato / acta',
   quote: 'Cotización',
+  rut: 'RUT',
+  chamber_of_commerce: 'Cámara de Comercio',
   other: 'Otro',
 };
+
+// Tipos que se ofrecen por defecto (RUT y Cámara de Comercio solo en proveedores).
+export const DEFAULT_KIND_KEYS = ['invoice_pdf', 'invoice_xml', 'payment_proof', 'delivery_note', 'photo', 'contract', 'quote', 'other'];
+export const SUPPLIER_KIND_KEYS = ['rut', 'chamber_of_commerce', 'contract', 'other'];
+
+const todayISO = () => new Date().toISOString().slice(0, 10);
 
 const ACCEPT = '.pdf,.xml,.jpg,.jpeg,.png,.webp,.xlsx,.xls,.docx,.doc,.csv,.txt,.zip';
 const VIEWABLE = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'];
@@ -35,13 +43,14 @@ const guessKind = (file, fallback) => {
  * Adjuntos de un documento: subir (botón o arrastrar), ver, descargar y quitar.
  * defaultKind: tipo preseleccionado (p. ej. 'payment_proof' en un pago).
  */
-export default function AttachmentsPanel({ entityType, entityId, title = 'Adjuntos', defaultKind = 'other', compact = false, readOnly = false }) {
+export default function AttachmentsPanel({ entityType, entityId, title = 'Adjuntos', defaultKind = 'other', kinds = DEFAULT_KIND_KEYS, compact = false, readOnly = false }) {
   const user = useAuthStore((s) => s.user);
   const can = usePermissions();
   const canWrite = !readOnly && can('attachments.write');
   const canDeleteAny = can('attachments.delete');
   const [rows, setRows] = useState(null);
   const [kind, setKind] = useState(defaultKind);
+  const [validUntil, setValidUntil] = useState('');
   const [busy, setBusy] = useState(false);
   const [dragging, setDragging] = useState(false);
   const inputRef = useRef(null);
@@ -63,14 +72,15 @@ export default function AttachmentsPanel({ entityType, entityId, title = 'Adjunt
     for (const file of list) {
       if (file.size > 10 * 1024 * 1024) { toast.error(`${file.name}: supera 10 MB`); continue; }
       try {
-        await uploadAttachment({ entityType, entityId, file, kind: guessKind(file, kind) });
+        const fileKind = kinds.includes(guessKind(file, kind)) ? guessKind(file, kind) : kind;
+        await uploadAttachment({ entityType, entityId, file, kind: fileKind, validUntil: fileKind === 'chamber_of_commerce' ? validUntil : undefined });
         ok++;
       } catch (e) {
         toast.error(`${file.name}: ${e.response?.data?.message || 'no se pudo adjuntar'}`);
       }
     }
     setBusy(false);
-    if (ok) { toast.success(ok === 1 ? 'Archivo adjuntado' : `${ok} archivos adjuntados`); load(); }
+    if (ok) { toast.success(ok === 1 ? 'Archivo adjuntado' : `${ok} archivos adjuntados`); setValidUntil(''); load(); }
   };
 
   const open = async (att, inline) => {
@@ -123,8 +133,14 @@ export default function AttachmentsPanel({ entityType, entityId, title = 'Adjunt
         {canWrite && (
           <div className="flex items-center gap-2">
             <select value={kind} onChange={(e) => setKind(e.target.value)} className="text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-1.5 bg-white dark:bg-gray-800">
-              {Object.entries(ATTACHMENT_KINDS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+              {kinds.map((k) => <option key={k} value={k}>{ATTACHMENT_KINDS[k] || k}</option>)}
             </select>
+            {kind === 'chamber_of_commerce' && (
+              <label className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400">
+                Vigente hasta
+                <input type="date" value={validUntil} onChange={(e) => setValidUntil(e.target.value)} className="text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-1 bg-white dark:bg-gray-800" />
+              </label>
+            )}
             <input ref={inputRef} type="file" multiple accept={ACCEPT} className="hidden" onChange={(e) => { upload(e.target.files); e.target.value = ''; }} />
             <button onClick={() => inputRef.current?.click()} disabled={busy} className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-60">
               <Upload className="w-4 h-4" /> {busy ? 'Subiendo...' : 'Adjuntar'}
@@ -148,6 +164,11 @@ export default function AttachmentsPanel({ entityType, entityId, title = 'Adjunt
                 <p className="text-sm text-gray-900 dark:text-gray-100 truncate" title={a.file_name}>{a.file_name}</p>
                 <p className="text-xs text-gray-500">
                   {ATTACHMENT_KINDS[a.kind] || a.kind} · {sizeText(a.size_bytes)} · {formatDateTime(a.created_at)}{a.uploader ? ` · ${a.uploader.name}` : ''}
+                  {a.valid_until && (
+                    <span className={`ml-1 font-medium ${a.valid_until < todayISO() ? 'text-red-600' : 'text-green-700'}`}>
+                      · {a.valid_until < todayISO() ? 'Vencida el' : 'Vigente hasta'} {a.valid_until.split('-').reverse().join('/')}
+                    </span>
+                  )}
                 </p>
               </div>
               {VIEWABLE.includes(a.mime_type) && (

@@ -54,3 +54,21 @@ export const BUDGET_CATEGORIES = {
 export const customerName = (c) => (c ? (c.business_name || [c.first_name, c.last_name].filter(Boolean).join(' ')) : '');
 export const userName = (u) => [u?.first_name, u?.last_name].filter(Boolean).join(' ') || u?.email || '';
 export const qty = (n) => Number(n || 0).toLocaleString('es-CO', { maximumFractionDigits: 4 });
+
+// Clasificación de horas de la planilla (backend services/projects/workHours.js).
+export const HOUR_CATEGORIES = [
+  ['ORD', 'Ordinarias'], ['HRNs', 'Rec. nocturno'], ['HRDDFs', 'Rec. dom/fest'], ['HRNDFs', 'Rec. noct. dom/fest'],
+  ['HEDs', 'Extra diurna'], ['HENs', 'Extra nocturna'], ['HEDDFs', 'Extra diurna dom/fest'], ['HENDFs', 'Extra noct. dom/fest'],
+];
+
+export const DISPATCH_ROLES = [
+  ['almacen', 'Almacén', 'Entrega'],
+  ['transportador', 'Transportador', 'Lleva'],
+  ['encargado_obra', 'Encargado de obra', 'Recibe'],
+];
+
+// Firmas del acta de un lote de herramientas, en el orden en que van en el PDF: [rol, rótulo, acción].
+export const BATCH_ROLES = {
+  delivery: [['almacen', 'Almacén', 'Entrega'], ['transportador', 'Transportador', 'Lleva'], ['encargado_obra', 'Encargado de obra', 'Recibe']],
+  return: [['encargado_obra', 'Encargado de obra', 'Devuelve'], ['transportador', 'Transportador', 'Lleva'], ['almacen', 'Almacén', 'Recibe']],
+};

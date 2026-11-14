@@ -7,6 +7,7 @@ import { usersAPI } from '../../api/users';
 import { createProject, updateProject } from '../../api/projects';
 import { invalidateProjectOptions } from './ProjectSelect';
 import { PROJECT_TYPES, userName } from './projectConstants';
+import AiuFields, { aiuFormOf, aiuPayload } from './AiuFields';
 
 const empty = {
   name: '', customer_id: null, type: 'ongrid', status: 'prospect', city: '', site_address: '',
@@ -15,6 +16,7 @@ const empty = {
   alert_warning_pct: 80,
   alert_critical_pct: 100,
   retention_pct: 0,
+  ...aiuFormOf(null),
 };
 
 const inputCls = 'w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white dark:bg-gray-800';
@@ -37,6 +39,7 @@ export default function ProjectFormModal({ isOpen, onClose, project = null, onSa
       capacity_kwp: project.capacity_kwp ?? '',
       contract_amount: project.contract_amount ?? '',
       manager_id: project.manager_id || '',
+      ...aiuFormOf(project),
     } : empty);
     if (!users.length) {
       usersAPI.getAll({ limit: 200, is_active: true, has_system_access: true })
@@ -61,6 +64,7 @@ export default function ProjectFormModal({ isOpen, onClose, project = null, onSa
         alert_critical_pct: Number(form.alert_critical_pct) || 100,
         retention_pct: Number(form.retention_pct) || 0,
         manager_id: form.manager_id || null,
+        ...aiuPayload(form),
       };
       const res = isEdit ? await updateProject(project.id, payload) : await createProject(payload);
       invalidateProjectOptions();
@@ -155,6 +159,12 @@ export default function ProjectFormModal({ isOpen, onClose, project = null, onSa
             <input type="number" min="1" max="500" value={form.alert_critical_pct} onChange={set('alert_critical_pct')} className={inputCls} />
           </div>
         </div>
+
+        <AiuFields
+          value={form}
+          onChange={(v) => setForm(v)}
+          hint={isEdit ? 'Es el AIU con el que arranca cada corte nuevo; los cortes ya hechos conservan el suyo. Un concepto en 0 % no aplica.' : 'Es el AIU con el que arranca cada corte; en cada corte se puede ajustar. Un concepto en 0 % no aplica.'}
+        />
 
         <div>
           <Label>Notas</Label>

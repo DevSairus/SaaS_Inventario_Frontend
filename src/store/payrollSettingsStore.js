@@ -36,6 +36,8 @@ export const usePayrollSettingsStore = create((set, get) => ({
       const response = await payrollSettingsAPI.update(percentages);
       set({ settings: response.data, isLoading: false });
       toast.success('Configuración actualizada');
+      // Avisos no bloqueantes (p. ej. jornada propia mayor a la máxima legal).
+      if (response.warning) toast(response.warning, { icon: '⚠️', duration: 9000 });
       return response.data;
     } catch (error) {
       const msg = error.response?.data?.message || 'Error al actualizar la configuración';

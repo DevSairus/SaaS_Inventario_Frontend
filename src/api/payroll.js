@@ -103,6 +103,8 @@ export const payrollConceptsAPI = {
 
 // ── Periodos de nómina — /api/payroll/periods ───────────────────────
 export const payrollPeriodsAPI = {
+  // 6.1 — flujograma: etapas, validaciones previas, responsables y bitácora.
+  getWorkflow: async (id) => (await api.get(`/payroll/periods/${id}/workflow`)).data,
   getAll: async (params = {}) => {
     const response = await api.get('/payroll/periods', { params });
     return response.data;
@@ -138,6 +140,9 @@ export const payrollPeriodsAPI = {
     const response = await api.post(`/payroll/periods/${id}/copy-novedades`, { source_period_id });
     return response.data;
   },
+  // Horas extra y recargos desde la planilla de las obras (Fase 4, req. 1.1).
+  getProjectHours: async (id) => (await api.get(`/payroll/periods/${id}/project-hours`)).data,
+  generateProjectHours: async (id) => (await api.post(`/payroll/periods/${id}/project-hours`)).data,
   // Avanza el periodo UNA posición en abierto -> liquidado -> emitido ->
   // cerrado (ver PERIOD_STATUS_ORDER en constants/payroll.js). Al pasar a
   // 'liquidado' el backend calcula (sin tocar la DIAN) y devuelve
@@ -246,6 +251,17 @@ export const payrollCertificatesAPI = {
 // Mejora #7: cálculo de cesantías/intereses/prima/vacaciones pendientes al
 // retirar un empleado, + emisión del Documento Soporte de Nómina de esa
 // liquidación a la DIAN. Ver payrollTerminationService.js.
+// ── Liquidación de vacaciones fuera de período (6.5) — /api/payroll/vacations ──
+export const payrollVacationPaymentsAPI = {
+  list: async (params = {}) => (await api.get('/payroll/vacations', { params })).data,
+  create: async (data) => (await api.post('/payroll/vacations', data)).data,
+  pay: async (id, data) => (await api.post(`/payroll/vacations/${id}/pay`, data)).data,
+  attach: async (id, periodId) => (await api.post(`/payroll/vacations/${id}/attach`, { period_id: periodId })).data,
+  void: async (id, reason) => (await api.post(`/payroll/vacations/${id}/void`, { reason })).data,
+  // PDF del comprobante. Respuesta axios cruda (blob).
+  downloadPdf: (id) => api.get(`/payroll/vacations/${id}/pdf`, { responseType: 'blob' }),
+};
+
 export const payrollTerminationAPI = {
   // Empleados con termination_date registrada — candidatos a liquidar —
   // con already_settled indicando si ya se emitió con éxito antes.
@@ -253,6 +269,12 @@ export const payrollTerminationAPI = {
     const response = await api.get('/payroll/termination/pending');
     return response.data;
   },
+  // PDF del comprobante de liquidación (6.3). Respuesta axios cruda (blob).
+  // Si ya fue emitida y aceptada se arma con lo firmado; si no, es un borrador.
+  downloadPdf: (employeeId, { indemnizacion, bonifRetiro } = {}) => api.get(`/payroll/termination/${employeeId}/pdf`, {
+    params: { indemnizacion, bonifRetiro },
+    responseType: 'blob',
+  }),
   // Cálculo completo SIN persistir nada — para revisar antes de emitir.
   preview: async (employeeId, { indemnizacion, bonifRetiro } = {}) => {
     const response = await api.get(`/payroll/termination/${employeeId}/preview`, {

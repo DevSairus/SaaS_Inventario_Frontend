@@ -1,18 +1,25 @@
 // frontend/src/api/radian.js
 import api from './axios';
 
-export const emitRadianAcuse      = (purchaseId) => api.post(`/radian/purchases/${purchaseId}/acuse`);
-export const emitRadianRecibo     = (purchaseId) => api.post(`/radian/purchases/${purchaseId}/recibo`);
+// receiver (030/032): quién recibió { first_name, last_name, id_type, id_number, job_title, department }
+export const emitRadianAcuse      = (purchaseId, receiver) => api.post(`/radian/purchases/${purchaseId}/acuse`, { receiver });
+export const emitRadianRecibo     = (purchaseId, receiver) => api.post(`/radian/purchases/${purchaseId}/recibo`, { receiver });
 export const emitRadianAceptacion = (purchaseId) => api.post(`/radian/purchases/${purchaseId}/aceptacion`);
 export const emitRadianReclamo    = (purchaseId, reasonCode, reasonText) =>
   api.post(`/radian/purchases/${purchaseId}/reclamo`, { reason_code: reasonCode, reason_text: reasonText });
 export const getRadianEvents      = (purchaseId) => api.get(`/radian/purchases/${purchaseId}/events`);
 
-export const recordSaleRadianEvent = (saleId, eventCode, note) =>
-  api.post(`/radian/sales/${saleId}/received-event`, { event_code: eventCode, note });
+// receipt (solo 032): { eventNumber, cude, issuedAt: 'YYYY-MM-DDTHH:MM' hora Colombia }
+export const recordSaleRadianEvent = (saleId, eventCode, note, receipt = {}) =>
+  api.post(`/radian/sales/${saleId}/received-event`, {
+    event_code: eventCode, note,
+    event_number: receipt.eventNumber, cude: receipt.cude, issued_at: receipt.issuedAt,
+  });
 export const emitRadianTacita      = (saleId, declarantType) =>
   api.post(`/radian/sales/${saleId}/aceptacion-tacita`, { declarant_type: declarantType });
 export const getSaleRadianEvents   = (saleId) => api.get(`/radian/sales/${saleId}/events`);
+// Consulta en la DIAN (GetStatusEvent) los eventos del cliente y registra 032/033/031
+export const syncSaleRadianEvents  = (saleId) => api.post(`/radian/sales/${saleId}/sync-dian`);
 export const getRadianPending      = () => api.get('/radian/pending');
 
 // Fase 4 — requiere factura inscrita

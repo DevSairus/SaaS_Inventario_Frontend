@@ -10,8 +10,8 @@
  */
 import { useState, useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';
-import { Inbox, CheckCircle2, XCircle, Clock, AlertTriangle, Gavel } from 'lucide-react';
-import { emitRadianTacita, recordSaleRadianEvent, getSaleRadianEvents } from '../../api/radian';
+import { Inbox, CheckCircle2, XCircle, Clock, AlertTriangle, Gavel, RefreshCw } from 'lucide-react';
+import { emitRadianTacita, recordSaleRadianEvent, getSaleRadianEvents, syncSaleRadianEvents } from '../../api/radian';
 
 const EVENT_LABELS = {
   '032': 'Recibo del bien/servicio (cliente)',
@@ -36,6 +36,30 @@ export default function SaleRadianPanel({ sale }) {
   const [showRecordForm, setShowRecordForm] = useState(false);
   const [recordCode, setRecordCode] = useState('032');
   const [recordNote, setRecordNote] = useState('');
+  // Datos del 032 del cliente: el plazo corre desde su fecha real y el 034
+  // cita su número y CUDE (Anexo FE 1.9 §6.5.5.7).
+  const [receiptNumber, setReceiptNumber] = useState('');
+  const [receiptCude, setReceiptCude] = useState('');
+  const [receiptAt, setReceiptAt] = useState('');
+  // Resultado de la última consulta a la DIAN (GetStatusEvent)
+  const [syncResult, setSyncResult] = useState(null);
+
+  const handleSync = async () => {
+    setActing(true);
+    try {
+      const res = await syncSaleRadianEvents(sale.id);
+      const data = res.data?.data || {};
+      setSyncResult(data);
+      const msg = res.data?.message || 'Consulta realizada';
+      if (data.applied?.length) toast.success(msg); else toast(msg);
+      if (data.applied?.length) setTimeout(() => window.location.reload(), 800);
+      else load();
+    } catch (e) {
+      toast.error(e.response?.data?.message || 'Error al consultar la DIAN');
+    } finally {
+      setActing(false);
+    }
+  };
 
   const load = useCallback(() => {
     if (!sale?.id) return;
@@ -53,11 +77,22 @@ export default function SaleRadianPanel({ sale }) {
   const status = sale.radian_status || 'none';
   const deadline = sale.radian_deadline_at ? new Date(sale.radian_deadline_at) : null;
   const deadlineExpired = deadline ? deadline.getTime() < Date.now() : false;
+  // El plazo vence a las 11:59 p. m. hora Colombia; se muestra en esa zona.
+  const fmtDeadline = (d) => d.toLocaleString('es-CO', { dateStyle: 'long', timeStyle: 'short', timeZone: 'America/Bogota' });
+  // 032 registrado antes de exigir número/CUDE: hay que completarlo para el 034.
+  const receipt032 = events.find(ev => ev.direction === 'received' && ev.event_code === '032');
+  const receiptIncomplete = status === '032_received' && !loading && receipt032 && !receipt032.cude;
 
   const handleRecord = async () => {
+    if (recordCode === '032' && (!receiptNumber.trim() || !receiptCude.trim() || !receiptAt)) {
+      toast.error('Ingrese el número, el CUDE y la fecha y hora del 032 del cliente');
+      return;
+    }
     setActing(true);
     try {
-      const res = await recordSaleRadianEvent(sale.id, recordCode, recordNote);
+      const res = await recordSaleRadianEvent(sale.id, recordCode, recordNote, recordCode === '032'
+        ? { eventNumber: receiptNumber.trim(), cude: receiptCude.trim(), issuedAt: receiptAt }
+        : {});
       toast.success(`Evento ${recordCode} registrado`);
       setShowRecordForm(false);
       setRecordNote('');
@@ -96,13 +131,14 @@ export default function SaleRadianPanel({ sale }) {
 
       <div className="p-4 space-y-3">
         <p className="text-xs text-gray-500">
-          Estos eventos los emite el cliente con su propio software. Si te llegó por correo o portal, regístralo aquí para
-          que Pitbox controle el plazo de 3 días hábiles y habilite la aceptación tácita si no responde.
+          Estos eventos los emite el cliente con su propio software. Usa "Consultar eventos en la DIAN" para traerlos
+          automáticamente, o regístralos a mano si te llegaron por correo. Así Pitbox controla el plazo de 3 días hábiles
+          y habilita la aceptación tácita si el cliente no responde.
         </p>
 
         {sale.payment_form !== 'credito' && (
           <p className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2">
-            Factura de contado: no es título valor, así que no aplica la aceptación tácita (034) ni la inscripción en RADIAN.
+            Factura de contado: no es título valor, así que no aplica la aceptación tácita (034).
           </p>
         )}
 
@@ -110,19 +146,42 @@ export default function SaleRadianPanel({ sale }) {
           <div className={`text-xs rounded-lg px-3 py-2 flex items-center gap-2 ${deadlineExpired ? 'bg-blue-50 text-blue-700' : 'bg-amber-50 text-amber-700'}`}>
             <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
             {deadlineExpired
-              ? `Plazo vencido el ${deadline.toLocaleDateString('es-CO')} sin respuesta del cliente — ya se puede emitir el 034.`
-              : `Plazo para que el cliente responda (033/031): hasta el ${deadline.toLocaleDateString('es-CO')}.`}
+              ? `Plazo vencido el ${fmtDeadline(deadline)} sin respuesta del cliente — ya se puede emitir el 034.`
+              : `Plazo para que el cliente responda (033/031): hasta el ${fmtDeadline(deadline)}.`}
           </div>
+        )}
+
+        {receiptIncomplete && (
+          <div className="text-xs rounded-lg px-3 py-2 flex items-center gap-2 bg-red-50 text-red-700">
+            <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
+            Al 032 registrado le faltan su número y su CUDE: complételos (botón "Registrar evento recibido") antes de emitir el 034.
+          </div>
+        )}
+
+        {['033_received', '034'].includes(status) && (
+          <p className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2">
+            Factura aceptada: la DIAN ya no permite notas crédito ni débito sobre ella.
+          </p>
         )}
 
         <div className="flex gap-2 flex-wrap">
           {(status === 'none' || status === '032_received') && (
-            <button disabled={acting} onClick={() => setShowRecordForm(v => !v)}
+            <button disabled={acting} onClick={handleSync}
+              title="Trae de la DIAN el 032, 033 o 031 que haya emitido el cliente sobre esta factura"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium">
+              <RefreshCw className={`w-3.5 h-3.5 ${acting ? 'animate-spin' : ''}`} /> Consultar eventos en la DIAN
+            </button>
+          )}
+          {(status === 'none' || status === '032_received') && (
+            <button disabled={acting} onClick={() => {
+              setRecordCode(status === 'none' || receiptIncomplete ? '032' : '033');
+              setShowRecordForm(v => !v);
+            }}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 text-gray-700 text-xs rounded-lg hover:bg-gray-50 disabled:opacity-50 font-medium">
               <Inbox className="w-3.5 h-3.5" /> Registrar evento recibido
             </button>
           )}
-          {status === '032_received' && deadlineExpired && sale.payment_form === 'credito' && (
+          {status === '032_received' && deadlineExpired && sale.payment_form === 'credito' && !receiptIncomplete && (
             <button disabled={acting} onClick={handleTacita}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium">
               <Gavel className="w-3.5 h-3.5" /> Emitir Aceptación Tácita (034)
@@ -130,14 +189,60 @@ export default function SaleRadianPanel({ sale }) {
           )}
         </div>
 
+        {syncResult && (
+          <div className="text-xs bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 space-y-1">
+            {!syncResult.found && <p className="text-gray-600">{syncResult.message}</p>}
+            {syncResult.found && syncResult.events?.length > 0 && (
+              <p className="text-gray-700">
+                Eventos en la DIAN: {syncResult.events.map(e => e.code).join(', ')}
+                {syncResult.applied?.length ? ` · registrados ahora: ${syncResult.applied.join(', ')}` : ''}
+              </p>
+            )}
+            {syncResult.skipped?.map(s => <p key={s} className="text-amber-700">No registrado — {s}</p>)}
+            {syncResult.xmlSample && (
+              <details className="text-gray-500">
+                <summary className="cursor-pointer">La DIAN respondió, pero no se reconocieron eventos: ver respuesta</summary>
+                <pre className="mt-1 whitespace-pre-wrap break-all font-mono text-[10px] max-h-48 overflow-auto">{syncResult.xmlSample}</pre>
+              </details>
+            )}
+          </div>
+        )}
+
         {showRecordForm && (
           <div className="bg-gray-50 rounded-lg p-3 space-y-2">
             <select value={recordCode} onChange={e => setRecordCode(e.target.value)}
               className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm">
-              {status === 'none' && <option value="032">032 — Recibo del bien/servicio</option>}
+              {(status === 'none' || receiptIncomplete) && <option value="032">{receiptIncomplete ? '032 — Completar número y CUDE' : '032 — Recibo del bien/servicio'}</option>}
               {status === '032_received' && <option value="033">033 — Aceptación expresa</option>}
               {status === '032_received' && <option value="031">031 — Reclamo</option>}
             </select>
+            {recordCode === '032' && (
+              <div className="space-y-2">
+                <input
+                  type="text"
+                  value={receiptNumber}
+                  onChange={e => setReceiptNumber(e.target.value)}
+                  placeholder="Número del 032 que emitió el cliente"
+                  className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm"
+                />
+                <input
+                  type="text"
+                  value={receiptCude}
+                  onChange={e => setReceiptCude(e.target.value.trim())}
+                  placeholder="CUDE del 032 (96 caracteres)"
+                  className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm font-mono"
+                />
+                <label className="block text-xs text-gray-500">
+                  Fecha y hora en que el cliente generó el 032 (hora Colombia) — el plazo de 3 días hábiles corre desde aquí
+                  <input
+                    type="datetime-local"
+                    value={receiptAt}
+                    onChange={e => setReceiptAt(e.target.value)}
+                    className="mt-1 w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm text-gray-900"
+                  />
+                </label>
+              </div>
+            )}
             <textarea
               value={recordNote}
               onChange={e => setRecordNote(e.target.value)}

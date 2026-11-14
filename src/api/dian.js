@@ -45,6 +45,9 @@ export const sendCreditNoteRetry  = (saleId) => api.post(`/dian/send-credit-note
 export const sendDebitNoteRetry   = (saleId) => api.post(`/dian/send-debit-note/${saleId}`);
 export const checkDianStatus      = (saleId) => api.post(`/dian/check-status/${saleId}`);
 export const sendToTestSet        = (saleId) => api.post(`/dian/test-set/${saleId}`);
+// Envío (o reenvío) del PDF+XML de un documento aceptado a varios correos.
+// data: { additional_emails?: string | string[], use_customer_list?: boolean }
+export const sendInvoiceEmail     = (saleId, data = {}) => api.post(`/dian/email/${saleId}`, data);
 
 // ── Notas crédito / débito ───────────────────────────────────
 export const createCreditNote = (saleId, data) => api.post(`/dian/create-credit-note/${saleId}`, data);
@@ -99,6 +102,7 @@ const dianAPI = {
   getNumberingRange,
   sendInvoice,
   checkStatus:          checkDianStatus,
+  sendInvoiceEmail,
   sendToTestSet,
   createCreditNote,
   createDebitNote,
