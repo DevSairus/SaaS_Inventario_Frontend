@@ -14,6 +14,7 @@ import TaxConfigSection from '../../components/settings/TaxConfigSection';
 import ConsentSettingsTab from '../../components/settings/ConsentSettingsTab';
 import VehicleReminderSettings from '../../components/settings/VehicleReminderSettings';
 import VehicleTypesSettings from '../../components/settings/VehicleTypesSettings';
+import WhatsAppSettingsTab from '../../components/settings/WhatsAppSettingsTab';
 import { invalidateRetentionCatalog } from '../../hooks/useRetentionCatalog';
 import { Building2, Receipt, ShoppingCart, Wrench, Landmark, MessageCircle, Printer, Package, FileText, ShieldCheck } from 'lucide-react';
 
@@ -70,7 +71,10 @@ const TenantSettingsPage = () => {
     { id: 'taller',      label: 'Taller',       Icon: Wrench },
     { id: 'inventario',  label: 'Inventario',   Icon: Package },
     { id: 'datos',       label: 'Datos personales', Icon: ShieldCheck },
+    // Conexión de Meta (token, webhook, desconectar): solo administradores.
+    ...(isAdmin ? [{ id: 'whatsapp', label: 'WhatsApp', Icon: MessageCircle }] : []),
   ];
+  const isWhatsAppTab = activeTab === 'whatsapp' && isAdmin;
 
   useEffect(() => {
     loadConfig();
@@ -263,7 +267,7 @@ const TenantSettingsPage = () => {
             sigue siendo uno solo: Guardar Cambios manda TODO config.state
             sin importar qué pestaña esté activa, así no se pierden cambios
             hechos en una pestaña al pasar a otra antes de guardar. */}
-        <div className="flex gap-1 border-b border-gray-200 overflow-x-auto">
+        <div className="flex flex-wrap gap-1 border-b border-gray-200">
           {TABS.map(tab => (
             <button
               key={tab.id}
@@ -281,13 +285,15 @@ const TenantSettingsPage = () => {
           ))}
         </div>
 
-        {!canEdit && (
+        {isWhatsAppTab && <WhatsAppSettingsTab />}
+
+        {!isWhatsAppTab && !canEdit && (
           <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
             Estás viendo la configuración en solo lectura. Solo un Administrador o un Gerente puede cambiarla.
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className={isWhatsAppTab ? 'hidden' : 'space-y-6'}>
           <fieldset disabled={!canEdit} className="space-y-6 min-w-0">
           {/* ============ GENERAL ============ */}
           {activeTab === 'general' && (
@@ -454,34 +460,6 @@ const TenantSettingsPage = () => {
               </div>
             </div>
           </Card>
-
-          {/* WhatsApp Business — solo administradores del tenant pueden
-              ver y tocar la conexión (Embedded Signup, token, webhook,
-              desconectar). El resto de roles ni siquiera ve la tarjeta. */}
-          {isAdmin && (
-            <Card>
-              <div className="p-6 flex items-center justify-between">
-                <div className="flex items-start gap-4">
-                  <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-green-50 flex items-center justify-center text-green-600">
-                    <MessageCircle size={20} strokeWidth={2} />
-                  </div>
-                  <div>
-                    <p className="font-semibold text-gray-900">Meta y WhatsApp</p>
-                    <p className="text-sm text-gray-500 mt-0.5">
-                      Conecta el número de WhatsApp del negocio, el webhook, el modo demo
-                      y los formularios de anuncios de Facebook/Instagram.
-                    </p>
-                  </div>
-                </div>
-                <Link
-                  to="/settings/whatsapp"
-                  className="flex-shrink-0 ml-4 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition-colors"
-                >
-                  Configurar →
-                </Link>
-              </div>
-            </Card>
-          )}
           </>
           )}
 

@@ -51,7 +51,7 @@ export default function WaTemplatePickerModal({ isOpen, onClose, phone, customer
         )}
         {templates?.length === 0 && (
           <p className="text-sm text-gray-500">
-            No hay plantillas aprobadas. Sincronízalas en Configuración → Meta y WhatsApp → Plantillas Meta.
+            No hay plantillas aprobadas. Sincronízalas en Configuración → WhatsApp → Plantillas Meta.
           </p>
         )}
         {templates?.length > 0 && (

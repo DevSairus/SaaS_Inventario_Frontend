@@ -78,6 +78,8 @@ const crmApi = {
   summarizeWaConversation: (id) => api.post(`/crm/whatsapp/conversations/${id}/ai/summarize`),
   syncWaTemplates: () => api.post('/crm/whatsapp/templates/sync'),
   listWaTemplates: (params = {}) => api.get('/crm/whatsapp/templates', { params }),
+  listWaEventTemplates: () => api.get('/crm/whatsapp/event-templates'),
+  setWaEventTemplate: (event, body) => api.put(`/crm/whatsapp/event-templates/${event}`, body),
   listWaReminders: (params = {}) => api.get('/crm/whatsapp/reminders', { params }),
   createWaReminder: (data) => api.post('/crm/whatsapp/reminders', data),
   listWaCampaigns: () => api.get('/crm/whatsapp/campaigns'),

@@ -274,12 +274,10 @@ export default function ConsentSettingsTab({ businessConfig, onChange }) {
             description="Al crear la OT se envía al cliente el enlace de seguimiento (y el acta, si está activa) por correo y WhatsApp Cloud. Si WhatsApp no sale solo, Pitbox te ofrece enviarlo desde tu WhatsApp."
           />
 
-          <Field
-            label="Plantilla de WhatsApp para el aviso de recepción (opcional)"
-            hint="Plantilla de Meta de categoría Servicio con 4 variables en el cuerpo: {{1}} nombre del cliente, {{2}} número de OT, {{3}} placa, {{4}} enlace. Sin plantilla, WhatsApp solo sale si el cliente te escribió en las últimas 24 h."
-          >
-            <input value={intake.whatsapp_reception_template || ''} onChange={(e) => setIntake('whatsapp_reception_template', e.target.value.trim())} className={inputCls} placeholder="vehiculo_recibido" />
-          </Field>
+          <p className="text-xs text-gray-500">
+            La plantilla de WhatsApp del aviso de recepción se elige en{' '}
+            <a href="/settings?tab=whatsapp" className="text-blue-600 hover:underline">Configuración → WhatsApp → Plantillas por mensaje</a>.
+          </p>
 
           <Field label="Condiciones del servicio">
             <ModeChoice name="intake_mode" value={intake.terms_mode} onChange={(v) => setIntake('terms_mode', v)} />
