@@ -39,7 +39,9 @@ export const superAdminAPI = {
   },
 
   deleteTenant: async (id, confirm) => {
-    const response = await api.delete(`/superadmin/tenants/${id}`, { data: { confirm } });
+    // La purga recorre todas las tablas de la empresa en una transacción:
+    // puede pasar de los 30 s por defecto.
+    const response = await api.delete(`/superadmin/tenants/${id}`, { data: { confirm }, timeout: 300000 });
     return response.data;
   },
 
