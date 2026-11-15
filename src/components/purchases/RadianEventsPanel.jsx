@@ -34,6 +34,8 @@ const STATUS_CONFIG = {
 
 export default function RadianEventsPanel({ purchase }) {
   const [events, setEvents] = useState([]);
+  // Forma de pago de la factura del proveedor (de su XML): 'cash' | 'credit' | null
+  const [paymentForm, setPaymentForm] = useState(null);
   const [loading, setLoading] = useState(true);
   const [acting, setActing] = useState(false);
   const [showClaimForm, setShowClaimForm] = useState(false);
@@ -49,7 +51,7 @@ export default function RadianEventsPanel({ purchase }) {
     if (!purchase?.id) return;
     setLoading(true);
     getRadianEvents(purchase.id)
-      .then(res => setEvents(res.data?.data || []))
+      .then(res => { setEvents(res.data?.data || []); setPaymentForm(res.data?.payment_form || null); })
       .catch(() => setEvents([]))
       .finally(() => setLoading(false));
   }, [purchase?.id]);
@@ -137,7 +139,16 @@ export default function RadianEventsPanel({ purchase }) {
           </div>
         )}
 
-        <div className="flex gap-2 flex-wrap">
+        {/* La DIAN solo admite 030-033 sobre facturas a crédito (regla LGC62). */}
+        {paymentForm === 'cash' && (
+          <div className="text-xs rounded-lg px-3 py-2 flex items-start gap-2 bg-gray-50 text-gray-700 border border-gray-200">
+            <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+            La factura del proveedor es de contado. Los eventos RADIAN (acuse, recibo, aceptación y reclamo) solo aplican a
+            facturas a crédito: no hay nada que emitir para esta compra.
+          </div>
+        )}
+
+        <div className={`flex gap-2 flex-wrap ${paymentForm === 'cash' ? 'hidden' : ''}`}>
           {status === 'none' && (
             <button disabled={acting} onClick={() => openReceiver('030')}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium">
