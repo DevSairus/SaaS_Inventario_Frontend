@@ -144,7 +144,7 @@ const AccountsReceivablePage = () => {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar por nombre o documento (NIT/cédula)..."
+            placeholder="Buscar por cliente, documento, placa o número..."
             className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           />
         </div>

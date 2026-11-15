@@ -15,6 +15,7 @@ const useSalesStore = create((set, get) => ({
     to_date: '',
     document_type: '',
     customer_name: '',
+    search: '',        // buscador general: número, cliente, documento, teléfono o placa
     vehicle_plate: '',
     branch_id: '',
     payment_view: '', // 'pending' = solo documentos con saldo por cobrar

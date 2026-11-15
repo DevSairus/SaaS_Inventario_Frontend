@@ -86,7 +86,7 @@ export default function QuotesPage() {
   // tenant se recarga sin perder la página que venía en la URL.
   const list = usePaginatedList(
     (params, opts) => salesApi.getQuotes({ ...params, include_workshop: hasWorkshop ? 'true' : undefined }, opts).then(res => res.data),
-    { filters: { ...filters, customer_name: debouncedSearch } },
+    { filters: { ...filters, search: debouncedSearch } },
   );
   const quotes = list.rows;
   const loading = list.loading;
@@ -155,7 +155,7 @@ export default function QuotesPage() {
               <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" />
               <input
                 type="text"
-                placeholder="Buscar por cliente o placa..."
+                placeholder="Buscar por cliente, documento, placa o número..."
                 value={searchInput}
                 onChange={e => setSearchInput(e.target.value)}
                 className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 dark:border-white/10 dark:bg-graphite-2 dark:text-gray-100 dark:placeholder-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"

@@ -76,7 +76,7 @@ const TenantMigrationStatus = () => {
   const handleCutover = async (slug) => {
     setActionSlug(slug);
     try {
-      await api.post(`/superadmin/tenants/${slug}/cutover`, null, { timeout: LONG_ACTION_TIMEOUT });
+      await api.post(`/superadmin/tenants/${slug}/cutover`, {}, { timeout: LONG_ACTION_TIMEOUT });
       toast.success(`"${slug}" migrado a schema dedicado`);
       await fetchStatus();
     } catch (error) {
@@ -98,7 +98,7 @@ const TenantMigrationStatus = () => {
 
     setActionSlug(slug);
     try {
-      await api.post(`/superadmin/tenants/${slug}/rollback`, null, { timeout: LONG_ACTION_TIMEOUT });
+      await api.post(`/superadmin/tenants/${slug}/rollback`, {}, { timeout: LONG_ACTION_TIMEOUT });
       toast.success(`"${slug}" revertido a modo legado`);
       await fetchStatus();
     } catch (error) {
