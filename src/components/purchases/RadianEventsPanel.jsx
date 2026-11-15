@@ -14,6 +14,7 @@ import {
   emitRadianAcuse, emitRadianRecibo, emitRadianAceptacion, emitRadianReclamo, getRadianEvents,
 } from '../../api/radian';
 import useAuthStore from '../../store/authStore';
+import { DOCUMENT_TYPE_OPTIONS } from '../../constants/documentTypes';
 
 const EVENT_LABELS = {
   '030': 'Acuse de recibo',
@@ -188,11 +189,7 @@ export default function RadianEventsPanel({ purchase }) {
                 className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm" />
               <select value={receiver.id_type} onChange={e => setReceiverField('id_type', e.target.value)}
                 className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm">
-                <option value="13">Cédula de ciudadanía</option>
-                <option value="22">Cédula de extranjería</option>
-                <option value="41">Pasaporte</option>
-                <option value="47">PEP</option>
-                <option value="31">NIT</option>
+                {DOCUMENT_TYPE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
               <input value={receiver.id_number} onChange={e => setReceiverField('id_number', e.target.value.replace(/\s/g, ''))} placeholder="Número de documento *"
                 className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm" />

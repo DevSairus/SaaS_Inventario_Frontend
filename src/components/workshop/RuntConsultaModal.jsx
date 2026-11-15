@@ -12,6 +12,14 @@ import { useState, useEffect, useCallback } from 'react';
 import { X, RefreshCw, Search, Loader, AlertTriangle, CheckCircle } from 'lucide-react';
 import axios from '../../api/axios';
 
+// Si el RUNT no entrega su lista de tipos de documento.
+const TIPOS_DOC_BASICOS = [
+  { id: 'C', nombre: 'Cédula de ciudadanía' },
+  { id: 'E', nombre: 'Cédula de extranjería' },
+  { id: 'P', nombre: 'Pasaporte' },
+  { id: 'N', nombre: 'NIT' },
+];
+
 const inputCls = "w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100";
 
 export default function RuntConsultaModal({ placa: placaProp = '', onConfirm, onClose }) {
@@ -46,6 +54,15 @@ export default function RuntConsultaModal({ placa: placaProp = '', onConfirm, on
 
   // Cargar captcha al montar
   useEffect(() => { fetchCaptcha(); }, [fetchCaptcha]);
+
+  // Tipos de documento que acepta el RUNT, pedidos al propio RUNT (incluye
+  // el PPT y los demás). Si no responde, quedan los cuatro básicos.
+  const [tiposDoc, setTiposDoc] = useState(TIPOS_DOC_BASICOS);
+  useEffect(() => {
+    axios.get('/workshop/vehicles/runt/tipos-documento')
+      .then(res => { if (Array.isArray(res.data?.data) && res.data.data.length) setTiposDoc(res.data.data); })
+      .catch(() => {});
+  }, []);
 
   const handleNuevoCaptcha = () => {
     setError('');
@@ -135,13 +152,10 @@ export default function RuntConsultaModal({ placa: placaProp = '', onConfirm, on
 
           {/* Tipo documento + número */}
           <div className="flex gap-2">
-            <div className="w-28">
+            <div className="w-44">
               <label className="text-xs text-gray-500 block mb-1 dark:text-gray-400">Tipo doc.</label>
               <select value={tipoDoc} onChange={e => setTipoDoc(e.target.value)} className={inputCls}>
-                <option value="C">Cédula</option>
-                <option value="E">C. Extranjer.</option>
-                <option value="P">Pasaporte</option>
-                <option value="N">NIT</option>
+                {tiposDoc.map(t => <option key={t.id} value={t.id}>{t.nombre}</option>)}
               </select>
             </div>
             <div className="flex-1">

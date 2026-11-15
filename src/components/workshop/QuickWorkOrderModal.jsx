@@ -9,6 +9,7 @@ import axios from '../../api/axios';
 import { vehiclesApi, workOrdersApi } from '../../api/workshop';
 import useReceptionNotice from './receptionNotice';
 import useTenantStore from '../../store/tenantStore';
+import DocumentTypeSelect from '../../components/customers/DocumentTypeSelect';
 import { meterUnitOf, defaultMeterUnit, defaultVehicleType, meterName } from '../../constants/vehicleTypes';
 
 /**
@@ -30,7 +31,7 @@ const normalizePlate = (p) => String(p || '').toUpperCase().replace(/[\s-]/g, ''
 const customerName = (c) =>
   c ? (c.business_name || c.full_name || `${c.first_name || ''} ${c.last_name || ''}`.trim()) : '';
 
-const EMPTY_CUSTOMER = { first_name: '', last_name: '', mobile: '', tax_id: '', email: '' };
+const EMPTY_CUSTOMER = { first_name: '', last_name: '', mobile: '', document_type: '13', tax_id: '', email: '' };
 
 // text-base (16px) en los inputs propios: en iPhone, menos de eso hace zoom al enfocar.
 const inputCls = 'w-full border border-gray-300 dark:border-white/10 rounded-lg px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white dark:bg-graphite-2 dark:text-gray-100';
@@ -238,7 +239,9 @@ export default function QuickWorkOrderModal({ isOpen, onClose }) {
                   onChange={e => setNewCustomer(p => ({ ...p, last_name: e.target.value }))} />
                 <input value={newCustomer.mobile} placeholder="Celular *" className={inputCls} type="tel" inputMode="tel" autoComplete="off"
                   onChange={e => setNewCustomer(p => ({ ...p, mobile: e.target.value }))} />
-                <input value={newCustomer.tax_id} placeholder="Cédula/NIT (opcional)" className={inputCls} inputMode="numeric" autoComplete="off"
+                <DocumentTypeSelect value={newCustomer.document_type} className={inputCls}
+                  onChange={(v) => setNewCustomer(p => ({ ...p, document_type: v }))} />
+                <input value={newCustomer.tax_id} placeholder="Número de documento (opcional)" className={inputCls} autoComplete="off"
                   onChange={e => setNewCustomer(p => ({ ...p, tax_id: e.target.value }))} />
                 <input value={newCustomer.email} placeholder="Correo (opcional)" className={`${inputCls} sm:col-span-2`} type="email" inputMode="email" autoComplete="off"
                   onChange={e => setNewCustomer(p => ({ ...p, email: e.target.value }))} />

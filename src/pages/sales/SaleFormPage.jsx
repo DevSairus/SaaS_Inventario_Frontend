@@ -52,6 +52,7 @@ import ProductImageViewer from '../../components/products/ProductImageViewer';
 import ComboPickerModal from '../../components/combos/ComboPickerModal';
 import { groupDocumentItems, newComboGroupId } from '../../components/combos/comboUtils';
 import ProjectSelect from '../../components/projects/ProjectSelect';
+import DocumentTypeSelect from '../../components/customers/DocumentTypeSelect';
 import {
   ClipboardDocumentListIcon,
   DocumentTextIcon,
@@ -204,6 +205,7 @@ function SaleFormPage() {
   const [showQuickCustomer, setShowQuickCustomer] = useState(false);
   const [quickCustomer, setQuickCustomer] = useState({
     full_name: '',
+    document_type: '13',
     tax_id: '',
     email: '',
     phone: ''
@@ -1427,8 +1429,10 @@ function SaleFormPage() {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                   <input name="full_name" value={quickCustomer.full_name} onChange={handleQuickCustomerChange}
                     required={showQuickCustomer} placeholder="Nombre completo *" className={fieldCls} />
+                  <DocumentTypeSelect value={quickCustomer.document_type} className={fieldCls}
+                    onChange={(v) => setQuickCustomer(prev => ({ ...prev, document_type: v }))} />
                   <input name="tax_id" value={quickCustomer.tax_id} onChange={handleQuickCustomerChange}
-                    placeholder="NIT / Cédula" className={fieldCls} />
+                    placeholder="Número de documento" className={fieldCls} />
                   <input type="email" name="email" value={quickCustomer.email} onChange={handleQuickCustomerChange}
                     placeholder="Correo (opcional)" className={fieldCls} />
                   <input name="phone" value={quickCustomer.phone} onChange={handleQuickCustomerChange}

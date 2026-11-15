@@ -17,6 +17,7 @@ import useFormDraft from '../../hooks/useFormDraft';
 import useReceptionNotice from '../../components/workshop/receptionNotice';
 import VehicleBrandLineInputs from '../../components/workshop/VehicleBrandLineInputs';
 import useTenantStore from '../../store/tenantStore';
+import DocumentTypeSelect from '../../components/customers/DocumentTypeSelect';
 import { vehicleTypeOptionsFor, enabledVehicleTypes, defaultVehicleType, meterUnitOf, defaultMeterUnit, meterName } from '../../constants/vehicleTypes';
 
 const inputCls = "w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white";
@@ -71,7 +72,7 @@ export default function WorkOrderFormPage() {
       ? p : { ...p, vehicle_type: defaultVehicleType(configuredTypes) }));
   }, [configuredTypes]);
   const [showNewCustomer, setShowNewCustomer] = useState(false);
-  const [newCustomer, setNewCustomer] = useState({ first_name: '', last_name: '', phone: '', tax_id: '', email: '' });
+  const [newCustomer, setNewCustomer] = useState({ first_name: '', last_name: '', phone: '', document_type: '13', tax_id: '', email: '' });
   const [savingCust,  setSavingCust]  = useState(false);
   const [showScanModal, setShowScanModal] = useState(false);
   const prefilledRef = useRef(false);
@@ -283,7 +284,7 @@ export default function WorkOrderFormPage() {
       setCustomers(prev => [c, ...prev]);
       selectCustomer(c);
       setShowNewCustomer(false);
-      setNewCustomer({ first_name: '', last_name: '', phone: '', tax_id: '', email: '' });
+      setNewCustomer({ first_name: '', last_name: '', phone: '', document_type: '13', tax_id: '', email: '' });
       toast.success('Cliente registrado');
     } catch (e) { toast.error(e.response?.data?.message || 'Error'); }
     finally { setSavingCust(false); }
@@ -560,7 +561,12 @@ export default function WorkOrderFormPage() {
                       <button type="button" onClick={() => setShowNewCustomer(false)}><X size={13} className="text-green-400"/></button>
                     </div>
                     <div className="grid grid-cols-2 gap-2">
-                      {[['Nombre *','first_name'],['Apellido','last_name'],['Teléfono','phone'],['Cédula/NIT','tax_id'],['Correo (opcional)','email']].map(([lbl, k]) => (
+                      <div>
+                        <label className="text-xs text-gray-500 block mb-0.5">Tipo de documento</label>
+                        <DocumentTypeSelect value={newCustomer.document_type} className={inputCls}
+                          onChange={(v) => setNewCustomer(p => ({ ...p, document_type: v }))} />
+                      </div>
+                      {[['Nombre *','first_name'],['Apellido','last_name'],['Teléfono','phone'],['Número de documento','tax_id'],['Correo (opcional)','email']].map(([lbl, k]) => (
                         <div key={k} className={k === 'email' ? 'col-span-2' : undefined}>
                           <label className="text-xs text-gray-500 block mb-0.5">{lbl}</label>
                           <input value={newCustomer[k]} placeholder={lbl} className={inputCls}
