@@ -1028,6 +1028,7 @@ export default function DianConfigPage() {
                 onChange={e => handleTestDocTypeChange(e.target.value)}>
                 <option value="invoice">Factura Electrónica</option>
                 <option value="support_document">Documento Soporte (adquisiciones)</option>
+                <option value="payroll">Nómina electrónica</option>
               </select>
             </div>
             <p className="text-xs text-gray-500">
@@ -1048,6 +1049,14 @@ export default function DianConfigPage() {
                   Requiere: NIT, Software ID, PIN, Llave Técnica, TestSetId, certificado P12 y resolución de habilitación activa.
                   Los documentos de prueba siempre van al ambiente de habilitación de la DIAN, aunque la empresa ya facture en Producción.
                 </p>
+                {testDocType === 'payroll' && (
+                  <p className="text-sm text-gray-600 mt-2 bg-blue-50 border border-blue-200 rounded px-3 py-2">
+                    Nómina: se envía el documento de un empleado real con un mes completo calculado en el momento (sueldo, auxilio de
+                    transporte, salud y pensión). <strong>No se crea periodo, documento de nómina ni asiento contable</strong>: solo se usa un
+                    número de la resolución de pruebas de nómina. Requiere el Software ID y el PIN de nómina y el TestSetId en esa resolución.
+                    Repite la prueba hasta completar los documentos que pida el set en el portal de la DIAN.
+                  </p>
+                )}
               </div>
 
               {/* Set completo — recomendado (solo disponible para Factura Electrónica) */}
@@ -1086,7 +1095,7 @@ export default function DianConfigPage() {
                     ? <><ClockIcon className="w-4 h-4 animate-pulse" /> Enviando...</>
                     : <><DocumentTextIcon className="w-4 h-4" /> Prueba rápida — 1 documento</>}
                 </button>
-                <button
+                {testDocType !== 'payroll' && <button
                   onClick={() => handleAutoTest(2)}
                   disabled={sendingTest}
                   className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium
@@ -1094,7 +1103,7 @@ export default function DianConfigPage() {
                   {sendingTest
                     ? <><ClockIcon className="w-4 h-4 animate-pulse" /> Enviando...</>
                     : <><DocumentTextIcon className="w-4 h-4" /> Prueba rápida — 2 documentos</>}
-                </button>
+                </button>}
               </div>
               {sendingTest && (
                 <p className="text-xs text-gray-500 italic">
@@ -1115,11 +1124,11 @@ export default function DianConfigPage() {
                   </div>
 
                   {/* Agrupado por tipo */}
-                  {['factura', 'documento_soporte', 'nota_credito', 'nota_debito'].map(tipo => {
+                  {['factura', 'documento_soporte', 'nomina', 'nota_credito', 'nota_debito'].map(tipo => {
                     const grupo = testResults.filter(r => r.type === tipo || (!r.type && tipo === 'factura'));
                     if (!grupo.length) return null;
-                    const tipoLabel = { factura: 'Facturas', documento_soporte: 'Documentos Soporte', nota_credito: 'Notas Crédito', nota_debito: 'Notas Débito' }[tipo];
-                    const tipoColor = { factura: 'blue', documento_soporte: 'teal', nota_credito: 'purple', nota_debito: 'orange' }[tipo];
+                    const tipoLabel = { factura: 'Facturas', documento_soporte: 'Documentos Soporte', nomina: 'Nómina electrónica', nota_credito: 'Notas Crédito', nota_debito: 'Notas Débito' }[tipo];
+                    const tipoColor = { factura: 'blue', documento_soporte: 'teal', nomina: 'indigo', nota_credito: 'purple', nota_debito: 'orange' }[tipo];
                     return (
                       <div key={tipo}>
                         <p className={`text-xs font-semibold text-${tipoColor}-700 mb-1 mt-3`}>{tipoLabel}</p>
@@ -1133,13 +1142,14 @@ export default function DianConfigPage() {
                               <div className="flex-1 min-w-0">
                                 <p className={`font-medium ${r.accepted ? 'text-green-800' : 'text-red-800'}`}>
                                   {r.label || `Documento ${r.index}`}: {r.invoiceNumber || 'Error al generar'}
+                                  {r.employee && <span className="text-xs font-normal text-gray-500 ml-2">· {r.employee}</span>}
                                   {r.refInvoice && r.refInvoice !== '—' && (
                                     <span className="text-xs font-normal text-gray-500 ml-2">← ref. {r.refInvoice}</span>
                                   )}
                                 </p>
                                 {r.accepted && r.cufe && (
                                   <p className="text-xs text-green-600 font-mono mt-0.5">
-                                    {tipo === 'factura' ? 'CUFE' : tipo === 'documento_soporte' ? 'CUDS' : 'CUDE'}: {r.cufe?.substring(0, 32)}...
+                                    {tipo === 'factura' ? 'CUFE' : tipo === 'documento_soporte' ? 'CUDS' : tipo === 'nomina' ? 'CUNE' : 'CUDE'}: {r.cufe?.substring(0, 32)}...
                                   </p>
                                 )}
                                 {!r.accepted && (
