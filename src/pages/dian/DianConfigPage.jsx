@@ -120,11 +120,13 @@ export default function DianConfigPage() {
       const raw = cfgRes.data.data || {};
       // Guardar flags de campos ya configurados antes de limpiar
       const pinSet = !!(raw.software_pin && raw.software_pin.includes('***'));
+      const pinNominaSet = !!(raw.software_pin_nomina && raw.software_pin_nomina.includes('***'));
       const technicalKeySet = raw.technical_key === '[CONFIGURADO]';
       const certPasswordSet = raw.certificate_password === '[CONFIGURADO]';
       // Limpiar valores enmascarados para que no se reenvíen al guardar
-      const clean = { ...raw, _pin_set: pinSet, _tech_key_set: technicalKeySet, _cert_pass_set: certPasswordSet };
+      const clean = { ...raw, _pin_set: pinSet, _pin_nomina_set: pinNominaSet, _tech_key_set: technicalKeySet, _cert_pass_set: certPasswordSet };
       if (pinSet) clean.software_pin = '';
+      if (pinNominaSet) clean.software_pin_nomina = '';
       if (technicalKeySet) clean.technical_key = '';
       if (clean.certificate_p12_base64 === '[CONFIGURADO]') clean.certificate_p12_base64 = '[CONFIGURADO]'; // se mantiene para indicador visual
       if (certPasswordSet) clean.certificate_password = '';
@@ -147,9 +149,10 @@ export default function DianConfigPage() {
     setSaving(true);
     try {
       // Limpiar campos enmascarados e internos antes de enviar
-      const { _pin_set, _tech_key_set, _cert_pass_set, ...rest } = cfg;
+      const { _pin_set, _pin_nomina_set, _tech_key_set, _cert_pass_set, ...rest } = cfg;
       const toSend = { ...rest };
       if (toSend.software_pin === '') delete toSend.software_pin;
+      if (toSend.software_pin_nomina === '') delete toSend.software_pin_nomina;
       if (toSend.technical_key === '') delete toSend.technical_key;
       if (toSend.certificate_password === '') delete toSend.certificate_password;
       await updateDianConfig(toSend);
@@ -519,6 +522,26 @@ export default function DianConfigPage() {
             </Field>
           </Section>
 
+          <Section title="Software de Nómina Electrónica"
+            subtitle="Software habilitado ante la DIAN para el documento soporte de pago de nómina (es distinto al de facturación)">
+            <Field label="Software ID de nómina (UUID)"
+              hint="UUID del software de nómina registrado en el portal DIAN. Sin él no se puede emitir nómina electrónica.">
+              <input className={inputCls} value={cfg.software_id_nomina || ''}
+                placeholder="UUID del software de nómina"
+                onChange={e => setCfg(p => ({ ...p, software_id_nomina: e.target.value }))} />
+            </Field>
+            <Field label="PIN del software de nómina"
+              hint="PIN que definió al registrar el software de nómina en el portal DIAN">
+              <input type="password" className={inputCls} value={cfg.software_pin_nomina || ''}
+                placeholder={cfg._pin_nomina_set ? '••••• (ya configurado — dejar vacío para no cambiar)' : 'PIN del software de nómina'}
+                onChange={e => setCfg(p => ({ ...p, software_pin_nomina: e.target.value }))} />
+            </Field>
+            <p className="md:col-span-2 text-xs text-gray-500">
+              El <strong>TestSetId</strong> de habilitación de nómina se escribe en la resolución de numeración de tipo
+              Nómina electrónica (más abajo). Con el entorno en Habilitación / Pruebas, los documentos de nómina se envían a ese set de pruebas.
+            </p>
+          </Section>
+
           <Section title="Certificado Digital"
             subtitle="Certificado P12/PFX expedido por entidad certificadora habilitada por la DIAN">
             <div className="md:col-span-2">
@@ -741,6 +764,8 @@ export default function DianConfigPage() {
                     <option value="debit_note">Nota Débito</option>
                     <option value="support_document">Documento Soporte (adquisiciones)</option>
                     <option value="support_document_adjustment">Nota de Ajuste Doc. Soporte</option>
+                    <option value="payroll">Nómina electrónica</option>
+                    <option value="payroll_adjustment">Nota de ajuste de nómina electrónica</option>
                   </select>
                 </Field>
                 <Field label="Tipo de Resolución">
@@ -812,7 +837,7 @@ export default function DianConfigPage() {
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-semibold text-gray-900">Res. {r.resolution_number}</span>
                       <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-medium">
-                        {{ invoice: 'Factura', credit_note: 'Nota Crédito', debit_note: 'Nota Débito', support_document: 'Documento Soporte', support_document_adjustment: 'Ajuste Doc. Soporte' }[r.document_type] || r.document_type}
+                        {{ invoice: 'Factura', credit_note: 'Nota Crédito', debit_note: 'Nota Débito', support_document: 'Documento Soporte', support_document_adjustment: 'Ajuste Doc. Soporte', payroll: 'Nómina electrónica', payroll_adjustment: 'Ajuste de nómina' }[r.document_type] || r.document_type}
                       </span>
                       {r.technical_key === '[CONFIGURADO]' && (
                         <span className="text-xs px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 font-medium">
