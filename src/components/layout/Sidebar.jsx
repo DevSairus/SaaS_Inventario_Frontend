@@ -93,6 +93,7 @@ const NAV = [
     children: [
       { label: "Nueva Venta",      path: "/sales/new" },
       { label: "Historial Ventas", path: "/sales" },
+      { label: "Facturación recurrente", path: "/sales/recurring" },
       { label: "Clientes",         path: "/customers" },
     ],
   },

@@ -52,6 +52,7 @@ const PayableAlertsPage = lazy(() => import('./pages/payable-alerts/PayableAlert
 const UsersPage = lazy(() => import('./pages/users/UsersPage'));
 const UserForm = lazy(() => import('./pages/users/UserForm'));
 const SalesPage = lazy(() => import('./pages/sales/SalesPage'));
+const RecurringInvoicesPage = lazy(() => import('./pages/sales/RecurringInvoicesPage'));
 const QuotesPage = lazy(() => import('./pages/sales/QuotesPage'));
 const SaleFormPage = lazy(() => import('./pages/sales/SaleFormPage'));
 const SaleDetailPage = lazy(() => import('./pages/sales/SaleDetailPage'));
@@ -458,6 +459,7 @@ function App() {
 
         {/* ── Ventas ─────────────────────────────────── */}
         <Route path="sales"          element={<TenantRoute module="sales"><Suspense fallback={<Loading fullScreen />}><SalesPage /></Suspense></TenantRoute>} />
+        <Route path="sales/recurring" element={<TenantRoute module="sales" roles={['admin', 'manager', 'accountant']}><Suspense fallback={<Loading fullScreen />}><RecurringInvoicesPage /></Suspense></TenantRoute>} />
         <Route path="sales/new"      element={<TenantRoute module="sales"><Suspense fallback={<Loading fullScreen />}><SaleFormPage /></Suspense></TenantRoute>} />
         <Route path="sales/:id/edit" element={<TenantRoute module="sales"><Suspense fallback={<Loading fullScreen />}><SaleFormPage /></Suspense></TenantRoute>} />
         <Route path="accounts-receivable" element={<TenantRoute module="receivables" roles={MGMT_ROLES}><Suspense fallback={<Loading fullScreen />}><AccountsReceivablePage /></Suspense></TenantRoute>} />

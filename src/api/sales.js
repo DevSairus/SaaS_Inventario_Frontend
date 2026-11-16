@@ -100,3 +100,14 @@ export const saleDiagnosisMarksApi = {
 };
 
 export default salesApi;
+// Facturación recurrente (contratos): emisión automática a la DIAN con el
+// precio y el plazo del contrato.
+export const recurringInvoicesApi = {
+  list: async (params = {}) => (await api.get('/sales/recurring', { params })).data,
+  preview: async (month) => (await api.get('/sales/recurring/preview', { params: { month } })).data,
+  get: async (id) => (await api.get(`/sales/recurring/${id}`)).data,
+  create: async (payload) => (await api.post('/sales/recurring', payload)).data,
+  update: async (id, payload) => (await api.put(`/sales/recurring/${id}`, payload)).data,
+  setStatus: async (id, status) => (await api.post(`/sales/recurring/${id}/status`, { status })).data,
+  runNow: async (id) => (await api.post(`/sales/recurring/${id}/run`, {}, { timeout: 120000 })).data,
+};
