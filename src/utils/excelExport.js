@@ -213,6 +213,7 @@ export const downloadProductsTemplate = async (categories = []) => {
     { header: 'Tipo', width: 15 },
     { header: 'Marca', width: 16 },
     { header: 'Código de barras', width: 18 },
+    { header: 'Código UNSPSC', width: 16 },
     { header: 'Descripción', width: 30 },
     { header: 'Unidad', width: 13 },
     { header: 'Costo', width: 14 },
@@ -231,7 +232,7 @@ export const downloadProductsTemplate = async (categories = []) => {
   const examples = [
     {
       'Código*': 'FIL-001', 'Nombre*': 'Filtro de aceite', 'Categoría': 'Filtros', 'Tipo': 'Producto',
-      'Marca': 'Bosch', 'Código de barras': '7701234567890', 'Unidad': 'Unidad', 'Costo': 18000,
+      'Marca': 'Bosch', 'Código de barras': '7701234567890', 'Código UNSPSC': '40161504', 'Unidad': 'Unidad', 'Costo': 18000,
       'Margen Utilidad (%)': 30, 'Precio incluye IVA': 'No', 'IVA': '19', 'Cantidad': 20,
       'Stock mínimo': 5, 'Equivalente(s)': 'FIL-002',
     },
@@ -322,6 +323,9 @@ export const downloadProductsTemplate = async (categories = []) => {
     '7️⃣ OTROS CAMPOS OPCIONALES',
     '   • Marca, Descripción.',
     '   • Código de barras: único; si ya lo tiene otro producto, la fila falla.',
+    '   • Código UNSPSC: código de 8 dígitos del clasificador UNSPSC (DIAN).',
+    '     Si está, la factura electrónica identifica el producto con él; si no,',
+    '     con el Código del producto. Búscalo en el formulario del producto.',
     '   • Unidad: Unidad (por defecto), Kilogramo, Gramo, Libra, Onza, Litro,',
     '     Mililitro, Galón, Metro, Centímetro, Pie, Caja, Paquete, Docena.',
     '   • Equivalente(s): código(s) de producto(s) sustitutos, separados por "|"',

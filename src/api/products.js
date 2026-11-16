@@ -1,6 +1,12 @@
 import api from './axios';
 
 export const productsAPI = {
+  // Catálogo UNSPSC (factura electrónica): por palabras o por código.
+  searchUnspsc: async (q, limit = 30) => {
+    const response = await api.get('/products/unspsc', { params: { q, limit } });
+    return response.data?.data || [];
+  },
+
   // Obtener todos los productos
   getAll: async (params = {}) => {
     const response = await api.get('/products', { params });

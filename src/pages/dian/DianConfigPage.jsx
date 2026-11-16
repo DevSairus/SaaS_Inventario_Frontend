@@ -12,6 +12,7 @@ import {
 import { branchesService } from '../../api/branches';
 import Layout from '../../components/layout/Layout';
 import DivipolaCitySelect from '../../components/common/DivipolaCitySelect';
+import { FISCAL_RESPONSIBILITIES, parseResponsibilities } from '../../constants/fiscalResponsibilities';
 import {
   Cog6ToothIcon,
   ClipboardDocumentListIcon,
@@ -466,11 +467,42 @@ export default function DianConfigPage() {
                 <option value="49">49 - No responsable de IVA</option>
               </select>
             </Field>
-            <Field label="Responsabilidad Fiscal"
-              hint="Código de responsabilidad (ej: R-99-PN)">
-              <input className={inputCls} value={cfg.tax_level_code || 'R-99-PN'}
-                placeholder="R-99-PN"
-                onChange={e => setCfg(p => ({ ...p, tax_level_code: e.target.value }))} />
+            <Field label="Tipo de persona">
+              <select className={selectCls} value={cfg.person_type || '1'}
+                onChange={e => setCfg(p => ({ ...p, person_type: e.target.value }))}>
+                <option value="1">Persona jurídica</option>
+                <option value="2">Persona natural</option>
+              </select>
+            </Field>
+            <div className="md:col-span-2">
+              <Field label="Responsabilidades fiscales (casilla 53 del RUT)"
+                hint="Marca todas las que tenga tu RUT. Salen en la factura electrónica y en su representación gráfica.">
+                <div className="flex flex-wrap gap-x-5 gap-y-2 pt-1">
+                  {FISCAL_RESPONSIBILITIES.map(r => {
+                    const selected = parseResponsibilities(cfg.tax_level_code);
+                    const checked = selected.includes(r.code);
+                    return (
+                      <label key={r.code} className="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                        <input type="checkbox" checked={checked}
+                          onChange={e => setCfg(p => {
+                            let next = parseResponsibilities(p.tax_level_code).filter(c => c !== r.code);
+                            if (e.target.checked) next = r.code === 'R-99-PN' ? ['R-99-PN'] : [...next.filter(c => c !== 'R-99-PN'), r.code];
+                            return { ...p, tax_level_code: next.length ? next.join(';') : 'R-99-PN' };
+                          })} />
+                        <span><b>{r.code}</b> {r.label}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </Field>
+            </div>
+            <Field label="Impuesto al consumo (INC)"
+              hint="Márcalo si eres responsable del impuesto nacional al consumo (p. ej. restaurantes).">
+              <label className="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 pt-2">
+                <input type="checkbox" checked={!!cfg.inc_responsible}
+                  onChange={e => setCfg(p => ({ ...p, inc_responsible: e.target.checked }))} />
+                Responsable de INC
+              </label>
             </Field>
           </Section>
 

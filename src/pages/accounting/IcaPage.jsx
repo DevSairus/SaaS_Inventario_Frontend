@@ -36,6 +36,27 @@ function periodsFor(periodicity, year) {
 
 const inputCls = 'mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500';
 
+// Grupos de actividades del art. 908 E.T. (formulario 2593, Régimen SIMPLE).
+const SIMPLE_GROUP_OPTIONS = [
+  { value: '1', label: 'Grupo 1: tiendas pequeñas, minimercados, micromercados y peluquerías' },
+  { value: '2', label: 'Grupo 2: comercio, servicios técnicos y mecánicos, talleres, industria y demás' },
+  { value: '3', label: 'Grupo 3: expendio de comidas y bebidas, y transporte' },
+  { value: '3p', label: 'Grupo 3 (sic): servicios profesionales, de consultoría y científicos' },
+  { value: '6', label: 'Grupo 6: actividades CIIU 4665, 3830 y 3811' },
+];
+
+// Sugerencia por CIIU: es solo un punto de partida, el contador decide.
+function suggestSimpleGroup(ciiu) {
+  const c = String(ciiu || '').replace(/\D/g, '');
+  if (c.length < 4) return null;
+  if (['4665', '3830', '3811'].includes(c)) return '6';
+  if (['4711', '4719', '4721', '4729', '9602'].includes(c)) return '1';
+  const d2 = Number(c.slice(0, 2));
+  if (d2 === 56 || (d2 >= 49 && d2 <= 51)) return '3';
+  if ((d2 >= 69 && d2 <= 75) || d2 === 62 || d2 === 63) return '3p';
+  return '2';
+}
+
 const EMPTY_MUN = { city_name: '', city_code: '', periodicity: 'bimestral', avisos_tableros: false, avisos_pct: 15, bomberil_pct: 0, autoica_enabled: false, round_thousands: true, excluded_account_prefixes: '', is_active: true };
 
 const IcaPage = () => {
@@ -429,11 +450,16 @@ function MunicipalityEditor({ initial, onClose, onSaved }) {
   // Departamento elegido antes de escoger la ciudad (la ciudad trae el suyo).
   const [deptCode, setDeptCode] = useState(initial.city_code ? String(initial.city_code).substring(0, 2) : '');
   const [activities, setActivities] = useState(
-    (initial.activities || []).map((a) => ({ ...a, account_prefixes: (a.account_prefixes || []).join(', '), autoica_rate: a.autoica_rate ?? '' }))
+    (initial.activities || []).map((a) => ({ ...a, account_prefixes: (a.account_prefixes || []).join(', '), autoica_rate: a.autoica_rate ?? '', simple_group: a.simple_group || '', simple_rate: a.simple_rate ?? '' }))
   );
   const [saving, setSaving] = useState(false);
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
-  const setAct = (i, k, v) => setActivities((list) => list.map((a, idx) => (idx === i ? { ...a, [k]: v } : (k === 'is_default' && v ? { ...a, is_default: false } : a))));
+  const setAct = (i, k, v) => setActivities((list) => list.map((a, idx) => {
+    if (idx !== i) return k === 'is_default' && v ? { ...a, is_default: false } : a;
+    // Al escribir el CIIU se sugiere el grupo SIMPLE si aún no tiene uno.
+    if (k === 'ciiu_code' && !a.simple_group) return { ...a, ciiu_code: v, simple_group: suggestSimpleGroup(v) || '' };
+    return { ...a, [k]: v };
+  }));
 
   const save = async () => {
     if (!form.city_code || !form.city_name.trim()) { toast.error('Seleccione el municipio'); return; }
@@ -505,7 +531,7 @@ function MunicipalityEditor({ initial, onClose, onSaved }) {
         <div>
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-sm font-semibold text-gray-700">Actividades (CIIU)</h3>
-            <button onClick={() => setActivities((l) => [...l, { ciiu_code: '', description: '', rate: '', autoica_rate: '', account_prefixes: '', is_default: l.length === 0 }])}
+            <button onClick={() => setActivities((l) => [...l, { ciiu_code: '', description: '', rate: '', autoica_rate: '', account_prefixes: '', is_default: l.length === 0, simple_group: '', simple_rate: '' }])}
               className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800"><PlusIcon className="h-4 w-4" /> Agregar</button>
           </div>
           <p className="text-xs text-gray-500 mb-2">
@@ -525,6 +551,19 @@ function MunicipalityEditor({ initial, onClose, onSaved }) {
                 <button onClick={() => setActivities((l) => l.filter((_, idx) => idx !== i))} className="sm:col-span-1 text-red-500 hover:text-red-700 pb-2 justify-self-end" aria-label="Quitar actividad">
                   <TrashIcon className="h-4 w-4" />
                 </button>
+                <label className="col-span-2 sm:col-span-8 text-xs text-gray-600"
+                  title="Solo para empresas del Régimen SIMPLE: grupo del art. 908 E.T. con el que esta actividad entra al formulario 2593">
+                  Grupo Régimen SIMPLE (formulario 2593)
+                  <select value={a.simple_group || ''} onChange={(e) => setAct(i, 'simple_group', e.target.value)} className={inputCls}>
+                    <option value="">Sin grupo (no es del Régimen SIMPLE)</option>
+                    {SIMPLE_GROUP_OPTIONS.map((g) => <option key={g.value} value={g.value}>{g.label}</option>)}
+                  </select>
+                </label>
+                <label className="col-span-2 sm:col-span-4 text-xs text-gray-600"
+                  title="Tarifa ICA consolidada que adoptó el municipio para el SIMPLE. Vacía = la tarifa del ICA más avisos y tableros y bomberil.">
+                  Tarifa ICA consolidada SIMPLE ‰
+                  <input type="number" step="0.0001" min="0" value={a.simple_rate} onChange={(e) => setAct(i, 'simple_rate', e.target.value)} className={inputCls} placeholder="Calculada" />
+                </label>
               </div>
             ))}
           </div>

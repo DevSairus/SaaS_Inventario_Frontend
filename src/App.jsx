@@ -69,6 +69,7 @@ const JournalEntriesPage = lazy(() => import('./pages/accounting/JournalEntriesP
 const AccountMappingsPage = lazy(() => import('./pages/accounting/AccountMappingsPage'));
 const AccountMigrationsPage = lazy(() => import('./pages/accounting/AccountMigrationsPage'));
 const IcaPage = lazy(() => import('./pages/accounting/IcaPage'));
+const Simple2593Page = lazy(() => import('./pages/accounting/Simple2593Page'));
 const IvaProrrateoPage = lazy(() => import('./pages/accounting/IvaProrrateoPage'));
 const FinancialReportsPage = lazy(() => import('./pages/accounting/FinancialReportsPage'));
 const FiscalPeriodsPage = lazy(() => import('./pages/accounting/FiscalPeriodsPage'));
@@ -493,6 +494,7 @@ function App() {
         <Route path="accounting/rounding-adjustments"              element={<TenantRoute module="accounting" roles={['admin', 'manager', 'accountant']}><Suspense fallback={<Loading fullScreen />}><RoundingAdjustmentsPage /></Suspense></TenantRoute>} />
         <Route path="accounting/bank-accounts/:id/reconciliation"  element={<TenantRoute module="accounting" roles={['admin', 'manager', 'accountant']}><Suspense fallback={<Loading fullScreen />}><BankReconciliationPage /></Suspense></TenantRoute>} />
         <Route path="accounting/ica"                element={<TenantRoute module="accounting" roles={['admin', 'manager', 'accountant']}><Suspense fallback={<Loading fullScreen />}><IcaPage /></Suspense></TenantRoute>} />
+        <Route path="accounting/simple-2593"        element={<TenantRoute module="accounting" roles={['admin', 'manager', 'accountant']}><Suspense fallback={<Loading fullScreen />}><Simple2593Page /></Suspense></TenantRoute>} />
         <Route path="accounting/iva-prorrateo"      element={<TenantRoute module="accounting" roles={['admin', 'manager', 'accountant']}><Suspense fallback={<Loading fullScreen />}><IvaProrrateoPage /></Suspense></TenantRoute>} />
         <Route path="accounting/account-migrations" element={<TenantRoute module="accounting" roles={['admin', 'accountant']}><Suspense fallback={<Loading fullScreen />}><AccountMigrationsPage /></Suspense></TenantRoute>} />
         <Route path="accounting/tax-classification" element={<TenantRoute module="accounting" roles={['admin', 'manager', 'accountant']}><Suspense fallback={<Loading fullScreen />}><TaxClassificationPage /></Suspense></TenantRoute>} />

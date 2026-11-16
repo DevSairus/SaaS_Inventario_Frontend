@@ -13,6 +13,7 @@ import NumericInput from '../inputs/NumericInput';
 import ProductImageUpload from './ProductImageUpload';
 import { productsAPI } from '../../api/products';
 import RuntConsultaModal from '../workshop/RuntConsultaModal';
+import UnspscPicker from './UnspscPicker';
 
 const ProductFormModal = ({ isOpen, onClose, product = null }) => {
   const { createProduct, updateProduct, loading } = useProductsStore();
@@ -58,6 +59,7 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
   const [formData, setFormData] = useState({
     sku: '',
     barcode: '',
+    unspsc_code: '',
     name: '',
     description: '',
     category_id: '',
@@ -161,6 +163,7 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
       setFormData({
         sku: product.sku || '',
         barcode: product.barcode || '',
+        unspsc_code: product.unspsc_code || '',
         name: product.name || '',
         description: product.description || '',
         category_id: product.category_id || '',
@@ -209,6 +212,7 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
       setFormData(prev => ({
         sku: '',
         barcode: '',
+    unspsc_code: '',
         name: '',
         description: '',
         category_id: '',
@@ -433,6 +437,18 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
                   </button>
                 </div>
                 <p className="mt-1 text-xs text-gray-500 dark:text-gray-500">Escanea con cámara o pistola USB</p>
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Código UNSPSC (factura electrónica)
+                </label>
+                <UnspscPicker
+                  value={formData.unspsc_code}
+                  onChange={(code) => setFormData(prev => ({ ...prev, unspsc_code: code }))}
+                  inputClassName="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100"
+                />
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-500">Opcional. Si lo dejas vacío, la factura electrónica identifica el producto con su código propio.</p>
               </div>
 
               <div className="md:col-span-2">

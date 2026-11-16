@@ -39,6 +39,16 @@ export const icaAPI = {
   voidSettlement: async (id, reason) => (await api.patch(`/accounting/ica/settlements/${id}/void`, { reason })).data,
 };
 
+// Formulario 2593 — Recibo electrónico del SIMPLE (cálculo por bimestre)
+export const simple2593API = {
+  get: async (year, period) => (await api.get('/accounting/simple-2593', { params: { year, period } })).data,
+  list: async (year) => (await api.get('/accounting/simple-2593/receipts', { params: { year } })).data,
+  save: async (year, period, inputs) => (await api.put('/accounting/simple-2593', { year, period, inputs })).data,
+  present: async (year, period, inputs, formNumber) => (await api.post('/accounting/simple-2593/present', { year, period, inputs, form_number: formNumber })).data,
+  reopen: async (year, period) => (await api.post('/accounting/simple-2593/reopen', { year, period })).data,
+  exportExcel: async (year, period) => (await api.get('/accounting/simple-2593/export', { params: { year, period }, responseType: 'blob' })).data,
+};
+
 // Prorrateo del IVA descontable por período (art. 490 E.T.)
 export const ivaProrrateoAPI = {
   report: async (params) => (await api.get('/accounting/iva-prorrateo', { params })).data,
