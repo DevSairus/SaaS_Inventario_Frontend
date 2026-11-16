@@ -85,7 +85,7 @@ const ChartOfAccountsPage = () => {
     try {
       setSaving(true);
       if (editing) {
-        await chartOfAccountsAPI.update(editing.id, { name: form.name, accepts_entries: form.accepts_entries });
+        await chartOfAccountsAPI.update(editing.id, { name: form.name, accepts_entries: form.accepts_entries, parent_id: form.parent_id || null });
         toast.success('Cuenta actualizada');
       } else {
         await chartOfAccountsAPI.create(form);
@@ -242,6 +242,24 @@ const ChartOfAccountsPage = () => {
                     onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
                   />
+                </div>
+                {/* Cuenta padre: del mismo tipo y cuyo código sea el inicio del de esta
+                    cuenta (p. ej. 415595 debajo de 4155). Al editar, mueve la cuenta. */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Cuenta padre</label>
+                  <select
+                    value={form.parent_id || ''}
+                    onChange={(e) => setForm((f) => ({ ...f, parent_id: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  >
+                    <option value="">Sin cuenta padre (clase)</option>
+                    {accounts
+                      .filter((a) => a.account_type === form.account_type && a.id !== editing?.id
+                        && (!form.code || (String(form.code).startsWith(a.code) && a.code.length < String(form.code).length)))
+                      .sort((a, b) => a.code.localeCompare(b.code))
+                      .map((a) => <option key={a.id} value={a.id}>{a.code} — {a.name}</option>)}
+                  </select>
+                  {editing && <p className="text-xs text-gray-500 mt-1">Si la cuenta padre tiene movimientos, primero muévelos a una subcuenta con Migración de Cuentas.</p>}
                 </div>
                 {!editing && (
                   <div>

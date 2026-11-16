@@ -168,6 +168,7 @@ const NAV = [
       { label: "Terceros por configurar", path: "/accounting/third-party-setup" },
       { label: "Ajuste al peso",       path: "/accounting/rounding-adjustments" },
       { label: "Clasificación tributaria", path: "/accounting/tax-classification" },
+      { label: "Ingresos diferidos",   path: "/accounting/deferred-revenues" },
       { label: "ICA",                  path: "/accounting/ica" },
       { label: "Formulario 2593 (SIMPLE)", path: "/accounting/simple-2593" },
       { label: "Prorrateo de IVA",     path: "/accounting/iva-prorrateo" },

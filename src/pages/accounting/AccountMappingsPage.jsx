@@ -12,11 +12,11 @@ const EVENT_GROUPS = [
       { key: 'sale_bank_account', label: 'Cobro por banco/tarjeta' },
       { key: 'sale_receivable', label: 'Venta a crédito (cartera)' },
       { key: 'sale_revenue_product', label: 'Ingreso por venta de mercancía' },
-      { key: 'sale_revenue_service', label: 'Ingreso por servicios (taller)' },
+      { key: 'sale_revenue_service', label: 'Ingreso por servicios' },
       { key: 'sale_tax_iva', label: 'IVA generado en la venta' },
       { key: 'sale_tax_inc', label: 'Impuesto al consumo (INC) generado en la venta' },
       { key: 'sale_cogs_product', label: 'Costo de mercancía vendida' },
-      { key: 'sale_cogs_service', label: 'Costo de servicios (taller)' },
+      { key: 'sale_cogs_service', label: 'Costo de servicios' },
     ],
   },
   {

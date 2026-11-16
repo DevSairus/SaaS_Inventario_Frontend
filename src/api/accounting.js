@@ -39,6 +39,12 @@ export const icaAPI = {
   voidSettlement: async (id, reason) => (await api.patch(`/accounting/ica/settlements/${id}/void`, { reason })).data,
 };
 
+// Ingresos diferidos (anualidades, semestralidades): lista y amortización
+export const deferredRevenueAPI = {
+  list: async (params = {}) => (await api.get('/accounting/deferred-revenues', { params })).data,
+  amortize: async (id = null) => (await api.post('/accounting/deferred-revenues/amortize', id ? { id } : {})).data,
+};
+
 // Formulario 2593 — Recibo electrónico del SIMPLE (cálculo por bimestre)
 export const simple2593API = {
   get: async (year, period) => (await api.get('/accounting/simple-2593', { params: { year, period } })).data,

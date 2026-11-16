@@ -14,6 +14,7 @@ import ProductImageUpload from './ProductImageUpload';
 import { productsAPI } from '../../api/products';
 import RuntConsultaModal from '../workshop/RuntConsultaModal';
 import UnspscPicker from './UnspscPicker';
+import { chartOfAccountsAPI } from '../../api/accounting';
 
 const ProductFormModal = ({ isOpen, onClose, product = null }) => {
   const { createProduct, updateProduct, loading } = useProductsStore();
@@ -60,6 +61,9 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
     sku: '',
     barcode: '',
     unspsc_code: '',
+    revenue_account_id: '',
+    deferred_months: '',
+    deferred_account_id: '',
     name: '',
     description: '',
     category_id: '',
@@ -164,6 +168,9 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
         sku: product.sku || '',
         barcode: product.barcode || '',
         unspsc_code: product.unspsc_code || '',
+        revenue_account_id: product.revenue_account_id || '',
+        deferred_months: product.deferred_months || '',
+        deferred_account_id: product.deferred_account_id || '',
         name: product.name || '',
         description: product.description || '',
         category_id: product.category_id || '',
@@ -213,6 +220,9 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
         sku: '',
         barcode: '',
     unspsc_code: '',
+    revenue_account_id: '',
+    deferred_months: '',
+    deferred_account_id: '',
         name: '',
         description: '',
         category_id: '',
@@ -322,6 +332,16 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
     }
   };
 
+  // Cuentas para el bloque Contabilidad (solo quien ve el plan de cuentas;
+  // a los demás roles el endpoint no responde y el bloque no aparece).
+  const [ledgerAccounts, setLedgerAccounts] = useState(null);
+  useEffect(() => {
+    if (!isOpen) return;
+    chartOfAccountsAPI.getAll()
+      .then((res) => setLedgerAccounts((res.data || []).filter((a) => a.accepts_entries && a.is_active)))
+      .catch(() => setLedgerAccounts(null));
+  }, [isOpen]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSaveError('');
@@ -339,7 +359,16 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
       warehouse_id: formData.warehouse_id || null,
       // '' = sin ubicación (el backend la quita); la ubicación es de la bodega elegida.
       location_id: formData.warehouse_id ? (formData.location_id || null) : null,
+      revenue_account_id: formData.revenue_account_id || null,
+      deferred_months: formData.deferred_months ? parseInt(formData.deferred_months, 10) : null,
+      deferred_account_id: formData.deferred_months ? (formData.deferred_account_id || null) : null,
     };
+    // Sin acceso al plan de cuentas no se envían (no se tocan en el producto).
+    if (!ledgerAccounts) {
+      delete dataToSend.revenue_account_id;
+      delete dataToSend.deferred_months;
+      delete dataToSend.deferred_account_id;
+    }
 
     // El Vehicle real solo se crea junto con el producto la primera vez --
     // después se edita desde el módulo Vehículos (ver updateProduct backend).
@@ -450,6 +479,43 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
                 />
                 <p className="mt-1 text-xs text-gray-500 dark:text-gray-500">Opcional. Si lo dejas vacío, la factura electrónica identifica el producto con su código propio.</p>
               </div>
+
+              {ledgerAccounts && (
+                <div className="md:col-span-2 border border-gray-200 dark:border-white/10 rounded-lg p-4 space-y-3">
+                  <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-200">Contabilidad</h4>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Cuenta de ingreso</label>
+                    <select value={formData.revenue_account_id} onChange={(e) => setFormData((p) => ({ ...p, revenue_account_id: e.target.value }))}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100">
+                      <option value="">La del mapeo de cuentas (ventas de mercancía o servicios)</option>
+                      {ledgerAccounts.filter((a) => a.account_type === 'ingreso').sort((a, b) => a.code.localeCompare(b.code))
+                        .map((a) => <option key={a.id} value={a.id}>{a.code} — {a.name}</option>)}
+                    </select>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Ingreso diferido (meses)</label>
+                      <input type="number" min="0" max="120" value={formData.deferred_months}
+                        onChange={(e) => setFormData((p) => ({ ...p, deferred_months: e.target.value }))}
+                        placeholder="0 = se causa al facturar"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100" />
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Cuenta del ingreso recibido por anticipado</label>
+                      <select value={formData.deferred_account_id} disabled={!Number(formData.deferred_months)}
+                        onChange={(e) => setFormData((p) => ({ ...p, deferred_account_id: e.target.value }))}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg disabled:opacity-50 dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100">
+                        <option value="">Elige la cuenta (2705…)</option>
+                        {ledgerAccounts.filter((a) => a.account_type === 'pasivo').sort((a, b) => a.code.localeCompare(b.code))
+                          .map((a) => <option key={a.id} value={a.id}>{a.code} — {a.name}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    Con meses (por ejemplo 12 en una anualidad), la factura lleva el valor a la cuenta de pasivo y Pitbox lo causa mes a mes en la cuenta de ingreso, desde el mes de la factura (Contabilidad → Ingresos diferidos).
+                  </p>
+                </div>
+              )}
 
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
