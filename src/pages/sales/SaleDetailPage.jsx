@@ -829,8 +829,9 @@ export default function SaleDetailPage() {
           </div>
         )}
 
-        {/* ── Panel DIAN (solo facturas): estado, CUFE, fechas, motivo de rechazo y acciones ── */}
-        {sale.document_type === 'factura' && (
+        {/* ── Panel DIAN (facturas y notas crédito/débito): estado, CUFE, fechas, motivo de rechazo y acciones ──
+            Antes solo salía en facturas: una nota rechazada no tenía botón Reenviar en ningún lado. */}
+        {['factura', 'nota_credito', 'nota_debito'].includes(sale.document_type) && (
           <div className="no-print">
             <DianDetailPanel
               sale={sale}

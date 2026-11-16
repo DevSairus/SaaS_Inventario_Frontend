@@ -13,6 +13,9 @@ import {
 } from '@heroicons/react/24/outline';
 import { formatCurrency } from '../../utils/formatters';
 
+// Tipo de documento sin asiento, en español.
+const SOURCE_LABELS = { sale: 'Venta', credit_note: 'Nota crédito', debit_note: 'Nota débito', purchase: 'Compra', expense: 'Gasto', cash_session: 'Cierre de caja', project_labor: 'Nómina a obras' };
+
 const toLocalDateString = (date) => {
   const d = date instanceof Date ? date : new Date(date);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -134,7 +137,7 @@ const AccountingHealthPage = () => {
                 </div>
                 <div className="text-2xl font-bold text-gray-900">{data.missing_entries.total_missing}</div>
                 <div className="text-xs text-gray-500 mt-1">
-                  {Object.entries(data.missing_entries.by_type || {}).map(([k, v]) => `${k}: ${v}`).join(' · ') || 'Sin huecos'}
+                  {Object.entries(data.missing_entries.by_type || {}).map(([k, v]) => `${SOURCE_LABELS[k] || k}: ${v}`).join(' · ') || 'Sin huecos'}
                 </div>
               </div>
               <div className="bg-white rounded-xl border border-gray-200 p-4">
@@ -179,7 +182,7 @@ const AccountingHealthPage = () => {
                       return (
                         <tr key={key}>
                           <td className="px-4 py-2 text-sm text-gray-500">{item.date}</td>
-                          <td className="px-4 py-2"><span className="text-xs px-2 py-0.5 rounded-full bg-amber-50 text-amber-700">{item.source_type}</span></td>
+                          <td className="px-4 py-2"><span className="text-xs px-2 py-0.5 rounded-full bg-amber-50 text-amber-700">{SOURCE_LABELS[item.source_type] || item.source_type}</span></td>
                           <td className="px-4 py-2 text-sm text-gray-800">{item.label}</td>
                           <td className="px-4 py-2 text-sm text-right">{item.amount != null ? formatCurrency(item.amount) : '—'}</td>
                           <td className="px-4 py-2 text-right">
@@ -213,7 +216,7 @@ const AccountingHealthPage = () => {
                       <tr key={item.id}>
                         <td className="px-4 py-2 text-sm font-mono text-gray-500">{item.entry_number}</td>
                         <td className="px-4 py-2 text-sm text-gray-500">{item.entry_date}</td>
-                        <td className="px-4 py-2"><span className="text-xs px-2 py-0.5 rounded-full bg-amber-50 text-amber-700">{item.source_type}</span></td>
+                        <td className="px-4 py-2"><span className="text-xs px-2 py-0.5 rounded-full bg-amber-50 text-amber-700">{SOURCE_LABELS[item.source_type] || item.source_type}</span></td>
                         <td className="px-4 py-2 text-sm text-gray-800">{item.description || '—'}</td>
                         <td className="px-4 py-2 text-sm text-right">{item.days_pending}</td>
                         <td className="px-4 py-2 text-sm text-right">{formatCurrency(item.total_debit)}</td>
