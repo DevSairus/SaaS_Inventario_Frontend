@@ -238,12 +238,14 @@ const ExpensesPage = () => {
       return;
     }
     try {
-      await expensesAPI.registerPayment(selectedExpense.id, {
+      const res = await expensesAPI.registerPayment(selectedExpense.id, {
         amount: parseFloat(paymentAmount),
         payment_method: paymentMethod,
         bank_account_id: paymentMethod !== 'Efectivo' ? paymentBankAccountId : null,
       });
       toast.success('Pago registrado');
+      // El pago quedó, pero su asiento contable no (p. ej. falta un mapeo de cuentas).
+      if (res?.accounting_warning) toast.error(res.accounting_warning, { duration: 10000 });
       setShowPaymentModal(false);
       setSelectedExpense(null);
       setPaymentAmount('');

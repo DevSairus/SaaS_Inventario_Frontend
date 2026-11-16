@@ -14,7 +14,7 @@ import {
 import { formatCurrency } from '../../utils/formatters';
 
 // Tipo de documento sin asiento, en español.
-const SOURCE_LABELS = { sale: 'Venta', credit_note: 'Nota crédito', debit_note: 'Nota débito', purchase: 'Compra', expense: 'Gasto', cash_session: 'Cierre de caja', project_labor: 'Nómina a obras' };
+const SOURCE_LABELS = { sale: 'Venta', credit_note: 'Nota crédito', debit_note: 'Nota débito', purchase: 'Compra', expense: 'Gasto', expense_payment: 'Pago de gasto', cash_session: 'Cierre de caja', project_labor: 'Nómina a obras' };
 
 const toLocalDateString = (date) => {
   const d = date instanceof Date ? date : new Date(date);
