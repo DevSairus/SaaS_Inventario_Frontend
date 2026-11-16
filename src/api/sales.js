@@ -17,6 +17,7 @@ const salesApi = {
     if (filters.document_type) params.append('document_type', filters.document_type);
     if (filters.doc_group) params.append('doc_group', filters.doc_group);
     if (filters.dian_status) params.append('dian_status', filters.dian_status);
+    if (filters.search) params.append('search', filters.search);
     if (filters.customer_name) params.append('customer_name', filters.customer_name);
     if (filters.vehicle_plate) params.append('vehicle_plate', filters.vehicle_plate);
     if (filters.branch_id) params.append('branch_id', filters.branch_id);
