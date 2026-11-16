@@ -9,7 +9,7 @@ import useAuthStore from '../../store/authStore';
 // Ingresos recibidos por anticipado (anualidades, semestralidades) que se
 // causan mes a mes. Se crean solos al facturar un producto con "Ingreso
 // diferido" (ficha del producto → Contabilidad). El job diario genera la
-// cuota de cada mes; el botón hace lo mismo a mano.
+// cuota de cada mes al cierre (último día); el botón hace lo mismo a mano.
 
 const STAFF_ROLES = ['admin', 'super_admin', 'accountant'];
 const STATUS = {
@@ -62,7 +62,7 @@ export default function DeferredRevenuesPage() {
             <h1 className="text-2xl font-semibold text-gray-900">Ingresos diferidos</h1>
             <p className="text-sm text-gray-500 mt-1 max-w-3xl">
               Cobros recibidos por anticipado (anualidades, semestralidades) que se causan mes a mes: cada mes, débito a la cuenta de pasivo y crédito a la de ingreso.
-              Se crean al facturar un producto con ingreso diferido (ficha del producto → Contabilidad). Pitbox genera la cuota de cada mes en borrador el día 1.
+              Se crean al facturar un producto con ingreso diferido (ficha del producto → Contabilidad). Pitbox genera la cuota de cada mes en borrador al cierre del mes (fechada el último día).
             </p>
           </div>
           {isStaff && (

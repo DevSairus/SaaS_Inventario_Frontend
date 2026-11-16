@@ -512,7 +512,7 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
                     </div>
                   </div>
                   <p className="text-xs text-gray-500">
-                    Con meses (por ejemplo 12 en una anualidad), la factura lleva el valor a la cuenta de pasivo y Pitbox lo causa mes a mes en la cuenta de ingreso, desde el mes de la factura (Contabilidad → Ingresos diferidos).
+                    Con meses (por ejemplo 12 en una anualidad), la factura lleva el valor a la cuenta de pasivo y Pitbox lo causa al cierre de cada mes en la cuenta de ingreso, desde el mes de la factura (Contabilidad → Ingresos diferidos).
                   </p>
                 </div>
               )}
