@@ -28,10 +28,15 @@ export const testDianConnection     = () => api.post('/dian/test-connection');
 export const testDianConnectionProd = () => api.post('/dian/test-connection-prod');
 
 // ── Set de pruebas (auto-test) ───────────────────────────────
+// El set de pruebas (SendTestSetAsync) espera la respuesta de la DIAN:
+// hasta ~90 s por documento en dian-service. El timeout global de 30 s del
+// cliente cortaba la petición y mostraba error aunque el envío siguiera en
+// el backend.
+const TEST_SET_TIMEOUT = 5 * 60 * 1000;
 export const sendAutoTestDocuments      = (count = 2, documentType = 'invoice') =>
-  api.post('/dian/send-auto-test', { count, mode: 'invoices', document_type: documentType });
+  api.post('/dian/send-auto-test', { count, mode: 'invoices', document_type: documentType }, { timeout: TEST_SET_TIMEOUT });
 export const sendFullHabilitacionSet    = (documentType = 'invoice') =>
-  api.post('/dian/send-auto-test', { mode: 'full', document_type: documentType });
+  api.post('/dian/send-auto-test', { mode: 'full', document_type: documentType }, { timeout: TEST_SET_TIMEOUT });
 
 // ── Log de eventos ───────────────────────────────────────────
 export const getDianEvents        = (params = {}) => api.get('/dian/events', { params });
