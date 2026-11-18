@@ -14,6 +14,7 @@ import TaxConfigSection from '../../components/settings/TaxConfigSection';
 import ConsentSettingsTab from '../../components/settings/ConsentSettingsTab';
 import VehicleReminderSettings from '../../components/settings/VehicleReminderSettings';
 import VehicleTypesSettings from '../../components/settings/VehicleTypesSettings';
+import WorkshopBaysSettings from '../../components/settings/WorkshopBaysSettings';
 import WhatsAppSettingsTab from '../../components/settings/WhatsAppSettingsTab';
 import { invalidateRetentionCatalog } from '../../hooks/useRetentionCatalog';
 import { Building2, Receipt, ShoppingCart, Wrench, Landmark, MessageCircle, Printer, Package, FileText, ShieldCheck } from 'lucide-react';
@@ -33,7 +34,9 @@ const TenantSettingsPage = () => {
   // /dian/config exige estos roles (App.jsx y backend dian.routes.js).
   const canConfigureDian = ['admin', 'manager', 'accountant'].includes(user?.role);
   const { setFeatures, setTaxConfig, setVehicleTypes } = useTenantStore();
-  const hasTreasury = (useTenantStore((s) => s.enabledModules) || []).includes('treasury');
+  const enabledModules = useTenantStore((s) => s.enabledModules) || [];
+  const hasTreasury = enabledModules.includes('treasury');
+  const hasWorkshop = enabledModules.includes('workshop');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
@@ -938,6 +941,9 @@ const TenantSettingsPage = () => {
               </div>
             </div>
           </Card>
+
+          {/* Taller — Bahías por sede + enlace de la pantalla del TV (guarda al instante) */}
+          {hasWorkshop && <WorkshopBaysSettings canEdit={canEdit} />}
 
           {/* Taller — Tipos de vehículo que atiende (tipo de establecimiento) */}
           <VehicleTypesSettings

@@ -130,6 +130,8 @@ const WorkshopReportPage = lazy(() => import('./pages/workshop/WorkshopReportPag
 const AppointmentsPage = lazy(() => import('./pages/workshop/AppointmentsPage'));
 const AppointmentSettingsPage = lazy(() => import('./pages/workshop/AppointmentSettingsPage'));
 import PublicAppointmentPage from './pages/workshop/PublicAppointmentPage';
+const WorkshopDisplayPage = lazy(() => import('./pages/workshop/WorkshopDisplayPage'));
+const WorkshopBoardPage = lazy(() => import('./pages/workshop/WorkshopBoardPage'));
 import VehiclePortalPage from './pages/workshop/VehiclePortalPage';
 const MaintenanceTypesPage = lazy(() => import('./pages/workshop/MaintenanceTypesPage'));
 const CustomersPage = lazy(() => import('./pages/customers/CustomersPage'));
@@ -359,6 +361,8 @@ function App() {
         <Route path="/documento/:token"    element={<QuotePublicPage />} />
         <Route path="/public/quote/:token" element={<QuotePublicPage />} />
         <Route path="/agendar/:slug"       element={<PublicAppointmentPage />} />
+        {/* Pantalla de taller para el TV de la sede (sin login). */}
+        <Route path="/pantalla-taller/:token" element={<Suspense fallback={<div className="h-screen bg-zinc-950" />}><WorkshopDisplayPage /></Suspense>} />
         <Route path="/simulador/:slug"     element={<Suspense fallback={<Loading fullScreen />}><SolarSimulatorPage /></Suspense>} />
         {/* Habeas data / acta de ingreso: el cliente acepta con un código OTP */}
         <Route path="/autorizacion/:token" element={<ConsentPublicPage />} />
@@ -526,6 +530,7 @@ function App() {
         {/* Lazy + Suspense: estas 6 rutas son el alcance completo de la PWA
             "Taller" instalada (mobile-only, con offline). Ver frontend/src/pwa/. */}
         <Route path="workshop/work-orders"             element={<TenantRoute module="workshop"><Suspense fallback={<Loading fullScreen />}><WorkOrdersPage /></Suspense></TenantRoute>} />
+        <Route path="workshop/board"                   element={<TenantRoute module="workshop"><Suspense fallback={<Loading fullScreen />}><WorkshopBoardPage /></Suspense></TenantRoute>} />
         <Route path="workshop/report"                  element={<TenantRoute module="workshop"><Suspense fallback={<Loading fullScreen />}><WorkshopReportPage /></Suspense></TenantRoute>} />
         <Route path="workshop/appointments"            element={<TenantRoute module="workshop"><Suspense fallback={<Loading fullScreen />}><AppointmentsPage /></Suspense></TenantRoute>} />
         <Route path="workshop/appointments/settings"   element={<TenantRoute module="workshop" roles={['admin', 'manager']}><Suspense fallback={<Loading fullScreen />}><AppointmentSettingsPage /></Suspense></TenantRoute>} />

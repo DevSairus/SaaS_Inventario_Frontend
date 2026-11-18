@@ -48,6 +48,7 @@ const NAV = [
         label: "Orden de Trabajo",
         path: "/workshop/work-orders/new",
       },
+      { label: "Tablero del taller",    path: "/workshop/board" },
       { label: "Vehículos",             path: "/workshop/vehicles" },
       { label: "Agenda de citas",       path: "/workshop/appointments" },
       // appointments.routes.js: GET /config solo admin/manager (ni siquiera super_admin).

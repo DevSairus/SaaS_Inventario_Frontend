@@ -31,6 +31,7 @@ import IntakeAuthorizationCard from '../../components/consents/IntakeAuthorizati
 import { consentsAPI } from '../../api/consents';
 import { groupDocumentItems } from '../../components/combos/comboUtils';
 import useWhatsAppPitbox from '../../hooks/useWhatsAppPitbox';
+import OrderBayCard from '../../components/workshop/board/OrderBayCard';
 
 const STATUS_FLOW = ['recibido', 'en_proceso', 'en_espera', 'listo', 'entregado'];
 
@@ -1985,6 +1986,9 @@ export default function WorkOrderDetailPage() {
                   : <p className="text-sm text-gray-400 italic">Sin asignar</p>
               )}
             </div>
+
+            {/* Bahía (pantalla de taller) */}
+            <OrderBayCard order={order} onChanged={() => fetchOrder(id)} />
 
             {/* Bodega */}
             <div className="bg-white dark:bg-graphite border border-gray-100 dark:border-white/10 rounded-xl p-4">
