@@ -10,6 +10,7 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import crmApi from '../api/crm';
 import useAuthStore from '../store/authStore';
+import useTenantStore from '../store/tenantStore';
 import { buildWaLink, formatColombianPhone, trackWhatsAppInteraction } from '../utils/whatsapp';
 
 const STATUS_TTL_MS = 60 * 1000;
@@ -18,9 +19,15 @@ let cached = { at: 0, promise: null };
 // el navegador no bloquee la pestaña de wa.me. null = nunca se ha cargado.
 let lastKnown = null;
 
-// El status vive bajo requireModule('crm'): sin CRM responde 403 y se trata
-// como no operativo (wa.me).
+// El status vive bajo requireModule('crm'): sin CRM se trata como no operativo
+// (wa.me). Si ya sabemos que el tenant no tiene CRM ni siquiera se consulta;
+// si los módulos aún no cargan, el 403 llega silencioso (skipGlobalForbidden).
 export function loadWhatsAppPitboxStatus() {
+  const modules = useTenantStore.getState().enabledModules;
+  if (Array.isArray(modules) && !modules.includes('crm')) {
+    lastKnown = false;
+    return Promise.resolve(false);
+  }
   if (!cached.promise || Date.now() - cached.at > STATUS_TTL_MS) {
     cached = {
       at: Date.now(),

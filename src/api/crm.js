@@ -47,7 +47,10 @@ const crmApi = {
   disconnectMetaIntegration: () => api.delete('/crm/meta-integration/disconnect'),
 
   // ── WhatsApp Cloud API + coexistencia ────────────────────────────────────
-  getWhatsAppCloudStatus: () => api.get('/crm/whatsapp/status'),
+  // Se consulta desde pantallas de Ventas/Taller (useWhatsAppPitbox) aunque el
+  // tenant no tenga CRM: el 403 ahí es esperado y no debe mostrar el aviso
+  // global de "Tu plan no incluye el módulo CRM".
+  getWhatsAppCloudStatus: () => api.get('/crm/whatsapp/status', { skipGlobalForbidden: true }),
   completeWhatsAppEmbeddedSignup: (data) => api.post('/crm/whatsapp/embedded-signup/complete', data),
   connectWhatsAppWithToken: (data) => api.post('/crm/whatsapp/connect-token', data),
   setWhatsAppWebhookVerifyToken: (webhookVerifyToken) => api.put('/crm/whatsapp/webhook-verify-token', { webhook_verify_token: webhookVerifyToken }),
