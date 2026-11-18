@@ -33,6 +33,7 @@ const TenantSettingsPage = () => {
   // /dian/config exige estos roles (App.jsx y backend dian.routes.js).
   const canConfigureDian = ['admin', 'manager', 'accountant'].includes(user?.role);
   const { setFeatures, setTaxConfig, setVehicleTypes } = useTenantStore();
+  const hasTreasury = (useTenantStore((s) => s.enabledModules) || []).includes('treasury');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
@@ -788,6 +789,40 @@ const TenantSettingsPage = () => {
                     }`} />
                   </button>
                 </div>
+
+                {/* Toggle: Exigir caja abierta para cobrar (solo con Tesorería).
+                    business_config.require_open_cash_session; sin definir = exigir. */}
+                {hasTreasury && (() => {
+                  const requireCash = config.business_config?.require_open_cash_session !== false;
+                  return (
+                    <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
+                      <div className="flex-1 mr-4">
+                        <p className="font-medium text-gray-900 text-sm">Exigir caja abierta para cobrar</p>
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          Con esta opción activa, cualquier cobro, anticipo o devolución de dinero (en efectivo o
+                          por otro medio) exige una caja abierta en la sede. Si la desactivas, se puede cobrar sin
+                          caja abierta: si hay una caja abierta el pago queda en su cuadre; si no, no aparece en
+                          ningún cierre de caja (sí en Flujo de Caja y en contabilidad).
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        disabled={!canEdit}
+                        onClick={() => setConfig(prev => ({
+                          ...prev,
+                          business_config: { ...prev.business_config, require_open_cash_session: !requireCash },
+                        }))}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0 disabled:opacity-50 ${
+                          requireCash ? 'bg-blue-600' : 'bg-gray-300'
+                        }`}
+                      >
+                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                          requireCash ? 'translate-x-6' : 'translate-x-1'
+                        }`} />
+                      </button>
+                    </div>
+                  );
+                })()}
 
               </div>
             </div>
