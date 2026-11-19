@@ -202,8 +202,11 @@ const useSuperAdminStore = create((set, get) => ({
   createTenantUser: async (tenantId, userData) => {
     set({ isSubmitting: true, error: null });
     try {
-      await superAdminAPI.createTenantUser(tenantId, userData);
+      const result = await superAdminAPI.createTenantUser(tenantId, userData);
       set({ isSubmitting: false });
+      // La persona ya trabajaba en otra empresa: quedó vinculada (no se creó
+      // otra cuenta y conserva su contraseña). Ver identity.service.js.
+      if (result?.linked) toast.success(result.message, { duration: 8000 });
       return true;
     } catch (error) {
       set({
