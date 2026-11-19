@@ -7,6 +7,21 @@ export const authAPI = {
     return response.data;
   },
 
+  // Una persona en varias empresas (backend services/auth/identity.service.js):
+  // elegir empresa después del login, listar las suyas y cambiar sin cerrar sesión.
+  selectTenant: async (selectionToken, userId) => {
+    const response = await api.post('/auth/select-tenant', { selection_token: selectionToken, user_id: userId });
+    return response.data;
+  },
+  getCompanies: async () => {
+    const response = await api.get('/auth/companies');
+    return response.data;
+  },
+  switchTenant: async (tenantId) => {
+    const response = await api.post('/auth/switch-tenant', { tenant_id: tenantId });
+    return response.data;
+  },
+
   // Obtener perfil
   getProfile: async () => {
     const response = await api.get('/auth/profile');

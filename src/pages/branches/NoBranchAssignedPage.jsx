@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import useAuthStore from '../../store/authStore';
+import CompanySwitcher from '../../components/layout/CompanySwitcher';
 
 export default function NoBranchAssignedPage() {
   const navigate = useNavigate();
@@ -27,6 +28,12 @@ export default function NoBranchAssignedPage() {
           Contacta a un administrador de tu empresa para que te asigne una sede desde
           la sección de administración de sedes. Una vez asignada, podrás ingresar con normalidad.
         </p>
+        {/* Quien trabaja en varias empresas puede entrar a otra mientras le
+            asignan sede en esta (solo aparece si tiene más de una). */}
+        <div className="flex flex-col items-center gap-2 mb-4 [&:not(:has(button))]:hidden">
+          <p className="text-xs text-gray-500 dark:text-gray-400">O entra a otra de tus empresas:</p>
+          <CompanySwitcher />
+        </div>
         <button
           onClick={handleLogout}
           className="w-full px-4 py-2.5 bg-pink-600 hover:bg-pink-700 text-white rounded-lg text-sm font-semibold transition-colors"

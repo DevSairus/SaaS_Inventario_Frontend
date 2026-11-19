@@ -12,7 +12,20 @@ import {
   setImpersonatorSession,
   clearImpersonatorSession,
   decodeJwtPayload,
+  setStoredBranchId,
 } from '../utils/authStorage';
+import offlineDb from '../pwa/offlineQueue/db';
+
+// Otra pestaña cambió de empresa: esta recarga para no seguir mostrando (ni
+// guardando) datos de la empresa anterior con el token de la nueva.
+if (typeof window !== 'undefined') {
+  window.addEventListener('storage', (e) => {
+    if (e.key !== 'token' || !e.oldValue || !e.newValue) return;
+    const before = decodeJwtPayload(e.oldValue)?.tenant_id;
+    const after = decodeJwtPayload(e.newValue)?.tenant_id;
+    if (before && after && before !== after) window.location.reload();
+  });
+}
 
 function loadInitialSession() {
   const token = getStoredToken();
@@ -40,6 +53,16 @@ const useAuthStore = create((set) => ({
     try {
       const response = await authAPI.login(email, password);
 
+      // Trabaja en varias empresas: la página de login muestra la lista y
+      // llama a selectCompany con la elegida.
+      if (response.success && response.data?.requires_tenant_selection) {
+        set({ isLoading: false, error: null });
+        return {
+          success: false,
+          selection: { token: response.data.selection_token, companies: response.data.companies || [] },
+        };
+      }
+
       if (response.success) {
         const { token, user } = response.data;
 
@@ -66,6 +89,53 @@ const useAuthStore = create((set) => ({
         isLoading: false,
       });
       return { success: false, error: errorMessage };
+    }
+  },
+
+  // Login en dos pasos: la empresa elegida de la lista que devolvió login().
+  selectCompany: async (selectionToken, userId) => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await authAPI.selectTenant(selectionToken, userId);
+      const { token, user } = response.data;
+      setStoredBranchId(null);
+      setStoredToken(token);
+      setStoredUser(user);
+      set({ user, token, isAuthenticated: true, isLoading: false, error: null });
+      return { success: true, user };
+    } catch (error) {
+      const errorMessage = error.response?.data?.message || 'No se pudo entrar a la empresa';
+      set({ error: errorMessage, isLoading: false });
+      return { success: false, error: errorMessage, expired: error.response?.data?.code === 'SELECTION_EXPIRED' };
+    }
+  },
+
+  // Cambia de empresa sin cerrar sesión. Navegación dura a /dashboard: así
+  // ningún store, caché ni socket conserva datos de la empresa anterior (igual
+  // que la impersonación de soporte).
+  switchCompany: async (tenantId) => {
+    // La cola sin conexión de Taller no sabe de qué empresa es cada cambio:
+    // si queda algo pendiente, se sincronizaría en la empresa equivocada.
+    const pending = await offlineDb.mutationQueue
+      .where('status').anyOf('pending', 'error', 'conflict').count()
+      .catch(() => 0);
+    if (pending > 0) {
+      return {
+        success: false,
+        error: `Hay ${pending} cambio(s) de Taller sin sincronizar en esta empresa. Conéctate y espera a que se sincronicen antes de cambiar de empresa.`,
+      };
+    }
+    try {
+      const response = await authAPI.switchTenant(tenantId);
+      const { token, user } = response.data;
+      useNotificationsBundleStore.getState().stopPolling();
+      setStoredBranchId(null); // la sede activa era de la otra empresa
+      setStoredToken(token);
+      setStoredUser(user);
+      window.location.href = '/dashboard';
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.response?.data?.message || 'No se pudo cambiar de empresa' };
     }
   },
 

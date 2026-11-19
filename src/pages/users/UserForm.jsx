@@ -93,6 +93,55 @@ const UserForm = () => {
   // en edición, el acceso se habilita/revoca con el flujo dedicado más abajo.
   const isNoAccessTechnician = !isEdit && formData.role === 'technician' && !formData.has_system_access;
 
+  // ── Persona que ya tiene cuenta en otra empresa (contador, auxiliar) ──────
+  // Se consulta al salir del campo Email y antes de crear. Si existe, no se
+  // crea otra cuenta: se vincula con el rol elegido y entra con su misma
+  // contraseña (backend services/auth/identity.service.js).
+  const [emailCheck, setEmailCheck] = useState({ email: '', status: null });
+  const [linking, setLinking] = useState(false);
+  const normalizedEmail = formData.email.trim().toLowerCase();
+  const emailStatus = emailCheck.email === normalizedEmail ? emailCheck.status : null;
+  const isLinkMode = !isEdit && !isNoAccessTechnician && emailStatus === 'linkable';
+
+  const checkEmail = async (email) => {
+    const value = String(email || '').trim().toLowerCase();
+    if (isEdit || !value || !value.includes('@')) return null;
+    if (emailCheck.email === value && emailCheck.status) return emailCheck.status;
+    try {
+      const { status, is_active: isActive } = await usersAPI.getEmailStatus(value);
+      setEmailCheck({ email: value, status });
+      if (status === 'member') {
+        setErrors((prev) => ({
+          ...prev,
+          email: isActive === false
+            ? 'Esta persona ya es usuario de tu empresa pero está inactiva: actívala desde la lista'
+            : 'Esta persona ya es usuario de tu empresa',
+        }));
+      }
+      return status;
+    } catch {
+      return null;
+    }
+  };
+
+  const handleLink = async () => {
+    setLinking(true);
+    try {
+      const result = await usersAPI.link({ email: normalizedEmail, role: formData.role });
+      toast.success(result.message || 'Usuario vinculado', { duration: 6000 });
+      navigate('/users');
+    } catch (err) {
+      const data = err.response?.data;
+      if (err.response?.status === 402) {
+        setPlanLimitModal({ message: data?.message, limit: data?.limit });
+      } else {
+        toast.error(data?.message || 'No se pudo vincular el usuario');
+      }
+    } finally {
+      setLinking(false);
+    }
+  };
+
   const validate = () => {
     const newErrors = {};
     if (!formData.first_name.trim()) newErrors.first_name = 'Nombre requerido';
@@ -112,6 +161,14 @@ const UserForm = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isLinkMode) return handleLink();
+
+    // ¿Ya tiene cuenta en otra empresa? Se revisa antes de exigir nombre y
+    // contraseña: si existe, no se crea, se vincula (aparece el aviso).
+    if (!isEdit && !isNoAccessTechnician) {
+      const status = await checkEmail(formData.email);
+      if (status === 'linkable' || status === 'member') return;
+    }
 
     const clientErrors = validate();
     if (Object.keys(clientErrors).length > 0) {
@@ -128,6 +185,8 @@ const UserForm = () => {
         if (result?.success !== false) {
           toast.success('Usuario actualizado');
           navigate('/users');
+        } else {
+          toast.error(result?.error || 'No se pudo actualizar el usuario', { duration: 6000 });
         }
       } else {
         const payload = { ...formData };
@@ -146,6 +205,10 @@ const UserForm = () => {
       }
       if (err?.type === 'FORBIDDEN') {
         toast.error(err.message || 'Tu rol no tiene permiso para crear usuarios');
+        return;
+      }
+      if (err?.code === 'EMAIL_LINKABLE') {
+        setEmailCheck({ email: formData.email.trim().toLowerCase(), status: 'linkable' });
         return;
       }
       if (err?.type === 'VALIDATION') {
@@ -258,13 +321,27 @@ const UserForm = () => {
                     type="email"
                     value={formData.email}
                     onChange={(e) => handleChange('email', e.target.value)}
+                    onBlur={(e) => checkEmail(e.target.value)}
                     error={errors.email}
                     placeholder="usuario@empresa.com"
                     disabled={isEdit}
                   />
 
+                  {isLinkMode && (
+                    <div className="md:col-span-2 p-4 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-900 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-200">
+                      <p className="font-semibold">Esta persona ya tiene cuenta en Pitbox</p>
+                      <p className="mt-1">
+                        Trabaja en otra empresa (por ejemplo, es contador o auxiliar). No hace falta crearle otra
+                        cuenta ni contraseña: vincúlala a tu empresa con el rol que elijas abajo. Entrará con su
+                        mismo correo y contraseña, y podrá cambiar de empresa sin cerrar sesión. Su nombre y
+                        teléfono se toman de su cuenta y queda en la sede principal (ajústala en Sedes si hace
+                        falta). Le llegará un correo avisándole.
+                      </p>
+                    </div>
+                  )}
+
                   {/* Contraseña + hints */}
-                  <div>
+                  <div className={isLinkMode ? 'hidden' : ''}>
                     <Input
                       label={isEdit ? 'Nueva Contraseña (opcional)' : 'Contraseña *'}
                       type="password"
@@ -530,10 +607,10 @@ const UserForm = () => {
             <Button
               type="submit"
               variant="primary"
-              loading={isSubmitting}
+              loading={isSubmitting || linking}
               className="flex-1"
             >
-              {isEdit ? 'Actualizar Usuario' : 'Crear Usuario'}
+              {isEdit ? 'Actualizar Usuario' : isLinkMode ? 'Vincular a mi empresa' : 'Crear Usuario'}
             </Button>
           </div>
         </form>

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import Sidebar from './Sidebar';
 import WorkshopBottomNav from './WorkshopBottomNav';
 import NotificationsCenter from '../common/NotificationsCenter';
+import CompanySwitcher from './CompanySwitcher';
 import AppointmentNotificationsBell from '../common/AppointmentNotificationsBell';
 import QuoteNotificationsBell from '../common/QuoteNotificationsBell';
 import BranchSelector from './BranchSelector';
@@ -136,6 +137,7 @@ function Layout({ children }) {
           </span>
 
           <div className="flex items-center gap-2">
+            <CompanySwitcher compact />
             <BranchSelector />
             <NotificationsCenter />
           </div>
@@ -143,6 +145,7 @@ function Layout({ children }) {
 
         {/* Barra desktop con alertas */}
         <div className="hidden lg:flex sticky top-0 z-30 items-center justify-end gap-3 bg-gray-50 dark:bg-[#0D0D0D] px-6 pt-4 pb-1 flex-shrink-0">
+          <CompanySwitcher />
           <BranchSelector />
           <NotificationsCenter />
         </div>

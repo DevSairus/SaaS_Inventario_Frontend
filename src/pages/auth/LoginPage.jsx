@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useAuthStore from '../../store/authStore';
 import { authAPI } from '../../api/auth';
+import { roleLabel } from '../../utils/roleLabels';
 
 const PARTICLES = Array.from({ length: 18 }, (_, i) => ({
   id: i,
@@ -14,7 +15,7 @@ const PARTICLES = Array.from({ length: 18 }, (_, i) => ({
 
 function LoginPage() {
   const navigate = useNavigate();
-  const { login, isLoading, error, clearError } = useAuthStore();
+  const { login, selectCompany, isLoading, error, clearError } = useAuthStore();
 
   const [view, setView] = useState('login'); // 'login' | 'forgot' | 'sent'
   const [showPass, setShowPass] = useState(false);
@@ -35,8 +36,35 @@ function LoginPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const success = await login(formData.email, formData.password);
-    if (success) navigate('/dashboard');
+    const result = await login(formData.email, formData.password);
+    // Trabaja en varias empresas: elegir a cuál entrar.
+    if (result?.selection) {
+      setSelection(result.selection);
+      setCompanySearch('');
+      setView('select');
+      return;
+    }
+    if (result?.success) navigate('/dashboard');
+  };
+
+  const [selection, setSelection] = useState(null); // { token, companies }
+  const [companySearch, setCompanySearch] = useState('');
+  const [selectingId, setSelectingId] = useState(null);
+  const lastUsedId = selection?.companies?.reduce(
+    (best, c) => (c.last_login && (!best || new Date(c.last_login) > new Date(best.last_login)) ? c : best), null,
+  )?.user_id;
+  const visibleCompanies = (selection?.companies || []).filter((c) =>
+    c.company_name.toLowerCase().includes(companySearch.trim().toLowerCase()));
+
+  const handleSelectCompany = async (company) => {
+    setSelectingId(company.user_id);
+    const result = await selectCompany(selection.token, company.user_id);
+    setSelectingId(null);
+    if (result.success) return navigate('/dashboard');
+    if (result.expired) {
+      setSelection(null);
+      setView('login');
+    }
   };
 
   const handleForgot = async (e) => {
@@ -207,6 +235,66 @@ function LoginPage() {
                   )}
                 </button>
               </form>
+            </div>
+          )}
+
+          {/* ── ELEGIR EMPRESA (trabaja en varias) ── */}
+          {view === 'select' && selection && (
+            <div className="p-8 fade-in">
+              <button onClick={() => { setView('login'); setSelection(null); clearError(); }}
+                className="flex items-center gap-1 text-slate-400 hover:text-slate-200 text-sm mb-6 transition-colors">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+                Volver
+              </button>
+              <h2 className="text-xl font-semibold text-white mb-1">¿A qué empresa quieres entrar?</h2>
+              <p className="text-slate-400 text-sm mb-5">
+                Trabajas en {selection.companies.length} empresas. Después puedes cambiar de empresa sin cerrar sesión.
+              </p>
+
+              {error && (
+                <div className="mb-4 bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-xl text-sm">{error}</div>
+              )}
+
+              {selection.companies.length > 5 && (
+                <input
+                  type="search"
+                  value={companySearch}
+                  onChange={(e) => setCompanySearch(e.target.value)}
+                  placeholder="Buscar empresa…"
+                  className="inp w-full px-4 py-2.5 rounded-xl text-sm mb-3"
+                  autoFocus
+                />
+              )}
+
+              <div className="space-y-2 max-h-[22rem] overflow-y-auto pr-1">
+                {visibleCompanies.map((c) => (
+                  <button
+                    key={c.user_id}
+                    type="button"
+                    disabled={!!selectingId}
+                    onClick={() => handleSelectCompany(c)}
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-colors border border-white/10 bg-white/[0.03] hover:border-[#CF3A0B] hover:bg-[#CF3A0B]/10 disabled:opacity-60"
+                  >
+                    {c.logo_url
+                      ? <img src={c.logo_url} alt="" className="w-9 h-9 rounded-lg object-contain bg-white/90 p-0.5 shrink-0" />
+                      : <span className="w-9 h-9 rounded-lg bg-[#CF3A0B]/20 text-[#F0572B] font-bold flex items-center justify-center shrink-0">{c.company_name[0]?.toUpperCase()}</span>}
+                    <span className="flex-1 min-w-0">
+                      <span className="block text-sm font-semibold text-slate-100 truncate">{c.company_name}</span>
+                      <span className="block text-xs text-slate-400">
+                        {roleLabel(c.role)}{c.user_id === lastUsedId ? ' · Última usada' : ''}
+                      </span>
+                    </span>
+                    {selectingId === c.user_id
+                      ? <svg className="animate-spin w-4 h-4 text-slate-300" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
+                      : <svg className="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>}
+                  </button>
+                ))}
+                {visibleCompanies.length === 0 && (
+                  <p className="text-sm text-slate-500 text-center py-4">Ninguna empresa coincide con la búsqueda.</p>
+                )}
+              </div>
             </div>
           )}
 
