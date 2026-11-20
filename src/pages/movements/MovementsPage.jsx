@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useMovementsStore } from '../../store/movementsStore';
@@ -58,6 +59,8 @@ const MovementsPage = () => {
     setPage(1);
   };
 
+  // Kardex: la pantalla valorizada de Inventario → Kardex.
+  const navigate = useNavigate();
   const handleViewKardex = async (productId, page = 1) => {
     // Abrir modal primero para que el usuario vea el loading
     const product = products.find(p => p.id === productId) || selectedProduct;
@@ -270,7 +273,7 @@ const MovementsPage = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
                         <button
-                          onClick={() => handleViewKardex(movement.product_id)}
+                          onClick={() => navigate(`/inventory/kardex?product=${movement.product_id}`)}
                           className="text-blue-600 hover:text-blue-900"
                           title="Ver Kardex"
                         >

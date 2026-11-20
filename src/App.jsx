@@ -619,7 +619,7 @@ function App() {
         <Route path="settings/whatsapp" element={<TenantRoute roles={['admin']}><WhatsAppSettingsRedirect /></TenantRoute>} />
 
         <Route path="reports"  element={<TenantRoute><Suspense fallback={<Loading fullScreen />}><ReportsPage /></Suspense></TenantRoute>} />
-        <Route path="reports/fiscal" element={<TenantRoute><Suspense fallback={<Loading fullScreen />}><FiscalReportsPage /></Suspense></TenantRoute>} />
+        <Route path="reports/fiscal" element={<TenantRoute roles={["admin", "super_admin", "manager", "accountant"]}><Suspense fallback={<Loading fullScreen />}><FiscalReportsPage /></Suspense></TenantRoute>} />
         <Route path="nexa/aprobaciones" element={<TenantRoute module="ai_assistant"><Suspense fallback={<Loading fullScreen />}><NexaApprovalsPage /></Suspense></TenantRoute>} />
         <Route path="users"          element={<TenantRoute><Suspense fallback={<Loading fullScreen />}><UsersPage /></Suspense></TenantRoute>} />
         <Route path="users/new"      element={<TenantRoute><Suspense fallback={<Loading fullScreen />}><UserForm /></Suspense></TenantRoute>} />

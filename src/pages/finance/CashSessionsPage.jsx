@@ -204,6 +204,8 @@ const CashSessionsPage = () => {
 
   // Tirilla POS: arqueo (caja abierta) o cierre (caja cerrada).
   const tenantId = useAuthStore((s) => s.user?.tenant_id);
+  // Corregir un faltante: mismo permiso que la ruta del backend.
+  const canAdjust = ['admin', 'manager', 'accountant', 'super_admin'].includes(useAuthStore.getState().user?.role);
   const posEnabled = getPosSettings(tenantId).enabled;
   const printSessionTicket = async (sessionId, opts = {}) => {
     try {
@@ -432,7 +434,7 @@ const CashSessionsPage = () => {
                                   <PrinterIcon className="w-4 h-4" /> Tirilla
                                 </button>
                               )}
-                              {s.status === 'closed' && sessionOutstanding(s) > 0.009 && (
+                              {canAdjust && s.status === 'closed' && sessionOutstanding(s) > 0.009 && (
                                 <button
                                   onClick={() => setAdjustModal({ session: s, type: 'found', amount: String(Math.round(sessionOutstanding(s) * 100) / 100), method: 'efectivo', notes: '' })}
                                   className="mr-3 text-xs font-medium text-amber-700 hover:text-amber-900"

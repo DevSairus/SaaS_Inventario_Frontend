@@ -81,13 +81,16 @@ export default function RegisterSalePaymentModal({ invoice, onClose, onSuccess }
         });
         if (res?.data?.advance) toast.success(res.data.message, { duration: 6000 });
         // Recibo en tirilla si este equipo tiene impresora POS con impresión automática.
-        const history = res?.data?.data?.payment_history || [];
-        const newPayment = history[history.length - 1];
-        if (newPayment?.payment_id) {
-          printPosDocument('payment', newPayment.payment_id, { tenantId, auto: true })
-            .catch(() => toast.error('No se pudo imprimir la tirilla del recibo'));
-        }
+        // Una tirilla por recibo generado: en una factura que agrupa remisiones
+        // los pagos quedan en las remisiones, no en el historial de la factura.
         const receipts = res?.data?.receipts || [];
+        const autoIds = receipts.length
+          ? receipts.map((r) => r.payment_id)
+          : [(res?.data?.data?.payment_history || []).slice(-1)[0]?.payment_id];
+        autoIds.filter(Boolean).forEach((pid) => {
+          printPosDocument('payment', pid, { tenantId, auto: true })
+            .catch(() => toast.error('No se pudo imprimir la tirilla del recibo'));
+        });
         if (receipts.length) {
           toast.success('Pago registrado');
           setDoneReceipts(receipts);
