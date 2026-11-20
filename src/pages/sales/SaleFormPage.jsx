@@ -48,6 +48,7 @@ import {
   INPUT_CONFIG 
 } from '../../utils/formatters';
 import toast from 'react-hot-toast';
+import { flagMissing, flagServerErrors } from '../../utils/formErrors';
 import ProductImageViewer from '../../components/products/ProductImageViewer';
 import ComboPickerModal from '../../components/combos/ComboPickerModal';
 import { groupDocumentItems, newComboGroupId } from '../../components/combos/comboUtils';
@@ -869,17 +870,20 @@ function SaleFormPage() {
 
   const handleSubmit = async (e) => {
     e?.preventDefault();
-    if (items.length === 0) {
-      toast('Debe agregar al menos un producto');
-      return;
-    }
     const hasTrackedProducts = items.some(
       item => item.item_type !== 'service' && item.item_type !== 'free_line' && item.product_id
     );
-    if (hasTrackedProducts && !formData.warehouse_id) {
-      toast('Esta venta tiene productos: selecciona una bodega para poder confirmarla después');
-      return;
-    }
+    // Todo lo que falta de una vez, marcado en pantalla.
+    if (flagMissing([
+      !formData.sale_date && { field: 'sale_date', label: 'Fecha' },
+      showQuickCustomer && !String(quickCustomer.full_name || '').trim() && { field: 'quick_customer_name', label: 'Nombre del cliente nuevo' },
+      items.length === 0 && { field: 'items', label: 'Al menos un producto o servicio' },
+      ...items.map((it, i) => it.item_type === 'free_line' && !String(it.product_name || '').trim()
+        && { field: `items.${i}.product_name`, label: `Descripción de la línea ${i + 1}` }),
+      ...items.map((it, i) => !(toNumber(it.quantity, 0) > 0)
+        && { field: `items.${i}.quantity`, label: `Cantidad de ${it.product_name || `la línea ${i + 1}`}` }),
+      hasTrackedProducts && !formData.warehouse_id && { field: 'warehouse_id', label: 'Bodega (la venta tiene productos con inventario)' },
+    ])) return;
     await submitSale(formData.document_type);
   };
 
@@ -945,7 +949,9 @@ function SaleFormPage() {
         navigate(isCrmQuoteMode ? `/quotes/${result.id}` : `/sales/${result.id}`);
       }
     } catch (error) {
-      toast.error(error.message || 'Error al guardar la venta');
+      if (!flagServerErrors(error)) {
+        toast.error(error.response?.data?.message || error.message || 'Error al guardar la venta');
+      }
     }
   };
 
@@ -953,7 +959,7 @@ function SaleFormPage() {
   // edita igual que cualquier línea; el combo solo agrupa).
   const renderItemRow = (item, index, inCombo = false) => (
     <tr key={index} className={`hover:bg-gray-50 transition-colors ${inCombo ? 'bg-emerald-50/30' : ''}`}>
-      <td className={`py-1.5 px-2 ${inCombo ? 'pl-6 border-l-4 border-emerald-300' : ''}`}>
+      <td className={`py-1.5 px-2 ${inCombo ? 'pl-6 border-l-4 border-emerald-300' : ''}`} data-field={`items.${index}.product_name`}>
         {item.item_type === 'free_line' ? (
           <input
             type="text"
@@ -987,7 +993,7 @@ function SaleFormPage() {
           )}
         </div>
       </td>
-      <td className="py-1.5 px-2">
+      <td className="py-1.5 px-2" data-field={`items.${index}.quantity`}>
         <Input
           type="number"
           {...INPUT_CONFIG.quantity}
@@ -1191,7 +1197,8 @@ function SaleFormPage() {
             <Button
               size="sm"
               onClick={handleSubmit}
-              disabled={loading || items.length === 0}
+              // Habilitado aunque falten datos: al pulsarlo se marca qué falta.
+              disabled={loading}
               className="bg-blue-600 hover:bg-blue-700"
             >
               <Save className="w-4 h-4 mr-2" />
@@ -1241,7 +1248,7 @@ function SaleFormPage() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-3">
+        <form onSubmit={handleSubmit} noValidate className="space-y-3">
           {/* Datos generales */}
           <div className="card !p-3">
             <div className="grid grid-cols-2 md:grid-cols-6 lg:grid-cols-12 gap-x-3 gap-y-2 items-start">
@@ -1327,7 +1334,7 @@ function SaleFormPage() {
                 </div>
               )}
 
-              <div className="col-span-1 md:col-span-2 lg:col-span-2">
+              <div className="col-span-1 md:col-span-2 lg:col-span-2" data-field="sale_date">
                 <label className={labelCls}>
                   <Calendar className="w-3.5 h-3.5 inline mr-1" />
                   Fecha *
@@ -1358,7 +1365,7 @@ function SaleFormPage() {
                 </div>
               )}
 
-              <div className={`col-span-1 md:col-span-2 ${isCrmQuoteMode ? 'lg:col-span-2' : 'lg:col-span-3'}`}>
+              <div className={`col-span-1 md:col-span-2 ${isCrmQuoteMode ? 'lg:col-span-2' : 'lg:col-span-3'}`} data-field="warehouse_id">
                 <label className={labelCls}>
                   <Package className="w-3.5 h-3.5 inline mr-1" />
                   Bodega
@@ -1427,8 +1434,10 @@ function SaleFormPage() {
                   </button>
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                  <input name="full_name" value={quickCustomer.full_name} onChange={handleQuickCustomerChange}
-                    required={showQuickCustomer} placeholder="Nombre completo *" className={fieldCls} />
+                  <div data-field="quick_customer_name">
+                    <input name="full_name" value={quickCustomer.full_name} onChange={handleQuickCustomerChange}
+                      required={showQuickCustomer} placeholder="Nombre completo *" className={`${fieldCls} w-full`} />
+                  </div>
                   <DocumentTypeSelect value={quickCustomer.document_type} className={fieldCls}
                     onChange={(v) => setQuickCustomer(prev => ({ ...prev, document_type: v }))} />
                   <input name="tax_id" value={quickCustomer.tax_id} onChange={handleQuickCustomerChange}
@@ -1577,7 +1586,7 @@ function SaleFormPage() {
 
           <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_310px] gap-3 items-start">
             {/* Productos */}
-            <div className="card !p-3 min-w-0">
+            <div className="card !p-3 min-w-0" data-field="items">
               <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
                 <div className="flex items-center">
                   <ShoppingCart className="w-4 h-4 text-blue-600 mr-1.5" />

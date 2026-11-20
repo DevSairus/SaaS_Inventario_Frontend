@@ -7,6 +7,8 @@ export const cashSessionsAPI = {
   getSummary: (id) => api.get(`/cash-sessions/${id}/summary`),
   getPayments: (id) => api.get(`/cash-sessions/${id}/payments`),
   close: (id, payload) => api.post(`/cash-sessions/${id}/close`, payload),
+  // Corregir faltante de una caja cerrada: { type: 'found'|'repaid', amount, method, notes }
+  addAdjustment: (id, payload) => api.post(`/cash-sessions/${id}/adjustments`, payload),
   getById: (id) => api.get(`/cash-sessions/${id}`),
   list: (params = {}, config = {}) => api.get('/cash-sessions', { params, ...config }),
 };

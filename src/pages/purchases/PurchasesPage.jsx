@@ -9,6 +9,8 @@ import Layout from '../../components/layout/Layout';
 import InvoiceImportModal from '../../components/purchases/InvoiceImportModal';
 import Combobox, { HighlightMatch } from '../../components/common/Combobox';
 import { formatDate } from '../../utils/formatters';
+import { purchasesAPI } from '../../api/purchases';
+import toast from 'react-hot-toast';
 import {
   PlusIcon,
   EyeIcon,
@@ -63,6 +65,30 @@ const PurchasesPage = () => {
   const [showFilters, setShowFilters]         = useState(false);
   const [search, setSearch]                   = useState('');
   const [serverFilters, setServerFilters]     = useState({ status: '', supplier_id: '', branch_id: '' });
+  // Pestañas: todas / órdenes de compra (sin factura) / facturas de proveedor.
+  const [kind, setKind] = useState('');
+  // Convertir orden en factura: { purchase, invoice_number, invoice_date, due_date }
+  const [invoiceModal, setInvoiceModal] = useState(null);
+  const [savingInvoice, setSavingInvoice] = useState(false);
+
+  const saveInvoice = async () => {
+    if (!invoiceModal.invoice_number.trim()) { toast.error('Indica el número de factura del proveedor'); return; }
+    try {
+      setSavingInvoice(true);
+      const res = await purchasesAPI.registerInvoice(invoiceModal.purchase.id, {
+        invoice_number: invoiceModal.invoice_number.trim(),
+        invoice_date: invoiceModal.invoice_date || undefined,
+        due_date: invoiceModal.due_date || undefined,
+      });
+      toast.success(res?.message || 'Factura registrada');
+      setInvoiceModal(null);
+      fetchPurchases(); fetchStats();
+    } catch (e) {
+      toast.error(e.response?.data?.message || 'No se pudo registrar la factura');
+    } finally {
+      setSavingInvoice(false);
+    }
+  };
 
   useEffect(() => {
     fetchStats();
@@ -76,9 +102,9 @@ const PurchasesPage = () => {
   // Antes de los efectos de carga: la primera consulta ya usa la página de la URL
   useUrlPageSync(pagination.page, setPage);
   useEffect(() => {
-    setFilters(serverFilters);
-    fetchPurchases(serverFilters);
-  }, [serverFilters, pagination.page, pagination.limit]);
+    setFilters({ ...serverFilters, kind });
+    fetchPurchases();
+  }, [serverFilters, kind, pagination.page, pagination.limit]);
 
   /* filtrado local */
   const filtered = useMemo(() => {
@@ -131,6 +157,14 @@ const PurchasesPage = () => {
               <span className="hidden sm:inline">Importar Factura</span>
             </button>
             <button
+              onClick={() => navigate('/purchases/new?kind=order')}
+              title="Mercancía que llega sin factura: entra al inventario y se convierte en factura después"
+              className="inline-flex items-center gap-2 px-4 py-2.5 border border-emerald-600 text-emerald-700 bg-white hover:bg-emerald-50 rounded-lg text-sm font-semibold shadow-sm"
+            >
+              <PlusIcon className="h-4 w-4" />
+              <span className="hidden sm:inline">Orden de compra</span>
+            </button>
+            <button
               onClick={() => navigate('/purchases/new')}
               className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-semibold shadow-sm transition-colors"
             >
@@ -138,6 +172,20 @@ const PurchasesPage = () => {
               Nueva Compra
             </button>
           </div>
+        </div>
+
+        {/* ── Pestañas: órdenes / facturas ── */}
+        <div className="flex gap-1 border-b border-gray-200">
+          {[
+            ['', 'Todas'],
+            ['order', `Órdenes de compra${stats?.open_orders ? ` (${stats.open_orders})` : ''}`],
+            ['invoice', 'Facturas'],
+          ].map(([k, label]) => (
+            <button key={k || 'all'} type="button" onClick={() => { setKind(k); setPage(1); }}
+              className={`px-4 py-2 text-sm font-medium -mb-px border-b-2 ${kind === k ? 'border-emerald-600 text-emerald-700' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
+              {label}
+            </button>
+          ))}
         </div>
 
         {/* ── Stats ── */}
@@ -313,7 +361,11 @@ const PurchasesPage = () => {
                         {p.supplier?.tax_id && <p className="text-xs text-gray-400">{p.supplier.tax_id}</p>}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-gray-500">{fmtDate(p.purchase_date)}</td>
-                      <td className="px-4 py-3 whitespace-nowrap text-gray-600 font-mono text-xs">{p.invoice_number || '—'}</td>
+                      <td className="px-4 py-3 whitespace-nowrap text-gray-600 font-mono text-xs">
+                        {p.invoice_number || (p.purchase_kind === 'order'
+                          ? <span className="font-sans text-[11px] font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">Orden sin factura</span>
+                          : '—')}
+                      </td>
                       <td className="px-4 py-3 text-center whitespace-nowrap"><Chip status={p.status} /></td>
                       <td className="px-4 py-3 text-right whitespace-nowrap font-bold text-gray-800">{fmtCOP(p.total_amount)}</td>
                       <td className="px-4 py-3 text-center whitespace-nowrap sticky right-0 bg-white group-hover:bg-slate-50 transition-colors shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.08)]">
@@ -321,6 +373,15 @@ const PurchasesPage = () => {
                           <button onClick={() => navigate(`/purchases/${p.id}`)} title="Ver detalle" className="p-1.5 rounded-lg text-blue-600 hover:bg-blue-50 transition-colors">
                             <EyeIcon className="h-4 w-4" />
                           </button>
+                          {p.purchase_kind === 'order' && !['draft', 'cancelled'].includes(p.status) && (
+                            <button
+                              onClick={() => setInvoiceModal({ purchase: p, invoice_number: '', invoice_date: new Date().toISOString().slice(0, 10), due_date: '' })}
+                              title="Registrar la factura del proveedor y convertir la orden en factura"
+                              className="px-2 py-1 rounded-lg text-xs font-semibold text-amber-800 bg-amber-50 hover:bg-amber-100"
+                            >
+                              Convertir en factura
+                            </button>
+                          )}
                           {p.status === 'draft' && (
                             <>
                               <button onClick={() => navigate(`/purchases/${p.id}/edit`)} title="Editar" className="p-1.5 rounded-lg text-emerald-600 hover:bg-emerald-50 transition-colors">
@@ -366,6 +427,40 @@ const PurchasesPage = () => {
           )}
         </div>
       </div>
+
+      {invoiceModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-5 space-y-3">
+            <h3 className="text-base font-semibold text-gray-900">Convertir {invoiceModal.purchase.purchase_number} en factura</h3>
+            <p className="text-sm text-gray-500">{invoiceModal.purchase.supplier?.name} · {fmtCOP(invoiceModal.purchase.total_amount)}</p>
+            <label className="block text-sm font-medium text-gray-700">Número de factura del proveedor *
+              <input autoFocus value={invoiceModal.invoice_number}
+                onChange={(e) => setInvoiceModal((m) => ({ ...m, invoice_number: e.target.value }))}
+                className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="Ej: FE-1234" />
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              <label className="block text-sm font-medium text-gray-700">Fecha factura
+                <input type="date" value={invoiceModal.invoice_date}
+                  onChange={(e) => setInvoiceModal((m) => ({ ...m, invoice_date: e.target.value }))}
+                  className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+              </label>
+              <label className="block text-sm font-medium text-gray-700">Vence
+                <input type="date" value={invoiceModal.due_date}
+                  onChange={(e) => setInvoiceModal((m) => ({ ...m, due_date: e.target.value }))}
+                  className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+              </label>
+            </div>
+            <p className="text-xs text-gray-500">Lo ya recibido pasa de “mercancía recibida por facturar” a cuentas por pagar al proveedor, con su IVA y retenciones.</p>
+            <div className="flex justify-end gap-2">
+              <button onClick={() => setInvoiceModal(null)} className="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 rounded-lg">Cancelar</button>
+              <button onClick={saveInvoice} disabled={savingInvoice}
+                className="px-4 py-2 text-sm font-semibold text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 disabled:opacity-50">
+                {savingInvoice ? 'Guardando...' : 'Convertir en factura'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <InvoiceImportModal
         isOpen={showImportModal}

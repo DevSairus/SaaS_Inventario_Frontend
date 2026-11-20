@@ -42,16 +42,20 @@ const PurchaseDetailPage = () => {
     fetchPurchaseById(id);
   };
   const [showSendModal, setShowSendModal] = useState(false);
-  const [invoiceForm, setInvoiceForm] = useState({ invoice_number: '', due_date: '' });
+  const [invoiceForm, setInvoiceForm] = useState({ invoice_number: '', due_date: '', invoice_date: new Date().toISOString().slice(0, 10) });
   const [savingInvoice, setSavingInvoice] = useState(false);
 
   const saveSupplierInvoice = async () => {
     if (!invoiceForm.invoice_number.trim()) { toast('Indica el número de factura'); return; }
     setSavingInvoice(true);
     try {
-      await purchasesAPI.registerInvoice(id, { invoice_number: invoiceForm.invoice_number.trim(), due_date: invoiceForm.due_date || undefined });
-      toast.success('Factura registrada: la compra ya figura en cuentas por pagar');
-      setInvoiceForm({ invoice_number: '', due_date: '' });
+      const res = await purchasesAPI.registerInvoice(id, {
+        invoice_number: invoiceForm.invoice_number.trim(),
+        invoice_date: invoiceForm.invoice_date || undefined,
+        due_date: invoiceForm.due_date || undefined,
+      });
+      toast.success(res?.message || 'Factura registrada: la compra ya figura en cuentas por pagar');
+      setInvoiceForm({ invoice_number: '', due_date: '', invoice_date: new Date().toISOString().slice(0, 10) });
       fetchPurchaseById(id);
     } catch (e) {
       toast.error(e.response?.data?.message || 'No se pudo registrar la factura');
@@ -255,7 +259,15 @@ const PurchaseDetailPage = () => {
         {/* Orden confirmada sin factura ni mercancía: todavía es un pedido. */}
         {['confirmed', 'partially_received', 'received'].includes(purchase.status) && !purchase.invoice_number && (
           <div className="mb-3 text-sm text-blue-800 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
-            {purchase.status === 'confirmed' && (
+            {purchase.purchase_kind === 'order' ? (
+              <p className="mb-2">
+                <span className="font-semibold">Orden de compra sin factura.</span>{' '}
+                {purchase.status === 'confirmed'
+                  ? 'Al recibirla entra al inventario con su costo (contra “mercancía recibida por facturar”).'
+                  : 'La mercancía ya está en inventario.'}{' '}
+                Registra la factura del proveedor para convertirla en factura y llevarla a cuentas por pagar.
+              </p>
+            ) : purchase.status === 'confirmed' && (
               <p className="mb-2">
                 Pedido al proveedor: entrará a cuentas por pagar cuando recibas la mercancía o registres la factura del proveedor.
               </p>
@@ -267,6 +279,15 @@ const PurchaseDetailPage = () => {
                   value={invoiceForm.invoice_number}
                   onChange={(e) => setInvoiceForm((f) => ({ ...f, invoice_number: e.target.value }))}
                   placeholder="Ej: FE-12345"
+                  className="px-2 py-1.5 border border-blue-200 rounded-lg text-sm bg-white"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-blue-700">Fecha factura</label>
+                <input
+                  type="date"
+                  value={invoiceForm.invoice_date}
+                  onChange={(e) => setInvoiceForm((f) => ({ ...f, invoice_date: e.target.value }))}
                   className="px-2 py-1.5 border border-blue-200 rounded-lg text-sm bg-white"
                 />
               </div>
@@ -284,7 +305,7 @@ const PurchaseDetailPage = () => {
                 disabled={savingInvoice}
                 className="px-3 py-1.5 text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
               >
-                {savingInvoice ? 'Guardando...' : 'Registrar factura'}
+                {savingInvoice ? 'Guardando...' : (purchase.purchase_kind === 'order' ? 'Convertir en factura' : 'Registrar factura')}
               </button>
             </div>
           </div>
@@ -438,6 +459,23 @@ const PurchaseDetailPage = () => {
                   ))}
                 </tbody>
                 <tfoot className="bg-gray-50">
+                  {parseFloat(purchase.shipping_cost || 0) > 0 && (
+                    <tr>
+                      <td colSpan="3" className="px-6 pt-3 text-right text-sm text-gray-600">
+                        Flete{purchase.freight_supplier_id ? ' (lo cobra la transportadora: gasto aparte, incluido en el costo de los productos)' : ''}:
+                      </td>
+                      <td className={`px-6 pt-3 text-right text-sm ${purchase.freight_supplier_id ? 'text-gray-400' : 'text-gray-900'}`}>
+                        {formatCurrency(purchase.shipping_cost)}
+                      </td>
+                    </tr>
+                  )}
+                  {purchase.iva_to_cost && parseFloat(purchase.tax_amount || 0) > 0 && (
+                    <tr>
+                      <td colSpan="4" className="px-6 pt-2 text-right text-xs text-gray-500">
+                        IVA no discriminado: {formatCurrency(purchase.tax_amount)} va al costo de los productos.
+                      </td>
+                    </tr>
+                  )}
                   <tr>
                     <td colSpan="3" className="px-6 py-4 text-right text-sm font-semibold text-gray-900">
                       Total:

@@ -32,6 +32,7 @@ const EVENT_GROUPS = [
     events: [
       { key: 'purchase_inventory', label: 'Ingreso a inventario' },
       { key: 'purchase_payable', label: 'Compra a crédito (proveedores)' },
+      { key: 'purchase_goods_received_not_invoiced', label: 'Orden de compra recibida sin factura (transitoria)' },
       { key: 'purchase_cash_account', label: 'Compra de contado' },
       { key: 'purchase_bank_account', label: 'Compra pagada por banco' },
       { key: 'purchase_iva_descontable', label: 'IVA descontable de la compra' },
@@ -62,6 +63,7 @@ const EVENT_GROUPS = [
     events: [
       { key: 'cash_session_surplus', label: 'Sobrante de caja (al cerrar sesión)' },
       { key: 'cash_session_shortage', label: 'Faltante de caja (al cerrar sesión)' },
+      { key: 'cash_session_shortage_employee', label: 'Faltante de caja cargado al cajero (CxC trabajador)' },
       { key: 'customer_advance_liability', label: 'Anticipos recibidos de clientes' },
     ],
   },

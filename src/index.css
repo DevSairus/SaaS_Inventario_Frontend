@@ -311,3 +311,21 @@ body {
 .sidebar-scroll::-webkit-scrollbar-thumb:hover {
   background-color: rgba(255, 255, 255, 0.24);
 }
+/* Campo faltante/inválido marcado por utils/formErrors.js: borde rojo con un
+   pulso corto para que el usuario lo encuentre sin leer el aviso. */
+.field-error {
+  outline: 2px solid #ef4444 !important;
+  outline-offset: 2px;
+  border-radius: 0.375rem;
+  animation: field-error-pulse 0.9s ease-out 2;
+}
+.field-error-hint {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.75rem;
+  color: #dc2626;
+}
+@keyframes field-error-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.55); }
+  100% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+}

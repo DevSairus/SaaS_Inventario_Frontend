@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import { cashSessionsAPI } from '../../api/cashSessions';
+import { usersAPI } from '../../api/users';
 import { formatCurrency, toLocalDateString } from '../../utils/formatters';
 import NumericInput from '../../components/inputs/NumericInput';
 import useBranchStore from '../../store/branchStore';
@@ -100,6 +101,13 @@ const CashSessionsPage = () => {
   const [counted, setCounted] = useState(emptyAmounts);
   const [closingNotes, setClosingNotes] = useState('');
   const [savingClose, setSavingClose] = useState(false);
+  // Faltante al cerrar: pérdida del negocio o a cargo de un empleado.
+  const [shortageTreatment, setShortageTreatment] = useState('loss');
+  const [shortageUserId, setShortageUserId] = useState('');
+  const [staff, setStaff] = useState([]);
+  // Corrección posterior del faltante (dinero encontrado / empleado repone).
+  const [adjustModal, setAdjustModal] = useState(null);
+  const [savingAdjust, setSavingAdjust] = useState(false);
 
   // Modal de detalle de pagos (historial de cajas ya cerradas)
   const [detailModal, setDetailModal] = useState({ open: false, loading: false, transactions: [] });
@@ -209,7 +217,14 @@ const CashSessionsPage = () => {
     try {
       setSavingClose(true);
       const sessionId = currentSession.id;
-      await cashSessionsAPI.close(sessionId, { counted_amounts: counted, notes: closingNotes || null });
+      await cashSessionsAPI.close(sessionId, {
+        counted_amounts: counted,
+        notes: closingNotes || null,
+        ...(totalShortageNow > 0 ? {
+          shortage_treatment: shortageTreatment,
+          shortage_user_id: shortageTreatment === 'employee' ? (shortageUserId || currentSession.opener?.id || null) : null,
+        } : {}),
+      });
       toast.success('Caja cerrada');
       setShowCloseModal(false);
       loadData();
@@ -226,6 +241,46 @@ const CashSessionsPage = () => {
     ? METHODS.reduce((sum, m) => sum + (summary.expected_amounts?.[m.key] || 0), 0)
     : 0;
   const totalDiff = totalCounted - totalExpected;
+  // Faltante del cierre en curso (suma de los métodos que quedan cortos).
+  const totalShortageNow = summary
+    ? METHODS.reduce((sum, m) => {
+      const d = (parseFloat(counted[m.key]) || 0) - (summary.expected_amounts?.[m.key] || 0);
+      return sum + (d < -0.009 ? -d : 0);
+    }, 0)
+    : 0;
+
+  // Empleados para cargar el faltante (si el rol no puede listar usuarios,
+  // queda solo quien abrió la caja).
+  useEffect(() => {
+    if (!showCloseModal || staff.length) return;
+    usersAPI.getAll({ limit: 200, is_active: true })
+      .then((r) => {
+        const list = r?.data?.users || r?.data || r?.users || [];
+        setStaff(Array.isArray(list) ? list : []);
+      })
+      .catch(() => setStaff([]));
+  }, [showCloseModal]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const sessionShortage = (s) => METHODS.reduce((sum, m) => sum + (Number(s.differences?.[m.key]) < 0 ? -Number(s.differences[m.key]) : 0), 0);
+  const sessionOutstanding = (s) => Math.max(sessionShortage(s) - (s.adjustments || []).reduce((a, x) => a + Number(x.amount || 0), 0), 0);
+
+  const handleAdjust = async () => {
+    const amount = parseFloat(adjustModal.amount);
+    if (!(amount > 0)) { toast.error('Indica el valor'); return; }
+    try {
+      setSavingAdjust(true);
+      const res = await cashSessionsAPI.addAdjustment(adjustModal.session.id, {
+        type: adjustModal.type, amount, method: adjustModal.method, notes: adjustModal.notes || null,
+      });
+      toast.success(res.data?.message || 'Corrección registrada');
+      setAdjustModal(null);
+      loadData();
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'No se pudo registrar la corrección');
+    } finally {
+      setSavingAdjust(false);
+    }
+  };
 
   return (
     <Layout>
@@ -360,6 +415,13 @@ const CashSessionsPage = () => {
                               diffTotal === null ? 'text-gray-400' : diffTotal === 0 ? 'text-gray-600' : diffTotal > 0 ? 'text-blue-600' : 'text-red-600'
                             }`}>
                               {diffTotal === null ? '—' : `${diffTotal > 0 ? '+' : ''}${formatCurrency(diffTotal)}`}
+                              {s.status === 'closed' && sessionShortage(s) > 0 && (
+                                <span className="block text-[11px] font-normal text-gray-500">
+                                  {s.shortage_treatment === 'employee' ? 'A cargo del cajero' : 'Pérdida'}
+                                  {(s.adjustments || []).length > 0 && ` · corregido ${formatCurrency(sessionShortage(s) - sessionOutstanding(s))}`}
+                                  {sessionOutstanding(s) <= 0.009 && ' · saldado'}
+                                </span>
+                              )}
                             </td>
                             <td className="px-4 py-3 text-right whitespace-nowrap">
                               {posEnabled && (
@@ -368,6 +430,14 @@ const CashSessionsPage = () => {
                                   className="inline-flex items-center gap-1 mr-3 text-xs font-medium text-blue-600 hover:text-blue-800"
                                 >
                                   <PrinterIcon className="w-4 h-4" /> Tirilla
+                                </button>
+                              )}
+                              {s.status === 'closed' && sessionOutstanding(s) > 0.009 && (
+                                <button
+                                  onClick={() => setAdjustModal({ session: s, type: 'found', amount: String(Math.round(sessionOutstanding(s) * 100) / 100), method: 'efectivo', notes: '' })}
+                                  className="mr-3 text-xs font-medium text-amber-700 hover:text-amber-900"
+                                >
+                                  Corregir faltante
                                 </button>
                               )}
                               <button
@@ -483,6 +553,37 @@ const CashSessionsPage = () => {
                     </span>
                   </div>
 
+                  {totalShortageNow > 0 && (
+                    <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-3 mb-4 space-y-2">
+                      <p className="text-sm font-semibold text-red-800">Faltante de {formatCurrency(totalShortageNow)}: ¿cómo se registra?</p>
+                      <label className="flex items-start gap-2 text-sm text-gray-700 cursor-pointer">
+                        <input type="radio" className="mt-1" checked={shortageTreatment === 'loss'} onChange={() => setShortageTreatment('loss')} />
+                        <span><span className="font-medium">Pérdida del negocio</span><span className="block text-xs text-gray-500">Gasto diverso (519599).</span></span>
+                      </label>
+                      <label className="flex items-start gap-2 text-sm text-gray-700 cursor-pointer">
+                        <input type="radio" className="mt-1" checked={shortageTreatment === 'employee'} onChange={() => setShortageTreatment('employee')} />
+                        <span><span className="font-medium">A cargo del empleado</span><span className="block text-xs text-gray-500">Cuenta por cobrar al trabajador (136595) hasta que lo reponga.</span></span>
+                      </label>
+                      {shortageTreatment === 'employee' && (
+                        <select
+                          value={shortageUserId || currentSession?.opener?.id || ''}
+                          onChange={(e) => setShortageUserId(e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
+                        >
+                          {currentSession?.opener && !staff.some((u) => u.id === currentSession.opener.id) && (
+                            <option value={currentSession.opener.id}>{currentSession.opener.first_name} {currentSession.opener.last_name} (abrió la caja)</option>
+                          )}
+                          {staff.map((u) => (
+                            <option key={u.id} value={u.id}>
+                              {u.first_name} {u.last_name}{u.id === currentSession?.opener?.id ? ' (abrió la caja)' : ''}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                      <p className="text-xs text-gray-500">Si después aparece el dinero o el empleado lo repone, usa “Corregir faltante” en el historial.</p>
+                    </div>
+                  )}
+
                   <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Movimientos de esta sesión</p>
                   <div className="mb-4">
                     <PaymentsList transactions={closePayments} />
@@ -514,6 +615,58 @@ const CashSessionsPage = () => {
             </div>
           </div>
         )}
+        {/* ── Modal: Corregir faltante de una caja cerrada ───── */}
+        {adjustModal && (
+          <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-5 space-y-3">
+              <h3 className="text-base font-semibold text-gray-900">Corregir faltante — caja {adjustModal.session.session_date}</h3>
+              <p className="text-sm text-gray-600">
+                Faltante pendiente: <span className="font-semibold text-red-600">{formatCurrency(sessionOutstanding(adjustModal.session))}</span>
+                {' · '}{adjustModal.session.shortage_treatment === 'employee' ? 'a cargo del cajero' : 'registrado como pérdida'}
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                <button type="button" onClick={() => setAdjustModal((m) => ({ ...m, type: 'found' }))}
+                  className={`px-3 py-2 rounded-lg border-2 text-sm font-medium ${adjustModal.type === 'found' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-700'}`}>
+                  Dinero encontrado
+                </button>
+                <button type="button" disabled={adjustModal.session.shortage_treatment !== 'employee'}
+                  onClick={() => setAdjustModal((m) => ({ ...m, type: 'repaid' }))}
+                  className={`px-3 py-2 rounded-lg border-2 text-sm font-medium disabled:opacity-40 ${adjustModal.type === 'repaid' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-700'}`}>
+                  Empleado repone
+                </button>
+              </div>
+              <label className="block text-sm font-medium text-gray-700">Valor
+                <NumericInput value={adjustModal.amount} onChange={(e) => setAdjustModal((m) => ({ ...m, amount: e.target.value }))}
+                  className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-right" />
+              </label>
+              <label className="block text-sm font-medium text-gray-700">Entra a
+                <select value={adjustModal.method} onChange={(e) => setAdjustModal((m) => ({ ...m, method: e.target.value }))}
+                  className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                  <option value="efectivo">Caja (efectivo)</option>
+                  <option value="transferencia">Bancos (transferencia)</option>
+                </select>
+              </label>
+              <textarea rows={2} value={adjustModal.notes} onChange={(e) => setAdjustModal((m) => ({ ...m, notes: e.target.value }))}
+                placeholder="Ej: estaba en el sobre del cambio" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+              <p className="text-xs text-gray-500">La caja sigue cerrada; queda registrado quién hizo la corrección. No sumes este dinero a la caja abierta de hoy.</p>
+              {(adjustModal.session.adjustments || []).length > 0 && (
+                <ul className="text-xs text-gray-600 border-t pt-2 space-y-0.5">
+                  {adjustModal.session.adjustments.map((a) => (
+                    <li key={a.id}>{String(a.date).slice(0, 10)} · {a.type === 'repaid' ? 'Repuesto' : 'Encontrado'} {formatCurrency(a.amount)}{a.notes ? ` — ${a.notes}` : ''}</li>
+                  ))}
+                </ul>
+              )}
+              <div className="flex justify-end gap-2">
+                <button onClick={() => setAdjustModal(null)} className="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 rounded-lg">Cancelar</button>
+                <button onClick={handleAdjust} disabled={savingAdjust}
+                  className="px-4 py-2 text-sm font-medium text-white bg-blue-700 rounded-lg hover:bg-blue-800 disabled:opacity-50">
+                  {savingAdjust ? 'Guardando...' : 'Registrar corrección'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* ── Modal: Detalle de pagos (historial) ───────────── */}
         {detailModal.open && (
           <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">

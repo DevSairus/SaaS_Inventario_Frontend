@@ -1052,3 +1052,51 @@ export const parseMaintenanceWorkbook = async (file) => {
   });
   return rows;
 };
+
+/**
+ * Kardex valorizado de un producto (Inventario → Kardex). `data` es la
+ * respuesta de GET /inventory/movements/kardex/:id con limit alto.
+ */
+export const exportKardexToExcel = async (data, filters = {}) => {
+  const p = data?.product || {};
+  const s = data?.summary || {};
+  const v = data?.sales || {};
+  const day = (d) => (d ? String(d).slice(0, 10) : '');
+  const wb = new ExcelJS.Workbook();
+
+  const info = wb.addWorksheet('Resumen');
+  info.columns = [{ header: 'Concepto', key: 'k', width: 32 }, { header: 'Valor', key: 'v', width: 28 }];
+  [
+    ['Producto', p.name], ['SKU', p.sku],
+    ['Desde', day(filters.start_date) || 'Inicio'], ['Hasta', day(filters.end_date) || 'Hoy'],
+    ['Bodega', filters.warehouse_name || 'Todas'],
+    ['Saldo inicial (cant.)', s.opening_qty], ['Saldo inicial (valor)', s.opening_value],
+    ['Entradas (cant.)', s.total_entradas], ['Entradas (valor)', s.valor_entradas],
+    ['Salidas (cant.)', s.total_salidas], ['Salidas (valor)', s.valor_salidas],
+    ['Saldo final (cant.)', s.closing_qty], ['Saldo final (valor)', s.closing_value],
+    ['Costo promedio', p.average_cost], ['Último costo', p.last_purchase_cost], ['Última compra', day(p.last_purchase_date)],
+    ['Precio de venta', p.sale_price], ['Utilidad configurada %', p.configured_margin_pct], ['Utilidad actual %', p.current_margin_pct],
+    ['Unidades vendidas', v.qty_sold], ['Ventas sin IVA', v.revenue], ['Costo de ventas', v.cost],
+    ['Utilidad realizada', v.profit], ['Utilidad realizada %', v.realized_margin_pct],
+    ['Última venta', v.last_sale ? `${day(v.last_sale.sale_date)} (${v.last_sale.sale_number})` : 'Nunca'],
+  ].forEach(([k, val]) => info.addRow({ k, v: val ?? '' }));
+
+  const rows = (data?.movements || []).map((m) => ({
+    'Fecha': day(m.movement_date),
+    'Número': m.movement_number || '',
+    'Motivo': m.movement_reason || '',
+    'Bodega': m.warehouse?.name || '',
+    'Entrada': m.direction === 'in' ? Number(m.quantity) : '',
+    'Salida': m.direction === 'out' ? Number(m.quantity) : '',
+    'Costo unitario': Number(m.unit_cost) || 0,
+    'Valor movimiento': Number(m.total_cost) || 0,
+    'Saldo cantidad': m.balance_qty,
+    'Saldo valor': m.balance_value,
+    'Costo promedio': m.balance_avg_cost ?? '',
+  }));
+  const ws = addSheetFromObjects(wb, 'Kardex', rows);
+  ['Costo unitario', 'Valor movimiento', 'Saldo valor', 'Costo promedio'].forEach((c) => rows.length && applyCurrencyColumn(ws, c));
+  if (rows.length) ws.columns.forEach((c) => { c.width = Math.max(12, String(c.header).length + 4); });
+
+  await downloadWorkbook(wb, `kardex_${(p.sku || p.name || 'producto').replace(/[^\w-]+/g, '_')}_${new Date().toISOString().split('T')[0]}.xlsx`);
+};

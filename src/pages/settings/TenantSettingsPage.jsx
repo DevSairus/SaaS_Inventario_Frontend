@@ -619,6 +619,37 @@ const TenantSettingsPage = () => {
             </div>
           </Card>
 
+          {/* IVA en compras: discriminado (descontable) o al costo */}
+          <Card>
+            <div className="p-6">
+              <h2 className="text-xl font-semibold mb-1">IVA en compras</h2>
+              <p className="text-sm text-gray-500 mb-5">
+                Define si el IVA de las facturas de proveedor se discrimina o se lleva al costo de los productos.
+              </p>
+              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <div className="flex-1 mr-4">
+                  <p className="font-medium text-gray-900 text-sm">No discriminar IVA en compras (IVA al costo)</p>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    El IVA pagado no se lleva a IVA descontable: se suma al costo de cada producto (kardex y costo promedio)
+                    y el costo se digita con IVA incluido. Aplica a las compras que se creen desde ahora; las ya registradas no cambian.
+                    Si la empresa no es responsable de IVA, el IVA ya va al costo aunque esta opción esté apagada.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => toggleFeature('purchase_iva_to_cost')}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0 ${
+                    config.features?.purchase_iva_to_cost ? 'bg-blue-600' : 'bg-gray-300'
+                  }`}
+                >
+                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                    config.features?.purchase_iva_to_cost ? 'translate-x-6' : 'translate-x-1'
+                  }`} />
+                </button>
+              </div>
+            </div>
+          </Card>
+
           {/* Facturar remisiones ya confirmadas */}
           <Card>
             <div className="p-6">

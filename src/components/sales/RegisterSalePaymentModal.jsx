@@ -12,7 +12,8 @@ import { formatCurrency } from '../../utils/formatters';
 import NumericInput from '../inputs/NumericInput';
 import BankAccountSelect from '../accounting/BankAccountSelect';
 import useAuthStore from '../../store/authStore';
-import { printPosDocument } from '../../utils/posPrinting';
+import { printPosDocument, getPosSettings } from '../../utils/posPrinting';
+import { receiptsAPI } from '../../api/receipts';
 
 export default function RegisterSalePaymentModal({ invoice, onClose, onSuccess }) {
   const [paymentAmount, setPaymentAmount] = useState(invoice?.balance ? String(invoice.balance) : '');
@@ -21,7 +22,26 @@ export default function RegisterSalePaymentModal({ invoice, onClose, onSuccess }
   const [paymentNotes, setPaymentNotes] = useState('');
   const [excessToAdvance, setExcessToAdvance] = useState(false);
   const [saving, setSaving] = useState(false);
+  // Recibos generados por el pago: el modal queda abierto mostrándolos para
+  // descargar el PDF o imprimir la tirilla antes de cerrar.
+  const [doneReceipts, setDoneReceipts] = useState(null);
   const tenantId = useAuthStore((s) => s.user?.tenant_id);
+  const posEnabled = getPosSettings(tenantId).enabled;
+
+  const openReceiptPdf = async (receipt) => {
+    try {
+      const res = await receiptsAPI.getPdf(receipt.id);
+      const url = URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
+      window.open(url, '_blank');
+    } catch {
+      toast.error('No se pudo generar el recibo');
+    }
+  };
+  const printReceiptTicket = (receipt) => {
+    printPosDocument('payment', receipt.payment_id, { tenantId })
+      .catch(() => toast.error('No se pudo imprimir la tirilla del recibo'));
+  };
+  const finish = () => { setDoneReceipts(null); onSuccess?.(); };
 
   if (!invoice) return null;
 
@@ -67,6 +87,12 @@ export default function RegisterSalePaymentModal({ invoice, onClose, onSuccess }
           printPosDocument('payment', newPayment.payment_id, { tenantId, auto: true })
             .catch(() => toast.error('No se pudo imprimir la tirilla del recibo'));
         }
+        const receipts = res?.data?.receipts || [];
+        if (receipts.length) {
+          toast.success('Pago registrado');
+          setDoneReceipts(receipts);
+          return;
+        }
       }
       toast.success('Pago registrado');
       onSuccess?.();
@@ -77,6 +103,49 @@ export default function RegisterSalePaymentModal({ invoice, onClose, onSuccess }
       setSaving(false);
     }
   };
+
+  if (doneReceipts) {
+    return (
+      <div className="fixed z-50 inset-0 overflow-y-auto">
+        <div className="flex items-center justify-center min-h-screen p-4">
+          <div className="fixed inset-0 bg-gray-500 bg-opacity-75" onClick={finish} />
+          <div className="relative bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+            <h3 className="text-lg font-medium text-gray-900">Pago registrado</h3>
+            <p className="mt-1 text-sm text-gray-600">{invoice.customer_name}</p>
+            <ul className="mt-4 space-y-3">
+              {doneReceipts.map((r) => (
+                <li key={r.id} className="rounded-lg border border-gray-200 p-3">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="font-semibold text-gray-900">Recibo {r.receipt_number}</span>
+                    <span className="font-medium text-green-700">{formatCurrency(r.amount)}</span>
+                  </div>
+                  <p className="text-xs text-gray-500">Abono a {r.sale_number}</p>
+                  <div className="mt-2 flex gap-2">
+                    <button type="button" onClick={() => openReceiptPdf(r)}
+                      className="flex-1 rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700">
+                      Ver / imprimir PDF
+                    </button>
+                    {posEnabled && (
+                      <button type="button" onClick={() => printReceiptTicket(r)}
+                        className="flex-1 rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                        Tirilla POS
+                      </button>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ul>
+            <div className="mt-5 flex justify-end">
+              <button type="button" onClick={finish}
+                className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed z-50 inset-0 overflow-y-auto">

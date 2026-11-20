@@ -1412,6 +1412,7 @@ export default function SaleDetailPage() {
             loading={confirmingPayment}
             customerId={enabledModules?.includes('receivables') ? sale?.customer_id : null}
             canCreateAdvance={!!sale?.customer_id && !!enabledModules?.includes('receivables')}
+            allowCredit={String(sale?.customer_tax_id || '').trim() !== '222222222222' && !!sale?.customer_id}
           />
 
           <ConfirmDialog

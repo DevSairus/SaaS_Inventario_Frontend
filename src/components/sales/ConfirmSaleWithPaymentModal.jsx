@@ -85,8 +85,12 @@ const ConfirmSaleWithPaymentModal = ({
   // Permite dejar el excedente (cliente paga más que el total) como anticipo
   // a su favor: requiere cliente y el módulo de Cartera.
   canCreateAdvance = false,
+  // false = el cliente es CONSUMIDOR FINAL: solo se puede confirmar pagando
+  // todo (sin Parcial ni Crédito). El backend también lo valida.
+  allowCredit = true,
 }) => {
   const isPaymentMode = mode === 'payment';
+  const blockCredit = !isPaymentMode && !allowCredit;
   const docTypes = DOC_TYPES;
   const [docType, setDocType]           = useState(currentDocType || 'remision');
   const [paymentMethod, setPaymentMethod] = useState('cash');
@@ -266,6 +270,7 @@ const ConfirmSaleWithPaymentModal = ({
     }
 
     if (!paymentMethod) return;
+    if (blockCredit && paymentType !== 'full') return;
     const finalAmount = paymentType === 'credit' ? 0 : parseFloat(paidAmount);
     if (paymentType === 'partial' && (finalAmount <= 0 || finalAmount >= effectiveTotal)) return;
     if (!isPaymentMode && (paymentType === 'partial' || paymentType === 'credit') && effectiveCreditDays <= 0) return;
@@ -422,8 +427,8 @@ const ConfirmSaleWithPaymentModal = ({
                 <div className={`grid grid-cols-2 gap-2 ${isPaymentMode ? 'sm:grid-cols-3' : 'sm:grid-cols-4'}`}>
                   {[
                     { key: 'full',    label: 'Contado',  color: 'green',  emoji: '✅' },
-                    { key: 'partial', label: 'Parcial',  color: 'yellow', emoji: '🕐' },
-                    !isPaymentMode && { key: 'credit',  label: 'Crédito',  color: 'red',    emoji: '📋' },
+                    !blockCredit && { key: 'partial', label: 'Parcial',  color: 'yellow', emoji: '🕐' },
+                    !isPaymentMode && !blockCredit && { key: 'credit',  label: 'Crédito',  color: 'red',    emoji: '📋' },
                     { key: 'mixed',   label: 'Mixto',    color: 'purple', emoji: '🔀' },
                   ].filter(Boolean).map(({ key, label, color, emoji }) => (
                     <button key={key} type="button" onClick={() => setPaymentType(key)}
@@ -437,6 +442,11 @@ const ConfirmSaleWithPaymentModal = ({
                     </button>
                   ))}
                 </div>
+                {blockCredit && (
+                  <p className="mt-2 text-xs text-amber-700">
+                    Venta a CONSUMIDOR FINAL: debe pagarse completa. Para dejar saldo a crédito asigna el cliente real.
+                  </p>
+                )}
               </div>
 
               {/* ── PAGO MIXTO ── */}

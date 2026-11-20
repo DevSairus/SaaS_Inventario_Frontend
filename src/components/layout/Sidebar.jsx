@@ -201,6 +201,7 @@ const NAV = [
       { label: "Compras",           path: "/purchases" },
       { label: "Pedidos a proveedores", path: "/order-lists" },
       { label: "Movimientos",       path: "/movements" },
+      { label: "Kardex",            path: "/inventory/kardex" },
       { label: "Ajustes",           path: "/adjustments" },
       { label: "Ajustes de precio", path: "/price-adjustments" },
       { label: "Inventario físico", path: "/inventory/physical-counts" },
@@ -215,6 +216,8 @@ const NAV = [
     ],
   },
   { id: "reports",  label: "Informes", icon: "chart", path: "/reports" },
+  // Renta sin contabilidad: sale de los documentos, no exige el módulo contable.
+  { id: "fiscal-reports", label: "Informes fiscales", icon: "file", path: "/reports/fiscal", roles: ["admin", "super_admin", "manager", "accountant"] },
   // Órdenes de compra que esperan visto bueno (services/approvals en el backend).
   { id: "approvals", label: "Aprobaciones", icon: "file", path: "/approvals" },
   // aiProposals.controller.js: solo admin/manager/accountant (y super_admin).

@@ -18,6 +18,7 @@ import {
   INPUT_CONFIG
 } from '../../utils/formatters';
 import toast from 'react-hot-toast';
+import { flagMissing, flagServerErrors } from '../../utils/formErrors';
 import { purchasesAPI } from '../../api/purchases';
 import useTenantStore from '../../store/tenantStore';
 import { maxMarginFor, suggestedSalePrice, impliedMargin } from '../../utils/salePricing';
@@ -59,6 +60,8 @@ const PurchaseFormPage = () => {
   const [suppliers, setSuppliers] = useState([]);
   const { searchProducts } = useProductsStore();
   const marginMethod = useTenantStore((s) => s.marginMethod);
+  // Configuración "No discriminar IVA en compras": el costo se digita con IVA.
+  const ivaToCost = useTenantStore((s) => s.features?.purchase_iva_to_cost === true);
   const maxMargin = maxMarginFor(marginMethod);
   const excelInputRef = useRef(null);
   const [importingExcel, setImportingExcel] = useState(false);
@@ -78,7 +81,13 @@ const PurchaseFormPage = () => {
     internal_notes: '',
     discount_amount: 0,
     shipping_cost: 0,
-    project_id: null
+    project_id: null,
+    // 'order' = orden de compra sin factura del proveedor (se convierte en
+    // factura al registrar el número); 'invoice' = compra facturada.
+    purchase_kind: new URLSearchParams(location.search).get('kind') === 'order' ? 'order' : 'invoice',
+    invoice_date: '',
+    // Flete cobrado por otra empresa: gasto aparte que igual va al costo.
+    freight_supplier_id: '',
   });
   // Proyecto de la compra que se edita (para mostrarlo aunque ya esté cerrado)
   const [currentProject, setCurrentProject] = useState(null);
@@ -94,7 +103,9 @@ const PurchaseFormPage = () => {
   });
   // El costo que se digita en "Agregar" trae IVA incluido: al agregar la línea
   // se convierte a costo antes de impuestos (lo que guarda la compra).
-  const [costIncludesTax, setCostIncludesTax] = useState(false);
+  const [costIncludesTax, setCostIncludesTax] = useState(ivaToCost);
+  useEffect(() => { useTenantStore.getState().fetchFeatures?.(); }, []);
+  useEffect(() => { if (ivaToCost) setCostIncludesTax(true); }, [ivaToCost]);
 
   // Retenciones: las calcula el motor del backend (perfil del tenant + del
   // proveedor + concepto de cada producto) vía /retentions/preview.
@@ -257,7 +268,10 @@ const PurchaseFormPage = () => {
         internal_notes: purchase.internal_notes || '',
         discount_amount: toNumber(purchase.discount_amount, 0),
         shipping_cost: toNumber(purchase.shipping_cost, 0),
-        project_id: purchase.project_id || null
+        project_id: purchase.project_id || null,
+        purchase_kind: purchase.purchase_kind || 'invoice',
+        invoice_date: purchase.invoice_date || '',
+        freight_supplier_id: purchase.freight_supplier_id || '',
       });
       setCurrentProject(purchase.project || null);
 
@@ -371,10 +385,11 @@ const PurchaseFormPage = () => {
   };
 
   const addItem = () => {
-    if (!currentItem.product_id || !currentItem.quantity || !currentItem.unit_cost) {
-      toast('Por favor complete todos los campos del producto');
-      return;
-    }
+    if (flagMissing([
+      !currentItem.product_id && { field: 'item_product', label: 'Producto' },
+      !currentItem.quantity && { field: 'item_quantity', label: 'Cantidad' },
+      !currentItem.unit_cost && { field: 'item_unit_cost', label: 'Costo unitario' },
+    ], { title: 'Para agregar la línea falta' })) return;
 
     const existingItemIndex = items.findIndex(item => item.product_id === currentItem.product_id);
     
@@ -501,7 +516,8 @@ const PurchaseFormPage = () => {
     const incAmount = items.reduce((sum, item) => sum + toNumber(item.incAmount, 0), 0);
     const discountAmount = toInteger(formData.discount_amount, 0);
     const shippingCost = toInteger(formData.shipping_cost, 0);
-    const total = subtotal + taxAmount + incAmount - discountAmount + shippingCost;
+    // Flete de una transportadora: no se le debe al proveedor de la compra.
+    const total = subtotal + taxAmount + incAmount - discountAmount + (formData.freight_supplier_id ? 0 : shippingCost);
 
     return {
       subtotal,
@@ -553,36 +569,29 @@ const PurchaseFormPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!formData.supplier_id) {
-      toast('Por favor seleccione un proveedor');
-      return;
-    }
-
-    if (items.length === 0) {
-      toast('Debe agregar al menos un producto');
-      return;
-    }
-
-    const badMargin = items.find((it) => marginOrNull(it.profit_margin_pct) !== null
-      && !(marginOrNull(it.profit_margin_pct) >= 0 && marginOrNull(it.profit_margin_pct) <= maxMargin));
-    if (badMargin) {
-      toast(`El margen de ${badMargin.product_name} debe estar entre 0 y ${maxMargin} %`);
-      return;
-    }
-
+    const badMargin = (it) => marginOrNull(it.profit_margin_pct) !== null
+      && !(marginOrNull(it.profit_margin_pct) >= 0 && marginOrNull(it.profit_margin_pct) <= maxMargin);
     // Las líneas precargadas desde un pedido pueden llegar en 0 (producto sin
     // compras previas): pedir el costo, igual que al agregar un producto. Solo
     // en ese caso, para no bloquear compras existentes con ítems bonificados.
-    const sinCosto = orderListLink ? items.filter(item => !(toNumber(item.unit_cost, 0) > 0)) : [];
-    if (sinCosto.length) {
-      toast(`Falta el costo unitario de: ${sinCosto.map(i => i.product_name).join(', ')}`);
-      return;
-    }
+    const sinCosto = (it) => orderListLink && !(toNumber(it.unit_cost, 0) > 0);
+    // Todo lo que falta de una vez, marcado en pantalla (no uno por uno).
+    if (flagMissing([
+      !formData.supplier_id && { field: 'supplier_id', label: 'Proveedor' },
+      formData.freightThirdParty && !formData.freight_supplier_id && toInteger(formData.shipping_cost, 0) > 0
+        && { field: 'freight_supplier_id', label: 'Transportadora que cobra el flete' },
+      items.length === 0 && { field: 'item_product', label: 'Al menos un producto' },
+      ...items.map((it, i) => sinCosto(it) && { field: `items.${i}.unit_cost`, label: `Costo unitario de ${it.product_name}` }),
+      ...items.map((it, i) => badMargin(it) && { field: `items.${i}.profit_margin_pct`, label: `Margen de ${it.product_name} (0 a ${maxMargin} %)` }),
+    ])) return;
 
     const purchaseData = {
       ...formData,
       discount_amount: toInteger(formData.discount_amount, 0),
       shipping_cost: toInteger(formData.shipping_cost, 0),
+      freight_supplier_id: formData.freight_supplier_id || null,
+      purchase_kind: formData.invoice_number ? 'invoice' : formData.purchase_kind,
+      invoice_date: formData.invoice_number ? (formData.invoice_date || null) : null,
       payment_terms: formData.payment_terms === '' ? null : parseInt(formData.payment_terms),
       due_date: formData.due_date === '' ? null : formData.due_date,
       items: items.map(item => ({
@@ -629,7 +638,11 @@ const PurchaseFormPage = () => {
         navigate(`/purchases/${result.id}`);
       }
     } catch (error) {
-      toast.error(isEditMode ? 'Error al actualizar la compra' : 'Error al crear la compra');
+      // El backend dice qué falló (y a veces en qué campo): mostrarlo en vez
+      // de un "Error al crear" que no ayuda a encontrar el problema.
+      if (!flagServerErrors(error)) {
+        toast.error(error.response?.data?.message || (isEditMode ? 'Error al actualizar la compra' : 'Error al crear la compra'));
+      }
     }
   };
 
@@ -669,7 +682,7 @@ const PurchaseFormPage = () => {
           <h2 className="text-xl font-semibold text-gray-800 mb-4">Información General</h2>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="md:col-span-2">
+            <div className="md:col-span-2" data-field="supplier_id">
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Proveedor <span className="text-red-500">*</span>
               </label>
@@ -749,18 +762,45 @@ const PurchaseFormPage = () => {
               </select>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Número de Factura
-              </label>
-              <input
-                type="text"
-                name="invoice_number"
-                value={formData.invoice_number}
-                onChange={handleFormChange}
-                placeholder="Ej: FAC-001"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
+            <div data-field="invoice_number">
+              <div className="mb-1 flex items-center justify-between gap-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  {formData.purchase_kind === 'order' ? 'Orden de compra' : 'Número de Factura'}
+                </label>
+                <div className="inline-flex rounded-md border border-gray-300 text-xs overflow-hidden" title="Una orden de compra entra al inventario sin factura; se convierte en factura al registrar el número.">
+                  {[['invoice', 'Factura'], ['order', 'Orden']].map(([k, l]) => (
+                    <button key={k} type="button"
+                      onClick={() => setFormData((f) => ({ ...f, purchase_kind: k, ...(k === 'order' ? { invoice_number: '', invoice_date: '' } : {}) }))}
+                      className={`px-2 py-0.5 ${formData.purchase_kind === k ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
+                      {l}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {formData.purchase_kind === 'order' ? (
+                <p className="px-3 py-2 rounded-lg border border-dashed border-amber-300 bg-amber-50 text-xs text-amber-800">
+                  Sin factura del proveedor. Al recibirla entra al inventario con su costo; registra el número de factura después para convertirla.
+                </p>
+              ) : (
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    name="invoice_number"
+                    value={formData.invoice_number}
+                    onChange={handleFormChange}
+                    placeholder="Ej: FAC-001"
+                    className="min-w-0 flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                  <input
+                    type="date"
+                    name="invoice_date"
+                    value={formData.invoice_date}
+                    onChange={handleFormChange}
+                    title="Fecha de la factura"
+                    className="w-36 px-2 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+              )}
             </div>
           </div>
 
@@ -864,7 +904,7 @@ const PurchaseFormPage = () => {
               cortos; "Incluye IVA" va en la línea del título del costo para que
               todos los campos queden alineados. */}
           <div className="grid grid-cols-2 sm:grid-cols-6 lg:grid-cols-12 gap-3 items-end">
-            <div className="col-span-2 sm:col-span-6 lg:col-span-4 relative product-search-container">
+            <div className="col-span-2 sm:col-span-6 lg:col-span-4 relative product-search-container" data-field="item_product">
               <label className={itemLabelCls}>Producto</label>
               <ProductSearchInput
                 value={productSearch}
@@ -876,7 +916,7 @@ const PurchaseFormPage = () => {
               />
             </div>
 
-            <div className="lg:col-span-1">
+            <div className="lg:col-span-1" data-field="item_quantity">
               <label className={itemLabelCls}>Cantidad</label>
               <input
                 type="number"
@@ -888,7 +928,7 @@ const PurchaseFormPage = () => {
               />
             </div>
 
-            <div className="sm:col-span-2 lg:col-span-2">
+            <div className="sm:col-span-2 lg:col-span-2" data-field="item_unit_cost">
               <div className="mb-1 flex items-center justify-between gap-2">
                 <label className="text-sm font-medium text-gray-700 whitespace-nowrap" title={costIncludesTax ? 'El valor trae IVA: al agregar se guarda antes de impuestos' : 'Costo unitario antes de IVA'}>
                   Costo unit.
@@ -1008,7 +1048,7 @@ const PurchaseFormPage = () => {
                           className="w-20 px-2 py-1 border border-gray-300 rounded text-right focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         />
                       </td>
-                      <td className="px-4 py-3 text-right text-sm text-gray-900">
+                      <td className="px-4 py-3 text-right text-sm text-gray-900" data-field={`items.${index}.unit_cost`}>
                         <NumericInput
                           name="unit_cost"
                           value={item.unit_cost}
@@ -1022,7 +1062,7 @@ const PurchaseFormPage = () => {
                         {toNumber(item.inc_rate, 0) > 0 && <div className="text-xs text-gray-500">INC {item.inc_rate}%</div>}
                       </td>
                       <td className="px-4 py-3 text-right text-sm text-gray-900">{item.discount_percentage}%</td>
-                      <td className="px-4 py-3 text-right text-sm text-gray-900">
+                      <td className="px-4 py-3 text-right text-sm text-gray-900" data-field={`items.${index}.profit_margin_pct`}>
                         <input
                           type="number" min="0" max={maxMargin} step="0.01"
                           value={item.profit_margin_pct ?? ''}
@@ -1112,7 +1152,7 @@ const PurchaseFormPage = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Costo de Envío
+                      Costo de Envío (flete)
                     </label>
                     <NumericInput
                       name="shipping_cost"
@@ -1121,6 +1161,41 @@ const PurchaseFormPage = () => {
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                   </div>
+                  {toInteger(formData.shipping_cost, 0) > 0 && (
+                    <div className="col-span-full" data-field="freight_supplier_id">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">¿Quién cobra el flete?</label>
+                      <div className="flex flex-wrap gap-3 text-sm mb-2">
+                        <label className="flex items-center gap-1.5 cursor-pointer">
+                          <input type="radio" checked={!formData.freightThirdParty && !formData.freight_supplier_id}
+                            onChange={() => setFormData((f) => ({ ...f, freight_supplier_id: '', freightThirdParty: false }))} />
+                          El mismo proveedor (en su factura)
+                        </label>
+                        <label className="flex items-center gap-1.5 cursor-pointer">
+                          <input type="radio" checked={!!(formData.freightThirdParty || formData.freight_supplier_id)}
+                            onChange={() => setFormData((f) => ({ ...f, freightThirdParty: true }))} />
+                          Otra empresa (transportadora)
+                        </label>
+                      </div>
+                      {(formData.freightThirdParty || formData.freight_supplier_id) && (
+                        <>
+                          <Combobox
+                            placeholder="Buscar transportadora (proveedor)..."
+                            items={suppliers}
+                            value={formData.freight_supplier_id || null}
+                            displayValue={supplierLabel(suppliers.find((s) => String(s.id) === String(formData.freight_supplier_id)))}
+                            onSelect={(s) => setFormData((f) => ({ ...f, freight_supplier_id: s.id }))}
+                            onClear={() => setFormData((f) => ({ ...f, freight_supplier_id: '' }))}
+                            getSearchText={(s) => [s.name, s.business_name, s.tax_id].filter(Boolean).join(' ')}
+                            remoteSearch={(q) => suppliersAPI.search(q, { is_active: true })}
+                            renderItem={(s) => <p className="font-medium text-gray-800">{s.name}</p>}
+                          />
+                          <p className="mt-1 text-xs text-gray-500">
+                            Se registra como gasto aparte a la transportadora al recibir la compra, pero su valor se reparte en el costo de los productos. No suma a lo que se le debe al proveedor.
+                          </p>
+                        </>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -1146,9 +1221,12 @@ const PurchaseFormPage = () => {
                     <span className="font-medium text-red-600">-{formatCurrency(formData.discount_amount)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Envío:</span>
-                    <span className="font-medium">{formatCurrency(formData.shipping_cost)}</span>
+                    <span className="text-gray-600">{formData.freight_supplier_id ? 'Envío (lo cobra la transportadora):' : 'Envío:'}</span>
+                    <span className={`font-medium ${formData.freight_supplier_id ? 'text-gray-400 line-through' : ''}`}>{formatCurrency(formData.shipping_cost)}</span>
                   </div>
+                  {(ivaToCost || costIncludesTax) && totals.taxAmount > 0 && ivaToCost && (
+                    <p className="text-xs text-gray-500">El IVA va al costo de los productos (configuración de la empresa).</p>
+                  )}
                   <div className="border-t pt-2 mt-2">
                     <div className="flex justify-between">
                       <span className="text-lg font-bold text-gray-900">Total:</span>
@@ -1286,7 +1364,7 @@ const PurchaseFormPage = () => {
           <button
             type="submit"
             className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-            disabled={isLoading || items.length === 0}
+            disabled={isLoading}
           >
             {isLoading && (
               <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>

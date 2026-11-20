@@ -27,6 +27,8 @@ const PhysicalCountsPage = lazy(() => import('./pages/inventory/PhysicalCountsPa
 const PhysicalCountPage = lazy(() => import('./pages/inventory/PhysicalCountPage'));
 const PhysicalCountDetailPage = lazy(() => import('./pages/inventory/PhysicalCountDetailPage'));
 const MovementsPage = lazy(() => import('./pages/movements/MovementsPage'));
+const FiscalReportsPage = lazy(() => import('./pages/reports/FiscalReportsPage'));
+const KardexPage = lazy(() => import('./pages/inventory/KardexPage'));
 const StockAlertsPage = lazy(() => import('./pages/stock-alerts/StockAlertsPage'));
 const OrderListsPage = lazy(() => import('./pages/order-lists/OrderListsPage'));
 const OrderListDetailPage = lazy(() => import('./pages/order-lists/OrderListDetailPage'));
@@ -444,6 +446,7 @@ function App() {
         <Route path="inventory/physical-counts/:id" element={<TenantRoute module="inventory"><Suspense fallback={<Loading fullScreen />}><PhysicalCountDetailPage /></Suspense></TenantRoute>} />
 
         <Route path="movements"   element={<TenantRoute module="inventory"><Suspense fallback={<Loading fullScreen />}><MovementsPage /></Suspense></TenantRoute>} />
+        <Route path="inventory/kardex" element={<TenantRoute module="inventory"><Suspense fallback={<Loading fullScreen />}><KardexPage /></Suspense></TenantRoute>} />
         <Route path="stock-alerts" element={<TenantRoute module="inventory"><Suspense fallback={<Loading fullScreen />}><StockAlertsPage /></Suspense></TenantRoute>} />
         <Route path="order-lists"     element={<TenantRoute module="inventory"><Suspense fallback={<Loading fullScreen />}><OrderListsPage /></Suspense></TenantRoute>} />
         <Route path="order-lists/:id" element={<TenantRoute module="inventory"><Suspense fallback={<Loading fullScreen />}><OrderListDetailPage /></Suspense></TenantRoute>} />
@@ -616,6 +619,7 @@ function App() {
         <Route path="settings/whatsapp" element={<TenantRoute roles={['admin']}><WhatsAppSettingsRedirect /></TenantRoute>} />
 
         <Route path="reports"  element={<TenantRoute><Suspense fallback={<Loading fullScreen />}><ReportsPage /></Suspense></TenantRoute>} />
+        <Route path="reports/fiscal" element={<TenantRoute><Suspense fallback={<Loading fullScreen />}><FiscalReportsPage /></Suspense></TenantRoute>} />
         <Route path="nexa/aprobaciones" element={<TenantRoute module="ai_assistant"><Suspense fallback={<Loading fullScreen />}><NexaApprovalsPage /></Suspense></TenantRoute>} />
         <Route path="users"          element={<TenantRoute><Suspense fallback={<Loading fullScreen />}><UsersPage /></Suspense></TenantRoute>} />
         <Route path="users/new"      element={<TenantRoute><Suspense fallback={<Loading fullScreen />}><UserForm /></Suspense></TenantRoute>} />
