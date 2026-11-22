@@ -76,6 +76,9 @@ const Simple2593Page = lazy(() => import('./pages/accounting/Simple2593Page'));
 const DeferredRevenuesPage = lazy(() => import('./pages/accounting/DeferredRevenuesPage'));
 const IvaProrrateoPage = lazy(() => import('./pages/accounting/IvaProrrateoPage'));
 const FinancialReportsPage = lazy(() => import('./pages/accounting/FinancialReportsPage'));
+const NiifStatementsPage = lazy(() => import('./pages/accounting/NiifStatementsPage'));
+const NiifMeasurementsPage = lazy(() => import('./pages/accounting/NiifMeasurementsPage'));
+const FiscalReconciliationPage = lazy(() => import('./pages/accounting/FiscalReconciliationPage'));
 const FiscalPeriodsPage = lazy(() => import('./pages/accounting/FiscalPeriodsPage'));
 const AccountingHealthPage = lazy(() => import('./pages/accounting/AccountingHealthPage'));
 const OpeningBalancesPage = lazy(() => import('./pages/accounting/OpeningBalancesPage'));
@@ -492,6 +495,9 @@ function App() {
         <Route path="accounting/journal-entries"   element={<TenantRoute module="accounting" roles={['admin', 'manager', 'accountant']}><Suspense fallback={<Loading fullScreen />}><JournalEntriesPage /></Suspense></TenantRoute>} />
         <Route path="accounting/account-mappings"  element={<TenantRoute module="accounting" roles={['admin', 'manager', 'accountant']}><Suspense fallback={<Loading fullScreen />}><AccountMappingsPage /></Suspense></TenantRoute>} />
         <Route path="accounting/reports"           element={<TenantRoute module="accounting" roles={['admin', 'manager', 'accountant']}><Suspense fallback={<Loading fullScreen />}><FinancialReportsPage /></Suspense></TenantRoute>} />
+        <Route path="accounting/niif-statements"   element={<TenantRoute module="accounting" roles={['admin', 'manager', 'accountant']}><Suspense fallback={<Loading fullScreen />}><NiifStatementsPage /></Suspense></TenantRoute>} />
+        <Route path="accounting/niif-measurements" element={<TenantRoute module="accounting" roles={['admin', 'accountant']}><Suspense fallback={<Loading fullScreen />}><NiifMeasurementsPage /></Suspense></TenantRoute>} />
+        <Route path="accounting/fiscal-reconciliation" element={<TenantRoute module="accounting" roles={['admin', 'manager', 'accountant']}><Suspense fallback={<Loading fullScreen />}><FiscalReconciliationPage /></Suspense></TenantRoute>} />
         <Route path="accounting/fiscal-periods"    element={<TenantRoute module="accounting" roles={['admin', 'manager', 'accountant']}><Suspense fallback={<Loading fullScreen />}><FiscalPeriodsPage /></Suspense></TenantRoute>} />
         <Route path="accounting/health"            element={<TenantRoute module="accounting" roles={['admin', 'manager', 'accountant']}><Suspense fallback={<Loading fullScreen />}><AccountingHealthPage /></Suspense></TenantRoute>} />
         <Route path="accounting/opening-balances"  element={<TenantRoute module="accounting" roles={['admin', 'manager', 'accountant']}><Suspense fallback={<Loading fullScreen />}><OpeningBalancesPage /></Suspense></TenantRoute>} />

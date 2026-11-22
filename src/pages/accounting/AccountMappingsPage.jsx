@@ -171,6 +171,22 @@ const EVENT_GROUPS = [
     ],
   },
   {
+    title: 'NIIF — mediciones de cierre',
+    events: [
+      { key: 'receivable_impairment_expense', label: 'Gasto por deterioro de cartera' },
+      { key: 'receivable_impairment_allowance', label: 'Deterioro acumulado de cartera (CR)' },
+      { key: 'receivable_impairment_recovery', label: 'Recuperación de deterioro de cartera' },
+      { key: 'inventory_nrv_expense', label: 'Gasto por deterioro de inventarios (VNR)' },
+      { key: 'inventory_nrv_allowance', label: 'Deterioro acumulado de inventarios (CR)' },
+      { key: 'inventory_nrv_recovery', label: 'Recuperación de deterioro de inventarios' },
+      { key: 'fx_gain', label: 'Ingreso por diferencia en cambio' },
+      { key: 'fx_loss', label: 'Gasto por diferencia en cambio' },
+      { key: 'deferred_tax_asset', label: 'Activo por impuesto diferido' },
+      { key: 'deferred_tax_liability', label: 'Pasivo por impuesto diferido' },
+      { key: 'deferred_tax_expense', label: 'Gasto (ingreso) por impuesto diferido' },
+    ],
+  },
+  {
     title: 'Activos Fijos — Depreciación y baja',
     events: [
       { key: 'fixed_asset_disposal_gain', label: 'Utilidad en venta de activos fijos' },

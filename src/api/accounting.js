@@ -6,6 +6,39 @@ export const chartOfAccountsAPI = {
   create: async (payload) => (await api.post('/accounting/chart-of-accounts', payload)).data,
   update: async (id, payload) => (await api.put(`/accounting/chart-of-accounts/${id}`, payload)).data,
   delete: async (id) => (await api.delete(`/accounting/chart-of-accounts/${id}`)).data,
+  niifRubros: async () => (await api.get('/accounting/chart-of-accounts/niif-rubros')).data,
+};
+
+// Conciliación fiscal (soporte del formato 2516)
+export const fiscalReconciliationAPI = {
+  esf: async (year) => (await api.get(`/accounting/fiscal-reconciliation/${year}/esf`)).data,
+  eri: async (year) => (await api.get(`/accounting/fiscal-reconciliation/${year}/eri`)).data,
+  getSettings: async (year) => (await api.get(`/accounting/fiscal-reconciliation/${year}/settings`)).data,
+  saveSettings: async (year, payload) => (await api.put(`/accounting/fiscal-reconciliation/${year}/settings`, payload)).data,
+  adjustments: async (year) => (await api.get(`/accounting/fiscal-reconciliation/${year}/adjustments`)).data,
+  createAdjustment: async (year, payload) => (await api.post(`/accounting/fiscal-reconciliation/${year}/adjustments`, payload)).data,
+  deleteAdjustment: async (id) => (await api.delete(`/accounting/fiscal-reconciliation/adjustments/${id}`)).data,
+  copyPrevious: async (year) => (await api.post(`/accounting/fiscal-reconciliation/${year}/adjustments/copy-previous`)).data,
+  exportExcel: async (year) => api.get(`/accounting/fiscal-reconciliation/${year}/export`, { responseType: 'blob' }),
+};
+
+// Mediciones NIIF de cierre: receivable_impairment | inventory_nrv | fx_remeasurement
+export const niifMeasurementsAPI = {
+  preview: async (kind, payload) => (await api.post(`/accounting/niif-measurements/${kind}/preview`, payload)).data,
+  apply: async (kind, payload) => (await api.post(`/accounting/niif-measurements/${kind}/apply`, payload)).data,
+  history: async (kind) => (await api.get('/accounting/niif-measurements', { params: { kind } })).data,
+  reverse: async (id, reason) => (await api.post(`/accounting/niif-measurements/${id}/reverse`, { reason })).data,
+  trm: async (date) => (await api.get('/accounting/niif-measurements/trm', { params: { date } })).data,
+};
+
+// Estados financieros NIIF para Pymes: financial-position | comprehensive-income | equity-changes
+export const niifStatementsAPI = {
+  get: async (report, params) => (await api.get(`/accounting/reports/niif/${report}`, { params })).data,
+  exportExcel: async (report, params) => api.get(`/accounting/reports/niif/${report}/export`, { params, responseType: 'blob' }),
+  exportPdf: async (report, params) => api.get(`/accounting/reports/niif/${report}/export`, { params: { ...params, format: 'pdf' }, responseType: 'blob' }),
+  packagePdf: async (params) => api.get('/accounting/reports/niif-package/pdf', { params, responseType: 'blob' }),
+  saveNote: async (year, key, payload) => (await api.put(`/accounting/reports/niif-notes/${year}/${key}`, payload)).data,
+  saveSignatures: async (year, payload) => (await api.put(`/accounting/reports/niif-signatures/${year}`, payload)).data,
 };
 
 export const journalEntriesAPI = {
@@ -328,6 +361,10 @@ export const SOURCE_TYPE_LABELS = {
   inventory_adjustment: 'Ajuste de inventario',
   product_initial_stock: 'Inventario inicial',
   product_bulk_import: 'Importación de inventario',
+  niif_receivable_impairment: 'Deterioro de cartera (NIIF)',
+  niif_inventory_nrv: 'Deterioro de inventarios — VNR (NIIF)',
+  niif_fx_remeasurement: 'Diferencia en cambio (NIIF)',
+  niif_deferred_tax: 'Impuesto diferido (NIIF)',
 };
 
 // Clasificación tributaria de compras (pantalla del contador): concepto de

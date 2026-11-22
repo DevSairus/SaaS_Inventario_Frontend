@@ -28,7 +28,9 @@ function buildTree(accounts) {
   return roots;
 }
 
-const emptyForm = { code: '', name: '', account_type: 'activo', parent_id: '', accepts_entries: true };
+const emptyForm = { code: '', name: '', account_type: 'activo', parent_id: '', accepts_entries: true, niif_rubro: '' };
+
+const RUBRO_SOURCE_LABELS = { cuenta: 'fijado', heredado: 'heredado', regla: 'automático', sin_clasificar: 'sin clasificar' };
 
 const ChartOfAccountsPage = () => {
   const [accounts, setAccounts] = useState([]);
@@ -40,8 +42,13 @@ const ChartOfAccountsPage = () => {
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState('');
   const [ledgerAccount, setLedgerAccount] = useState(null);
+  const [rubros, setRubros] = useState([]);
+  const rubroLabel = useMemo(() => Object.fromEntries(rubros.map((r) => [r.code, r.label])), [rubros]);
 
   useEffect(() => { load(); }, []);
+  useEffect(() => {
+    chartOfAccountsAPI.niifRubros().then((r) => setRubros(r.data || [])).catch(() => {});
+  }, []);
 
   const load = async () => {
     try {
@@ -76,6 +83,7 @@ const ChartOfAccountsPage = () => {
     setForm({
       code: account.code, name: account.name, account_type: account.account_type,
       parent_id: account.parent_id || '', accepts_entries: account.accepts_entries,
+      niif_rubro: account.niif_rubro || '',
     });
     setShowModal(true);
   };
@@ -85,7 +93,7 @@ const ChartOfAccountsPage = () => {
     try {
       setSaving(true);
       if (editing) {
-        await chartOfAccountsAPI.update(editing.id, { name: form.name, accepts_entries: form.accepts_entries, parent_id: form.parent_id || null });
+        await chartOfAccountsAPI.update(editing.id, { name: form.name, accepts_entries: form.accepts_entries, parent_id: form.parent_id || null, niif_rubro: form.niif_rubro || null });
         toast.success('Cuenta actualizada');
       } else {
         await chartOfAccountsAPI.create(form);
@@ -143,6 +151,16 @@ const ChartOfAccountsPage = () => {
             </span>
           </td>
           <td className="px-4 py-2.5 text-sm text-gray-500">{account.accepts_entries ? 'Detalle' : 'Agrupadora'}</td>
+          <td className="px-4 py-2.5 text-xs">
+            {account.niif_rubro_effective && account.niif_rubro_source !== 'clase' && (
+              <span className={account.niif_rubro_source === 'sin_clasificar' ? 'text-amber-700' : 'text-gray-700'}>
+                {rubroLabel[account.niif_rubro_effective] || account.niif_rubro_effective}
+                <span className={`ml-1 ${account.niif_rubro_source === 'cuenta' ? 'text-indigo-600' : 'text-gray-400'}`}>
+                  ({RUBRO_SOURCE_LABELS[account.niif_rubro_source]})
+                </span>
+              </span>
+            )}
+          </td>
           <td className="px-4 py-2.5 text-right">
             <div className="flex items-center justify-end gap-2">
               {account.accepts_entries && (
@@ -201,15 +219,15 @@ const ChartOfAccountsPage = () => {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  {['Código', 'Nombre', 'Tipo', 'Naturaleza', ''].map((h) => (
+                  {['Código', 'Nombre', 'Tipo', 'Naturaleza', 'Rubro NIIF', ''].map((h) => (
                     <th key={h} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {loading && <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400">Cargando...</td></tr>}
+                {loading && <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-400">Cargando...</td></tr>}
                 {!loading && filteredAccounts && filteredAccounts.length === 0 && (
-                  <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400">Sin resultados</td></tr>
+                  <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-400">Sin resultados</td></tr>
                 )}
                 {!loading && filteredAccounts && filteredAccounts.map((a) => renderRow(a, 0))}
                 {!loading && !filteredAccounts && tree.map((a) => renderRow(a, 0))}
@@ -273,6 +291,25 @@ const ChartOfAccountsPage = () => {
                     </select>
                   </div>
                 )}
+                {/* Rubro de presentación en los estados financieros NIIF. Automático =
+                    el de la cuenta padre o la regla por código PUC. Fijarlo sirve, p. ej.,
+                    para marcar una obligación financiera a más de 12 meses como no corriente. */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Rubro NIIF (estados financieros)</label>
+                  <select
+                    value={form.niif_rubro || ''}
+                    onChange={(e) => setForm((f) => ({ ...f, niif_rubro: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  >
+                    <option value="">
+                      Automático{editing?.niif_rubro_effective && !editing?.niif_rubro ? ` (${rubroLabel[editing.niif_rubro_effective] || editing.niif_rubro_effective})` : ''}
+                    </option>
+                    {rubros.filter((r) => r.account_types?.includes(form.account_type)).map((r) => (
+                      <option key={r.code} value={r.code}>{r.label}</option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">Las subcuentas heredan el rubro fijado aquí.</p>
+                </div>
                 <div className="flex items-center gap-2">
                   <input
                     type="checkbox" id="accepts_entries" checked={form.accepts_entries}
