@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import useProductsStore from '../../store/productsStore';
 import { usePermissions } from '../../store/tenantPermissionsStore';
 import useAuthStore from '../../store/authStore';
@@ -44,6 +44,20 @@ function ProductsPage() {
     updateProduct,
     clearError
   } = useProductsStore();
+
+  // Pestañas: productos físicos, mano de obra (tempario) y otros servicios.
+  // Solo esta página envía `kind`; los buscadores de ventas/OT siguen viendo todo.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab = ['products', 'labor', 'services'].includes(searchParams.get('tab')) ? searchParams.get('tab') : 'products';
+  const isProductsTab = tab === 'products';
+  const changeTab = (next) => {
+    if (next === tab) return;
+    const params = new URLSearchParams(searchParams);
+    params.set('tab', next);
+    params.delete('page');
+    setSearchParams(params, { replace: true });
+    setPage(1);
+  };
 
   const [searchInput, setSearchInput] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -90,7 +104,6 @@ function ProductsPage() {
 
   // Refresh al entrar a la página
   useEffect(() => {
-    fetchProducts(true);
     fetchStats();
     fetchCategories();
     vehicleApplicationsAPI.getBrandsAndLines().then(res => {
@@ -100,8 +113,8 @@ function ProductsPage() {
 
   // Refresh cuando cambian filtros (incluye filtro vehicular)
   useEffect(() => {
-    const vehicleParams = {};
-    if (vehicleFilter.brand && vehicleFilter.line) {
+    const vehicleParams = { kind: tab };
+    if (isProductsTab && vehicleFilter.brand && vehicleFilter.line) {
       vehicleParams.applies_to_brand = vehicleFilter.brand;
       vehicleParams.applies_to_line = vehicleFilter.line;
       if (vehicleFilter.year) vehicleParams.applies_to_year = vehicleFilter.year;
@@ -109,7 +122,7 @@ function ProductsPage() {
     // Pasar vehicleParams como parte de los filtros al store
     // Necesitamos modificar fetchProducts para aceptar estos params
     fetchProducts(false, vehicleParams);
-  }, [filters.search, filters.category_id, filters.is_active, filters.sort_by, filters.sort_order, pagination.page, pagination.limit, vehicleFilter.brand, vehicleFilter.line, vehicleFilter.year]);
+  }, [tab, filters.search, filters.category_id, filters.is_active, filters.sort_by, filters.sort_order, pagination.page, pagination.limit, vehicleFilter.brand, vehicleFilter.line, vehicleFilter.year]);
 
   // Búsqueda en tiempo real con debounce
   useEffect(() => {
@@ -226,7 +239,7 @@ function ProductsPage() {
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
-            Nuevo Producto
+            {tab === 'labor' ? 'Nueva mano de obra' : tab === 'services' ? 'Nuevo servicio' : 'Nuevo Producto'}
           </button>
           )}
         </div>
@@ -235,14 +248,42 @@ function ProductsPage() {
       {/* Main Content */}
       <main className="space-y-5">
         
-        {/* Stats Cards */}
-        {stats && (
+        {/* Pestañas */}
+        <div className="flex flex-wrap gap-2 border-b border-gray-200 dark:border-white/10">
+          {[
+            ['products', 'Productos', stats?.by_kind?.products],
+            ['labor', 'Mano de obra', stats?.by_kind?.labor],
+            ['services', 'Servicios', stats?.by_kind?.services],
+          ].map(([key, label, count]) => (
+            <button
+              key={key}
+              onClick={() => changeTab(key)}
+              className={`px-4 py-2 -mb-px text-sm font-medium border-b-2 transition-colors ${
+                tab === key
+                  ? 'border-blue-600 text-blue-700 dark:text-blue-300 dark:border-blue-400'
+                  : 'border-transparent text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'
+              }`}
+            >
+              {label}
+              {count != null && <span className="ml-2 text-xs px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300">{count}</span>}
+            </button>
+          ))}
+        </div>
+        {tab === 'labor' && (
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            Las horas y la tarifa de la mano de obra también se administran en{' '}
+            <button onClick={() => navigate('/workshop/labor-times')} className="text-blue-600 hover:underline">Taller → Tempario</button>, con carga masiva desde Excel.
+          </p>
+        )}
+
+        {/* Stats Cards (inventario: solo productos físicos) */}
+        {stats && isProductsTab && (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="bg-white rounded-xl shadow-md hover:shadow-xl transition-shadow p-6 border-l-4 border-blue-500 dark:bg-graphite">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Productos</p>
-                  <p className="text-3xl font-bold text-gray-900 mt-2 dark:text-gray-100">{stats.total_products || 0}</p>
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Productos activos</p>
+                  <p className="text-3xl font-bold text-gray-900 mt-2 dark:text-gray-100">{stats.by_kind?.products ?? stats.total_products ?? 0}</p>
                 </div>
                 <div className="w-14 h-14 bg-blue-100 rounded-full flex items-center justify-center dark:bg-blue-900/30">
                   <svg className="w-8 h-8 text-blue-600 dark:text-blue-300" fill="currentColor" viewBox="0 0 20 20">
@@ -351,6 +392,7 @@ function ProductsPage() {
             </div>
 
             {/* Vehicle Filter Toggle */}
+            {isProductsTab && (
             <div className="flex items-end">
               <button
                 onClick={() => {
@@ -369,10 +411,11 @@ function ProductsPage() {
                 {showVehicleFilter ? 'Limpiar filtro' : 'Filtrar por vehículo'}
               </button>
             </div>
+            )}
           </div>
 
           {/* Vehicle Filter Fields */}
-          {showVehicleFilter && (
+          {isProductsTab && showVehicleFilter && (
             <div className="mt-3 pt-3 border-t border-gray-200 dark:border-white/10">
               <div className="grid grid-cols-3 gap-3">
                 <div className="relative">
@@ -494,9 +537,11 @@ function ProductsPage() {
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-500">
                         Categoría
                       </th>
+                      {tab !== 'services' && (
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-500">
-                        Stock
+                        {tab === 'labor' ? 'Horas tempario' : 'Stock'}
                       </th>
+                      )}
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-500">
                         Precio
                       </th>
@@ -535,6 +580,14 @@ function ProductsPage() {
                             <div className="text-xs text-gray-500 dark:text-gray-500">Ubicación: {product.location.code}</div>
                           )}
                         </td>
+                        {tab === 'labor' && (
+                        <td className="px-6 py-4 text-sm">
+                          {Number(product.standard_hours) > 0
+                            ? <span className="text-gray-900 dark:text-gray-100">{Number(product.standard_hours).toLocaleString('es-CO', { maximumFractionDigits: 2 })} h{product.labor_pricing_mode === 'hourly' && <span className="block text-xs text-gray-500">precio por hora</span>}</span>
+                            : <span className="text-xs text-amber-600">Sin tiempo</span>}
+                        </td>
+                        )}
+                        {isProductsTab && (
                         <td className="px-6 py-4">
                           <span
                             onDoubleClick={() => product.track_inventory && setQuickStockProduct(product)}
@@ -557,6 +610,7 @@ function ProductsPage() {
                             </div>
                           )}
                         </td>
+                        )}
                         <td className="px-6 py-4">
                           <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
                             {formatCurrency(product.base_price)}
@@ -668,6 +722,7 @@ function ProductsPage() {
         }}
         onSave={handleSaveProduct}
         product={editingProduct}
+        newKind={editingProduct ? null : (isProductsTab ? null : tab)}
         categories={categories}
       />
 

@@ -1,212 +1,327 @@
-import { useState, useEffect } from 'react';
+// frontend/src/pages/workshop/productivity/TechnicianProductivityPage.jsx
+//
+// Productividad de técnicos = horas tempario de las OT terminadas (listo o
+// entregado) en el periodo ÷ horas disponibles según su jornada, sin festivos
+// ni ausencias. No depende de nómina. Backend: services/workshop/laborTimes.service.js.
+import { Fragment, useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
+import { TrendingUp, Calendar, ChevronDown, ChevronUp, Loader2, AlertTriangle, CalendarClock, Trash2, Plus, Save } from 'lucide-react';
 import Layout from '../../../components/layout/Layout';
-import axios from '../../../api/axios';
-import { Wrench, TrendingUp, Calendar, ChevronDown, ChevronUp } from 'lucide-react';
+import Modal from '../../../components/common/Modal';
+import { laborTimesAPI, WEEKDAYS, ABSENCE_REASONS } from '../../../api/laborTimes';
+import { formatCurrency } from '../../../utils/formatters';
 
-const COP = (n) =>
-  new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(n || 0);
+const localToday = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Bogota' }).format(new Date());
+const fmtH = (h) => Number(h || 0).toLocaleString('es-CO', { maximumFractionDigits: 1 });
+const pctColor = (p) => (p == null ? 'bg-gray-300' : p >= 85 ? 'bg-green-500' : p >= 60 ? 'bg-amber-500' : 'bg-red-500');
+const pctText = (p) => (p == null ? 'text-gray-400' : p >= 85 ? 'text-green-700' : p >= 60 ? 'text-amber-700' : 'text-red-600');
 
-const today = new Date();
-const firstOfMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-01`;
-const todayStr = today.toISOString().split('T')[0];
+function Detail({ techId, from, to }) {
+  const [lines, setLines] = useState(null);
+  useEffect(() => {
+    laborTimesAPI.productivityDetail(techId, { from, to }).then((r) => setLines(r.data.data)).catch(() => setLines([]));
+  }, [techId, from, to]);
+  if (!lines) return <div className="py-4 text-center text-gray-400 text-sm">Cargando…</div>;
+  if (!lines.length) return <div className="py-4 text-center text-gray-400 text-sm">Sin trabajos terminados en el periodo.</div>;
+  return (
+    <div className="overflow-x-auto">
+      <table className="min-w-full text-xs">
+        <thead className="bg-gray-50 dark:bg-graphite-2">
+          <tr>{['Terminada', 'OT', 'Servicio', 'Cant.', 'Horas c/u', 'Horas', 'Valor'].map((h, i) => (
+            <th key={h} className={`px-2 py-1.5 font-medium text-gray-500 ${i >= 3 ? 'text-right' : 'text-left'}`}>{h}</th>
+          ))}</tr>
+        </thead>
+        <tbody className="divide-y divide-gray-100 dark:divide-white/10">
+          {lines.map((l) => (
+            <tr key={l.id}>
+              <td className="px-2 py-1.5 whitespace-nowrap">{l.finished_on}</td>
+              <td className="px-2 py-1.5 whitespace-nowrap">{l.order_number}</td>
+              <td className="px-2 py-1.5">{l.product_name}</td>
+              <td className="px-2 py-1.5 text-right">{fmtH(l.quantity)}</td>
+              <td className="px-2 py-1.5 text-right">{l.standard_hours != null ? fmtH(l.standard_hours) : <span className="text-amber-600">sin tiempo</span>}</td>
+              <td className="px-2 py-1.5 text-right font-medium">{fmtH(l.hours)}</td>
+              <td className="px-2 py-1.5 text-right">{formatCurrency(l.subtotal)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function SchedulesModal({ isOpen, onClose, onChanged }) {
+  const [data, setData] = useState(null);
+  const [absences, setAbsences] = useState([]);
+  const [savingId, setSavingId] = useState(null);
+  const [form, setForm] = useState({ user_id: '', start_date: '', end_date: '', reason: 'vacaciones', notes: '' });
+
+  const load = async () => {
+    try {
+      const [s, a] = await Promise.all([laborTimesAPI.listSchedules(), laborTimesAPI.listAbsences()]);
+      setData(s.data.data);
+      setAbsences(a.data.data);
+    } catch {
+      toast.error('No se pudieron cargar las jornadas');
+    }
+  };
+  useEffect(() => { if (isOpen) load(); }, [isOpen]);
+
+  const setTech = (userId, patch) => setData((d) => ({ ...d, technicians: d.technicians.map((t) => (t.user_id === userId ? { ...t, ...patch, dirty: true } : t)) }));
+  const saveTech = async (t) => {
+    setSavingId(t.user_id);
+    try {
+      await laborTimesAPI.saveSchedule(t.user_id, { hours_by_weekday: t.hours_by_weekday, skip_holidays: t.skip_holidays, is_active: t.is_active });
+      setTech(t.user_id, { dirty: false, configured: true });
+      toast.success('Jornada guardada');
+      onChanged();
+    } catch (e) {
+      toast.error(e.response?.data?.message || 'No se pudo guardar');
+    } finally {
+      setSavingId(null);
+    }
+  };
+  const addAbsence = async () => {
+    try {
+      await laborTimesAPI.createAbsence(form);
+      setForm({ ...form, start_date: '', end_date: '', notes: '' });
+      setAbsences((await laborTimesAPI.listAbsences()).data.data);
+      onChanged();
+    } catch (e) {
+      toast.error(e.response?.data?.message || 'No se pudo registrar la ausencia');
+    }
+  };
+  const removeAbsence = async (id) => {
+    try {
+      await laborTimesAPI.deleteAbsence(id);
+      setAbsences((a) => a.filter((x) => x.id !== id));
+      onChanged();
+    } catch {
+      toast.error('No se pudo eliminar');
+    }
+  };
+  const nameOf = (id) => data?.technicians.find((t) => t.user_id === id)?.name || '—';
+  const input = 'border border-gray-200 dark:border-white/10 rounded-lg px-2 py-1.5 text-sm dark:bg-graphite-2';
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title="Jornadas y ausencias de técnicos" size="xl">
+      {!data ? <div className="py-8 flex justify-center"><Loader2 className="animate-spin text-gray-400" /></div> : (
+        <div className="space-y-6 text-sm">
+          <section>
+            <p className="text-gray-600 dark:text-gray-300 mb-2">
+              Horas por día de cada técnico. Sin jornada propia se usa la de la empresa (Tempario). Aparecen los usuarios con rol Técnico;
+              para medir a otra persona, asígnala como técnico en una OT y configúrale la jornada aquí.
+            </p>
+            {data.technicians.length === 0 ? <p className="text-gray-400">No hay usuarios con rol Técnico.</p> : (
+              <div className="overflow-x-auto border border-gray-200 dark:border-white/10 rounded-lg">
+                <table className="min-w-full text-sm">
+                  <thead className="bg-gray-50 dark:bg-graphite-2">
+                    <tr>
+                      <th className="px-2 py-1.5 text-left text-xs text-gray-500">Técnico</th>
+                      {WEEKDAYS.map(([d, l]) => <th key={d} className="px-1 py-1.5 text-xs text-gray-500">{l}</th>)}
+                      <th className="px-2 py-1.5 text-xs text-gray-500" title="Descontar festivos de Colombia">Festivos</th>
+                      <th className="px-2 py-1.5 text-xs text-gray-500" title="Medir su productividad">Medir</th>
+                      <th />
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 dark:divide-white/10">
+                    {data.technicians.map((t) => (
+                      <tr key={t.user_id}>
+                        <td className="px-2 py-1.5 whitespace-nowrap">{t.name}{!t.configured && <span className="block text-[11px] text-gray-400">jornada de la empresa</span>}</td>
+                        {WEEKDAYS.map(([d]) => (
+                          <td key={d} className="px-1 py-1.5">
+                            <input type="number" min="0" max="24" step="0.5" value={t.hours_by_weekday[d] ?? 0}
+                              onChange={(e) => setTech(t.user_id, { hours_by_weekday: { ...t.hours_by_weekday, [d]: e.target.value === '' ? 0 : Number(e.target.value) } })}
+                              className={`${input} w-14 text-center`} />
+                          </td>
+                        ))}
+                        <td className="px-2 py-1.5 text-center"><input type="checkbox" checked={t.skip_holidays} onChange={(e) => setTech(t.user_id, { skip_holidays: e.target.checked })} /></td>
+                        <td className="px-2 py-1.5 text-center"><input type="checkbox" checked={t.is_active} onChange={(e) => setTech(t.user_id, { is_active: e.target.checked })} /></td>
+                        <td className="px-2 py-1.5 text-right">
+                          {t.dirty && (
+                            <button onClick={() => saveTech(t)} disabled={savingId === t.user_id} className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-emerald-600 text-white text-xs disabled:opacity-60">
+                              {savingId === t.user_id ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />} Guardar
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
+
+          <section>
+            <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Ausencias</h4>
+            <p className="text-gray-600 dark:text-gray-300 mb-2">Vacaciones, incapacidades o permisos: esos días no cuentan como horas disponibles.</p>
+            <div className="flex flex-wrap items-end gap-2 mb-3">
+              <select value={form.user_id} onChange={(e) => setForm({ ...form, user_id: e.target.value })} className={input}>
+                <option value="">Técnico…</option>
+                {data.technicians.map((t) => <option key={t.user_id} value={t.user_id}>{t.name}</option>)}
+              </select>
+              <label className="text-xs text-gray-500">Desde<input type="date" value={form.start_date} onChange={(e) => setForm({ ...form, start_date: e.target.value })} className={`${input} block`} /></label>
+              <label className="text-xs text-gray-500">Hasta<input type="date" value={form.end_date} onChange={(e) => setForm({ ...form, end_date: e.target.value })} className={`${input} block`} /></label>
+              <select value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} className={input}>
+                {Object.entries(ABSENCE_REASONS).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+              </select>
+              <input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Nota (opcional)" className={`${input} flex-1 min-w-[140px]`} />
+              <button onClick={addAbsence} disabled={!form.user_id || !form.start_date || !form.end_date}
+                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-sm disabled:opacity-50"><Plus size={14} /> Agregar</button>
+            </div>
+            {absences.length === 0 ? <p className="text-gray-400">Sin ausencias registradas.</p> : (
+              <div className="max-h-56 overflow-y-auto border border-gray-200 dark:border-white/10 rounded-lg divide-y divide-gray-100 dark:divide-white/10">
+                {absences.map((a) => (
+                  <div key={a.id} className="flex items-center justify-between px-3 py-1.5">
+                    <span>{nameOf(a.user_id)} · {ABSENCE_REASONS[a.reason] || a.reason} · {a.start_date}{a.end_date !== a.start_date ? ` a ${a.end_date}` : ''}{a.notes ? ` · ${a.notes}` : ''}</span>
+                    <button onClick={() => removeAbsence(a.id)} className="text-gray-400 hover:text-red-600" title="Eliminar"><Trash2 size={14} /></button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        </div>
+      )}
+    </Modal>
+  );
+}
 
 export default function TechnicianProductivityPage() {
-  const [data, setData]         = useState([]);
-  const [loading, setLoading]   = useState(false);
-  const [dateFrom, setDateFrom] = useState(firstOfMonth);
-  const [dateTo, setDateTo]     = useState(todayStr);
+  const today = localToday();
+  const [from, setFrom] = useState(`${today.slice(0, 7)}-01`);
+  const [to, setTo] = useState(today);
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(false);
   const [expanded, setExpanded] = useState(null);
+  const [showSchedules, setShowSchedules] = useState(false);
 
   const load = async () => {
     setLoading(true);
+    setExpanded(null);
     try {
-      const res = await axios.get('/workshop/work-orders/productivity', {
-        params: { date_from: dateFrom, date_to: dateTo },
-      });
-      setData(res.data.data || []);
-    } catch {
-      setData([]);
+      const res = await laborTimesAPI.productivity({ from, to });
+      setData(res.data.data);
+    } catch (e) {
+      toast.error(e.response?.data?.message || 'No se pudo calcular la productividad');
     } finally {
       setLoading(false);
     }
   };
+  useEffect(() => { load(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => { load(); }, []);
-
-  const totals = data.reduce((acc, t) => ({
-    orders:    acc.orders + t.total_orders,
-    completed: acc.completed + t.completed_orders,
-    revenue:   acc.revenue + t.total_revenue,
-  }), { orders: 0, completed: 0, revenue: 0 });
-
-  const maxRevenue = Math.max(...data.map(t => t.total_revenue), 1);
-
+  const totals = data?.totals;
   return (
     <Layout>
-      <div className="p-4 sm:p-6 max-w-5xl mx-auto">
-
-        {/* Header */}
-        <div className="flex items-center gap-3 mb-6">
-          <div className="p-2 bg-blue-600 rounded-xl">
-            <TrendingUp size={22} className="text-white" />
+      <div className="p-4 sm:p-6 max-w-6xl mx-auto space-y-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-blue-600 rounded-xl"><TrendingUp size={22} className="text-white" /></div>
+            <div>
+              <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">Productividad de técnicos</h1>
+              <p className="text-sm text-gray-500">Horas del tempario en trabajos terminados ÷ horas disponibles de su jornada</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-xl font-bold text-gray-900">Productividad de Técnicos</h1>
-            <p className="text-sm text-gray-500">Mano de obra y servicios por período</p>
-          </div>
+          <button onClick={() => setShowSchedules(true)} className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 dark:border-white/10 text-sm hover:bg-gray-50 dark:hover:bg-white/5">
+            <CalendarClock size={15} /> Jornadas y ausencias
+          </button>
         </div>
 
-        {/* Filtros */}
-        <div className="bg-white border border-gray-100 rounded-xl p-4 mb-5">
-          <div className="flex flex-wrap gap-3 items-end">
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Desde</label>
-              <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
-                className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Hasta</label>
-              <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
-                className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-            </div>
-            <button onClick={load} disabled={loading}
-              className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-60 transition">
-              <Calendar size={15} />
-              {loading ? 'Calculando...' : 'Aplicar'}
-            </button>
-          </div>
+        <div className="bg-white dark:bg-graphite border border-gray-100 dark:border-white/10 rounded-xl p-4 flex flex-wrap gap-3 items-end">
+          <label className="text-xs font-medium text-gray-600 dark:text-gray-300">Desde
+            <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="block border border-gray-200 dark:border-white/10 rounded-lg px-3 py-2 text-sm dark:bg-graphite-2" />
+          </label>
+          <label className="text-xs font-medium text-gray-600 dark:text-gray-300">Hasta
+            <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="block border border-gray-200 dark:border-white/10 rounded-lg px-3 py-2 text-sm dark:bg-graphite-2" />
+          </label>
+          <button onClick={load} disabled={loading} className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-60">
+            <Calendar size={15} /> {loading ? 'Calculando…' : 'Aplicar'}
+          </button>
+          {data && data.available_until < data.to && (
+            <p className="text-xs text-gray-500">Horas disponibles contadas hasta hoy ({data.available_until}).</p>
+          )}
         </div>
 
-        {/* Resumen total */}
-        {data.length > 0 && (
-          <div className="grid grid-cols-3 gap-3 mb-5">
+        {totals && (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {[
-              { label: 'Total OT',        value: totals.orders,          sub: `${totals.completed} completadas` },
-              { label: 'Mano de obra',    value: COP(totals.revenue),    sub: 'solo servicios' },
-              { label: 'Técnicos activos', value: data.filter(t => t.technician_id).length, sub: `${data.filter(t => !t.technician_id).length > 0 ? '+ sin asignar' : ''}` },
-            ].map(({ label, value, sub }) => (
-              <div key={label} className="bg-white border border-gray-100 rounded-xl p-4">
+              ['Horas tempario', fmtH(totals.tempario_hours), 'trabajos terminados'],
+              ['Horas disponibles', fmtH(totals.available_hours), 'jornada sin festivos ni ausencias'],
+              ['Productividad', totals.productivity_pct != null ? `${fmtH(totals.productivity_pct)} %` : '—', 'del taller'],
+              ['Mano de obra', formatCurrency(totals.labor_value), 'antes de IVA'],
+            ].map(([label, value, sub]) => (
+              <div key={label} className="bg-white dark:bg-graphite border border-gray-100 dark:border-white/10 rounded-xl p-4">
                 <p className="text-xs text-gray-500 mb-1">{label}</p>
-                <p className="text-lg font-bold text-gray-900">{value}</p>
-                {sub && <p className="text-xs text-gray-400 mt-0.5">{sub}</p>}
+                <p className="text-lg font-bold text-gray-900 dark:text-gray-100">{value}</p>
+                <p className="text-xs text-gray-400 mt-0.5">{sub}</p>
               </div>
             ))}
           </div>
         )}
 
-        {/* Lista técnicos */}
-        {loading ? (
-          <div className="text-center py-16 text-gray-400">Calculando productividad...</div>
-        ) : data.length === 0 ? (
-          <div className="text-center py-16">
-            <Wrench size={40} className="mx-auto text-gray-200 mb-3" />
-            <p className="text-gray-500">Sin datos para el período seleccionado</p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {data.map((tech, idx) => {
-              const isOpen          = expanded === tech.technician_id;
-              const barWidth        = Math.round(tech.total_revenue / maxRevenue * 100);
-              const completionPct   = tech.total_orders > 0
-                ? Math.round(tech.completed_orders / tech.total_orders * 100) : 0;
-              const avgPerOrder     = tech.total_orders > 0
-                ? tech.total_revenue / tech.total_orders : 0;
-
-              return (
-                <div key={tech.technician_id || 'unassigned'}
-                  className={`bg-white border rounded-xl transition-all ${isOpen ? 'border-blue-200 shadow-sm' : 'border-gray-100'}`}>
-
-                  <button className="w-full text-left p-4" onClick={() => setExpanded(isOpen ? null : tech.technician_id)}>
-                    <div className="flex items-center gap-4">
-                      {/* Rank */}
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${
-                        idx === 0 ? 'bg-yellow-100 text-yellow-700' :
-                        idx === 1 ? 'bg-gray-100 text-gray-500' :
-                        idx === 2 ? 'bg-orange-100 text-orange-600' :
-                        'bg-gray-50 text-gray-400'
-                      }`}>
-                        {idx + 1}
-                      </div>
-
-                      {/* Name + bar */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between mb-1.5">
-                          <span className="font-semibold text-gray-900 text-sm">{tech.technician_name}</span>
-                          <span className="text-sm font-bold text-gray-900 ml-2">{COP(tech.total_revenue)}</span>
-                        </div>
-                        <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                          <div className="h-full bg-blue-500 rounded-full transition-all" style={{ width: `${barWidth}%` }} />
-                        </div>
-                        <div className="flex items-center gap-4 mt-1.5 text-xs text-gray-400">
-                          <span>{tech.total_orders} OT · {tech.completed_orders} completadas ({completionPct}%)</span>
-                          {tech.in_progress_orders > 0 && (
-                            <span className="text-orange-500">{tech.in_progress_orders} en curso</span>
-                          )}
-                        </div>
-                      </div>
-
-                      {isOpen
-                        ? <ChevronUp size={16} className="text-gray-400 flex-shrink-0" />
-                        : <ChevronDown size={16} className="text-gray-400 flex-shrink-0" />}
-                    </div>
-                  </button>
-
-                  {/* Expanded */}
-                  {isOpen && (
-                    <div className="border-t border-gray-100 p-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
-
-                      {/* Mano de obra */}
-                      <div className="bg-blue-50 rounded-xl p-3">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Wrench size={14} className="text-blue-600" />
-                          <span className="text-xs font-semibold text-blue-800">Mano de obra</span>
-                        </div>
-                        <p className="text-xl font-bold text-blue-900">{COP(tech.labor_revenue)}</p>
-                        <p className="text-xs text-blue-600 mt-0.5">Solo servicios facturados</p>
-                      </div>
-
-                      {/* Promedio */}
-                      <div className="bg-green-50 rounded-xl p-3">
-                        <div className="flex items-center gap-2 mb-2">
-                          <TrendingUp size={14} className="text-green-600" />
-                          <span className="text-xs font-semibold text-green-800">Promedio / OT</span>
-                        </div>
-                        <p className="text-xl font-bold text-green-900">{COP(avgPerOrder)}</p>
-                        <p className="text-xs text-green-600 mt-0.5">en mano de obra</p>
-                      </div>
-
-                      {/* Resumen OT */}
-                      <div className="bg-gray-50 rounded-xl p-3">
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="text-xs font-semibold text-gray-700">Resumen OT</span>
-                        </div>
-                        <div className="space-y-1.5 text-xs text-gray-600">
-                          <div className="flex justify-between">
-                            <span>Total</span>
-                            <span className="font-bold text-gray-900">{tech.total_orders}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>Completadas</span>
-                            <span className="font-bold text-green-700">{tech.completed_orders}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>En curso</span>
-                            <span className="font-bold text-orange-600">{tech.in_progress_orders}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>Completadas</span>
-                            <span className="font-bold text-gray-700">{completionPct}%</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+        {(totals?.lines_without_hours > 0 || data?.unassigned?.lines > 0) && (
+          <div className="flex items-start gap-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-3 text-sm text-amber-800 dark:text-amber-200">
+            <AlertTriangle size={16} className="mt-0.5 shrink-0" />
+            <div>
+              {totals.lines_without_hours > 0 && <p>{totals.lines_without_hours} línea(s) de mano de obra sin tiempo de tempario: no suman horas. Configura el tiempo del servicio en Tempario (las OT nuevas lo tomarán).</p>}
+              {data.unassigned.lines > 0 && <p>{data.unassigned.lines} línea(s) sin técnico asignado ({fmtH(data.unassigned.tempario_hours)} h, {formatCurrency(data.unassigned.labor_value)}).</p>}
+            </div>
           </div>
         )}
+
+        <div className="bg-white dark:bg-graphite border border-gray-100 dark:border-white/10 rounded-xl overflow-hidden">
+          {loading && !data ? (
+            <div className="flex justify-center py-12"><Loader2 className="animate-spin text-gray-400" /></div>
+          ) : !data?.rows?.length ? (
+            <div className="text-center py-12 text-gray-400 text-sm">Sin técnicos ni trabajos en el periodo. Los técnicos son los usuarios con rol Técnico o los asignados en las OT.</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead className="bg-gray-50 dark:bg-graphite-2">
+                  <tr>{['Técnico', 'OT', 'Horas tempario', 'Horas disponibles', 'Productividad', 'Mano de obra', ''].map((h, i) => (
+                    <th key={h || i} className={`px-3 py-2 text-xs font-medium text-gray-500 uppercase ${i === 0 ? 'text-left' : i === 4 ? 'text-left' : 'text-right'}`}>{h}</th>
+                  ))}</tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 dark:divide-white/10">
+                  {data.rows.map((r) => {
+                    const open = expanded === r.technician_id;
+                    return (
+                      <Fragment key={r.technician_id}>
+                        <tr className="cursor-pointer hover:bg-gray-50 dark:hover:bg-white/5" onClick={() => setExpanded(open ? null : r.technician_id)}>
+                          <td className="px-3 py-2">
+                            <span className="font-medium text-gray-900 dark:text-gray-100">{r.name}</span>
+                            {r.lines_without_hours > 0 && <span className="ml-2 text-xs text-amber-600" title="Líneas sin tiempo de tempario">{r.lines_without_hours} sin tiempo</span>}
+                          </td>
+                          <td className="px-3 py-2 text-right">{r.orders}</td>
+                          <td className="px-3 py-2 text-right font-medium">{fmtH(r.tempario_hours)}</td>
+                          <td className="px-3 py-2 text-right" title={r.absent_hours ? `${fmtH(r.absent_hours)} h de ausencias descontadas` : ''}>
+                            {fmtH(r.available_hours)}{r.absent_hours > 0 && <span className="block text-[11px] text-gray-400">−{fmtH(r.absent_hours)} ausencias</span>}
+                          </td>
+                          <td className="px-3 py-2 min-w-[160px]">
+                            <div className="flex items-center gap-2">
+                              <div className="flex-1 h-2 bg-gray-100 dark:bg-white/10 rounded-full overflow-hidden">
+                                <div className={`h-full ${pctColor(r.productivity_pct)}`} style={{ width: `${Math.min(r.productivity_pct || 0, 100)}%` }} />
+                              </div>
+                              <span className={`text-sm font-semibold w-14 text-right ${pctText(r.productivity_pct)}`}>{r.productivity_pct != null ? `${fmtH(r.productivity_pct)}%` : '—'}</span>
+                            </div>
+                          </td>
+                          <td className="px-3 py-2 text-right whitespace-nowrap">{formatCurrency(r.labor_value)}</td>
+                          <td className="px-3 py-2 text-right text-gray-400">{open ? <ChevronUp size={16} /> : <ChevronDown size={16} />}</td>
+                        </tr>
+                        {open && (
+                          <tr><td colSpan={7} className="px-3 pb-3 bg-gray-50/50 dark:bg-white/5"><Detail techId={r.technician_id} from={data.from} to={data.to} /></td></tr>
+                        )}
+                      </Fragment>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+        <p className="text-xs text-gray-500">
+          Cuentan las OT en estado Listo o Entregado según su fecha de terminación, con el técnico de cada línea (o el de la OT). Verde ≥ 85 %, ámbar 60–85 %, rojo &lt; 60 %.
+        </p>
       </div>
+      <SchedulesModal isOpen={showSchedules} onClose={() => setShowSchedules(false)} onChanged={() => {}} />
     </Layout>
   );
 }

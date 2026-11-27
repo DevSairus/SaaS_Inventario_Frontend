@@ -16,7 +16,9 @@ import RuntConsultaModal from '../workshop/RuntConsultaModal';
 import UnspscPicker from './UnspscPicker';
 import { chartOfAccountsAPI } from '../../api/accounting';
 
-const ProductFormModal = ({ isOpen, onClose, product = null }) => {
+// newKind: 'labor' | 'services' abre un producto NUEVO ya como mano de obra o
+// servicio (pestañas de la página de Productos).
+const ProductFormModal = ({ isOpen, onClose, product = null, newKind = null }) => {
   const { createProduct, updateProduct, loading } = useProductsStore();
   const { categories, fetchCategories } = useCategoriesStore();
   const { fetchFeatures, marginMethod } = useTenantStore();
@@ -86,6 +88,8 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
     tax_percentage: 19,
     price_includes_tax: false,
     is_labor: false,
+    standard_hours: '',
+    labor_pricing_mode: 'fixed',
     tax_config: {
       iva: { enabled: true, rate: 19 },
       inc: { enabled: false, rate: 0 },
@@ -193,6 +197,8 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
         tax_percentage: productTaxPercentage,
         price_includes_tax: product.price_includes_tax || false,
         is_labor: product.is_labor || false,
+        standard_hours: product.standard_hours != null ? String(Number(product.standard_hours)) : '',
+        labor_pricing_mode: product.labor_pricing_mode || 'fixed',
         tax_config: product.tax_config || {
           iva: { enabled: productHasTax, rate: productTaxPercentage },
           inc: { enabled: false, rate: 0 },
@@ -244,14 +250,20 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
         has_tax: true,
         tax_percentage: 19,
         price_includes_tax: false,
-        is_labor: false
+        is_labor: false,
+        standard_hours: '',
+        labor_pricing_mode: 'fixed',
+        ...(newKind === 'labor' || newKind === 'services' ? {
+          product_type: 'service', track_inventory: false, is_labor: newKind === 'labor',
+          current_stock: '', min_stock: '', max_stock: '', average_cost: '',
+        } : {}),
       }));
       setVehicleData(EMPTY_VEHICLE_DATA);
       setCalculatedPrice(null);
       setSaveError('');
       setCurrentImageUrl(null);
     }
-  }, [product, isOpen]);
+  }, [product, isOpen, newKind]);
 
   // Margen que heredaría el producto con la categoría elegida.
   const inheritedCategory = marginOverview?.categories.find((c) => c.id === formData.category_id);
@@ -362,6 +374,9 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
       revenue_account_id: formData.revenue_account_id || null,
       deferred_months: formData.deferred_months ? parseInt(formData.deferred_months, 10) : null,
       deferred_account_id: formData.deferred_months ? (formData.deferred_account_id || null) : null,
+      // Tempario: solo mano de obra. En modo "por hora" el backend fija el precio.
+      standard_hours: formData.product_type === 'service' && formData.is_labor && parseFloat(formData.standard_hours) > 0 ? parseFloat(formData.standard_hours) : null,
+      labor_pricing_mode: formData.product_type === 'service' && formData.is_labor ? (formData.labor_pricing_mode || 'fixed') : null,
     };
     // Sin acceso al plan de cuentas no se envían (no se tocan en el producto).
     if (!ledgerAccounts) {
@@ -1293,6 +1308,36 @@ const ProductFormModal = ({ isOpen, onClose, product = null }) => {
                       </p>
                     </div>
                   </label>
+                )}
+
+                {formData.product_type === 'service' && formData.is_labor && (
+                  <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 rounded-lg border border-gray-200 dark:border-white/10">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Horas tempario</label>
+                      <input
+                        type="number" min="0" step="0.05"
+                        value={formData.standard_hours}
+                        onChange={(e) => setFormData(prev => ({ ...prev, standard_hours: e.target.value }))}
+                        placeholder="Ej. 1,5"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Tiempo estándar de la operación. Se usa para la productividad de los técnicos.</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Precio</label>
+                      <select
+                        value={formData.labor_pricing_mode}
+                        onChange={(e) => setFormData(prev => ({ ...prev, labor_pricing_mode: e.target.value }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg dark:bg-graphite-2 dark:border-white/10 dark:text-gray-100"
+                      >
+                        <option value="fixed">Fijo (el precio de venta de esta ficha)</option>
+                        <option value="hourly">Por hora (horas × valor hora del tempario)</option>
+                      </select>
+                      {formData.labor_pricing_mode === 'hourly' && (
+                        <p className="text-xs text-gray-500 mt-1">Al guardar, el precio de venta se calcula con el valor hora configurado en Taller → Tempario.</p>
+                      )}
+                    </div>
+                  </div>
                 )}
               </div>
 

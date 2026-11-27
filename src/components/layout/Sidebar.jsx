@@ -56,7 +56,9 @@ const NAV = [
       { label: "Configurar horarios",   path: "/workshop/appointments/settings", roles: ["admin", "manager"] },
       // maintenanceTypes.routes.js: escritura solo admin/manager/super_admin.
       { label: "Mantenimientos",        path: "/workshop/maintenance-types", roles: ["admin", "manager", "super_admin"] },
-      { label: "Productividad",         path: "/workshop/productivity" },
+      // laborTimes.routes.js: el tempario se consulta abierto, se edita con admin/manager.
+      { label: "Tempario",              path: "/workshop/labor-times" },
+      { label: "Productividad",         path: "/workshop/productivity", roles: ["admin", "manager", "super_admin"] },
       { label: "Reporte Taller",        path: "/workshop/report" },
       { label: "Liquidación Servicios", path: "/workshop/commission-settlements" },
       { label: "Comisiones Productos",  path: "/workshop/commission-products" },

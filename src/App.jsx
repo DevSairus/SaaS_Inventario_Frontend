@@ -143,6 +143,7 @@ const WorkshopDisplayPage = lazy(() => import('./pages/workshop/WorkshopDisplayP
 const WorkshopBoardPage = lazy(() => import('./pages/workshop/WorkshopBoardPage'));
 import VehiclePortalPage from './pages/workshop/VehiclePortalPage';
 const MaintenanceTypesPage = lazy(() => import('./pages/workshop/MaintenanceTypesPage'));
+const LaborTimesPage = lazy(() => import('./pages/workshop/LaborTimesPage'));
 const CustomersPage = lazy(() => import('./pages/customers/CustomersPage'));
 const CustomerDetailPage = lazy(() => import('./pages/crm/CustomerDetailPage'));
 const PipelinePage = lazy(() => import('./pages/crm/PipelinePage'));
@@ -572,11 +573,12 @@ function App() {
         <Route path="ensambladora/cotizar"                      element={<TenantRoute module="ensambladora"><Suspense fallback={<Loading fullScreen />}><CotizarPage /></Suspense></TenantRoute>} />
         <Route path="ensambladora/sync"                         element={<TenantRoute module="ensambladora"><Suspense fallback={<Loading fullScreen />}><SyncMonitorPage /></Suspense></TenantRoute>} />
         <Route path="ensambladora/auditoria"                    element={<TenantRoute module="ensambladora"><Suspense fallback={<Loading fullScreen />}><AuditoriaPage /></Suspense></TenantRoute>} />
-        <Route path="workshop/productivity"            element={<TenantRoute module="workshop"><Suspense fallback={<Loading fullScreen />}><TechnicianProductivityPage /></Suspense></TenantRoute>} />
+        <Route path="workshop/productivity"            element={<TenantRoute module="workshop" roles={['admin', 'manager', 'super_admin']}><Suspense fallback={<Loading fullScreen />}><TechnicianProductivityPage /></Suspense></TenantRoute>} />
         <Route path="workshop/commission-settlements"  element={<TenantRoute module="workshop"><Suspense fallback={<Loading fullScreen />}><CommissionSettlementsPage /></Suspense></TenantRoute>} />
         <Route path="workshop/commission-settlements/:id" element={<TenantRoute module="workshop"><Suspense fallback={<Loading fullScreen />}><CommissionSettlementDetailPage /></Suspense></TenantRoute>} />
         <Route path="workshop/commission-products"     element={<TenantRoute module="workshop"><Suspense fallback={<Loading fullScreen />}><CommissionProductsReportPage /></Suspense></TenantRoute>} />
         <Route path="workshop/commission-categories"   element={<TenantRoute module="workshop" roles={['admin', 'super_admin']}><Suspense fallback={<Loading fullScreen />}><CommissionCategoriesPage /></Suspense></TenantRoute>} />
+        <Route path="workshop/labor-times"             element={<TenantRoute module="workshop"><Suspense fallback={<Loading fullScreen />}><LaborTimesPage /></Suspense></TenantRoute>} />
         <Route path="workshop/maintenance-types"       element={<TenantRoute module="workshop" roles={['admin', 'manager', 'super_admin']}><Suspense fallback={<Loading fullScreen />}><MaintenanceTypesPage /></Suspense></TenantRoute>} />
         <Route path="workshop/diagram-library"         element={<TenantRoute module="workshop" roles={['admin', 'super_admin']}><Suspense fallback={<Loading fullScreen />}><DiagramLibraryPage /></Suspense></TenantRoute>} />
         <Route path="workshop/diagram-points-editor"   element={<TenantRoute module="workshop" roles={['admin', 'super_admin']}><Suspense fallback={<Loading fullScreen />}><DiagramPointsEditorPage /></Suspense></TenantRoute>} />
