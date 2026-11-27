@@ -359,6 +359,7 @@ export const SOURCE_TYPE_LABELS = {
   year_end_close: 'Cierre de año',
   internal_consumption: 'Consumo interno',
   inventory_adjustment: 'Ajuste de inventario',
+  product_cost_correction: 'Corrección de costo (ajuste de precio)',
   product_initial_stock: 'Inventario inicial',
   product_bulk_import: 'Importación de inventario',
   niif_receivable_impairment: 'Deterioro de cartera (NIIF)',

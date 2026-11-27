@@ -12,6 +12,8 @@ import {
   MAINTENANCE_STATUS, VEHICLE_TYPE_LABELS, fmtKm, fmtDateOnly, describeRemaining, fmtKmPerDay,
 } from '../../components/workshop/maintenanceStatus';
 import { meterUnitOf } from '../../constants/vehicleTypes';
+import OdometerChart from '../../components/workshop/OdometerChart';
+import { CONCEPTS, fmtScore, scoreColor } from '../../constants/inspection';
 
 const fmtDate = (d) =>
   d ? new Date(d).toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' }) : '—';
@@ -165,7 +167,7 @@ export default function VehiclePortalPage() {
     );
   }
 
-  const { vehicle, upcoming = [], history = [], workshop, usage } = data;
+  const { vehicle, upcoming = [], history = [], workshop, usage, odometer, owners_count: ownersCount, inspections = [] } = data;
   const primaryColor = workshop?.primary_color || '#2563eb';
   const soat = docStatus(vehicle.soat_expiry);
   const tecno = docStatus(vehicle.tecnomecanica_expiry);
@@ -219,6 +221,42 @@ export default function VehiclePortalPage() {
             </div>
           )}
         </div>
+
+        {/* ── Peritajes publicados por el taller ── */}
+        {inspections.length > 0 && (
+          <Card title="Peritajes">
+            <div className="space-y-2">
+              {inspections.map((i) => {
+                const c = CONCEPTS[i.concept];
+                return (
+                  <a key={i.number} href={i.verify_url} className="flex items-center gap-3 rounded-xl border border-gray-100 p-3 hover:bg-gray-50">
+                    <span className="text-2xl font-black w-14 text-center" style={{ color: scoreColor(i.score) }}>{fmtScore(i.score)}</span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-sm font-semibold text-gray-900">{fmtDate(i.date)}</span>
+                      {c && <span className={`inline-block text-[11px] px-1.5 py-0.5 rounded-full border ${c.cls}`}>{c.label}</span>}
+                      {i.mileage != null && <span className="block text-[11px] text-gray-500 mt-0.5">{fmtKm(i.mileage, meterUnitOf(vehicle))}</span>}
+                    </span>
+                    <span className="text-xs text-gray-400">Ver ›</span>
+                  </a>
+                );
+              })}
+            </div>
+            <p className="text-[11px] text-gray-400 mt-2">Peritajes hechos por {workshop?.name || 'el taller'}. Cada uno abre su certificado verificable.</p>
+          </Card>
+        )}
+
+        {/* ── Kilometraje registrado ── */}
+        {odometer?.readings?.length > 1 && (
+          <Card title={odometer.unit === 'h' ? 'Horómetro registrado' : 'Kilometraje registrado'}
+            right={ownersCount > 1 ? <span className="text-xs text-gray-400">{ownersCount} propietarios en el taller</span> : null}>
+            <OdometerChart readings={odometer.readings} unit={odometer.unit} height={180} />
+            {odometer.anomalies > 0 ? (
+              <p className="text-xs text-red-700 bg-red-50 rounded-lg px-3 py-2 mt-2">⚠ Hay {odometer.anomalies} lectura(s) menor(es) a una anterior. Puede ser un error de registro o una alteración del {odometer.unit === 'h' ? 'horómetro' : 'odómetro'}.</p>
+            ) : (
+              <p className="text-[11px] text-gray-400 mt-2">Lecturas tomadas en cada visita al taller; todas son consistentes.</p>
+            )}
+          </Card>
+        )}
 
         {/* ── Próximos mantenimientos ── */}
         {upcoming.length > 0 && (

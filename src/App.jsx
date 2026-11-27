@@ -100,6 +100,10 @@ const WorkOrderFormPage = lazy(() => import('./pages/workshop/WorkOrderFormPage'
 const WorkOrderDetailPage = lazy(() => import('./pages/workshop/WorkOrderDetailPage'));
 const VehiclesPage = lazy(() => import('./pages/workshop/VehiclesPage'));
 const VehicleDetailPage = lazy(() => import('./pages/workshop/VehicleDetailPage'));
+const InspectionsPage = lazy(() => import('./pages/workshop/InspectionsPage'));
+const InspectionDetailPage = lazy(() => import('./pages/workshop/InspectionDetailPage'));
+const InspectionTemplatesPage = lazy(() => import('./pages/workshop/InspectionTemplatesPage'));
+const InspectionVerifyPage = lazy(() => import('./pages/workshop/InspectionVerifyPage'));
 const ScannerPage = lazy(() => import('./pages/workshop/ScannerPage'));
 // Módulo Ensambladora (Fase 1 — consulta de vehículos vs el Core)
 const VinSearchPage = lazy(() => import('./pages/ensambladora/VinSearchPage'));
@@ -376,6 +380,7 @@ function App() {
         {/* Aprobación desde el correo (enlace de un solo uso, sin sesión) */}
         <Route path="/aprobar/:token" element={<ApprovalPublicPage />} />
         <Route path="/portal/vehiculo/:token" element={<VehiclePortalPage />} />
+        <Route path="/peritaje/:token" element={<Suspense fallback={<Loading fullScreen />}><InspectionVerifyPage /></Suspense>} />
         <Route path="/blog"           element={<Suspense fallback={<Loading fullScreen />}><BlogListPage /></Suspense>} />
         <Route path="/blog/:slug"     element={<Suspense fallback={<Loading fullScreen />}><BlogPostPage /></Suspense>} />
         <Route path="/ensambladora/seguimiento/:tipo/:token" element={<SeguimientoPublicoPage />} />
@@ -547,6 +552,9 @@ function App() {
         <Route path="workshop/work-orders/:id"         element={<TenantRoute module="workshop"><Suspense fallback={<Loading fullScreen />}><WorkOrderDetailPage /></Suspense></TenantRoute>} />
         <Route path="workshop/vehicles"                element={<TenantRoute module="workshop"><Suspense fallback={<Loading fullScreen />}><VehiclesPage /></Suspense></TenantRoute>} />
         <Route path="workshop/vehicles/:id"            element={<TenantRoute module="workshop"><Suspense fallback={<Loading fullScreen />}><VehicleDetailPage /></Suspense></TenantRoute>} />
+        <Route path="workshop/inspections"             element={<TenantRoute module="workshop"><Suspense fallback={<Loading fullScreen />}><InspectionsPage /></Suspense></TenantRoute>} />
+        <Route path="workshop/inspections/templates"   element={<TenantRoute module="workshop"><Suspense fallback={<Loading fullScreen />}><InspectionTemplatesPage /></Suspense></TenantRoute>} />
+        <Route path="workshop/inspections/:id"         element={<TenantRoute module="workshop"><Suspense fallback={<Loading fullScreen />}><InspectionDetailPage /></Suspense></TenantRoute>} />
         <Route path="workshop/scan"                    element={<TenantRoute module="workshop"><Suspense fallback={<Loading fullScreen />}><ScannerPage /></Suspense></TenantRoute>} />
         <Route path="ensambladora/buscar"              element={<TenantRoute module="ensambladora"><Suspense fallback={<Loading fullScreen />}><VinSearchPage /></Suspense></TenantRoute>} />
         <Route path="ensambladora/vehiculos/:vin"      element={<TenantRoute module="ensambladora"><Suspense fallback={<Loading fullScreen />}><VehiculoDetailPage /></Suspense></TenantRoute>} />

@@ -7,12 +7,18 @@ import {
   ArrowLeft, Car, Wrench, User, Save, X, PencilLine,
   ChevronRight, AlertTriangle, CheckCircle, Clock,
   FileText, Hash, Fuel, Gauge, Palette,
-  QrCode, Link2, MessageCircle, CalendarClock, Bell, Mail,
+  QrCode, Link2, MessageCircle, CalendarClock, Bell, Mail, ClipboardCheck, ShieldCheck,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import NumericInput from '../../components/inputs/NumericInput';
 import VehicleLabelPrintModal from '../../components/workshop/VehicleLabelPrintModal';
 import VehicleBrandLineInputs from '../../components/workshop/VehicleBrandLineInputs';
+import RuntConsultaModal from '../../components/workshop/RuntConsultaModal';
+import {
+  TABS_360, Vehicle360Kpis, Vehicle360Timeline, Vehicle360Odometer, Vehicle360Inspections,
+  Vehicle360Gallery, Vehicle360Owners, Vehicle360Runt,
+} from '../../components/workshop/Vehicle360';
+import { usePermissions } from '../../store/tenantPermissionsStore';
 import useTenantStore from '../../store/tenantStore';
 import { vehicleTypeOptionsFor, meterUnitOf, defaultMeterUnit, meterName, METER_UNIT_OPTIONS } from '../../constants/vehicleTypes';
 import useRemoteOptions from '../../hooks/useRemoteOptions';
@@ -70,6 +76,18 @@ export default function VehicleDetailPage() {
   const [showLabelModal, setShowLabelModal] = useState(false);
   const [reminders, setReminders] = useState([]); // recordatorios de vencimiento enviados
   const { sendFromBackend } = useWhatsAppPitbox();
+  // Hoja de vida 360 (GET /workshop/vehicles/:id/360). La pestaña va en la URL
+  // (?tab=) para volver a la misma al regresar de una OT o un peritaje.
+  const [data360, setData360] = useState(null);
+  const [showRunt, setShowRunt] = useState(false);
+  const can = usePermissions();
+  const tab = searchParams.get('tab') || 'resumen';
+  const setTab = (t) => {
+    const next = new URLSearchParams(searchParams);
+    if (t === 'resumen') next.delete('tab'); else next.set('tab', t);
+    setSearchParams(next, { replace: true });
+  };
+  const load360 = () => vehiclesApi.get360(id).then(r => setData360(r.data.data)).catch(() => setData360(null));
 
   useEffect(() => { load(); }, [id]);
   // Búsqueda en el servidor: precargar un tope fijo dejaba clientes por fuera.
@@ -86,6 +104,7 @@ export default function VehicleDetailPage() {
       setVehicle(res.data.data.vehicle);
       setHistory(res.data.data.history || []);
       loadMaintenance();
+      load360();
       vehiclesApi.getReminders(id).then(r => setReminders(r.data.data || [])).catch(() => setReminders([]));
     } catch {
       toast.error('Error cargando vehículo');
@@ -178,6 +197,7 @@ export default function VehicleDetailPage() {
       setVehicle(reloaded.data.data.vehicle);
       setHistory(reloaded.data.data.history || []);
       setEditing(false);
+      load360(); // el propietario pudo cambiar
       toast.success('Vehículo actualizado');
     } catch (e) {
       toast.error(e.response?.data?.message || 'Error al guardar');
@@ -221,7 +241,7 @@ export default function VehicleDetailPage() {
   // ── RENDER ──────────────────────────────────────────────────────────
   return (
     <Layout>
-      <div className="p-4 sm:p-6 max-w-4xl mx-auto space-y-5">
+      <div className="p-4 sm:p-6 max-w-5xl mx-auto space-y-5">
 
         {/* Header */}
         <div className="flex items-start justify-between gap-3">
@@ -242,7 +262,17 @@ export default function VehicleDetailPage() {
             </div>
           </div>
           {!editing ? (
-            <div className="flex gap-2">
+            <div className="flex flex-wrap justify-end gap-2">
+              <button onClick={() => setShowRunt(true)}
+                className="flex items-center gap-1.5 px-3 py-2 border border-gray-200 text-gray-700 rounded-lg text-sm hover:bg-gray-50">
+                <ShieldCheck size={15} /> RUNT
+              </button>
+              {can('workshop.inspections.write') && (
+                <button onClick={() => navigate(`/workshop/inspections?new=1&vehicle_id=${id}`)}
+                  className="flex items-center gap-1.5 px-3 py-2 border border-gray-200 text-gray-700 rounded-lg text-sm hover:bg-gray-50">
+                  <ClipboardCheck size={15} /> Peritaje
+                </button>
+              )}
               <button onClick={startEdit}
                 className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition">
                 <PencilLine size={15} /> Editar
@@ -263,7 +293,28 @@ export default function VehicleDetailPage() {
         </div>
 
         {/* ── VISTA / EDICIÓN ── */}
-        {!editing ? (
+        {!editing && (
+          <div className="flex gap-1 overflow-x-auto border-b border-gray-200 -mt-1">
+            {TABS_360.map(t => (
+              <button key={t.key} onClick={() => setTab(t.key)}
+                className={`px-3 py-2 text-sm whitespace-nowrap border-b-2 -mb-px transition ${tab === t.key ? 'border-blue-600 text-blue-700 font-medium' : 'border-transparent text-gray-500 hover:text-gray-800'}`}>
+                {t.label}
+                {t.key === 'inspections' && data360?.inspections?.length ? <span className="ml-1 text-[11px] text-gray-400">{data360.inspections.length}</span> : null}
+                {t.key === 'km' && data360?.odometer?.anomalies?.length ? <span className="ml-1 text-[11px] text-red-600">⚠</span> : null}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {!editing && tab === 'timeline' && <Vehicle360Timeline data={data360} unit={meterUnitOf(vehicle)} />}
+        {!editing && tab === 'km' && <Vehicle360Odometer data={data360} />}
+        {!editing && tab === 'inspections' && <Vehicle360Inspections data={data360} vehicleId={id} unit={meterUnitOf(vehicle)} />}
+        {!editing && tab === 'gallery' && <Vehicle360Gallery data={data360} />}
+        {!editing && tab === 'owners' && <Vehicle360Owners data={data360} vehicleId={id} onChanged={load} />}
+        {!editing && tab === 'runt' && <Vehicle360Runt data={data360} onConsult={() => setShowRunt(true)} />}
+        {!editing && tab === 'resumen' && <Vehicle360Kpis data={data360} unit={meterUnitOf(vehicle)} />}
+
+        {editing || tab === 'resumen' ? (!editing ? (
           /* ─── MODO VISTA ─────────────────────────────── */
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
 
@@ -633,8 +684,26 @@ export default function VehicleDetailPage() {
               </div>
             </div>
           </div>
-        )}
+        )) : null}
       </div>
+
+      {showRunt && (
+        <RuntConsultaModal
+          placa={vehicle.plate || ''}
+          onClose={() => setShowRunt(false)}
+          onConfirm={async (runtData) => {
+            setShowRunt(false);
+            try {
+              await vehiclesApi.saveRuntSnapshot(id, runtData);
+              toast.success('Consulta RUNT guardada en la hoja de vida');
+              load360();
+              setTab('runt');
+            } catch (e) {
+              toast.error(e.response?.data?.message || 'No se pudo guardar la consulta RUNT');
+            }
+          }}
+        />
+      )}
 
       <VehicleLabelPrintModal isOpen={showLabelModal} onClose={handleCloseLabel} vehicleId={id} />
     </Layout>

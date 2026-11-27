@@ -19,6 +19,36 @@ export const vehiclesApi = {
   getPortalLink: (id) => axios.post(`/workshop/vehicles/${id}/portal-token`),
   sendPortalWhatsApp: (id) => axios.post(`/workshop/vehicles/${id}/portal-whatsapp`),
   getLabel: (id) => axios.get(`/workshop/vehicles/${id}/label`), // datos + QR del sticker
+  // Hoja de vida 360: resumen, línea de tiempo, kilometraje, galería, propietarios, peritajes, RUNT
+  get360: (id) => axios.get(`/workshop/vehicles/${id}/360`),
+  getOwners: (id) => axios.get(`/workshop/vehicles/${id}/owners`),
+  transferOwner: (id, data) => axios.post(`/workshop/vehicles/${id}/owners`, data),
+  updateOwner: (id, ownerId, data) => axios.put(`/workshop/vehicles/${id}/owners/${ownerId}`, data),
+  saveRuntSnapshot: (id, data) => axios.post(`/workshop/vehicles/${id}/runt-snapshots`, { data }),
+};
+
+// ── Peritajes vehiculares (PER-) ──
+export const inspectionsApi = {
+  meta: () => axios.get('/workshop/inspections/meta'),
+  list: (params, opts = {}) => axios.get('/workshop/inspections', { params, ...opts }),
+  get: (id) => axios.get(`/workshop/inspections/${id}`),
+  create: (data) => axios.post('/workshop/inspections', data),
+  update: (id, data) => axios.put(`/workshop/inspections/${id}`, data),
+  finalize: (id, data) => axios.post(`/workshop/inspections/${id}/finalize`, data || {}),
+  cancel: (id, reason) => axios.post(`/workshop/inspections/${id}/cancel`, { reason }),
+  remove: (id) => axios.delete(`/workshop/inspections/${id}`),
+  uploadPhotos: (id, files, itemId) => {
+    const fd = new FormData();
+    for (const f of files) fd.append('photos', f);
+    return axios.post(`/workshop/inspections/${id}/photos`, fd, { params: itemId ? { item_id: itemId } : {}, headers: { 'Content-Type': 'multipart/form-data' } });
+  },
+  pdf: (id) => axios.get(`/workshop/inspections/${id}/pdf`, { responseType: 'blob' }),
+  billingDefaults: (id) => axios.get(`/workshop/inspections/${id}/billing`),
+  createSale: (id, data) => axios.post(`/workshop/inspections/${id}/sale`, data),
+  sendWhatsApp: (id, phone) => axios.post(`/workshop/inspections/${id}/whatsapp`, phone ? { phone } : {}),
+  listTemplates: (all) => axios.get('/workshop/inspections/templates', { params: all ? { all: 1 } : {} }),
+  createTemplate: (data) => axios.post('/workshop/inspections/templates', data),
+  updateTemplate: (id, data) => axios.put(`/workshop/inspections/templates/${id}`, data),
 };
 
 // ── Tipos de mantenimiento (intervalos por tipo de vehículo) ──

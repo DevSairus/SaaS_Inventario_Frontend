@@ -7,6 +7,7 @@ import NumericInput from '../inputs/NumericInput';
 import { formatCurrency } from '../../utils/formatters';
 import { suggestedSalePrice, maxMarginFor, MARGIN_METHOD_LABELS } from '../../utils/salePricing';
 import { createPriceAdjustment, getPriceAdjustmentProductsInfo } from '../../api/priceAdjustments';
+import { usePermissions } from '../../store/tenantPermissionsStore';
 
 // Ajuste de precio de venta (AJP-) para uno o varios productos. Solo cambia
 // el precio: costo, stock y contabilidad quedan igual. Por cada producto se
@@ -14,6 +15,9 @@ import { createPriceAdjustment, getPriceAdjustmentProductsInfo } from '../../api
 // todavía no se ha registrado); el sugerido sale del margen y el método del
 // negocio, y el precio nuevo lo decide el usuario. También se puede cambiar el
 // margen del producto: queda como su margen propio para las próximas compras.
+// Con la casilla "Corregir también el costo" (permiso inventory.cost_correction,
+// por defecto solo el administrador) el costo promedio pasa al de referencia,
+// con salida + entrada en el kárdex y su asiento contable.
 // Backend: services/inventory/priceAdjustment.service.js.
 
 const num = (v) => (v === '' || v === null || v === undefined ? null : Number(v));
@@ -38,6 +42,9 @@ export default function PriceAdjustmentModal({ isOpen, onClose, productIds = [],
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const can = usePermissions();
+  const canCorrectCost = can('inventory.cost_correction');
+  const [updateCost, setUpdateCost] = useState(false);
 
   const addProducts = async (ids) => {
     const fresh = ids.filter((id) => !lines.some((l) => l.id === id));
@@ -60,6 +67,7 @@ export default function PriceAdjustmentModal({ isOpen, onClose, productIds = [],
     setReason('');
     setNotes('');
     setSearch('');
+    setUpdateCost(false);
     if (productIds.length) addProducts(productIds);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
@@ -84,7 +92,17 @@ export default function PriceAdjustmentModal({ isOpen, onClose, productIds = [],
   };
 
   const priceChanged = (l) => num(l.new_price) > 0 && Math.abs(num(l.new_price) - l.current_price) >= 0.005;
-  const changed = lines.filter((l) => priceChanged(l) || marginChanged(l));
+  // Corrección de costo: el promedio pasa al costo de referencia. El valor es
+  // lo que sube (o baja) el inventario: existencias × diferencia.
+  const costChange = (l) => {
+    const ref = num(l.reference_cost);
+    if (!updateCost || !(ref > 0) || Math.abs(ref - l.average_cost) < 0.005) return null;
+    const qty = l.current_stock > 0 ? l.current_stock : 0;
+    return { from: l.average_cost, to: ref, qty, value: Math.round((qty * ref - qty * l.average_cost) * 100) / 100 };
+  };
+  const changed = lines.filter((l) => priceChanged(l) || marginChanged(l) || costChange(l));
+  const costLines = lines.map((l) => ({ l, c: costChange(l) })).filter((x) => x.c);
+  const costTotal = costLines.reduce((s, x) => s + x.c.value, 0);
   const invalid = lines.some((l) => !(num(l.new_price) > 0) || marginInvalid(l));
   const canSave = !saving && reason.trim() && changed.length > 0 && !invalid;
 
@@ -95,6 +113,7 @@ export default function PriceAdjustmentModal({ isOpen, onClose, productIds = [],
       const res = await createPriceAdjustment({
         reason: reason.trim(),
         notes: notes.trim() || null,
+        update_cost: updateCost && costLines.length > 0,
         items: changed.map((l) => ({
           product_id: l.id,
           new_price: num(l.new_price),
@@ -118,7 +137,7 @@ export default function PriceAdjustmentModal({ isOpen, onClose, productIds = [],
     <Modal isOpen={isOpen} onClose={onClose} title="Ajustar precio de venta" size="xl">
       <div className="space-y-4">
         <p className="text-sm text-gray-600 dark:text-gray-400">
-          Solo cambia el <strong>precio de venta</strong>: el stock, el costo promedio, el último costo de compra y la contabilidad quedan igual.
+          Cambia el <strong>precio de venta</strong>: el stock, el costo promedio, el último costo de compra y la contabilidad quedan igual{canCorrectCost ? ', salvo que marques «Corregir también el costo».' : '.'}{' '}
           Si el costo real es otro (por ejemplo, una compra que todavía no has registrado), escríbelo en <strong>Costo de referencia</strong> y
           Pitbox sugiere el precio con el margen del producto ({MARGIN_METHOD_LABELS[method]?.toLowerCase()}); también puedes cambiar el margen. El ajuste queda registrado con su número, tu usuario y el motivo.
         </p>
@@ -213,6 +232,61 @@ export default function PriceAdjustmentModal({ isOpen, onClose, productIds = [],
           </table>
         </div>
 
+        {canCorrectCost && lines.length > 0 && (
+          <div className={`rounded-lg border p-3 ${updateCost ? 'border-amber-300 bg-amber-50 dark:border-amber-500/40 dark:bg-amber-500/10' : 'border-gray-200 dark:border-white/10'}`}>
+            <label className="flex items-start gap-2 cursor-pointer">
+              <input type="checkbox" checked={updateCost} onChange={(e) => setUpdateCost(e.target.checked)} className="mt-0.5 h-4 w-4 rounded border-gray-300 text-orange-600 focus:ring-orange-500" />
+              <span className="text-sm">
+                <strong className="text-gray-900 dark:text-gray-100">Corregir también el costo</strong>
+                <span className="block text-xs text-gray-600 dark:text-gray-400">
+                  El costo promedio de cada producto pasa al costo de referencia. Por las unidades en existencia se registra en el kárdex una salida al costo
+                  anterior y una entrada al nuevo, y un asiento contable por la diferencia (sobrante o faltante de inventario). El último costo de compra no cambia.
+                </span>
+              </span>
+            </label>
+            {updateCost && (
+              costLines.length === 0 ? (
+                <p className="mt-2 text-xs text-gray-600 dark:text-gray-400">Ningún producto tiene un costo de referencia distinto de su costo promedio.</p>
+              ) : (
+                <div className="mt-2 overflow-x-auto">
+                  <table className="min-w-full text-xs">
+                    <thead>
+                      <tr className="text-left text-gray-500">
+                        <th className="py-1 pr-3">Producto</th>
+                        <th className="py-1 pr-3 text-right">Existencias</th>
+                        <th className="py-1 pr-3 text-right">Costo actual</th>
+                        <th className="py-1 pr-3 text-right">Costo nuevo</th>
+                        <th className="py-1 text-right">Valor del inventario</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {costLines.map(({ l, c }) => (
+                        <tr key={l.id}>
+                          <td className="py-0.5 pr-3 font-mono">{l.sku}</td>
+                          <td className="py-0.5 pr-3 text-right">{l.current_stock.toLocaleString('es-CO')}</td>
+                          <td className="py-0.5 pr-3 text-right">{c.from > 0 ? formatCurrency(c.from) : '—'}</td>
+                          <td className="py-0.5 pr-3 text-right font-semibold">{formatCurrency(c.to)}</td>
+                          <td className={`py-0.5 text-right ${c.value > 0 ? 'text-green-700' : c.value < 0 ? 'text-red-700' : 'text-gray-500'}`}>
+                            {c.qty > 0 ? `${c.value > 0 ? '+' : ''}${formatCurrency(c.value)}` : 'Sin existencias: solo cambia el costo'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    {costLines.length > 1 && (
+                      <tfoot>
+                        <tr className="border-t border-amber-200 dark:border-white/10">
+                          <td colSpan="4" className="py-1 pr-3 text-right text-gray-600">Diferencia total</td>
+                          <td className="py-1 text-right font-semibold">{costTotal > 0 ? '+' : ''}{formatCurrency(costTotal)}</td>
+                        </tr>
+                      </tfoot>
+                    )}
+                  </table>
+                </div>
+              )
+            )}
+          </div>
+        )}
+
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Motivo *</label>
@@ -233,7 +307,7 @@ export default function PriceAdjustmentModal({ isOpen, onClose, productIds = [],
 
         <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-4 dark:border-white/10">
           <p className="text-sm text-gray-500">
-            {changed.length} de {lines.length} producto(s) cambian de precio o margen
+            {changed.length} de {lines.length} producto(s) cambian de precio{updateCost ? ', margen o costo' : ' o margen'}
             {lines.length > changed.length && changed.length > 0 && ' (los que quedan igual no se incluyen)'}
             {changed.some(marginChanged) && <span className="block text-xs text-amber-700">El margen nuevo queda guardado en el producto y se usa en las próximas compras.</span>}
           </p>

@@ -45,6 +45,11 @@ export function PriceAdjustmentDetailModal({ adjustmentId, onClose }) {
             <div><span className="text-gray-500">Productos:</span> {adj.items_count}</div>
             <div className="sm:col-span-3"><span className="text-gray-500">Motivo:</span> {adj.reason}</div>
             {adj.notes && <div className="sm:col-span-3"><span className="text-gray-500">Observaciones:</span> {adj.notes}</div>}
+            {adj.cost_corrected && (
+              <div className="sm:col-span-3 rounded-lg bg-amber-50 px-3 py-2 text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">
+                Este ajuste también corrigió el costo de {adj.items.filter((it) => it.cost_corrected).length} producto(s), con salida y entrada en el kárdex y su asiento contable.
+              </div>
+            )}
           </div>
           <div className="overflow-x-auto rounded-lg border dark:border-white/10">
             <table className="min-w-full">
@@ -81,7 +86,14 @@ export function PriceAdjustmentDetailModal({ adjustmentId, onClose }) {
                     <td className="px-3 py-2 text-right whitespace-nowrap">{money(it.suggested_price)}</td>
                     <td className="px-3 py-2 text-right text-xs text-gray-500 whitespace-nowrap">
                       <div>Último: {money(it.last_purchase_cost)}</div>
-                      <div>Promedio: {money(it.average_cost)}</div>
+                      {it.cost_corrected ? (
+                        <>
+                          <div className="font-semibold text-amber-700">Promedio: {money(it.average_cost)} → {money(it.new_average_cost)}</div>
+                          {Number(it.cost_correction_value) !== 0 && (
+                            <div>{Number(it.stock_at_correction).toLocaleString('es-CO')} und · {Number(it.cost_correction_value) > 0 ? '+' : ''}{money(it.cost_correction_value)}</div>
+                          )}
+                        </>
+                      ) : <div>Promedio: {money(it.average_cost)}</div>}
                     </td>
                   </tr>
                 ))}

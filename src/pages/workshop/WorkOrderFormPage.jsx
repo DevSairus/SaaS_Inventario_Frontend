@@ -15,10 +15,10 @@ import NumericInput from '../../components/inputs/NumericInput';
 import DraftRecoveryBanner from '../../components/common/DraftRecoveryBanner';
 import useFormDraft from '../../hooks/useFormDraft';
 import useReceptionNotice from '../../components/workshop/receptionNotice';
-import VehicleBrandLineInputs from '../../components/workshop/VehicleBrandLineInputs';
+import NewVehicleInlineForm, { emptyNewVehicle, newVehicleFromRunt } from '../../components/workshop/NewVehicleInlineForm';
 import useTenantStore from '../../store/tenantStore';
 import DocumentTypeSelect from '../../components/customers/DocumentTypeSelect';
-import { vehicleTypeOptionsFor, enabledVehicleTypes, defaultVehicleType, meterUnitOf, defaultMeterUnit, meterName } from '../../constants/vehicleTypes';
+import { enabledVehicleTypes, defaultVehicleType, meterUnitOf, defaultMeterUnit, meterName } from '../../constants/vehicleTypes';
 
 const inputCls = "w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white";
 
@@ -270,7 +270,7 @@ export default function WorkOrderFormPage() {
       setVehicles(prev => [v, ...prev]);
       selectVehicle(v);
       setShowNewVehicle(false);
-      setNewVehicle({ plate: '', brand: '', model: '', year: '', color: '', vehicle_type: defaultVehicleType(configuredTypes), fuel_type: 'gasolina', engine_number: '', vin: '', soat_number: '', soat_expiry: '', tecnomecanica_number: '', tecnomecanica_expiry: '' });
+      setNewVehicle(emptyNewVehicle(defaultVehicleType(configuredTypes)));
       toast.success(res.data.data._pendingSync ? 'Vehículo guardado sin conexión — se sincronizará automáticamente' : 'Vehículo registrado');
     } catch (e) { toast.error(e.response?.data?.message || 'Error'); }
   };
@@ -328,21 +328,7 @@ export default function WorkOrderFormPage() {
       }
     } else {
       // ── Pre-llenar formulario de nuevo vehículo ──────────────────────
-      setNewVehicle({
-        plate:                data.plate                || '',
-        brand:                data.brand                || '',
-        model:                data.model                || '',
-        year:                 data.year                 || '',
-        color:                data.color                || '',
-        vehicle_type:         data.vehicle_type         || 'automovil',
-        fuel_type:            data.fuel_type            || 'gasolina',
-        engine_number:        data.engine_number        || '',
-        vin:                  data.vin                  || '',
-        soat_number:          data.soat_number          || '',
-        soat_expiry:          data.soat_expiry          || '',
-        tecnomecanica_number: data.tecnomecanica_number || '',
-        tecnomecanica_expiry: data.tecnomecanica_expiry || '',
-      });
+      setNewVehicle(newVehicleFromRunt(data));
       setShowNewVehicle(true);
       toast.success(extras
         ? `Datos RUNT cargados — incluye ${extras}. Revisa y guarda`
@@ -486,54 +472,9 @@ export default function WorkOrderFormPage() {
             </div>
 
             {showNewVehicle && (
-              <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-100 space-y-3">
-                <div className="flex items-center justify-between">
-                  <p className="text-xs font-semibold text-blue-700">Nuevo vehículo</p>
-                  <button type="button" onClick={() => setShowNewVehicle(false)}><X size={13} className="text-blue-400" /></button>
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  <div>
-                    <label className="text-xs text-gray-500 block mb-0.5">Placa *</label>
-                    <input value={newVehicle.plate} placeholder="Placa *" className={inputCls}
-                      onChange={e => setNewVehicle(p => ({ ...p, plate: e.target.value.toUpperCase() }))} />
-                  </div>
-                  <VehicleBrandLineInputs
-                    vehicleType={newVehicle.vehicle_type}
-                    brand={newVehicle.brand}
-                    line={newVehicle.model}
-                    onBrandChange={v => setNewVehicle(p => ({ ...p, brand: v }))}
-                    onLineChange={v => setNewVehicle(p => ({ ...p, model: v }))}
-                    inputClassName={inputCls}
-                  />
-                  <div>
-                    <label className="text-xs text-gray-500 block mb-0.5">Año</label>
-                    <input type="number" value={newVehicle.year} placeholder="2020" className={inputCls}
-                      onChange={e => setNewVehicle(p => ({ ...p, year: e.target.value }))} />
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-500 block mb-0.5">Color</label>
-                    <input value={newVehicle.color} placeholder="Blanco" className={inputCls}
-                      onChange={e => setNewVehicle(p => ({ ...p, color: e.target.value }))} />
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-500 block mb-0.5">Tipo</label>
-                    <select value={newVehicle.vehicle_type} className={inputCls}
-                      onChange={e => setNewVehicle(p => ({ ...p, vehicle_type: e.target.value }))}>
-                      {vehicleTypeOptionsFor(configuredTypes, newVehicle.vehicle_type).map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-500 block mb-0.5">Combustible</label>
-                    <select value={newVehicle.fuel_type} className={inputCls}
-                      onChange={e => setNewVehicle(p => ({ ...p, fuel_type: e.target.value }))}>
-                      {['gasolina','diesel','gas','hibrido','electrico','otro'].map(f => <option key={f}>{f}</option>)}
-                    </select>
-                  </div>
-                </div>
-                <button type="button" onClick={handleCreateVehicle}
-                  className="flex items-center gap-1.5 bg-blue-600 text-white text-xs px-4 py-2 rounded-lg hover:bg-blue-700">
-                  <Save size={12}/> Guardar vehículo
-                </button>
+              <div className="mt-4">
+                <NewVehicleInlineForm value={newVehicle} onChange={setNewVehicle} inputCls={inputCls}
+                  onSave={handleCreateVehicle} onClose={() => setShowNewVehicle(false)} />
               </div>
             )}
 
