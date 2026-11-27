@@ -53,7 +53,29 @@ const PaymentsList = ({ transactions, loading }) => {
   if (!transactions || transactions.length === 0) {
     return <div className="text-center py-6 text-gray-400 text-sm">Sin movimientos registrados</div>;
   }
+  // Entradas primero y salidas después, cada grupo de mayor a menor.
+  const sorted = [...transactions].sort((a, b) => (a.direction === b.direction
+    ? Number(b.amount || 0) - Number(a.amount || 0)
+    : a.direction === 'in' ? -1 : 1));
+  const totalIn = transactions.filter(t => t.direction === 'in').reduce((s, t) => s + Number(t.amount || 0), 0);
+  const totalOut = transactions.filter(t => t.direction !== 'in').reduce((s, t) => s + Number(t.amount || 0), 0);
+  const outCount = transactions.filter(t => t.direction !== 'in').length;
   return (
+    <div className="space-y-2">
+    <div className="grid grid-cols-3 gap-2 text-sm">
+      <div className="rounded-lg border border-green-200 bg-green-50 px-3 py-2">
+        <div className="text-xs text-green-700">Entradas ({transactions.length - outCount})</div>
+        <div className="font-semibold text-green-800">+{formatCurrency(totalIn)}</div>
+      </div>
+      <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2">
+        <div className="text-xs text-red-700">Salidas ({outCount})</div>
+        <div className="font-semibold text-red-700">-{formatCurrency(totalOut)}</div>
+      </div>
+      <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
+        <div className="text-xs text-gray-600">Neto</div>
+        <div className="font-semibold text-gray-800">{totalIn - totalOut < 0 ? '-' : ''}{formatCurrency(Math.abs(totalIn - totalOut))}</div>
+      </div>
+    </div>
     <div className="overflow-x-auto border border-gray-200 rounded-lg">
       <table className="min-w-full divide-y divide-gray-200 text-sm">
         <thead className="bg-gray-50">
@@ -64,7 +86,7 @@ const PaymentsList = ({ transactions, loading }) => {
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100">
-          {transactions.map((t, idx) => (
+          {sorted.map((t, idx) => (
             <tr key={idx}>
               <td className="px-3 py-2 text-gray-600 whitespace-nowrap">{SOURCE_LABELS[t.source] || t.source}</td>
               <td className="px-3 py-2 text-gray-600 whitespace-nowrap">{t.reference}</td>
@@ -77,6 +99,100 @@ const PaymentsList = ({ transactions, loading }) => {
           ))}
         </tbody>
       </table>
+    </div>
+    </div>
+  );
+};
+
+// Cuadre por medio de pago (entradas, salidas, esperado) y resumen de
+// documentos del turno: ventas y compras por medio y lo que quedó a crédito.
+const METHOD_COLS = [['efectivo', 'Efectivo'], ['tarjeta', 'Tarjeta'], ['transferencia', 'Transf.'], ['otro', 'Otros']];
+const DOC_ROWS = [
+  ['sales', 'Ventas del turno', 'A crédito'],
+  ['collections', 'Abonos de cartera', null],
+  ['purchases', 'Compras del turno', 'Por pagar'],
+  ['supplier_payments', 'Pagos de compras anteriores', null],
+  ['expenses', 'Gastos del turno', 'Por pagar'],
+  ['expense_payments', 'Pagos de gastos anteriores', null],
+];
+const SessionReport = ({ byMethod, report }) => {
+  if (!byMethod && !report) return null;
+  const th = 'px-2 py-1.5 text-right text-xs font-medium text-gray-500 uppercase whitespace-nowrap';
+  const td = 'px-2 py-1.5 text-right whitespace-nowrap';
+  const money = (v) => (Math.abs(Number(v || 0)) >= 0.5 ? formatCurrency(v) : '—');
+  const rows = report ? DOC_ROWS.filter(([key]) => report[key]?.count > 0) : [];
+  return (
+    <div className="space-y-3">
+      {byMethod && (
+        <div className="overflow-x-auto border border-gray-200 rounded-lg">
+          <table className="min-w-full text-sm">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-2 py-1.5 text-left text-xs font-medium text-gray-500 uppercase">Medio</th>
+                <th className={th}>Entradas</th><th className={th}>Salidas</th><th className={th}>Esperado</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {METHOD_COLS.map(([key, label]) => {
+                const m = byMethod[key] || {};
+                if (!m.in && !m.out && !m.expected) return null;
+                return (
+                  <tr key={key}>
+                    <td className="px-2 py-1.5 text-gray-700">{label === 'Transf.' ? 'Transferencia' : label}</td>
+                    <td className={`${td} text-green-700`}>{money(m.in)}</td>
+                    <td
+                      className={`${td} ${key === 'efectivo' ? 'text-red-600' : 'text-gray-400'}`}
+                      title={key === 'efectivo' ? '' : 'Pagos por este medio: se registran pero no restan del cuadre de caja'}
+                    >
+                      {Number(m.out) ? (key === 'efectivo' ? `-${formatCurrency(m.out)}` : `${formatCurrency(m.out)}*`) : '—'}
+                    </td>
+                    <td className={`${td} font-semibold text-gray-900`}>{formatCurrency(m.expected)}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+          {METHOD_COLS.some(([k]) => k !== 'efectivo' && Number(byMethod[k]?.out)) && (
+            <p className="px-2 py-1.5 text-xs text-gray-500 border-t border-gray-100">
+              * Pagos por tarjeta o transferencia: quedan registrados, pero solo las salidas en efectivo restan del esperado.
+            </p>
+          )}
+        </div>
+      )}
+      {rows.length > 0 && (
+        <div className="overflow-x-auto border border-gray-200 rounded-lg">
+          <table className="min-w-full text-sm">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-2 py-1.5 text-left text-xs font-medium text-gray-500 uppercase">Documentos</th>
+                <th className={th}>Total</th>
+                {METHOD_COLS.map(([k, l]) => <th key={k} className={th}>{l}</th>)}
+                <th className={th} title="Anticipos aplicados, retenciones y saldos a favor: no mueven dinero de la caja">Otros conceptos</th>
+                <th className={th}>Crédito</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {rows.map(([key, label, creditLabel]) => {
+                const b = report[key];
+                const bm = b.by_method || {};
+                const other = Number(bm.anticipo || 0) + Number(bm.retenciones || 0) + Number(bm.saldo_a_favor || 0) + Number(b.retentions || 0);
+                return (
+                  <tr key={key}>
+                    <td className="px-2 py-1.5 text-gray-700 whitespace-nowrap">{label} <span className="text-gray-400">({b.count})</span></td>
+                    <td className={`${td} font-medium`}>{formatCurrency(b.total)}</td>
+                    {METHOD_COLS.map(([k]) => <td key={k} className={td}>{money(bm[k])}</td>)}
+                    <td className={td}>{money(other)}</td>
+                    <td className={`${td} ${b.credit ? 'text-amber-700 font-medium' : ''}`} title={creditLabel || ''}>{creditLabel ? money(b.credit) : '—'}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+          <p className="px-2 py-1.5 text-xs text-gray-500 border-t border-gray-100">
+            Por medio: lo recibido o pagado en esta caja. Crédito: lo que quedó por cobrar (ventas) o por pagar (compras y gastos, neto de retenciones).
+          </p>
+        </div>
+      )}
     </div>
   );
 };
@@ -98,6 +214,7 @@ const CashSessionsPage = () => {
   const [showCloseModal, setShowCloseModal] = useState(false);
   const [summary, setSummary] = useState(null);
   const [closePayments, setClosePayments] = useState([]);
+  const [closeReport, setCloseReport] = useState(null);
   const [counted, setCounted] = useState(emptyAmounts);
   const [closingNotes, setClosingNotes] = useState('');
   const [savingClose, setSavingClose] = useState(false);
@@ -178,6 +295,7 @@ const CashSessionsPage = () => {
     setCounted(emptyAmounts);
     setClosingNotes('');
     setClosePayments([]);
+    setCloseReport(null);
     try {
       const [summaryRes, paymentsRes] = await Promise.all([
         cashSessionsAPI.getSummary(currentSession.id),
@@ -185,6 +303,7 @@ const CashSessionsPage = () => {
       ]);
       setSummary(summaryRes.data.data);
       setClosePayments(paymentsRes.data.data?.transactions || []);
+      setCloseReport({ byMethod: paymentsRes.data.data?.by_method, report: paymentsRes.data.data?.report });
     } catch (error) {
       toast.error('Error calculando el cuadre esperado');
       setShowCloseModal(false);
@@ -195,7 +314,7 @@ const CashSessionsPage = () => {
     setDetailModal({ open: true, loading: true, transactions: [] });
     try {
       const res = await cashSessionsAPI.getPayments(sessionId);
-      setDetailModal({ open: true, loading: false, transactions: res.data.data?.transactions || [] });
+      setDetailModal({ open: true, loading: false, transactions: res.data.data?.transactions || [], byMethod: res.data.data?.by_method, report: res.data.data?.report });
     } catch (error) {
       toast.error('Error cargando el detalle de la caja');
       setDetailModal({ open: false, loading: false, transactions: [] });
@@ -506,7 +625,7 @@ const CashSessionsPage = () => {
         {/* ── Modal: Cerrar caja ────────────────────────────── */}
         {showCloseModal && (
           <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl shadow-xl max-w-lg w-full p-5 max-h-[90vh] overflow-y-auto">
+            <div className="bg-white rounded-xl shadow-xl max-w-3xl w-full p-5 max-h-[90vh] overflow-y-auto">
               <h3 className="text-base font-semibold text-gray-900 mb-1">Cerrar caja</h3>
               <p className="text-xs text-gray-500 mb-4">{activeBranch?.name} · {currentSession?.session_date}</p>
 
@@ -586,6 +705,12 @@ const CashSessionsPage = () => {
                     </div>
                   )}
 
+                  {closeReport && (
+                    <>
+                      <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Cuadre por medio de pago y documentos del turno</p>
+                      <div className="mb-4"><SessionReport byMethod={closeReport.byMethod} report={closeReport.report} /></div>
+                    </>
+                  )}
                   <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Movimientos de esta sesión</p>
                   <div className="mb-4">
                     <PaymentsList transactions={closePayments} />
@@ -672,7 +797,7 @@ const CashSessionsPage = () => {
         {/* ── Modal: Detalle de pagos (historial) ───────────── */}
         {detailModal.open && (
           <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full p-5 max-h-[90vh] overflow-y-auto">
+            <div className="bg-white rounded-xl shadow-xl max-w-4xl w-full p-5 max-h-[90vh] overflow-y-auto">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-base font-semibold text-gray-900">Detalle de movimientos</h3>
                 <button
@@ -682,6 +807,9 @@ const CashSessionsPage = () => {
                   Cerrar
                 </button>
               </div>
+              {!detailModal.loading && (
+                <div className="mb-4"><SessionReport byMethod={detailModal.byMethod} report={detailModal.report} /></div>
+              )}
               <PaymentsList transactions={detailModal.transactions} loading={detailModal.loading} />
             </div>
           </div>
